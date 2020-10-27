@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
+  <TemplateData>
+    <Name>COFRS Web API Controller</Name>
+    <Description>Creates a Web API Controller for a COFRS REST Service using .NET Framework</Description>
+    <Icon>COFRS.ico</Icon>
+    <TemplateID>7bf13309-626f-4ee5-88ec-763755320b7d</TemplateID>
+    <ProjectType>CSharp</ProjectType>
+    <TemplateGroupID>AspNetCore</TemplateGroupID>
+    <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
+    <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+    <DefaultName>ValuesController.cs</DefaultName>
+  </TemplateData>
+  <TemplateContent>
+    <References>
+      <Reference>
+        <Assembly>System</Assembly>
+      </Reference>
+    </References>
+    <ProjectItem ReplaceParameters="true" TargetFileName="$safeitemname$.cs" OpenInEditor="true">Class.cs</ProjectItem>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
+    <FullClassName>COFRSCoreInstaller.ControllerWizard</FullClassName>
+  </WizardExtension>
+</VSTemplate>

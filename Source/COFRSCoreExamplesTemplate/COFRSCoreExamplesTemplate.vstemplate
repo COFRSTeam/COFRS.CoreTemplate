@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
+  <TemplateData>
+    <Name>COFRS Swagger Example</Name>
+    <Description>Generates a Swagger example for a resource in a COFRS REST Service</Description>
+    <Icon>COFRS.ico</Icon>
+    <TemplateID>78bd0baa-cf8c-428a-9049-8de8e7e1b795</TemplateID>
+    <ProjectType>CSharp</ProjectType>
+    <TemplateGroupID>AspNetCore</TemplateGroupID>
+    <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
+    <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+    <DefaultName>ClassExample.cs</DefaultName>
+  </TemplateData>
+  <TemplateContent>
+    <References>
+      <Reference>
+        <Assembly>System</Assembly>
+      </Reference>
+    </References>
+    <ProjectItem ReplaceParameters="true" OpenInEditor="true" TargetFileName="$safeitemname$.cs">Example.cs</ProjectItem>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
+    <FullClassName>COFRSCoreInstaller.ExamplesWizard</FullClassName>
+  </WizardExtension>
+</VSTemplate>

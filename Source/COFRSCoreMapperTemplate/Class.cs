@@ -1,0 +1,11 @@
+﻿using AutoMapper;
+using System;
+using System.Linq;
+using Microsoft.Extensions.Configuration;
+using COFRS;
+using $entitynamespace$;
+using $domainnamespace$;
+
+namespace $rootnamespace$
+{
+$model$}

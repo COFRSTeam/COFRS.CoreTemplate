@@ -1,0 +1,302 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>COFRS.Common</name>
+    </assembly>
+    <members>
+        <member name="T:COFRS.Entity">
+            <summary>
+            The Entity Attribute assigns an entity model to a domain model
+            </summary>
+        </member>
+        <member name="M:COFRS.Entity.#ctor(System.Type)">
+            <summary>
+            Member attribute constructor
+            </summary>
+        </member>
+        <member name="P:COFRS.Entity.EntityType">
+            <summary>
+            The type of entity model associated with the domain model
+            </summary>
+        </member>
+        <member name="T:COFRS.ApiError">
+            <summary>
+            A generic error type that describes the error
+            </summary>
+        </member>
+        <member name="P:COFRS.ApiError.Message">
+            <summary>
+            A detailed description of the error.
+            </summary>
+        </member>
+        <member name="P:COFRS.ApiError.Parameters">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiError.#ctor(System.String,System.Collections.Generic.KeyValuePair{System.String,System.Object}[])">
+            <summary>
+            Contains an error, along with any associated parameters pertaining to the error.
+            </summary>
+            <param name="message">A detailed description of the error.</param>
+            <param name="parameters">The list of parameters pertaining to the error.</param>
+        </member>
+        <member name="T:COFRS.ApiErrorCollection">
+            <summary>
+            Represents the collection of errors returned by a COFRS REST operation
+            </summary>
+        </member>
+        <member name="P:COFRS.ApiErrorCollection.Errors">
+            <summary>
+            The list of errors returned
+            </summary>
+        </member>
+        <member name="T:COFRS.ApiException">
+            <summary>
+            Represents errors that occur during application execution of a COFRS REST Service.
+            </summary>
+        </member>
+        <member name="P:COFRS.ApiException.StatusCode">
+            <summary>
+            The HTTP status code to be used in the response to this error.
+            </summary>
+        </member>
+        <member name="P:COFRS.ApiException.Parameters">
+            <summary>
+            A list of named parameters associated with the error
+            </summary>
+        </member>
+        <member name="P:COFRS.ApiException.Location">
+            <summary>
+            The location of the error.
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.ApiException"/> class.
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiException.#ctor(System.Net.HttpStatusCode,System.String,System.Collections.Generic.KeyValuePair{System.String,System.Object}[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.ApiException"/> class containg a specified
+            status code with a standard status code message, and an optional list of parameters.
+            </summary>
+            <param name="statusCode">The <see cref="T:System.Net.HttpStatusCode"/> that the service will return.</param>
+            <param name="message">The message that describes the error.</param>
+            <param name="parameters">The list of named parameters associated with the error.</param>
+        </member>
+        <member name="M:COFRS.ApiException.#ctor(System.Net.HttpStatusCode,System.String,System.Exception,System.Collections.Generic.KeyValuePair{System.String,System.Object}[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.ApiException"/> class containg a specified
+            status code with a standard status code message, and an optional list of parameters.
+            </summary>
+            <param name="statusCode">The <see cref="T:System.Net.HttpStatusCode"/> that the service will return.</param>
+            <param name="message">The message that describes the error.</param>
+            <param name="innerException">The exception that is the cause of the current exception, or a null reference
+            (Nothing in Visual Basic) if no inner exception is specified.</param>
+            <param name="parameters">The list of named parameters associated with the error.</param>
+        </member>
+        <member name="M:COFRS.ApiException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.ApiException"/> class with serialized data.
+            </summary>
+            <param name="info">The SerializationInfo that holds the serialized object data about the exception being thrown.</param>
+            <param name="context">The StreamingContext that contains contextual information about the source or destination.</param>
+        </member>
+        <member name="M:COFRS.ApiException.GetObjectData(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Sets the SerializationInfo with information about the exception.
+            </summary>
+            <param name="info">Stores all the data needed to serialize or deserialize an object.</param>
+            <param name="context">Describes the source and destination of a given serialized stream, and
+            provides an additional caller-defined context.</param>
+        </member>
+        <member name="T:COFRS.RQLFormatException">
+            <summary>
+            The exception that is thrown when the contents of a string do not form a valid
+            RQL query, or the query is malformed.
+            </summary>
+        </member>
+        <member name="M:COFRS.RQLFormatException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.RQLFormatException"/> class.
+            </summary>
+        </member>
+        <member name="M:COFRS.RQLFormatException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.RQLFormatException"/> class with a specified
+            error message.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+        </member>
+        <member name="M:COFRS.RQLFormatException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.RQLFormatException"/> class with a specified
+            error message and a reference to the inner exception that is the cause of this
+            exception.
+            </summary>
+            <param name="message">The error message that explains the reason for the exception.</param>
+            <param name="innerException">The exception that is the cause of the current exception. If 
+            the innerException parameter is not a null reference (Nothing in Visual Basic), the 
+            current exception is raised in a catch block that handles the inner exception.</param>
+        </member>
+        <member name="M:COFRS.RQLFormatException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.RQLFormatException"/> class with serialized
+            data.
+            </summary>
+            <param name="info">The object that holds the serialized object data.</param>
+            <param name="context">The contextual information about the source or destination.</param>
+        </member>
+        <member name="T:COFRS.UriExtensions">
+            <summary>
+            URI Extensions class
+            </summary>
+        </member>
+        <member name="M:COFRS.UriExtensions.GetId``1(System.Uri)">
+            <summary>
+            Returns the ID of the url
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="uri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.UriExtensions.GetId``1(System.Uri,System.Int32)">
+            <summary>
+            Returns the Id of a specific key within the Url
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="uri"></param>
+            <param name="position"></param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.PatchCommand">
+            <summary>
+            Represents a command to be executed as part of a PATCH request.
+            </summary>
+        </member>
+        <member name="P:COFRS.PatchCommand.op">
+            <summary>
+            The operation of the patch (replace, remove or add).
+            </summary>
+        </member>
+        <member name="P:COFRS.PatchCommand.path">
+            <summary>
+            The attribute of the object to be operated upon.
+            </summary>
+        </member>
+        <member name="P:COFRS.PatchCommand.value">
+            <summary>
+            For add or replace, the value to set the specified attribute to.
+            </summary>
+        </member>
+        <member name="T:COFRS.RqlBulkAction">
+            <summary>
+            Rql Bulk Action
+            </summary>
+        </member>
+        <member name="F:COFRS.RqlBulkAction.NoAction">
+            <summary>
+            No action performed
+            </summary>
+        </member>
+        <member name="F:COFRS.RqlBulkAction.Add">
+            <summary>
+            Add an entity
+            </summary>
+        </member>
+        <member name="F:COFRS.RqlBulkAction.Delete">
+            <summary>
+            Delete an entity
+            </summary>
+        </member>
+        <member name="F:COFRS.RqlBulkAction.Update">
+            <summary>
+            Update an entity
+            </summary>
+        </member>
+        <member name="T:COFRS.RqlBulkItem`1">
+            <summary>
+            Represents an item in a collection of items to be submitted to a bulk action.
+            </summary>
+            <typeparam name="T">The type of item on which to perform the action</typeparam>
+        </member>
+        <member name="P:COFRS.RqlBulkItem`1.action">
+            <summary>
+            The action to perform on this item.
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlBulkItem`1.item">
+            <summary>
+            The item to perform the action on.
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlBulkItem`1.success">
+            <summary>
+            Returned as true if the action was successful; false otherwise.
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlBulkItem`1.errors">
+            <summary>
+            The list of errors (if any) that occured while trying to perform the action.
+            </summary>
+        </member>
+        <member name="T:COFRS.RqlBulkRequest`1">
+            <summary>
+            A request to perform a series of actions on a collection of items.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="P:COFRS.RqlBulkRequest`1.success">
+            <summary>
+            Overall success. Returns true if all actions performed successfully; false otherwise
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlBulkRequest`1.items">
+            <summary>
+            The list of items and the actions to perform
+            </summary>
+        </member>
+        <member name="T:COFRS.RqlCollection`1">
+            <summary>
+            Represents a collection of items.
+            </summary>
+            <typeparam name="T">Represents the type of items in the collection</typeparam>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.href">
+            <summary>
+            The hypertext reference to this batch of the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.next">
+            <summary>
+            The hypertext reference to the next batch in the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.first">
+            <summary>
+            The hypertext reference to the first batch in the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.previous">
+            <summary>
+            The hypertext reference to the previous batch in the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.count">
+            <summary>
+            The total number of items in the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.limit">
+            <summary>
+            The number of items in the current batch
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.items">
+            <summary>
+            The collection of items of type T
+            </summary>
+        </member>
+    </members>
+</doc>
