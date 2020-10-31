@@ -18,6 +18,7 @@ namespace COFRSCoreInstaller
 		private bool Populating = false;
 		public DBTable DatabaseTable { get; set; }
 		public List<DBColumn> DatabaseColumns { get; set; }
+		public string ConnectionString { get; set; }
 		#endregion
 
 		#region Utility functions
@@ -194,6 +195,7 @@ namespace COFRSCoreInstaller
 					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
 					_tableList.Items.Clear();
 
+					ConnectionString = connectionString;
 					using (var connection = new NpgsqlConnection(connectionString))
 					{
 						connection.Open();
@@ -227,6 +229,7 @@ SELECT schemaname, tablename
 					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
 					_tableList.Items.Clear();
 
+					ConnectionString = connectionString;
 					using (var connection = new MySqlConnection(connectionString))
 					{
 						connection.Open();
@@ -263,9 +266,11 @@ SELECT TABLE_SCHEMA, TABLE_NAME FROM information_schema.tables
 					string connectionString;
 
 					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-						connectionString = $"Server ={server.ServerName};Database={db};Trusted_Connection=True;";
+						connectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
 					else
 						connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
+
+					ConnectionString = connectionString;
 
 					_tableList.Items.Clear();
 

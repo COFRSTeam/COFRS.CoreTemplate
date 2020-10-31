@@ -43,10 +43,12 @@ namespace COFRSCoreInstaller
 		{
 			try
 			{
+				Proceed = true;
 				Random randomNumberGenerator = new Random(Convert.ToInt32(0x0000ffffL & DateTime.Now.ToFileTimeUtc()));
 				// Display a form to the user. The form collects
 				// input for the custom message.
 				inputForm = new UserInputProject();
+
 				if (inputForm.ShowDialog() == DialogResult.OK)
 				{
 
@@ -73,8 +75,6 @@ namespace COFRSCoreInstaller
 					}
 					else
 						replacementsDictionary.Add("$security$", "none");
-
-					Proceed = true;
 				}
 				else
 				{

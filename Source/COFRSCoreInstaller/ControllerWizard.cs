@@ -181,7 +181,7 @@ namespace COFRSCoreInstaller
 			}
 
 			if (CollectionExampleClass != null)
-				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({domain.ClassName}CollectionExample), jsonConverter: typeof(ExampleJsonConverter))]");
+				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({domain.ClassName}CollectionExample))]");
 
 			results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
 			results.AppendLine("\t\t[SupportRQL]");
@@ -237,7 +237,7 @@ namespace COFRSCoreInstaller
 					results.AppendLine($"\t\t[ProducesResponseType((int)HttpStatusCode.OK, Type = typeof({domain.ClassName}))]");
 
 				if (ExampleClass != null)
-					results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({domain.ClassName}Example), jsonConverter: typeof(ExampleJsonConverter))]");
+					results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({domain.ClassName}Example))]");
 
 				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
 					results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NotFound)]");
@@ -277,7 +277,8 @@ namespace COFRSCoreInstaller
 				{
 					results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
 					results.AppendLine("\t\t\t{");
-					results.AppendLine($"\t\t\t\tvar item = await service.GetSingleAsync<{domain.ClassName}>(url, Request.QueryString).ConfigureAwait(false);");
+					results.AppendLine($"\t\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
+					results.AppendLine($"\t\t\t\tvar item = await service.GetSingleAsync<{domain.ClassName}>(url, node).ConfigureAwait(false);");
 					results.AppendLine();
 					results.AppendLine("\t\t\t\tif (item == null)");
 					results.AppendLine("\t\t\t\t\treturn NotFound();");
@@ -304,7 +305,7 @@ namespace COFRSCoreInstaller
 				results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
 			if (ExampleClass != null)
-				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({domain.ClassName}Example), jsonConverter: typeof(AddExampleJsonConverter))]");
+				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({domain.ClassName}Example))]");
 
 			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
 				results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.Created, Type = typeof({domain.ClassName}))]");
@@ -312,7 +313,7 @@ namespace COFRSCoreInstaller
 				results.AppendLine($"\t\t[ProducesResponseType((int)HttpStatusCode.Created, Type = typeof({domain.ClassName}))]");
 
 			if (ExampleClass != null)
-				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.Created, typeof({domain.ClassName}Example), jsonConverter: typeof(ExampleJsonConverter))]");
+				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.Created, typeof({domain.ClassName}Example))]");
 			
 			results.AppendLine($"\t\t[SwaggerResponseHeader((int)HttpStatusCode.Created, \"Location\", \"string\", \"Returns Href or Int of new {domain.ClassName}\")]");
 			results.AppendLine($"\t\t[Consumes(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
@@ -363,7 +364,7 @@ namespace COFRSCoreInstaller
 
 			if (ExampleClass != null)
 			{
-				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({domain.ClassName}Example), jsonConverter: typeof(ExampleJsonConverter))]");
+				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({domain.ClassName}Example))]");
 			}
 
 			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
@@ -381,6 +382,7 @@ namespace COFRSCoreInstaller
 			results.AppendLine($"\t\tpublic async Task<IActionResult> Update{domain.ClassName}Async([FromBody] {domain.ClassName} item)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
+			results.AppendLine("\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
 			results.AppendLine();
 
 			if (hasValidator)
@@ -393,7 +395,7 @@ namespace COFRSCoreInstaller
 			if (replacementsDictionary["$targetframeworkversion$"] == "3.1")
 			{
 				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-				results.AppendLine($"\t\t\tawait service.UpdateAsync(item).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\tawait service.UpdateAsync(item, new List<KeyValuePair<string,object>>(), node).ConfigureAwait(false);");
 				results.AppendLine($"\t\t\treturn NoContent();");
 			}
 			else
@@ -442,6 +444,7 @@ namespace COFRSCoreInstaller
 
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
+				results.AppendLine("\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
 				results.AppendLine();
 				results.AppendLine("\t\t\tvar translationOptions = HttpContext.RequestServices.GetService<ITranslationOptions>();");
 				results.AppendLine($"\t\t\tvar url = new Uri(translationOptions.RootUrl, $\"{BuildRoute(nn.PluralCamelCase, pkcolumns)}\");");
@@ -457,7 +460,7 @@ namespace COFRSCoreInstaller
 				if (replacementsDictionary["$targetframeworkversion$"] == "3.1")
 				{
 					results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-					results.AppendLine($"\t\t\tawait service.PatchAsync<{domain.ClassName}>(url, commands).ConfigureAwait(false);");
+					results.AppendLine($"\t\t\tawait service.PatchAsync<{domain.ClassName}>(url, commands, node).ConfigureAwait(false);");
 					results.AppendLine($"\t\t\treturn NoContent();");
 				}
 				else

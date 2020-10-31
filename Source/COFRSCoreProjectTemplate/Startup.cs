@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using COFRS;
 $if$ ($securitymodel$ == OAuth)using COFRS.OAuth;
 $endif$using Microsoft.AspNetCore.Builder;
@@ -81,25 +82,29 @@ namespace $safeprojectname$
 			$if$ ( $securitymodel$ == OAuth )services.UseSwagger(authorityUrl, options, scopes);$else$services.UseSwagger(options);$endif$
 
 			var supportedJsonTypes = new string[] { "application/json", "text/json", "application/vnd.$companymoniker$.v1+json" };
+
+			var defaultSettings = new JsonSerializerSettings
+			{
+				NullValueHandling = NullValueHandling.Ignore,
+				Formatting = Formatting.Indented,
+				Converters = new List<JsonConverter>
+					{
+						new ApiJsonEnumConverter(),
+						new ApiJsonByteArrayConverter()
+					}
+			};
+
+			JsonConvert.DefaultSettings = () => { return defaultSettings; };
+
 			$if$ ($framework$ == netcoreapp2.1)services.AddMvc(mvcOptions =>
 			{
 				var serviceProvider = services.BuildServiceProvider();
 
-				var customJsonInputFormatter = new COFRSJsonFormatter(
-					supportedJsonTypes,
-					serviceProvider.GetService<ObjectPoolProvider>()
-				);
-
-				var customJsonOutputFormatter = new COFRSJsonFormatter(
-					supportedJsonTypes,
-					serviceProvider.GetService<ObjectPoolProvider>()
-				);
-
 				mvcOptions.RespectBrowserAcceptHeader = true; // false by default
 				mvcOptions.OutputFormatters.Clear();
-				mvcOptions.OutputFormatters.Insert(0, customJsonOutputFormatter);
+				mvcOptions.OutputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes));
 				mvcOptions.InputFormatters.Clear();
-				mvcOptions.InputFormatters.Insert(0, customJsonInputFormatter);
+				mvcOptions.InputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes));
 			});
 
 			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
@@ -108,22 +113,10 @@ namespace $safeprojectname$
 			services.AddControllers(o => 
 			{
 				o.EnableEndpointRouting = false;
-				var serviceProvider = services.BuildServiceProvider();
-
-				var customJsonInputFormatter = new COFRSJsonFormatter(
-					supportedJsonTypes,
-					serviceProvider.GetService<ObjectPoolProvider>()
-				);
-
-				var customJsonOutputFormatter = new COFRSJsonFormatter(
-					supportedJsonTypes,
-					serviceProvider.GetService<ObjectPoolProvider>()
-				);
-
 				o.OutputFormatters.Clear();
-				o.OutputFormatters.Insert(0, customJsonOutputFormatter);
+				o.OutputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes));
 				o.InputFormatters.Clear();
-				o.InputFormatters.Insert(0, customJsonInputFormatter);
+				o.InputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes));
 			});
 		$endif$}
 

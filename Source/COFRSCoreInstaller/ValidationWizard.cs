@@ -182,7 +182,8 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t\t\t//\tEnsure that the item exists before we try to update it.");
 			results.AppendLine("\t\t\tusing (var service = ServiceContainer.RequestServices.Get<IServiceOrchestrator>(User))");
 			results.AppendLine("\t\t\t{");
-			results.AppendLine($"\t\t\t\tif (await service.GetSingleAsync<{resourceClassFile.ClassName}>(item.href, \"select(href)\").ConfigureAwait(false) == null)");
+			results.AppendLine("\t\t\t\tvar node = RqlNode.Parse(\"select(href)\");");
+			results.AppendLine($"\t\t\t\tif (await service.GetSingleAsync<{resourceClassFile.ClassName}>(item.href, node).ConfigureAwait(false) == null)");
 			results.AppendLine("\t\t\t\t\tFailNotFound();");
 			results.AppendLine("\t\t\t}");
 			results.AppendLine();

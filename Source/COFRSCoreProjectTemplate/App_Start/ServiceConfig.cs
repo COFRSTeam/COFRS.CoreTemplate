@@ -47,18 +47,6 @@ namespace $safeprojectname$.App_Start
 			TranslationOptions = new TranslationOptions(Configuration.GetSection("ApiSettings").GetValue<string>("RootUrl"));
 			services.AddSingleton<ITranslationOptions>(TranslationOptions);
 
-			var settings = new COFRSJsonSettings()
-			{
-				DateFormatHandling = DateFormatHandling.IsoDateFormat,
-				DateTimeZoneHandling = DateTimeZoneHandling.Local,
-				NullValueHandling = NullValueHandling.Ignore,
-				Formatting = Formatting.Indented,
-			};
-
-			settings.Converters.Add(new ApiJsonEnumConverter());
-
-			services.AddSingleton<ICOFRSJsonSettings>(settings);
-
 			var myAssembly = Assembly.GetExecutingAssembly();
 			AutoMapperFactory.MapperConfiguration = new MapperConfiguration(cfg => cfg.AddMaps(myAssembly));
 			AutoMapperFactory.CreateMapper();

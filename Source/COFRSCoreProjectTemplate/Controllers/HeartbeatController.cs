@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using COFRS;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+$if$ ( $securitymodel$ == OAuth )using Microsoft.AspNetCore.Authorization;
+$endif$using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Filters;
 using $safeprojectname$.Orchestration.ResourceModels;
