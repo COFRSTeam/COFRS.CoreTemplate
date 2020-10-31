@@ -9,7 +9,7 @@ In the Visual Studio start up screen, select "Create New Project", or if you are
 
 Press the Next button.
 
-Enter the name of your new service in the Project Name edit box, and select the folder that will hold your new service. Once you've fill in the dialog with your desired options, press the Create button.
+Enter the name of your new service in the Project Name edit box, and select the folder that will hold your new service. Once you've filled in the dialog with your desired options, press the Create button.
 
 The COFRS RESTful Service Template dialog will appear. There are four options:
 
