@@ -295,6 +295,7 @@
             0,
             0,
             0});
+			this._portNumber.ValueChanged += new System.EventHandler(this.OnPortNumberChanged);
 			// 
 			// pictureBox2
 			// 

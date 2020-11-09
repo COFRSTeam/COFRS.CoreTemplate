@@ -888,6 +888,41 @@ select c.name as column_name,
 				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
+
+		private void OnPortNumberChanged(object sender, EventArgs e)
+		{
+			try
+			{
+				if (!Populating)
+				{
+					_dbList.Items.Clear();
+					_tableList.Items.Clear();
+					var server = (DBServer)_serverList.SelectedItem;
+
+					if (server != null)
+					{
+						if (server.RememberPassword)
+							server.Password = _password.Text;
+						else
+							server.Password = string.Empty;
+
+						server.PortNumber = Convert.ToInt32(_portNumber.Value);
+
+						var otherServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
+
+						Save();
+
+						if (TestConnection(server))
+							PopulateDatabases();
+					}
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
 		#endregion
 
 		#region Helper Functions

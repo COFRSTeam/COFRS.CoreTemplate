@@ -10,10 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="10.0.0" />
+    <PackageReference Include="AutoMapper" Version="10.1.1" />
     <PackageReference Include="COFRS.Common" Version="0.0.1-alpha" />
-    <PackageReference Include="COFRS" Version="0.0.1-alpha" />
-    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.1-alpha" />
+    <PackageReference Include="COFRS" Version="0.0.2-alpha" />
+    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.2-alpha" />
     $endif$$if$ ($databaseTechnology$ == Postgresql)<PackageReference Include="COFRS.Postgresql" Version="0.0.1-alpha" />
     $endif$$if$ ($databaseTechnology$ == MySQL)<PackageReference Include="COFRS.MySql" Version="0.0.1-alpha" />
     $endif$$if$ ($securitymodel$ == OAuth)<PackageReference Include="COFRS.OAuth" Version="0.0.1-alpha" />
@@ -24,11 +24,11 @@
     <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.5.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Filters" Version="5.1.2" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="5.5.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="5.5.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="5.5.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Filters" Version="6.0.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="5.6.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="5.6.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="5.6.3" />
   </ItemGroup>
 
   <ItemGroup>

@@ -188,30 +188,21 @@ namespace COFRSCoreInstaller
 			results.AppendLine($"\t\tpublic async Task<IActionResult> Get{nn.PluralForm}Async()");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method} {Request.Path}\");");
+			results.AppendLine("\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
 			results.AppendLine();
+
 			if (hasValidator)
 			{
 				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
-				results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(Request.QueryString).ConfigureAwait(false);");
+				results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(Request, node).ConfigureAwait(false);");
 				results.AppendLine();
 			}
 
-			if (replacementsDictionary["$targetframeworkversion$"] == "3.1")
-			{
-				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-				results.AppendLine($"\t\t\tvar collection = await service.GetCollectionAsync<{domain.ClassName}>(Request.QueryString).ConfigureAwait(false);");
-				results.AppendLine($"\t\t\treturn Ok(collection);");
-				results.AppendLine("\t\t}");
-			}
-			else
-			{
-				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-				results.AppendLine("\t\t\t{");
-				results.AppendLine($"\t\t\t\tvar collection = await service.GetCollectionAsync<{domain.ClassName}>(Request.QueryString).ConfigureAwait(false);");
-				results.AppendLine($"\t\t\t\treturn Ok(collection);");
-				results.AppendLine("\t\t\t}");
-				results.AppendLine("\t\t}");
-			}
+			results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
+			results.AppendLine($"\t\t\tvar collection = await service.GetCollectionAsync<{domain.ClassName}>(Request, node).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\treturn Ok(collection);");
+			results.AppendLine("\t\t}");
+
 			results.AppendLine();
 
 			// --------------------------------------------------------------------------------
@@ -251,6 +242,7 @@ namespace COFRSCoreInstaller
 
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
 				results.AppendLine();
 				results.AppendLine("\t\t\tvar translationOptions = HttpContext.RequestServices.GetService<ITranslationOptions>();");
 				results.AppendLine($"\t\t\tvar url = new Uri(translationOptions.RootUrl, $\"{BuildRoute(nn.PluralCamelCase, pkcolumns)}\");");
@@ -263,29 +255,16 @@ namespace COFRSCoreInstaller
 					results.AppendLine();
 				}
 
-				if (replacementsDictionary["$targetframeworkversion$"] == "3.1")
-				{
-					results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-					results.AppendLine($"\t\t\tvar item = await service.GetSingleAsync<{domain.ClassName}>(url, Request.QueryString).ConfigureAwait(false);");
-					results.AppendLine();
-					results.AppendLine("\t\t\tif (item == null)");
-					results.AppendLine("\t\t\t\treturn NotFound();");
-					results.AppendLine();
-					results.AppendLine("\t\t\treturn Ok(item);");
-				}
-				else
-				{
-					results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-					results.AppendLine("\t\t\t{");
-					results.AppendLine($"\t\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
-					results.AppendLine($"\t\t\t\tvar item = await service.GetSingleAsync<{domain.ClassName}>(url, node).ConfigureAwait(false);");
-					results.AppendLine();
-					results.AppendLine("\t\t\t\tif (item == null)");
-					results.AppendLine("\t\t\t\t\treturn NotFound();");
-					results.AppendLine();
-					results.AppendLine("\t\t\t\treturn Ok(item);");
-					results.AppendLine("\t\t\t}");
-				}
+				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+				results.AppendLine("\t\t\t{");
+				results.AppendLine($"\t\t\t\tvar item = await service.GetSingleAsync<{domain.ClassName}>(url, node).ConfigureAwait(false);");
+				results.AppendLine();
+				results.AppendLine("\t\t\t\tif (item == null)");
+				results.AppendLine("\t\t\t\t\treturn NotFound();");
+				results.AppendLine();
+				results.AppendLine("\t\t\t\treturn Ok(item);");
+				results.AppendLine("\t\t\t}");
+
 				results.AppendLine("\t\t}");
 				results.AppendLine();
 			}
@@ -330,20 +309,11 @@ namespace COFRSCoreInstaller
 				results.AppendLine();
 			}
 
-			if (replacementsDictionary["$targetframeworkversion$"] == "3.1")
-			{
-				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-				results.AppendLine($"\t\t\titem = await service.AddAsync(item).ConfigureAwait(false);");
-				results.AppendLine($"\t\t\treturn Created(item.href.AbsoluteUri, item);");
-			}
-			else
-			{
-				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-				results.AppendLine("\t\t\t{");
-				results.AppendLine($"\t\t\t\titem = await service.AddAsync(item).ConfigureAwait(false);");
-				results.AppendLine($"\t\t\t\treturn Created(item.href.AbsoluteUri, item);");
-				results.AppendLine("\t\t\t}");
-			}
+			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+			results.AppendLine("\t\t\t{");
+			results.AppendLine($"\t\t\t\titem = await service.AddAsync(item).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\t\treturn Created(item.href.AbsoluteUri, item);");
+			results.AppendLine("\t\t\t}");
 
 			results.AppendLine("\t\t}");
 			results.AppendLine();
@@ -392,20 +362,11 @@ namespace COFRSCoreInstaller
 				results.AppendLine();
 			}
 
-			if (replacementsDictionary["$targetframeworkversion$"] == "3.1")
-			{
-				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-				results.AppendLine($"\t\t\tawait service.UpdateAsync(item, new List<KeyValuePair<string,object>>(), node).ConfigureAwait(false);");
-				results.AppendLine($"\t\t\treturn NoContent();");
-			}
-			else
-			{
-				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-				results.AppendLine("\t\t\t{");
-				results.AppendLine($"\t\t\t\tawait service.UpdateAsync(item).ConfigureAwait(false);");
-				results.AppendLine($"\t\t\t\treturn NoContent();");
-				results.AppendLine("\t\t\t}");
-			}
+			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+			results.AppendLine("\t\t\t{");
+			results.AppendLine($"\t\t\t\tawait service.UpdateAsync(item, new List<KeyValuePair<string, object>>(), node).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\t\treturn NoContent();");
+			results.AppendLine("\t\t\t}");
 
 			results.AppendLine("\t\t}");
 			results.AppendLine();
@@ -457,20 +418,9 @@ namespace COFRSCoreInstaller
 					results.AppendLine();
 				}
 
-				if (replacementsDictionary["$targetframeworkversion$"] == "3.1")
-				{
-					results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-					results.AppendLine($"\t\t\tawait service.PatchAsync<{domain.ClassName}>(url, commands, node).ConfigureAwait(false);");
-					results.AppendLine($"\t\t\treturn NoContent();");
-				}
-				else
-				{
-					results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-					results.AppendLine("\t\t\t{");
-					results.AppendLine($"\t\t\t\tawait service.PatchAsync<{domain.ClassName}>(url, commands).ConfigureAwait(false);");
-					results.AppendLine($"\t\t\t\treturn NoContent();");
-					results.AppendLine("\t\t\t}");
-				}
+				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
+				results.AppendLine($"\t\t\tawait service.PatchAsync<{domain.ClassName}>(url, commands, node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\treturn NoContent();");
 
 				results.AppendLine("\t\t}");
 				results.AppendLine();
@@ -505,6 +455,7 @@ namespace COFRSCoreInstaller
 
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
+				results.AppendLine("\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
 				results.AppendLine();
 				results.AppendLine("\t\t\tvar translationOptions = HttpContext.RequestServices.GetService<ITranslationOptions>();");
 				results.AppendLine($"\t\t\tvar url = new Uri(translationOptions.RootUrl, $\"{BuildRoute(nn.PluralCamelCase, pkcolumns)}\");");
@@ -517,20 +468,11 @@ namespace COFRSCoreInstaller
 					results.AppendLine();
 				}
 
-				if (replacementsDictionary["$targetframeworkversion$"] == "3.1")
-				{
-					results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-					results.AppendLine($"\t\t\tawait service.DeleteAsync<{domain.ClassName}>(url).ConfigureAwait(false);");
-					results.AppendLine($"\t\t\treturn NoContent();");
-				}
-				else
-				{
-					results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-					results.AppendLine("\t\t\t{");
-					results.AppendLine($"\t\t\t\tawait service.DeleteAsync<{domain.ClassName}>(url).ConfigureAwait(false);");
-					results.AppendLine($"\t\t\t\treturn NoContent();");
-					results.AppendLine("\t\t\t}");
-				}
+				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+				results.AppendLine("\t\t\t{");
+				results.AppendLine($"\t\t\t\tawait service.DeleteAsync<{domain.ClassName}>(node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\t\treturn NoContent();");
+				results.AppendLine("\t\t\t}");
 
 				results.AppendLine("\t\t}");
 				results.AppendLine("\t}");

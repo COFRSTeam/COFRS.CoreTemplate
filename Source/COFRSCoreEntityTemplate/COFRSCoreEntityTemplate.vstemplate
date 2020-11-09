@@ -9,7 +9,7 @@
     <TemplateGroupID>AspNetCore</TemplateGroupID>
     <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
     <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
-    <DefaultName>ClassEntity.cs</DefaultName>
+    <DefaultName>EClass.cs</DefaultName>
   </TemplateData>
   <TemplateContent>
     <References>

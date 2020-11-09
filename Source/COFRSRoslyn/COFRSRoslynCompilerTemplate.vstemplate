@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
+  <TemplateData>
+    <Name>COFRS Roslyn Compiler</Name>
+    <Description>The Roslyn Compiler</Description>
+    <Icon>COFRS.ico</Icon>
+    <TemplateID>96da15d1-9b6b-4609-a8dd-2a073eb0f13c</TemplateID>
+    <ProjectType>CSharp</ProjectType>
+    <TemplateGroupID>AspNetCore</TemplateGroupID>
+    <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
+    <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+    <Hidden>true</Hidden>
+  </TemplateData>
+  <TemplateContent>
+    <References>
+      <Reference>
+        <Assembly>System</Assembly>
+      </Reference>
+    </References>
+    <ProjectItem ReplaceParameters="false" ItemType="">csc.exe</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">csc.exe.config</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">csc.rsp</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">csi.exe</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">csi.exe.config</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">csi.rsp</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.Build.Tasks.CodeAnalysis.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.CodeAnalysis.CSharp.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.CodeAnalysis.CSharp.Scripting.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.CodeAnalysis.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.CodeAnalysis.Scripting.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.CodeAnalysis.VisualBasic.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.CSharp.Core.targets</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.DiaSymReader.Native.amd64.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.DiaSymReader.Native.x86.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.Managed.core.targets</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">Microsoft.VisualBasic.core.targets</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">System.Buffers.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">System.Collections.Immutable.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">System.Memory.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">System.Numerics.Vectors.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">System.Reflection.Metadata.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">System.Runtime.CompilerServices.Unsafe.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">System.Text.Encoding.CodePages.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">System.Threading.Tasks.Extensions.dll</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">vbc.exe</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">vbc.exe.config</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">vbc.rsp</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">VBCSCompiler.exe</ProjectItem>
+    <ProjectItem ReplaceParameters="false" ItemType="">VBCSCompiler.exe.config</ProjectItem>
+  </TemplateContent>
+</VSTemplate>

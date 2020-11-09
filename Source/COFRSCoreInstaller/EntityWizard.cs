@@ -111,6 +111,8 @@ namespace COFRSCoreInstaller
 					AppendIndexed(result, ref first);
 				}
 
+				AppendNullable(result, column.IsNullable, ref first);
+
 				if (column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.NVarChar)
 				{
 					AppendFixed(result, column.Length, false, ref first);
@@ -286,6 +288,16 @@ namespace COFRSCoreInstaller
 		{
 			AppendComma(result, ref first);
 			result.Append("IsIndexed = true");
+		}
+
+		private void AppendNullable(StringBuilder result, bool isNullable, ref bool first)
+		{
+			AppendComma(result, ref first);
+
+			if (isNullable)
+				result.Append("IsNullable = true");
+			else
+				result.Append("IsNullable = false");
 		}
 
 		private void AppendIdentity(StringBuilder result, ref bool first)

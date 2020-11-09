@@ -1,4 +1,5 @@
 ﻿using EnvDTE;
+using EnvDTE80;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ namespace COFRSCoreInstaller
 		private string securityModel;
 		private string databaseTechnology;
 		private string logPath;
+		private string SolutionFolder;
 
 		// This method is called before opening any item that
 		// has the OpenInEditor attribute.
@@ -51,6 +53,7 @@ namespace COFRSCoreInstaller
 
 				if (inputForm.ShowDialog() == DialogResult.OK)
 				{
+					SolutionFolder = replacementsDictionary["$destinationdirectory$"];
 
 					framework = inputForm.Framework;
 					securityModel = inputForm.SecurityModel;
@@ -68,7 +71,7 @@ namespace COFRSCoreInstaller
 
 					if (string.Equals(securityModel, "OAuth", StringComparison.OrdinalIgnoreCase))
 					{
-						if ( string.Equals(framework, "netcoreapp2.1", StringComparison.OrdinalIgnoreCase))
+						if (string.Equals(framework, "netcoreapp2.1", StringComparison.OrdinalIgnoreCase))
 							replacementsDictionary.Add("$security$", "OAuth21");
 						else
 							replacementsDictionary.Add("$security$", "OAuth31");
