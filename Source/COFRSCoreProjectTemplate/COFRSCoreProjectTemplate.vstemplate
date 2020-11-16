@@ -5,6 +5,7 @@
     <Description>Create a RESTful Web Service with the COFRS Library.</Description>
     <Icon>COFRS.ico</Icon>
     <ProjectType>CSharp</ProjectType>
+    <ProjectSubType>Web</ProjectSubType>
     <LanguageTag>C#</LanguageTag>
     <ProjectTypeTag>Web</ProjectTypeTag>
     <PlatformTag>Windows</PlatformTag>

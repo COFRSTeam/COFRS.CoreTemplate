@@ -198,9 +198,11 @@ namespace COFRSCoreInstaller
 				results.AppendLine();
 			}
 
-			results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-			results.AppendLine($"\t\t\tvar collection = await service.GetCollectionAsync<{domain.ClassName}>(Request, node).ConfigureAwait(false);");
-			results.AppendLine($"\t\t\treturn Ok(collection);");
+			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+			results.AppendLine($"\t\t\t{{");
+			results.AppendLine($"\t\t\t\tvar collection = await service.GetCollectionAsync<{domain.ClassName}>(Request, node).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\t\treturn Ok(collection);");
+			results.AppendLine($"\t\t\t}}");
 			results.AppendLine("\t\t}");
 
 			results.AppendLine();
@@ -256,13 +258,15 @@ namespace COFRSCoreInstaller
 					results.AppendLine();
 				}
 
-				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-				results.AppendLine($"\t\t\tvar item = await service.GetSingleAsync<{domain.ClassName}>(node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+				results.AppendLine("\t\t\t{");
+				results.AppendLine($"\t\t\t\tvar item = await service.GetSingleAsync<{domain.ClassName}>(node).ConfigureAwait(false);");
 				results.AppendLine();
-				results.AppendLine("\t\t\tif (item == null)");
-				results.AppendLine("\t\t\t\treturn NotFound();");
+				results.AppendLine("\t\t\t\tif (item == null)");
+				results.AppendLine("\t\t\t\t\treturn NotFound();");
 				results.AppendLine();
-				results.AppendLine("\t\t\treturn Ok(item);");
+				results.AppendLine("\t\t\t\treturn Ok(item);");
+				results.AppendLine("\t\t\t}");
 
 				results.AppendLine("\t\t}");
 				results.AppendLine();
@@ -308,10 +312,12 @@ namespace COFRSCoreInstaller
 				results.AppendLine();
 			}
 
-			results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-			results.AppendLine($"\t\t\titem = await service.AddAsync(item).ConfigureAwait(false);");
-			results.AppendLine($"\t\t\treturn Created(item.href.AbsoluteUri, item);");
+			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+			results.AppendLine("\t\t\t{");
+			results.AppendLine($"\t\t\t\titem = await service.AddAsync(item).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\t\treturn Created(item.href.AbsoluteUri, item);");
 
+			results.AppendLine("\t\t\t}");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
 
@@ -360,9 +366,11 @@ namespace COFRSCoreInstaller
 				results.AppendLine();
 			}
 
-			results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-			results.AppendLine($"\t\t\tawait service.UpdateAsync(item, node).ConfigureAwait(false);");
-			results.AppendLine($"\t\t\treturn NoContent();");
+			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+			results.AppendLine("\t\t\t{");
+			results.AppendLine($"\t\t\t\tawait service.UpdateAsync(item, node).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\t\treturn NoContent();");
+			results.AppendLine("\t\t\t}");
 
 			results.AppendLine("\t\t}");
 			results.AppendLine();
@@ -415,10 +423,11 @@ namespace COFRSCoreInstaller
 					results.AppendLine();
 				}
 
-				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-				results.AppendLine($"\t\t\tawait service.PatchAsync<{domain.ClassName}>(commands, node).ConfigureAwait(false);");
-				results.AppendLine($"\t\t\treturn NoContent();");
-
+				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+				results.AppendLine("\t\t\t{");
+				results.AppendLine($"\t\t\t\tawait service.PatchAsync<{domain.ClassName}>(commands, node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\t\treturn NoContent();");
+				results.AppendLine("\t\t\t}");
 				results.AppendLine("\t\t}");
 				results.AppendLine();
 
@@ -466,9 +475,11 @@ namespace COFRSCoreInstaller
 					results.AppendLine();
 				}
 
-				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-				results.AppendLine($"\t\t\tawait service.DeleteAsync<{domain.ClassName}>(node).ConfigureAwait(false);");
-				results.AppendLine($"\t\t\treturn NoContent();");
+				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
+				results.AppendLine("\t\t\t{");
+				results.AppendLine($"\t\t\t\tawait service.DeleteAsync<{domain.ClassName}>(node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\t\treturn NoContent();");
+				results.AppendLine("\t\t\t}");
 
 				results.AppendLine("\t\t}");
 				results.AppendLine("\t}");
