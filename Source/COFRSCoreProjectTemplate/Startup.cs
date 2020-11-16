@@ -83,19 +83,6 @@ namespace $safeprojectname$
 
 			var supportedJsonTypes = new string[] { "application/json", "text/json", "application/vnd.$companymoniker$.v1+json" };
 
-			var defaultSettings = new JsonSerializerSettings
-			{
-				NullValueHandling = NullValueHandling.Ignore,
-				Formatting = Formatting.Indented,
-				Converters = new List<JsonConverter>
-					{
-						new ApiJsonEnumConverter(),
-						new ApiJsonByteArrayConverter()
-					}
-			};
-
-			JsonConvert.DefaultSettings = () => { return defaultSettings; };
-
 			$if$ ($framework$ == netcoreapp2.1)services.AddMvc(mvcOptions =>
 			{
 				var serviceProvider = services.BuildServiceProvider();

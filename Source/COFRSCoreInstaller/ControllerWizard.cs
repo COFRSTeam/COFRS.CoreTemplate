@@ -194,7 +194,7 @@ namespace COFRSCoreInstaller
 			if (hasValidator)
 			{
 				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
-				results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(Request, node).ConfigureAwait(false);");
+				results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(node).ConfigureAwait(false);");
 				results.AppendLine();
 			}
 
@@ -242,28 +242,27 @@ namespace COFRSCoreInstaller
 
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
 				results.AppendLine();
 				results.AppendLine("\t\t\tvar translationOptions = HttpContext.RequestServices.GetService<ITranslationOptions>();");
 				results.AppendLine($"\t\t\tvar url = new Uri(translationOptions.RootUrl, $\"{BuildRoute(nn.PluralCamelCase, pkcolumns)}\");");
 				results.AppendLine();
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"href={{url.AbsoluteUri}}\")");
+				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				if (hasValidator)
 				{
 					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
-					results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(url, Request.QueryString).ConfigureAwait(false);");
+					results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(node).ConfigureAwait(false);");
 					results.AppendLine();
 				}
 
-				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-				results.AppendLine("\t\t\t{");
-				results.AppendLine($"\t\t\t\tvar item = await service.GetSingleAsync<{domain.ClassName}>(url, node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
+				results.AppendLine($"\t\t\tvar item = await service.GetSingleAsync<{domain.ClassName}>(node).ConfigureAwait(false);");
 				results.AppendLine();
-				results.AppendLine("\t\t\t\tif (item == null)");
-				results.AppendLine("\t\t\t\t\treturn NotFound();");
+				results.AppendLine("\t\t\tif (item == null)");
+				results.AppendLine("\t\t\t\treturn NotFound();");
 				results.AppendLine();
-				results.AppendLine("\t\t\t\treturn Ok(item);");
-				results.AppendLine("\t\t\t}");
+				results.AppendLine("\t\t\treturn Ok(item);");
 
 				results.AppendLine("\t\t}");
 				results.AppendLine();
@@ -309,11 +308,9 @@ namespace COFRSCoreInstaller
 				results.AppendLine();
 			}
 
-			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-			results.AppendLine("\t\t\t{");
-			results.AppendLine($"\t\t\t\titem = await service.AddAsync(item).ConfigureAwait(false);");
-			results.AppendLine($"\t\t\t\treturn Created(item.href.AbsoluteUri, item);");
-			results.AppendLine("\t\t\t}");
+			results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
+			results.AppendLine($"\t\t\titem = await service.AddAsync(item).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\treturn Created(item.href.AbsoluteUri, item);");
 
 			results.AppendLine("\t\t}");
 			results.AppendLine();
@@ -352,21 +349,20 @@ namespace COFRSCoreInstaller
 			results.AppendLine($"\t\tpublic async Task<IActionResult> Update{domain.ClassName}Async([FromBody] {domain.ClassName} item)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-			results.AppendLine("\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
+			results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"href={{item.href.AbsoluteUri}}\")");
+			results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 			results.AppendLine();
 
 			if (hasValidator)
 			{
 				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
-				results.AppendLine("\t\t\tawait validator.ValidateForUpdateAsync(item).ConfigureAwait(false);");
+				results.AppendLine("\t\t\tawait validator.ValidateForUpdateAsync(item, node).ConfigureAwait(false);");
 				results.AppendLine();
 			}
 
-			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-			results.AppendLine("\t\t\t{");
-			results.AppendLine($"\t\t\t\tawait service.UpdateAsync(item, new List<KeyValuePair<string, object>>(), node).ConfigureAwait(false);");
-			results.AppendLine($"\t\t\t\treturn NoContent();");
-			results.AppendLine("\t\t\t}");
+			results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
+			results.AppendLine($"\t\t\tawait service.UpdateAsync(item, node).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\treturn NoContent();");
 
 			results.AppendLine("\t\t}");
 			results.AppendLine();
@@ -405,21 +401,22 @@ namespace COFRSCoreInstaller
 
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-				results.AppendLine("\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
 				results.AppendLine();
 				results.AppendLine("\t\t\tvar translationOptions = HttpContext.RequestServices.GetService<ITranslationOptions>();");
 				results.AppendLine($"\t\t\tvar url = new Uri(translationOptions.RootUrl, $\"{BuildRoute(nn.PluralCamelCase, pkcolumns)}\");");
 				results.AppendLine();
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"href={{url.AbsoluteUri}}\")");
+				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				if (hasValidator)
 				{
 					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
-					results.AppendLine("\t\t\tawait validator.ValidateForPatchAsync(url, commands).ConfigureAwait(false);");
+					results.AppendLine("\t\t\tawait validator.ValidateForPatchAsync(commands, node).ConfigureAwait(false);");
 					results.AppendLine();
 				}
 
 				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-				results.AppendLine($"\t\t\tawait service.PatchAsync<{domain.ClassName}>(url, commands, node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\tawait service.PatchAsync<{domain.ClassName}>(commands, node).ConfigureAwait(false);");
 				results.AppendLine($"\t\t\treturn NoContent();");
 
 				results.AppendLine("\t\t}");
@@ -455,24 +452,23 @@ namespace COFRSCoreInstaller
 
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-				results.AppendLine("\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
 				results.AppendLine();
 				results.AppendLine("\t\t\tvar translationOptions = HttpContext.RequestServices.GetService<ITranslationOptions>();");
 				results.AppendLine($"\t\t\tvar url = new Uri(translationOptions.RootUrl, $\"{BuildRoute(nn.PluralCamelCase, pkcolumns)}\");");
 				results.AppendLine();
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"href={{url.AbsoluteUri}}\")");
+				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				if (hasValidator)
 				{
 					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
-					results.AppendLine("\t\t\tawait validator.ValidateForDeleteAsync(url).ConfigureAwait(false);");
+					results.AppendLine("\t\t\tawait validator.ValidateForDeleteAsync(node).ConfigureAwait(false);");
 					results.AppendLine();
 				}
 
-				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
-				results.AppendLine("\t\t\t{");
-				results.AppendLine($"\t\t\t\tawait service.DeleteAsync<{domain.ClassName}>(node).ConfigureAwait(false);");
-				results.AppendLine($"\t\t\t\treturn NoContent();");
-				results.AppendLine("\t\t\t}");
+				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
+				results.AppendLine($"\t\t\tawait service.DeleteAsync<{domain.ClassName}>(node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\treturn NoContent();");
 
 				results.AppendLine("\t\t}");
 				results.AppendLine("\t}");

@@ -40,12 +40,29 @@ namespace $safeprojectname$.App_Start
 
 			services.AddSingleton<ICacheProvider>(new DefaultCacheProvider(Configuration.GetSection("ApiSettings").GetValue<int>("CacheLimit")));
 
+			//	Configure API Settings
 			ApiOptions = ApiOptions.Load(Configuration);
 			services.InitializeFactories();
 			services.AddSingleton<IApiOptions>(ApiOptions);
 
+			//	Configure Translation options
 			TranslationOptions = new TranslationOptions(Configuration.GetSection("ApiSettings").GetValue<string>("RootUrl"));
 			services.AddSingleton<ITranslationOptions>(TranslationOptions);
+
+			//	Configure JSON formatting
+			var defaultSettings = new JsonSerializerSettings
+			{
+				NullValueHandling = NullValueHandling.Ignore,	//	Null values are omitted from JSON output 
+				Formatting = Formatting.Indented,
+				Converters = new List<JsonConverter>
+				{
+					new ApiJsonEnumConverter(),					//	Enums will be output as ALL CAPS
+					new ApiJsonByteArrayConverter()				//	Byte Arrays are output as Base 64 Strings
+				}
+			};
+
+			JsonConvert.DefaultSettings = () => { return defaultSettings; };
+			services.AddSingleton<JsonSerializerSettings>(defaultSettings);
 
 			var myAssembly = Assembly.GetExecutingAssembly();
 			AutoMapperFactory.MapperConfiguration = new MapperConfiguration(cfg => cfg.AddMaps(myAssembly));

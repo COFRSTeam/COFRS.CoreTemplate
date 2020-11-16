@@ -16,7 +16,6 @@ namespace COFRSCoreInstaller
 		private string securityModel;
 		private string databaseTechnology;
 		private string logPath;
-		private string SolutionFolder;
 
 		// This method is called before opening any item that
 		// has the OpenInEditor attribute.
@@ -53,8 +52,6 @@ namespace COFRSCoreInstaller
 
 				if (inputForm.ShowDialog() == DialogResult.OK)
 				{
-					SolutionFolder = replacementsDictionary["$destinationdirectory$"];
-
 					framework = inputForm.Framework;
 					securityModel = inputForm.SecurityModel;
 					databaseTechnology = inputForm.DatabaseTechnology;

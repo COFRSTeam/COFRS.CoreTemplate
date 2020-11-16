@@ -302,7 +302,7 @@ namespace COFRSCoreInstaller
 			return isNullable;
 		}
 
-		private void EmitChildSet(StringBuilder results, ClassMember member, ref bool first, ref bool subFirst)
+		private void EmitChildSet(StringBuilder results, ClassMember member, ref bool subFirst)
 		{
 			if (member.EntityNames.Count > 0)
 			{
@@ -375,7 +375,7 @@ namespace COFRSCoreInstaller
 					subFirst = true;
 					foreach (var childMember in member.ChildMembers)
 					{
-						EmitChildSet(results, childMember, ref first, ref subFirst);
+						EmitChildSet(results, childMember, ref subFirst);
 					}
 
 					results.Append("}))");
@@ -406,7 +406,7 @@ namespace COFRSCoreInstaller
 						bool subFirst = true;
 						foreach (var childMember in member.ChildMembers)
 						{
-							EmitChildSet(results, childMember, ref first, ref subFirst);
+							EmitChildSet(results, childMember, ref subFirst);
 						}
 
 						results.Append($"}}))");
