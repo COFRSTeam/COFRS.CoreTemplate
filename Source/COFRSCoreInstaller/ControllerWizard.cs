@@ -60,22 +60,22 @@ namespace COFRSCoreInstaller
 				if (form.ShowDialog() == DialogResult.OK)
 				{
 					bool hasValidator = false;
-					var classFile = (EntityClassFile)form._entityModelList.SelectedItem;
-					var domainFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
+					var entityClassFile = (EntityClassFile)form._entityModelList.SelectedItem;
+					var resourceClassFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
+					var moniker = LoadMoniker(SolutionFolder);
 
 					Orchestrator = null;
 					ExampleClass = null;
 					ValidatorClass = null;
-					CollectionExampleClass = null;
 
-					LoadClassList(domainFile.ClassName);
+					LoadClassList(resourceClassFile.ClassName);
 					var policy = LoadPolicy(SolutionFolder);
-					var moniker = LoadMoniker(SolutionFolder);
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
+					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
 					replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
-					replacementsDictionary.Add("$entitynamespace$", classFile.ClassNameSpace);
-					replacementsDictionary.Add("$domainnamespace$", domainFile.ClassNamespace);
+					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
+					replacementsDictionary.Add("$domainnamespace$", resourceClassFile.ClassNamespace);
 					replacementsDictionary.Add("$orchestrationnamespace$", Orchestrator.ClassNamespace);
 
 					if (ValidatorClass != null)
@@ -96,8 +96,8 @@ namespace COFRSCoreInstaller
 
 					var model = Emit(replacementsDictionary,
 									 hasValidator,
-									 domainFile,
-									 classFile,
+									 resourceClassFile,
+									 entityClassFile,
 									 policy,
 									 form.DatabaseColumns);
 					

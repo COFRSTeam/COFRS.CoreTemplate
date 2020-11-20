@@ -35,19 +35,21 @@
       <Folder Name="Controllers">
         <ProjectItem ReplaceParameters="true">HeartbeatController.cs</ProjectItem>
       </Folder>
-      <Folder Name="Orchestration">
+      <Folder Name="Models">
         <Folder Name="ResourceModels">
           <ProjectItem ReplaceParameters="true">Heartbeat.cs</ProjectItem>
         </Folder>
+        <Folder Name="SwaggerExamples">
+          <ProjectItem ReplaceParameters="true">HeartbeatExample.cs</ProjectItem>
+        </Folder>
+      </Folder>
+      <Folder Name="Orchestration">
         <ProjectItem ReplaceParameters="true">IServiceOrchestrator.cs</ProjectItem>
         <ProjectItem ReplaceParameters="true">ServiceOrchestrator.cs</ProjectItem>
       </Folder>
       <Folder Name="Repository">
         <ProjectItem ReplaceParameters="true">IServiceRepository.cs</ProjectItem>
         <ProjectItem ReplaceParameters="true">ServiceRepository.cs</ProjectItem>
-      </Folder>
-      <Folder Name="SwaggerExamples">
-        <ProjectItem ReplaceParameters="true">HeartbeatExample.cs</ProjectItem>
       </Folder>
       <Folder Name="Properties">
         <ProjectItem ReplaceParameters="true" >launchSettings.json</ProjectItem>

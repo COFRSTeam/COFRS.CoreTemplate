@@ -679,7 +679,7 @@ SELECT TABLE_SCHEMA, TABLE_NAME FROM information_schema.tables
 					string connectionString;
 
 					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-						connectionString = $"Server ={server.ServerName};Database={db};Trusted_Connection=True;";
+						connectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
 					else
 						connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
 

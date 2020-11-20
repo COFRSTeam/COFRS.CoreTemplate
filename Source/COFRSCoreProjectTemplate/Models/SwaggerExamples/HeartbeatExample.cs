@@ -1,7 +1,7 @@
 ﻿using $safeprojectname$.Orchestration.ResourceModels;
 using Swashbuckle.AspNetCore.Filters;
 
-namespace $safeprojectname$.SwaggerExamples
+namespace $safeprojectname$.Models.SwaggerExamples
 {
 	/// <summary>
 	/// Example of Heartbeat object

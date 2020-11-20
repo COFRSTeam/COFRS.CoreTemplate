@@ -1,4 +1,4 @@
-﻿namespace $safeprojectname$.Orchestration.ResourceModels
+﻿namespace $safeprojectname$.Models.ResourceModels
 {
 	///	<summary>
 	///	A message used to verify that the service is running.

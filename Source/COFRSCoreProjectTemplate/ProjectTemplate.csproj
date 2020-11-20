@@ -12,8 +12,8 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="10.1.1" />
     <PackageReference Include="COFRS.Common" Version="0.0.1-alpha" />
-    <PackageReference Include="COFRS" Version="0.0.3-alpha" />
-    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.3-alpha" />
+    <PackageReference Include="COFRS" Version="0.0.4-alpha" />
+    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.4-alpha" />
     $endif$$if$ ($databaseTechnology$ == Postgresql)<PackageReference Include="COFRS.Postgresql" Version="0.0.3-alpha" />
     $endif$$if$ ($databaseTechnology$ == MySQL)<PackageReference Include="COFRS.MySql" Version="0.0.3-alpha" />
     $endif$$if$ ($securitymodel$ == OAuth)<PackageReference Include="COFRS.OAuth" Version="0.0.1-alpha" />
@@ -44,10 +44,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="App_Data\"/>
-    <Folder Include="App_Start\Mapping\"/>
+    <Folder Include="Models\Mapping\"/>
+    <Folder Include="Models\EntityModels\"/>
     <Folder Include="Validation\"/>
-    <Folder Include="Repository\EntityModels\"/>
   </ItemGroup>
 
 </Project>
