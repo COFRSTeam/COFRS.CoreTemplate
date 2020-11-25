@@ -1,4 +1,4 @@
-﻿using $safeprojectname$.Orchestration.ResourceModels;
+﻿using $safeprojectname$.Models.ResourceModels;
 using Swashbuckle.AspNetCore.Filters;
 
 namespace $safeprojectname$.Models.SwaggerExamples
@@ -16,7 +16,7 @@ namespace $safeprojectname$.Models.SwaggerExamples
 		{
 			return new Heartbeat()
 			{
-				Message = "InventoryService is running"
+				Message = "$safeprojectname$ is running"
 			};
 		}
 	}

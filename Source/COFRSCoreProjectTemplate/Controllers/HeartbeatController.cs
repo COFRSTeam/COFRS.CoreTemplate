@@ -4,8 +4,8 @@ $if$ ( $securitymodel$ == OAuth )using Microsoft.AspNetCore.Authorization;
 $endif$using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Filters;
-using $safeprojectname$.Orchestration.ResourceModels;
-using $safeprojectname$.SwaggerExamples;
+using $safeprojectname$.Models.ResourceModels; 
+using $safeprojectname$.Models.SwaggerExamples;
 
 namespace $safeprojectname$.Controllers
 {
