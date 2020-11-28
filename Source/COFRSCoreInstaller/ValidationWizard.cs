@@ -216,15 +216,15 @@ namespace COFRSCoreInstaller
 
 			results.AppendLine("\t\t\tforeach (var command in patchCommands)");
 			results.AppendLine("\t\t\t{");
-			results.AppendLine("\t\t\t\tif (string.Equals(command.op, \"replace\", StringComparison.OrdinalIgnoreCase))");
+			results.AppendLine("\t\t\t\tif (string.Equals(command.Op, \"replace\", StringComparison.OrdinalIgnoreCase))");
 			results.AppendLine("\t\t\t\t{");
 
 			results.AppendLine("\t\t\t\t}");
-			results.AppendLine("\t\t\t\telse if (string.Equals(command.op, \"add\", StringComparison.OrdinalIgnoreCase))");
+			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"add\", StringComparison.OrdinalIgnoreCase))");
 			results.AppendLine("\t\t\t\t{");
 
 			results.AppendLine("\t\t\t\t}");
-			results.AppendLine("\t\t\t\telse if (string.Equals(command.op, \"delete\", StringComparison.OrdinalIgnoreCase))");
+			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"delete\", StringComparison.OrdinalIgnoreCase))");
 			results.AppendLine("\t\t\t\t{");
 
 			results.AppendLine("\t\t\t\t}");
@@ -341,8 +341,7 @@ namespace COFRSCoreInstaller
 											if (line.ToLower().Contains(($"services.AddTransientWithParameters<I{domainClassFile.ClassName}Validator, {replacementsDictionary["$safeitemname$"]}>()").ToLower()))
 												validatorRegistered = true;
 
-											if (line.Contains("{"))
-												state++;
+											state += line.CountOf('{') - line.CountOf('}');
 
 											if (line.Contains("return ApiOptions;"))
 												state--;
@@ -358,11 +357,7 @@ namespace COFRSCoreInstaller
 										}
 										else
 										{
-											if (line.Contains("{"))
-												state++;
-
-											if (line.Contains("}"))
-												state--;
+											state += line.CountOf('{') - line.CountOf('}');
 										}
 
 										writer.WriteLine(line);

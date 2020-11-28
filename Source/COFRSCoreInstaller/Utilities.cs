@@ -57,14 +57,14 @@ namespace COFRSCoreInstaller
 
 						if (column.IsPrimaryKey)
 						{
-							var member = members.FirstOrDefault(m => string.Equals(m.DomainName, "href", StringComparison.OrdinalIgnoreCase));
+							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, "href", StringComparison.OrdinalIgnoreCase));
 
 							if (member == null)
 							{
 								member = new ClassMember()
 								{
-									DomainName = "href",
-									DomainType = string.Empty,
+									ResourceMemberName = "Href",
+									ResourceMemberType = string.Empty,
 									EntityNames = new List<DBColumn>(),
 									ChildMembers = new List<ClassMember>()
 								};
@@ -107,19 +107,19 @@ namespace COFRSCoreInstaller
 								shortColumnName = column.ForeignTableName;
 
 							var normalizer = new NameNormalizer(shortColumnName);
-							var domainName = normalizer.PluralCamelCase;
+							var domainName = normalizer.PluralForm;
 
 							if (string.Equals(shortColumnName, normalizer.SingleForm, StringComparison.OrdinalIgnoreCase))
-								domainName = normalizer.SingleCamelCase;
+								domainName = normalizer.SingleForm;
 
-							var member = members.FirstOrDefault(m => string.Equals(m.DomainName, domainName, StringComparison.OrdinalIgnoreCase));
+							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, domainName, StringComparison.OrdinalIgnoreCase));
 
 							if (member == null)
 							{
 								member = new ClassMember()
 								{
-									DomainName = domainName,
-									DomainType = string.Empty,
+									ResourceMemberName = domainName,
+									ResourceMemberType = string.Empty,
 									EntityNames = new List<DBColumn>(),
 									ChildMembers = new List<ClassMember>()
 								};
@@ -151,22 +151,22 @@ namespace COFRSCoreInstaller
 						else
 						{
 							var normalizer = new NameNormalizer(column.EntityName);
-							var domainName = normalizer.PluralCamelCase;
+							var domainName = normalizer.PluralForm;
 
 							if (string.Equals(column.EntityName, normalizer.SingleForm, StringComparison.OrdinalIgnoreCase))
-								domainName = normalizer.SingleCamelCase;
+								domainName = normalizer.SingleForm;
 
-							var member = members.FirstOrDefault(m => string.Equals(m.DomainName, domainName, StringComparison.OrdinalIgnoreCase));
+							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, domainName, StringComparison.OrdinalIgnoreCase));
 
 							if (member == null)
 							{
 								ClassMember potentialMember = null;
 
-								potentialMember = members.FirstOrDefault(m => domainName.Length > m.DomainName.Length ? string.Equals(m.DomainName, domainName.Substring(0, m.DomainName.Length), StringComparison.OrdinalIgnoreCase) :  false);
+								potentialMember = members.FirstOrDefault(m => domainName.Length > m.ResourceMemberName.Length ? string.Equals(m.ResourceMemberName, domainName.Substring(0, m.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase) :  false);
 
 								if (potentialMember != null)
 								{
-									var childMember = potentialMember.ChildMembers.FirstOrDefault(c => string.Equals(c.DomainName, domainName.Substring(potentialMember.DomainName.Length), StringComparison.OrdinalIgnoreCase));
+									var childMember = potentialMember.ChildMembers.FirstOrDefault(c => string.Equals(c.ResourceMemberName, domainName.Substring(potentialMember.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase));
 
 									if (childMember != null)
 										member = childMember;
@@ -177,8 +177,8 @@ namespace COFRSCoreInstaller
 							{
 								member = new ClassMember()
 								{
-									DomainName = domainName,
-									DomainType = string.Empty,
+									ResourceMemberName = domainName,
+									ResourceMemberType = string.Empty,
 									EntityNames = new List<DBColumn>(),
 									ChildMembers = new List<ClassMember>()
 								};
@@ -214,14 +214,14 @@ namespace COFRSCoreInstaller
 			return members;
 		}
 
-		public static List<ClassMember> LoadClassColumns(string domainFileName, string entityFileName, List<DBColumn> columns)
+		public static List<ClassMember> LoadClassColumns(string resourceFileName, string entityFileName, List<DBColumn> columns)
 		{
 			List<ClassMember> members = new List<ClassMember>();
 			string tableName = string.Empty;
 
-			var domainContent = File.ReadAllText(domainFileName).Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+			var resourceContent = File.ReadAllText(resourceFileName).Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
-			foreach (var line in domainContent)
+			foreach (var line in resourceContent)
 			{
 				var match = Regex.Match(line, "[ \\t]*public[ \\t]+(?<datatype>[^ \\t]+)[ \\t]+(?<column>[a-zA-Z0-9_]+)[ \\t]*\\{[ \\t]*get\\;[ \\t]*set\\;[ \\t]*\\}");
 				if (match.Success)
@@ -231,13 +231,13 @@ namespace COFRSCoreInstaller
 
 					var member = new ClassMember()
 					{
-						DomainName = memberName,
-						DomainType = dataType,
+						ResourceMemberName = memberName,
+						ResourceMemberType = dataType,
 						EntityNames = new List<DBColumn>(),
 						ChildMembers = new List<ClassMember>()
 					};
 
-					LoadChildMembers(Path.GetDirectoryName(domainFileName), member);
+					LoadChildMembers(Path.GetDirectoryName(resourceFileName), member);
 
 					members.Add(member);
 				}
@@ -284,14 +284,14 @@ namespace COFRSCoreInstaller
 
 						if (column.IsPrimaryKey)
 						{
-							var member = members.FirstOrDefault(m => string.Equals(m.DomainName, "href", StringComparison.OrdinalIgnoreCase));
+							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, "href", StringComparison.OrdinalIgnoreCase));
 
 							if (member == null)
 							{
 								member = new ClassMember()
 								{
-									DomainName = string.Empty,
-									DomainType = string.Empty,
+									ResourceMemberName = string.Empty,
+									ResourceMemberType = string.Empty,
 									EntityNames = new List<DBColumn>(),
 									ChildMembers = new List<ClassMember>()
 								};
@@ -334,19 +334,19 @@ namespace COFRSCoreInstaller
 								shortColumnName = column.ForeignTableName;
 
 							var normalizer = new NameNormalizer(shortColumnName);
-							var domainName = normalizer.PluralCamelCase;
+							var domainName = normalizer.PluralForm;
 
 							if (string.Equals(shortColumnName, normalizer.SingleForm, StringComparison.OrdinalIgnoreCase))
-								domainName = normalizer.SingleCamelCase;
+								domainName = normalizer.SingleForm;
 
-							var member = members.FirstOrDefault(m => string.Equals(m.DomainName, domainName, StringComparison.OrdinalIgnoreCase));
+							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, domainName, StringComparison.OrdinalIgnoreCase));
 
 							if (member == null)
 							{
 								member = new ClassMember()
 								{
-									DomainName = string.Empty,
-									DomainType = string.Empty,
+									ResourceMemberName = string.Empty,
+									ResourceMemberType = string.Empty,
 									EntityNames = new List<DBColumn>(),
 									ChildMembers = new List<ClassMember>()
 								};
@@ -378,20 +378,20 @@ namespace COFRSCoreInstaller
 						else
 						{
 							var normalizer = new NameNormalizer(column.EntityName);
-							var domainName = normalizer.PluralCamelCase;
+							var domainName = normalizer.PluralForm;
 
 							if (string.Equals(column.EntityName, normalizer.SingleForm, StringComparison.OrdinalIgnoreCase))
-								domainName = normalizer.SingleCamelCase;
+								domainName = normalizer.SingleForm;
 
-							var member = members.FirstOrDefault(m => string.Equals(m.DomainName, domainName, StringComparison.OrdinalIgnoreCase));
+							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, domainName, StringComparison.OrdinalIgnoreCase));
 
 							if (member == null)
 							{
-								var potentialMember = members.FirstOrDefault(m => domainName.Length > m.DomainName.Length ? string.Equals(m.DomainName, domainName.Substring(0, m.DomainName.Length), StringComparison.OrdinalIgnoreCase) : false);
+								var potentialMember = members.FirstOrDefault(m => domainName.Length > m.ResourceMemberName.Length ? string.Equals(m.ResourceMemberName, domainName.Substring(0, m.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase) : false);
 
 								if (potentialMember != null)
 								{
-									var childMember = potentialMember.ChildMembers.FirstOrDefault(c => string.Equals(c.DomainName, domainName.Substring(potentialMember.DomainName.Length), StringComparison.OrdinalIgnoreCase));
+									var childMember = potentialMember.ChildMembers.FirstOrDefault(c => string.Equals(c.ResourceMemberName, domainName.Substring(potentialMember.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase));
 
 									if (childMember != null)
 										member = childMember;
@@ -402,8 +402,8 @@ namespace COFRSCoreInstaller
 							{
 								member = new ClassMember()
 								{
-									DomainName = string.Empty,
-									DomainType = string.Empty,
+									ResourceMemberName = string.Empty,
+									ResourceMemberType = string.Empty,
 									EntityNames = new List<DBColumn>(),
 									ChildMembers = new List<ClassMember>()
 								};
@@ -502,7 +502,7 @@ namespace COFRSCoreInstaller
 
 		private static void LoadChildMembers(string folder, ClassMember member)
 		{
-			var fileName = FindFile(folder, member.DomainType + ".cs");
+			var fileName = FindFile(folder, member.ResourceMemberType + ".cs");
 
 			if (!string.IsNullOrWhiteSpace(fileName))
 			{
@@ -518,8 +518,8 @@ namespace COFRSCoreInstaller
 
 						var childMember = new ClassMember()
 						{
-							DomainName = memberName,
-							DomainType = dataType,
+							ResourceMemberName = memberName,
+							ResourceMemberType = dataType,
 							EntityNames = new List<DBColumn>(),
 							ChildMembers = new List<ClassMember>()
 						};

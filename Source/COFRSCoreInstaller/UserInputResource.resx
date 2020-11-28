@@ -118,6 +118,6 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="label11.Text" xml:space="preserve">
-    <value>Select the server, database and table that contains the resource you wish to generate. Once selected, the Entity class dropdown will show the corresponding entity model. An entity model for the resource must exist before  you can create a domain model. Once the entity model is identified, press OK to generate the corresponding domain model.</value>
+    <value>Select the server, database and table that contains the resource you wish to generate. Once selected, the Entity class dropdown will show the corresponding entity model. An entity model for the resource must exist before  you can create a resource model. Once the entity model is identified, press OK to generate the corresponding resource model.</value>
   </data>
 </root>

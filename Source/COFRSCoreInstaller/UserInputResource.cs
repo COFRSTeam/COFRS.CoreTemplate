@@ -530,18 +530,6 @@ select c.name as column_name,
 										ServerType = DBServerType.SQLSERVER
 									};
 
-									if (string.Equals(dbColumn.dbDataType, "geometry", StringComparison.OrdinalIgnoreCase))
-									{
-										_tableList.SelectedIndex = -1;
-										throw new Exception("COFRS .NET Core does not support the SQL Server geometry data type.");
-									}
-
-									if (string.Equals(dbColumn.dbDataType, "geography", StringComparison.OrdinalIgnoreCase))
-									{
-										_tableList.SelectedIndex = -1;
-										throw new Exception("COFRS .NET Core does not support the SQL Server geography data type.");
-									}
-
 									DatabaseColumns.Add(dbColumn);
 								}
 							}

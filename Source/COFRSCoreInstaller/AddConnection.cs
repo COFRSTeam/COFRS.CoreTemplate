@@ -30,6 +30,15 @@ namespace COFRSCoreInstaller
 
 			_portNumber.Location = new Point(133, 63);
 
+			_userNameLabel.Enabled = true;
+			_userName.Enabled = true;
+			_passwordLabel.Enabled = true;
+			_password.Enabled = true;
+			_rememberPassword.Checked = false;
+			_rememberPassword.Enabled = true;
+			_portNumber.Value = _dbServerType.SelectedIndex == 0 ? 3306 : 5432;
+			_authentication.SelectedIndex = 1;
+
 			if (_dbServerType.SelectedIndex == 0 || _dbServerType.SelectedIndex == 1)
 			{
 				_authentication.Enabled = false;
@@ -42,19 +51,19 @@ namespace COFRSCoreInstaller
 			{
 				_authentication.Enabled = true;
 				_authentication.Show();
+				_authentication.SelectedIndex = 0;
 				_authenticationLabel.Text = "Authentication";
 				_portNumber.Hide();
 				_portNumber.Enabled = false;
+
+				_userNameLabel.Enabled = false;
+				_userName.Enabled = false;
+				_passwordLabel.Enabled = false;
+				_password.Enabled = false;
+				_rememberPassword.Checked = false;
+				_rememberPassword.Enabled = false;
 			}
 
-			_portNumber.Value = _dbServerType.SelectedIndex == 0 ? 3306 : 5432;
-			_authentication.SelectedIndex = 1;
-			_userNameLabel.Enabled = true;
-			_userName.Enabled = true;
-			_passwordLabel.Enabled = true;
-			_password.Enabled = true;
-			_rememberPassword.Checked = false;
-			_rememberPassword.Enabled = true;
 			_checkConnectionResult.Text = "Connection is not verified";
 			_checkConnectionResult.ForeColor = Color.Red;
 
@@ -264,21 +273,21 @@ namespace COFRSCoreInstaller
 
 				if (_authentication.SelectedIndex == 1)
 				{
-					_userNameLabel.Enabled = false;
-					_userName.Enabled = false;
-					_passwordLabel.Enabled = false;
-					_password.Enabled = false;
-					_rememberPassword.Checked = false;
-					_rememberPassword.Enabled = false;
-				}
-				else
-				{
 					_userNameLabel.Enabled = true;
 					_userName.Enabled = true;
 					_passwordLabel.Enabled = true;
 					_password.Enabled = true;
 					_rememberPassword.Checked = true;
 					_rememberPassword.Enabled = true;
+				}
+				else
+				{
+					_userNameLabel.Enabled = false;
+					_userName.Enabled = false;
+					_passwordLabel.Enabled = false;
+					_password.Enabled = false;
+					_rememberPassword.Checked = false;
+					_rememberPassword.Enabled = false;
 				}
 			}
 		}
