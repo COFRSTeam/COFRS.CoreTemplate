@@ -57,7 +57,7 @@ namespace COFRSCoreInstaller
 
 						if (column.IsPrimaryKey)
 						{
-							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, "href", StringComparison.OrdinalIgnoreCase));
+							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, "Href", StringComparison.OrdinalIgnoreCase));
 
 							if (member == null)
 							{

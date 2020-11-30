@@ -261,6 +261,11 @@
             <see langword="true"/> if the column is fixed length; otherwise, <see langword="false"/>.
             </summary>
         </member>
+        <member name="P:COFRS.MemberAttribute.IsNullable">
+            <summary>
+            <see langword="true"/> if the column can be null; otherwise, <see langword="false"/>.
+            </summary>
+        </member>
         <member name="P:COFRS.MemberAttribute.AutoField">
             <summary>
             <see langword="true"/> if the column is auto populated by the database on insert; otherwise, <see langword="false"/>.
@@ -270,6 +275,40 @@
             <summary>
             Represents the native data type of the member as defined by the database.
             </summary>
+        </member>
+        <member name="T:COFRS.ProducesAttribute">
+            <summary>
+            Place on a controller application to indicate what type of output the operation produces
+            </summary>
+        </member>
+        <member name="P:COFRS.ProducesAttribute.ContentTypes">
+            <summary>
+            The list of supported content types
+            </summary>
+        </member>
+        <member name="M:COFRS.ProducesAttribute.#ctor(System.String,System.String[])">
+            <summary>
+            Instantiates a produces addribute
+            </summary>
+            <param name="contentType"></param>
+            <param name="additionalContentTypes"></param>
+        </member>
+        <member name="T:COFRS.ConsumesAttribute">
+            <summary>
+            Place on a controller application to indicate what type of input the operation consumes
+            </summary>
+        </member>
+        <member name="P:COFRS.ConsumesAttribute.ContentTypes">
+            <summary>
+            The list of supported content types
+            </summary>
+        </member>
+        <member name="M:COFRS.ConsumesAttribute.#ctor(System.String,System.String[])">
+            <summary>
+            Instantiates a produces addribute
+            </summary>
+            <param name="contentType"></param>
+            <param name="additionalContentTypes"></param>
         </member>
         <member name="T:COFRS.StringEnumHelper">
             <summary>
@@ -444,13 +483,27 @@
         </member>
         <member name="T:COFRS.DefaultCacheProvider">
             <summary>
-            COFRS Default Cache Provider
+            Default Cache PRovider
             </summary>
         </member>
         <member name="M:COFRS.DefaultCacheProvider.#ctor(System.Int32)">
             <summary>
             Instantiates a default cache provider
             </summary>
+        </member>
+        <member name="M:COFRS.DefaultCacheProvider.Contains(System.String)">
+            <summary>
+            Does the cache contain the item and is it still valid?
+            </summary>
+            <param name="etag"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.DefaultCacheProvider.Set(System.Net.Http.HttpContent)">
+            <summary>
+            Stores a new object into the cache, returning the etag
+            </summary>
+            <param name="result"></param>
+            <returns></returns>
         </member>
         <member name="M:COFRS.DefaultCacheProvider.RemoveItems(System.String)">
             <summary>
@@ -462,20 +515,6 @@
             <summary>
             Cleanup Thread
             </summary>
-        </member>
-        <member name="M:COFRS.DefaultCacheProvider.Contains(System.String)">
-            <summary>
-            Does the cache contain the item and is it still valid?
-            </summary>
-            <param name="etag"></param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.DefaultCacheProvider.Set(Microsoft.AspNetCore.Mvc.IActionResult)">
-            <summary>
-            Set an item in the cache
-            </summary>
-            <param name="result"></param>
-            <returns></returns>
         </member>
         <member name="M:COFRS.DefaultCacheProvider.Dispose(System.Boolean)">
             <summary>
@@ -505,7 +544,7 @@
             <param name="etag"></param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.ICacheProvider.Set(Microsoft.AspNetCore.Mvc.IActionResult)">
+        <member name="M:COFRS.ICacheProvider.Set(System.Net.Http.HttpContent)">
             <summary>
             Stores a new object into the cache, returning the etag
             </summary>
@@ -516,7 +555,7 @@
             <summary>
             Remove any modified items
             </summary>
-            <param name="reference">The href to the item that was modified</param>
+            <param name="reference">The Href to the item that was modified</param>
         </member>
         <member name="T:COFRS.ResourceCacheItem">
             <summary>
@@ -538,44 +577,15 @@
             Last Modifed date/time
             </summary>
         </member>
-        <member name="M:COFRS.ResourceCacheItem.#ctor(Microsoft.AspNetCore.Mvc.IActionResult)">
+        <member name="M:COFRS.ResourceCacheItem.#ctor(System.Net.Http.HttpContent)">
             <summary>
             Implements a Resource Cache Item
             </summary>
             <param name="result"></param>
         </member>
-        <member name="T:COFRS.ActionDescriptorExtensions">
-            <summary>
-            Action Description Extensions
-            </summary>
-        </member>
-        <member name="M:COFRS.ActionDescriptorExtensions.GetApiVersion(Microsoft.AspNetCore.Mvc.Abstractions.ActionDescriptor)">
-            <summary>
-            Returns the Api Version Model from the action descriptor
-            </summary>
-            <param name="actionDescriptor"></param>
-            <returns></returns>
-        </member>
-        <member name="T:COFRS.ApplicationBuilderExtension">
-            <summary>
-            RQL Handler Extension
-            </summary>
-        </member>
-        <member name="M:COFRS.ApplicationBuilderExtension.UseRqlHandler(Microsoft.AspNetCore.Builder.IApplicationBuilder)">
-            <summary>
-            Use RQL Handler
-            </summary>
-            <param name="builder">The applicationBuilder</param>
-            <returns></returns>
-        </member>
         <member name="T:COFRS.Cache">
             <summary>
             Cache
-            </summary>
-        </member>
-        <member name="P:COFRS.Cache.Expires">
-            <summary>
-            Expires
             </summary>
         </member>
         <member name="P:COFRS.Cache.MaxAge">
@@ -621,67 +631,91 @@
             </summary>
             <param name="cacheDirective"></param>
         </member>
-        <member name="M:COFRS.Cache.OnActionExecuted(Microsoft.AspNetCore.Mvc.Filters.ActionExecutedContext)">
+        <member name="M:COFRS.Cache.OnActionExecuting(System.Web.Http.Controllers.HttpActionContext)">
             <summary>
-            On executed
+            On
+            </summary>
+            <param name="actionContext"></param>
+        </member>
+        <member name="M:COFRS.Cache.OnActionExecuted(System.Web.Http.Filters.HttpActionExecutedContext)">
+            <summary>
+            
+            </summary>
+            <param name="actionExecutedContext"></param>
+        </member>
+        <member name="T:COFRS.COFRSExceptionHandler">
+            <summary>
+            Service Exception Handler
+            </summary>
+        </member>
+        <member name="M:COFRS.COFRSExceptionHandler.#ctor">
+            <summary>
+            Creates a Service Exception Handler
+            </summary>
+        </member>
+        <member name="M:COFRS.COFRSExceptionHandler.Handle(System.Web.Http.ExceptionHandling.ExceptionHandlerContext)">
+            <summary>
+            Handle
             </summary>
             <param name="context"></param>
         </member>
-        <member name="M:COFRS.Cache.OnActionExecuting(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext)">
+        <member name="T:COFRS.HttpConfiguratioNextension">
             <summary>
-            On executing
-            </summary>
-            <param name="context"></param>
-        </member>
-        <member name="T:COFRS.ExceptionMiddlewareExtension">
-            <summary>
-            Exception Middleware class
+            Http Context extension
             </summary>
         </member>
-        <member name="M:COFRS.ExceptionMiddlewareExtension.ConfigureExceptionHandler(Microsoft.AspNetCore.Builder.IApplicationBuilder,System.String[])">
+        <member name="M:COFRS.HttpConfiguratioNextension.UseRql(System.Web.Http.HttpConfiguration)">
             <summary>
-            Configure the exception handler
+            Use Rql
             </summary>
-            <param name="app"></param>
-            <param name="allowedCorsOrigins"></param>
+            <param name="config"></param>
         </member>
-        <member name="T:COFRS.RQLHandlerMiddleware">
+        <member name="T:COFRS.RqlHandler">
             <summary>
-            RQL Handler Middleware
+            IAppBuilder extensions
             </summary>
         </member>
-        <member name="M:COFRS.RQLHandlerMiddleware.#ctor(Microsoft.AspNetCore.Http.RequestDelegate)">
+        <member name="M:COFRS.RqlHandler.SendAsync(System.Net.Http.HttpRequestMessage,System.Threading.CancellationToken)">
             <summary>
-            Instantiates an RQL HAndler middleware component
+            Send Async of the Rql Handler
             </summary>
-            <param name="next"></param>
-        </member>
-        <member name="M:COFRS.RQLHandlerMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext)">
-            <summary>
-            Invoked on every call
-            </summary>
-            <param name="context"></param>
+            <param name="request"></param>
+            <param name="cancellationToken"></param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.RQLHandlerMiddleware.GenerateCorrelationId">
-            <summary>
-            Generates a unique correlation id
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="T:COFRS.ServiceCollectionExtensions">
+        <member name="T:COFRS.ServiceCollectioNextensions">
             <summary>
             IServiceColleciton extensions
             </summary>
         </member>
-        <member name="M:COFRS.ServiceCollectionExtensions.InitializeFactories(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+        <member name="M:COFRS.ServiceCollectioNextensions.InitializeFactories(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
             <summary>
             Adds options as singleton intstances
             </summary>
             <param name="services">The service collection</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.ServiceCollectionExtensions.AddTransientWithParameters``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+        <member name="P:COFRS.ServiceCollectioNextensions.ApiOptions">
+            <summary>
+            The Api Options
+            </summary>
+        </member>
+        <member name="M:COFRS.ServiceCollectioNextensions.AddApiOptions(Microsoft.Extensions.DependencyInjection.IServiceCollection,COFRS.IApiOptions)">
+            <summary>
+            Add options
+            </summary>
+            <param name="services"></param>
+            <param name="options">The api options</param>
+        </member>
+        <member name="M:COFRS.ServiceCollectioNextensions.AddControllersAsServices(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Collections.Generic.IEnumerable{System.Type})">
+            <summary>
+            Add Controllers as Services
+            </summary>
+            <param name="services"></param>
+            <param name="controllerTypes"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ServiceCollectioNextensions.AddTransientWithParameters``2(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
             <summary>
             
             </summary>
@@ -701,6 +735,20 @@
             <typeparam name="T">The type of service to get</typeparam>
             <param name="provider">The service provider</param>
             <param name="p">The list of runtime arguments to pass</param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.VersioNextension">
+            <summary>
+            Version Extension
+            </summary>
+        </member>
+        <member name="M:COFRS.VersioNextension.UseVerioning(System.Web.Http.HttpConfiguration,System.IServiceProvider,Microsoft.Web.Http.ApiVersion)">
+            <summary>
+            Used to setup versioning in a REST Service
+            </summary>
+            <param name="httpConfiguration">Represents a configuration of HttpServer instances</param>
+            <param name="provider">Defines a mechanism for retrieving a service object; that is, an object that provides custom support to other objects</param>
+            <param name="defaultVersion">The default version used if no version is specified in the call</param>
             <returns></returns>
         </member>
         <member name="T:COFRS.AutoMapperFactory">
@@ -964,48 +1012,102 @@
             <param name="value">The value.</param>
             <param name="serializer">The calling serializer.</param>
         </member>
-        <member name="T:COFRS.COFRSJsonFormatter">
+        <member name="T:COFRS.COFRSJsonContractResolver">
             <summary>
-            ApiJsonFormatter
+            Used by <see cref="T:Newtonsoft.Json.JsonSerializer"/> to resolve a <see cref="T:Newtonsoft.Json.Serialization.JsonContract"/> for a given <see cref="T:System.Type"/>
             </summary>
         </member>
-        <member name="P:COFRS.COFRSJsonFormatter.SupportedMediaTypes">
+        <member name="M:COFRS.COFRSJsonContractResolver.ResolveContractConverter(System.Type)">
             <summary>
-            The list of supported media types
+            Used by <see cref="T:Newtonsoft.Json.JsonSerializer"/> to resolve a <see cref="T:Newtonsoft.Json.Serialization.JsonContract"/> for a given <see cref="T:System.Type"/>
             </summary>
-        </member>
-        <member name="M:COFRS.COFRSJsonFormatter.#ctor(System.String[])">
-            <summary>
-            Instantiates an COFRSJsonFormatter
-            </summary>
-            <param name="supportedMediaTypes">The list of media types this service supports</param>
-        </member>
-        <member name="M:COFRS.COFRSJsonFormatter.CanWriteResult(Microsoft.AspNetCore.Mvc.Formatters.OutputFormatterCanWriteContext)">
-            <summary>
-            CanWriteResult
-            </summary>
-            <param name="context">A Context object for <see cref="T:Microsoft.AspNetCore.Mvc.Formatters.IOutputFormatter"/>.CanWriteResult(<see cref="T:Microsoft.AspNetCore.Mvc.Formatters.OutputFormatterCanWriteContext"/>)</param>
+            <param name="objectType">The <see cref="T:System.Type"/> to resolve</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.COFRSJsonFormatter.WriteAsync(Microsoft.AspNetCore.Mvc.Formatters.OutputFormatterWriteContext)">
+        <member name="T:COFRS.COFRSJsonMediaFormatter">
             <summary>
-            WriteAsync
+            Represents the <see cref="T:System.Net.Http.Formatting.MediaTypeFormatter"/> class COFRS uses to handle JSON.
             </summary>
-            <param name="context">A Context object for <see cref="T:Microsoft.AspNetCore.Mvc.Formatters.IOutputFormatter"/>.WriteAsync(<see cref="T:Microsoft.AspNetCore.Mvc.Formatters.OutputFormatterWriteContext"/>)</param>
+        </member>
+        <member name="P:COFRS.COFRSJsonMediaFormatter.Node">
+            <summary>
+            Gets the <see cref="T:COFRS.RqlNode"/> associated with the request
+            </summary>
+        </member>
+        <member name="M:COFRS.COFRSJsonMediaFormatter.#ctor">
+            <summary>
+            Instantiate a <see cref="T:COFRS.COFRSJsonMediaFormatter"/>
+            </summary>
+        </member>
+        <member name="M:COFRS.COFRSJsonMediaFormatter.#ctor(COFRS.RqlNode)">
+            <summary>
+            Instantiate a <see cref="T:COFRS.COFRSJsonMediaFormatter"/>
+            </summary>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> associated with the request</param>
+        </member>
+        <member name="M:COFRS.COFRSJsonMediaFormatter.GetPerRequestFormatterInstance(System.Type,System.Net.Http.HttpRequestMessage,System.Net.Http.Headers.MediaTypeHeaderValue)">
+            <summary>
+            Returns a specialized instance of the <see cref="T:System.Net.Http.Formatting.MediaTypeFormatter"/>
+            that can format a response for the given parameters.
+            </summary>
+            <param name="type">The <see cref="T:System.Type"/> to format.</param>
+            <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/></param>
+            <param name="mediaType">The <see cref="T:System.Net.Http.Headers.MediaTypeHeaderValue"/></param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.COFRSJsonFormatter.CanRead(Microsoft.AspNetCore.Mvc.Formatters.InputFormatterContext)">
+        <member name="M:COFRS.COFRSJsonMediaFormatter.CanWriteType(System.Type)">
             <summary>
-            Can Read
+            Queries whether this <see cref="T:System.Net.Http.Formatting.MediaTypeFormatter"/> can serialize an
+            object of the specified type.
             </summary>
-            <param name="context"></param>
+            <param name="type">The <see cref="T:System.Type"/> of object to serialize</param>
+            <returns><see langword="true"/> if the <see cref="T:System.Net.Http.Formatting.MediaTypeFormatter"/> can serialize this
+            type of object; <see langword="false"/> otherwise.</returns>
+        </member>
+        <member name="M:COFRS.COFRSJsonMediaFormatter.WriteToStreamAsync(System.Type,System.Object,System.IO.Stream,System.Net.Http.HttpContent,System.Net.TransportContext)">
+            <summary>
+            Asynchronously writes an object of the specified type.
+            </summary>
+            <param name="type">The type of the object to write.</param>
+            <param name="value"> The object value to write. It may be null.</param>
+            <param name="writeStream">The <see cref="T:System.IO.Stream"/> to which to write.</param>
+            <param name="content">The <see cref="T:System.Net.Http.HttpContent"/> if available. It may be null.</param>
+            <param name="transportContext">The <see cref="T:System.Net.TransportContext"/> if available. It may be null.</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.COFRSJsonFormatter.ReadAsync(Microsoft.AspNetCore.Mvc.Formatters.InputFormatterContext)">
+        <member name="T:COFRS.JsonMediaTypeMapping">
             <summary>
-            Read Async
+            Json Media Type Mapping
             </summary>
-            <param name="context"></param>
+        </member>
+        <member name="M:COFRS.JsonMediaTypeMapping.#ctor">
+            <summary>
+            Json Media Type mapping
+            </summary>
+        </member>
+        <member name="M:COFRS.JsonMediaTypeMapping.#ctor(System.Net.Http.Headers.MediaTypeHeaderValue)">
+            <summary>
+            Initializes a new instance of a <see cref="T:COFRS.JsonMediaTypeMapping"/> with
+            the given mediaType value.
+            </summary>
+            <param name="mediaType">The <see cref="T:System.Net.Http.Headers.MediaTypeHeaderValue"/> that is associated with <see cref="T:System.Net.Http.HttpRequestMessage"/>
+            or <see cref="T:System.Net.Http.HttpResponseMessage"/> instances that have the given characteristics
+            of the <see cref="T:System.Net.Http.Formatting.MediaTypeMapping"/>.</param>
+        </member>
+        <member name="M:COFRS.JsonMediaTypeMapping.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of a <see cref="T:System.Net.Http.Formatting.MediaTypeMapping"/> with the given mediaType value.
+            </summary>
+            <param name="mediaType">The <see cref="T:System.Net.Http.Headers.MediaTypeHeaderValue"/> that is associated with <see cref="T:System.Net.Http.HttpRequestMessage"/>
+            or <see cref="T:System.Net.Http.HttpResponseMessage"/> instances that have the given characteristics
+            of the <see cref="T:System.Net.Http.Formatting.MediaTypeMapping"/>.</param>
+        </member>
+        <member name="M:COFRS.JsonMediaTypeMapping.TryMatchMediaType(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            Returns the quality of the match of the <see cref="T:System.Net.Http.Headers.MediaTypeHeaderValue"/> associated with request.
+            </summary>
+            <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> to evaluate for the characteristics associated
+            with the <see cref="T:System.Net.Http.Headers.MediaTypeHeaderValue"/> of the <see cref="T:System.Net.Http.Formatting.MediaTypeMapping"/>.</param>
             <returns></returns>
         </member>
         <member name="T:COFRS.JsonSerializerPolicy">
@@ -1297,21 +1399,21 @@
         <member name="M:COFRS.Rql.ProcessProperty2(COFRS.Token)">
             <summary>
             The property is of the form (name,name,...)
-            At this point, the next thing better be a PROPERTY name
+            At this point, the Next thing better be a PROPERTY name
             </summary>
             <param name="token"></param>
         </member>
         <member name="M:COFRS.Rql.ProcessProperty3(COFRS.Token)">
             <summary>
             The property is of the form (name,name,...)
-            The next acceptable token is either , or )
+            The Next acceptable token is either , or )
             </summary>
             <param name="token"></param>
         </member>
         <member name="M:COFRS.Rql.ProcessProperty4(COFRS.Token)">
             <summary>
             The property is of the form name/name/...
-            The next acceptable token is either / or an operator
+            The Next acceptable token is either / or an operator
             If it's an operator, it's not part of the property, requeue it and end the
             property scan and begin the operator scan
             </summary>
@@ -1320,7 +1422,7 @@
         <member name="M:COFRS.Rql.ProcessProperty5(COFRS.Token)">
             <summary>
             The property is of the form name/name...
-            The only acceptable next token is a name
+            The only acceptable Next token is a name
             </summary>
             <param name="token"></param>
         </member>
@@ -1333,21 +1435,21 @@
         <member name="M:COFRS.Rql.ProcessInitProperty2(COFRS.Token)">
             <summary>
             The property is of the form (name,name,...)
-            At this point, the next thing better be a PROPERTY name
+            At this point, the Next thing better be a PROPERTY name
             </summary>
             <param name="token"></param>
         </member>
         <member name="M:COFRS.Rql.ProcessInitProperty3(COFRS.Token)">
             <summary>
             The property is of the form (name,name,...)
-            The next acceptable token is either , or )
+            The Next acceptable token is either , or )
             </summary>
             <param name="token"></param>
         </member>
         <member name="M:COFRS.Rql.ProcessInitProperty4(COFRS.Token)">
             <summary>
             The property is of the form name/name/...
-            The next acceptable token is either / or an operator
+            The Next acceptable token is either / or an operator
             If it's an operator, it's not part of the property, requeue it and end the
             property scan and begin the operator scan
             </summary>
@@ -1356,7 +1458,7 @@
         <member name="M:COFRS.Rql.ProcessInitProperty5(COFRS.Token)">
             <summary>
             The property is of the form name/name...
-            The only acceptable next token is a name
+            The only acceptable Next token is a name
             </summary>
             <param name="token"></param>
         </member>
@@ -1497,7 +1599,7 @@
         </member>
         <member name="M:COFRS.RqlNode.Find(COFRS.RqlOperation)">
             <summary>
-            Finds the first <see cref="T:COFRS.RqlNode"/> of the specified operation
+            Finds the First <see cref="T:COFRS.RqlNode"/> of the specified operation
             </summary>
             <param name="op">The operation to search for</param>
             <returns></returns>
@@ -1544,6 +1646,13 @@
             </summary>
             <param name="source">The source <see cref="T:COFRS.RqlNode"/> to merge.</param>
         </member>
+        <member name="M:COFRS.RqlNode.Purge(COFRS.RqlNode)">
+            <summary>
+            Purge the source <see cref="T:COFRS.RqlNode"/> of any elements referenced by this node
+            </summary>
+            <param name="source">The source <see cref="T:COFRS.RqlNode"/> to purge</param>
+            <returns>The source <see cref="T:COFRS.RqlNode"/> purged of conflicting elements</returns>
+        </member>
         <member name="M:COFRS.RqlNode.Consolidate(COFRS.RqlOperation)">
             <summary>
             Consolidates all child <see cref="T:COFRS.RqlNode"/>s of a specified <see cref="T:COFRS.RqlOperation"/> into a single
@@ -1565,7 +1674,7 @@
         </member>
         <member name="M:COFRS.RqlNode.Remove(COFRS.RqlOperation)">
             <summary>
-            Removes the first node that is of <see cref="T:COFRS.RqlOperation"/> from the current <see cref="T:COFRS.RqlNode"/>.
+            Removes the First node that is of <see cref="T:COFRS.RqlOperation"/> from the current <see cref="T:COFRS.RqlNode"/>.
             </summary>
             <param name="op">The <see cref="T:COFRS.RqlOperation"/> of the node to remove</param>
             <returns>The removed <see cref="T:COFRS.RqlNode"/>, or <see langword="null"/> if none was found.</returns>
@@ -1675,7 +1784,7 @@
         </member>
         <member name="F:COFRS.RqlOperation.FIRST">
             <summary>
-            first()
+            First()
             </summary>
         </member>
         <member name="F:COFRS.RqlOperation.ONE">
@@ -1791,7 +1900,7 @@
             <summary>
             Extracts the list of items used in a where clause
             </summary>
-            <returns></returns>
+            <returns>The list of keys found in the <see cref="T:COFRS.RqlNode"/></returns>
         </member>
         <member name="T:COFRS.Symbol">
             <summary>
@@ -1800,20 +1909,25 @@
         </member>
         <member name="T:COFRS.ApiVersionReader">
             <summary>
-            ApiVersionReader
+            ServiceVersionReader
             </summary>
         </member>
-        <member name="M:COFRS.ApiVersionReader.AddParameters(Microsoft.AspNetCore.Mvc.Versioning.IApiVersionParameterDescriptionContext)">
+        <member name="P:COFRS.ApiVersionReader.SupportedMediaTypes">
+            <summary>
+            SupportedMediaTypes
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiVersionReader.AddParameters(Microsoft.Web.Http.Versioning.IApiVersionParameterDescriptionContext)">
             <summary>
             Add Parameters
             </summary>
             <param name="context"></param>
         </member>
-        <member name="M:COFRS.ApiVersionReader.Read(Microsoft.AspNetCore.Http.HttpRequest)">
+        <member name="M:COFRS.ApiVersionReader.Read(System.Net.Http.HttpRequestMessage)">
             <summary>
-            Read
+            Reads the version from the Accept Header
             </summary>
-            <param name="request"></param>
+            <param name="request">The incoming request message</param>
             <returns></returns>
         </member>
         <member name="T:COFRS.ApiXmlConverter">
@@ -1875,7 +1989,7 @@
             <param name="Logger">The logger</param>
             <param name="provider">The Service Provider</param>
         </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.BulkUpdate``1(COFRS.RqlBulkRequest{``0})">
+        <member name="M:COFRS.BaseDualOrchestrator`2.BulkUpdateAsync``1(COFRS.RqlBulkRequest{``0})">
             <summary>
             Bulk Update
             </summary>
@@ -1883,64 +1997,34 @@
             <param name="request">The request containing the items to update</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.ValidateExists``1(System.Uri)">
+        <member name="M:COFRS.BaseDualOrchestrator`2.ValidateExistsAsync``1(System.Uri)">
             <summary>
             Validate that a resource exists in the datastore
             </summary>
             <typeparam name="T">The type of resource to check</typeparam>
-            <param name="href">The href of the resource</param>
+            <param name="Href">The Href of the resource</param>
             <returns>True if the resource exists; false otherwise</returns>
         </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.DeleteAsync``1(System.Uri)">
-            <summary>
-            Asynchronously deletes an item from the repository
-            </summary>
-            <typeparam name="T">The domain type of the item to delete</typeparam>
-            <param name="href">The primary key value of the item to delete</param>
-        </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.DeleteAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},COFRS.RqlNode)">
+        <member name="M:COFRS.BaseDualOrchestrator`2.DeleteAsync``1(COFRS.RqlNode)">
             <summary>
             Asynchronously delete an item from the repository
             </summary>
             <typeparam name="T">The domain type of the item to delete</typeparam>
-            <param name="keys">A list of keys and their values that uniquely identify the object(s) to delete. If
-            no keys are provided, all entities in the datastore are deleted.</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the delete</param>
         </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.GetSingleAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},COFRS.RqlNode)">
+        <member name="M:COFRS.BaseDualOrchestrator`2.GetSingleAsync``1(COFRS.RqlNode)">
             <summary>
             Asynchronously retrieve a single item from the data store
             </summary>
             <typeparam name="T">The domain type of the item to retrieve</typeparam>
-            <param name="keys">The list of keys and their values that uniquely identify the object</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that defines the system constraints associated with the call.</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.GetSingleAsync``1(System.Uri,COFRS.RqlNode)">
-            <summary>
-            Asynchronously retrieve a single item from the data store
-            </summary>
-            <typeparam name="T">The domain type of the item to retrieve</typeparam>
-            <param name="href">The primary key value of the item to retrieve</param>
-            <param name="node">The <see cref="T:COFRS.RqlNode"/> that defines the system constraints associated with the call.</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.GetCollectionAsync``1(System.Net.Http.HttpRequestMessage,COFRS.RqlNode,System.Boolean)">
+        <member name="M:COFRS.BaseDualOrchestrator`2.GetCollectionAsync``1(System.Web.HttpRequest,COFRS.RqlNode,System.Boolean)">
             <summary>
             Asynchronously get a collection of items from the datastore
             </summary>
             <typeparam name="T">The domain type of the items to retrieve</typeparam>
-            <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> associated with the call</param>
-            <param name="node">The <see cref="T:COFRS.RqlNode"/> that represets the system defined constriants on the query.</param>
-            <param name="NoPaging">Do not page results even if the result set exceeds the system defined limit. Default value = false.</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.GetCollectionAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.Net.Http.HttpRequestMessage,COFRS.RqlNode,System.Boolean)">
-            <summary>
-            Asynchronously get a collection of items from the datastore
-            </summary>
-            <typeparam name="T">The domain type of the items to retrieve</typeparam>
-            <param name="keys">The list of keys and their values that uniquely identifies the collection of objects</param>
             <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> associated with the call</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that represets the system defined constriants on the query.</param>
             <param name="NoPaging">Do not page results even if the result set exceeds the system defined limit. Default value = false.</param>
@@ -1962,21 +2046,13 @@
             <param name="item">The item to update</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that represets the system defined constriants on the query.</param>
         </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.PatchAsync``1(System.Uri,System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
+        <member name="M:COFRS.BaseDualOrchestrator`2.PatchAsync``1(System.Collections.Generic.IEnumerable{COFRS.PatchCommand},COFRS.RqlNode)">
             <summary>
             Asynchronously patch an item in the datastore
             </summary>
             <typeparam name="T">The domain type of the items to patch</typeparam>
-            <param name="href">The value of the primary key of the item to patch</param>
             <param name="patchCommands">The list of patch commands</param>
-        </member>
-        <member name="M:COFRS.BaseDualOrchestrator`2.PatchAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
-            <summary>
-            Asynchronously patch an item in the datastore
-            </summary>
-            <typeparam name="T">The domain type of the items to patch</typeparam>
-            <param name="keys">The list of keys and their values that uniquely identify the object</param>
-            <param name="patchCommands">The list of patch commands</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that represets the system defined constriants on the query.</param>
         </member>
         <member name="M:COFRS.BaseDualOrchestrator`2.Dispose(System.Boolean)">
             <summary>
@@ -2025,7 +2101,7 @@
             Instantiates an Api Domain Processor
             </summary>
         </member>
-        <member name="M:COFRS.BaseOrchestrator`1.BulkUpdate``1(COFRS.RqlBulkRequest{``0})">
+        <member name="M:COFRS.BaseOrchestrator`1.BulkUpdateAsync``1(COFRS.RqlBulkRequest{``0})">
             <summary>
             Bulk Update
             </summary>
@@ -2033,63 +2109,34 @@
             <param name="request">The request containing the items to update</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.BaseOrchestrator`1.ValidateExists``1(System.Uri)">
+        <member name="M:COFRS.BaseOrchestrator`1.ValidateExistsAsync``1(System.Uri)">
             <summary>
             Validate that a resource exists in the datastore
             </summary>
             <typeparam name="T">The type of resource to check</typeparam>
-            <param name="href">The href of the resource</param>
+            <param name="Href">The Href of the resource</param>
             <returns>True if the resource exists; false otherwise</returns>
         </member>
-        <member name="M:COFRS.BaseOrchestrator`1.DeleteAsync``1(System.Uri)">
+        <member name="M:COFRS.BaseOrchestrator`1.DeleteAsync``1(COFRS.RqlNode)">
             <summary>
             Asynchronously delete an item from the repository
             </summary>
             <typeparam name="T">The domain type of the item to delete</typeparam>
-            <param name="key">The primary key value of the item to delete</param>
-        </member>
-        <member name="M:COFRS.BaseOrchestrator`1.DeleteAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},COFRS.RqlNode)">
-            <summary>
-            Asynchronously delete an item from the repository
-            </summary>
-            <typeparam name="T">The domain type of the item to delete</typeparam>
-            <param name="keys">The list of keys and their values that uniquely identify the object</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the delete operation.</param>
         </member>
-        <member name="M:COFRS.BaseOrchestrator`1.GetSingleAsync``1(System.Uri,COFRS.RqlNode)">
+        <member name="M:COFRS.BaseOrchestrator`1.GetSingleAsync``1(COFRS.RqlNode)">
             <summary>
             Asynchronously retrieve a single item from the data store
             </summary>
-            <typeparam name="T">The domain type of the item to retrieve</typeparam>
-            <param name="href">The primary key value of the item to retrieve</param>
+            <typeparam name="T">The resource type of the item to retrieve</typeparam>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.BaseOrchestrator`1.GetSingleAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},COFRS.RqlNode)">
-            <summary>
-            Asynchronously retrieve a single item from the data store
-            </summary>
-            <typeparam name="T">The domain type of the item to retrieve</typeparam>
-            <param name="keys">The list of keys and their values that uniquely identify the object</param>
-            <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.BaseOrchestrator`1.GetCollectionAsync``1(System.Net.Http.HttpRequestMessage,COFRS.RqlNode,System.Boolean)">
+        <member name="M:COFRS.BaseOrchestrator`1.GetCollectionAsync``1(System.Web.HttpRequest,COFRS.RqlNode,System.Boolean)">
             <summary>
             Asynchronously get a collection of items from the datastore
             </summary>
             <typeparam name="T">The domain type of the items to retrieve</typeparam>
-            <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> associated with the call</param>
-            <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
-            <param name="NoPaging">Do not page results even if the result set exceeds the system defined limit. Default value = false.</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.BaseOrchestrator`1.GetCollectionAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.Net.Http.HttpRequestMessage,COFRS.RqlNode,System.Boolean)">
-            <summary>
-            Asynchronously get a collection of items from the datastore
-            </summary>
-            <typeparam name="T">The domain type of the items to retrieve</typeparam>
-            <param name="keys">The list of keys and their values that limits the list of objects</param>
             <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> associated with the call</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
             <param name="NoPaging">Do not page results even if the result set exceeds the system defined limit. Default value = false.</param>
@@ -2111,21 +2158,13 @@
             <param name="item">The item to update</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
         </member>
-        <member name="M:COFRS.BaseOrchestrator`1.PatchAsync``1(System.Uri,System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
+        <member name="M:COFRS.BaseOrchestrator`1.PatchAsync``1(System.Collections.Generic.IEnumerable{COFRS.PatchCommand},COFRS.RqlNode)">
             <summary>
             Asynchronously patch an item in the datastore
             </summary>
-            <typeparam name="T">The domain type of the items to patch</typeparam>
-            <param name="href">The value of the primary key of the item to patch</param>
+            <typeparam name="T">The resource type of the items to patch</typeparam>
             <param name="patchCommands">The list of patch commands</param>
-        </member>
-        <member name="M:COFRS.BaseOrchestrator`1.PatchAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
-            <summary>
-            Asynchronously patch an item in the datastore
-            </summary>
-            <typeparam name="T">The domain type of the items to patch</typeparam>
-            <param name="keys">The list of keys and their values that uniquely identify the object</param>
-            <param name="patchCommands">The list of patch commands</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
         </member>
         <member name="M:COFRS.BaseOrchestrator`1.Dispose(System.Boolean)">
             <summary>
@@ -2143,50 +2182,149 @@
             This code added to correctly implement the disposable pattern.
             </summary>
         </member>
+        <member name="T:COFRS.COFRSApiDependencyResolver">
+            <summary>
+            Api Dependency Resolver
+            </summary>
+        </member>
+        <member name="M:COFRS.COFRSApiDependencyResolver.#ctor(System.IServiceProvider)">
+            <summary>
+            Api Dependency Resolver
+            </summary>
+            <param name="serviceProvider">The Service Provider</param>
+        </member>
+        <member name="M:COFRS.COFRSApiDependencyResolver.BeginScope">
+            <summary>
+            Begin Scope
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.COFRSApiDependencyResolver.Dispose">
+            <summary>
+            Dispose
+            </summary>
+        </member>
+        <member name="M:COFRS.COFRSApiDependencyResolver.GetService(System.Type)">
+            <summary>
+            Get Service
+            </summary>
+            <param name="serviceType"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.COFRSApiDependencyResolver.GetServices(System.Type)">
+            <summary>
+            Get Services
+            </summary>
+            <param name="serviceType"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.COFRSApiDependencyResolver.Get``1(System.Object[])">
+            <summary>
+            Gets a service with parameters
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="p"></param>
+            <returns></returns>
+        </member>
         <member name="T:COFRS.COFRSController">
             <summary>
-            Basea class for controllers
+            VinController class
             </summary>
         </member>
         <member name="M:COFRS.COFRSController.#ctor">
             <summary>
-            Instantiates a COFRS Controller
+            Constructs a VinController
             </summary>
-        </member>
-        <member name="M:COFRS.COFRSController.Ok(System.Object)">
-            <summary>
-            Ok 
-            </summary>
-            <param name="value"></param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.COFRSController.Created(System.String,System.Object)">
-            <summary>
-            Created
-            </summary>
-            <param name="uri">The URI of the new object</param>
-            <param name="value">The value of the new object</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.COFRSController.Created(System.Uri,System.Object)">
-            <summary>
-            Created
-            </summary>
-            <param name="uri">The URI of the new object</param>
-            <param name="value">The value of the new object</param>
-            <returns></returns>
         </member>
         <member name="M:COFRS.COFRSController.NoContent">
             <summary>
-            No Content
+            Generates a NoContent result
             </summary>
-            <returns></returns>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a NoContent status code</returns>
+        </member>
+        <member name="M:COFRS.COFRSController.Ok">
+            <summary>
+            Generates an OK result
+            </summary>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a Ok status code</returns>
         </member>
         <member name="M:COFRS.COFRSController.NotFound">
             <summary>
-            Not Found
+            Generates a NotFound result
             </summary>
-            <returns></returns>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a NotFound status code</returns>
+        </member>
+        <member name="M:COFRS.COFRSController.BadRequest">
+            <summary>
+            Generates a BadRequest result
+            </summary>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a BadRequest status code</returns>
+        </member>
+        <member name="M:COFRS.COFRSController.Conflict">
+            <summary>
+            Generates a Conflict result
+            </summary>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a Conflict status code</returns>
+        </member>
+        <member name="M:COFRS.COFRSController.InternalServerError">
+            <summary>
+            Generates a Conflict result
+            </summary>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with an InternalServerError status code</returns>
+        </member>
+        <member name="M:COFRS.COFRSController.Ok``1(``0)">
+            <summary>
+            Returns an OK result with content
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="content"></param>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a Ok status code</returns>
+        </member>
+        <member name="M:COFRS.COFRSController.Content``1(System.Net.HttpStatusCode,``0)">
+            <summary>
+            Returns a result with content
+            </summary>
+            <typeparam name="T">The type of content</typeparam>
+            <param name="statusCode">The <see cref="T:System.Net.HttpStatusCode"/> to return</param>
+            <param name="value">The value of type T to return</param>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/></returns>
+        </member>
+        <member name="M:COFRS.COFRSController.Created``1(System.Uri,``0)">
+            <summary>
+            Returns a created result
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="location"></param>
+            <param name="content"></param>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a Created status code</returns>
+        </member>
+        <member name="M:COFRS.COFRSController.Created``1(System.String,``0)">
+            <summary>
+            Returns a created result with content
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="location"></param>
+            <param name="content"></param>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a Created status code</returns>
+        </member>
+        <member name="M:COFRS.COFRSController.Created(System.Uri)">
+            <summary>
+            Returns a created result with location
+            </summary>
+            <param name="location"></param>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a Created status code</returns>
+        </member>
+        <member name="M:COFRS.COFRSController.Created(System.String)">
+            <summary>
+            Returns a created result with location
+            </summary>
+            <param name="location"></param>
+            <returns>Returns an <see cref="T:System.Web.Http.IHttpActionResult"/> with a Created status code</returns>
+        </member>
+        <member name="P:COFRS.COFRSController.CorrelationId">
+            <summary>
+            Gets the correlation id
+            </summary>
         </member>
         <member name="M:COFRS.COFRSController.GenerateCorrelationId">
             <summary>
@@ -2194,17 +2332,64 @@
             </summary>
             <returns></returns>
         </member>
-        <member name="P:COFRS.COFRSController.CorrelationId">
+        <member name="T:COFRS.DependencyResolverExtension">
             <summary>
-            Gets the coorelation id for the request
+            Dependency Resolver extension
             </summary>
+        </member>
+        <member name="M:COFRS.DependencyResolverExtension.Get``1(System.Web.Mvc.IDependencyResolver,System.Object[])">
+            <summary>
+            Get a service with parameters
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="resolver"></param>
+            <param name="p"></param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.COFRSMvcDependencyResolver">
+            <summary>
+            Mvc Dependency Resolver
+            </summary>
+        </member>
+        <member name="P:COFRS.COFRSMvcDependencyResolver.ServiceProvider">
+            <summary>
+            The Service Provider
+            </summary>
+        </member>
+        <member name="M:COFRS.COFRSMvcDependencyResolver.#ctor(System.IServiceProvider)">
+            <summary>
+            Instantiates an Mvc Dependency Resolver
+            </summary>
+            <param name="serviceProvider"></param>
+        </member>
+        <member name="M:COFRS.COFRSMvcDependencyResolver.GetService(System.Type)">
+            <summary>
+            Gets a service
+            </summary>
+            <param name="serviceType"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.COFRSMvcDependencyResolver.GetServices(System.Type)">
+            <summary>
+            Gets a list of services
+            </summary>
+            <param name="serviceType"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.COFRSMvcDependencyResolver.Get``1(System.Object[])">
+            <summary>
+            Gets a service with parameters
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="p"></param>
+            <returns></returns>
         </member>
         <member name="T:COFRS.IOrchestrator">
             <summary>
             Base Orchestrator interface
             </summary>
         </member>
-        <member name="M:COFRS.IOrchestrator.BulkUpdate``1(COFRS.RqlBulkRequest{``0})">
+        <member name="M:COFRS.IOrchestrator.BulkUpdateAsync``1(COFRS.RqlBulkRequest{``0})">
             <summary>
             Bulk Update
             </summary>
@@ -2212,63 +2397,34 @@
             <param name="request">The request containing the items to update</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.IOrchestrator.ValidateExists``1(System.Uri)">
+        <member name="M:COFRS.IOrchestrator.ValidateExistsAsync``1(System.Uri)">
             <summary>
             Validate that a resource exists in the datastore
             </summary>
             <typeparam name="T">The type of resource to check</typeparam>
-            <param name="href">The href of the resource</param>
+            <param name="Href">The Href of the resource</param>
             <returns>True if the resource exists; false otherwise</returns>
         </member>
-        <member name="M:COFRS.IOrchestrator.DeleteAsync``1(System.Uri)">
+        <member name="M:COFRS.IOrchestrator.DeleteAsync``1(COFRS.RqlNode)">
             <summary>
             Asychronously delete an item from the repository
             </summary>
             <typeparam name="T">The domain type of the item to delete</typeparam>
-            <param name="href">The primary key value of the item to delete</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the delete operation</param>
         </member>
-        <member name="M:COFRS.IOrchestrator.DeleteAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},COFRS.RqlNode)">
-            <summary>
-            Asychronously delete an item from the repository
-            </summary>
-            <typeparam name="T">The domain type of the item to delete</typeparam>
-            <param name="keyList">The list of keys and their values that uniquely identify the object</param>
-            <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the delete operation.</param>
-        </member>
-        <member name="M:COFRS.IOrchestrator.GetSingleAsync``1(System.Uri,COFRS.RqlNode)">
+        <member name="M:COFRS.IOrchestrator.GetSingleAsync``1(COFRS.RqlNode)">
             <summary>
             Asynchronously retrieve a single item from the data store
             </summary>
             <typeparam name="T">The domain type of the item to retrieve</typeparam>
-            <param name="href">The primary key value of the item to retrieve</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.IOrchestrator.GetSingleAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},COFRS.RqlNode)">
-            <summary>
-            Asynchronously retrieve a single item from the data store
-            </summary>
-            <typeparam name="T">The domain type of the item to retrieve</typeparam>
-            <param name="keyList">The list of keys and their values that uniquely identify the object</param>
-            <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.IOrchestrator.GetCollectionAsync``1(System.Net.Http.HttpRequestMessage,COFRS.RqlNode,System.Boolean)">
+        <member name="M:COFRS.IOrchestrator.GetCollectionAsync``1(System.Web.HttpRequest,COFRS.RqlNode,System.Boolean)">
             <summary>
             Asynchronously get a collection of items from the datastore
             </summary>
             <typeparam name="T">The domain type of the items to retrieve</typeparam>
-            <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> associated with the call.</param>
-            <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
-            <param name="NoPaging">Do not page results even if the result set exceeds the system defined limit. Default value = false.</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.IOrchestrator.GetCollectionAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.Net.Http.HttpRequestMessage,COFRS.RqlNode,System.Boolean)">
-            <summary>
-            Asynchronously get a collection of items from the datastore
-            </summary>
-            <typeparam name="T">The domain type of the items to retrieve</typeparam>
-            <param name="keyList">The list of keys and their values that limits the list of objects</param>
             <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> associated with the call.</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
             <param name="NoPaging">Do not page results even if the result set exceeds the system defined limit. Default value = false.</param>
@@ -2290,21 +2446,13 @@
             <param name="item">The item to update</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
         </member>
-        <member name="M:COFRS.IOrchestrator.PatchAsync``1(System.Uri,System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
+        <member name="M:COFRS.IOrchestrator.PatchAsync``1(System.Collections.Generic.IEnumerable{COFRS.PatchCommand},COFRS.RqlNode)">
             <summary>
             Asynchronously patch an item in the datastore
             </summary>
             <typeparam name="T">The domain type of the items to patch</typeparam>
-            <param name="href">The value of the primary key of the item to patch</param>
             <param name="patchCommands">The list of patch commands</param>
-        </member>
-        <member name="M:COFRS.IOrchestrator.PatchAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
-            <summary>
-            Patch an item in the datastore
-            </summary>
-            <typeparam name="T">The domain type of the items to patch</typeparam>
-            <param name="keyList">The list of keys and their values that uniquely identify the object</param>
-            <param name="patchCommands">The list of patch commands</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
         </member>
         <member name="T:COFRS.IRepository">
             <summary>
@@ -2317,23 +2465,12 @@
             </summary>
             <returns></returns>
         </member>
-        <member name="M:COFRS.IRepository.GetSingleAsync(System.Type,System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},COFRS.RqlNode)">
+        <member name="M:COFRS.IRepository.GetSingleAsync(System.Type,COFRS.RqlNode)">
             <summary>
             Asychronously gets a single object of type T by a key value(s)
             </summary>
-            <param name="keys">The list of keys and their values used to uniquely identifiy the object</param>
             <param name="node">The RQL Query</param>
             <param name="T">The type of object to return</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.IRepository.GetCollectionAsync(System.Type,System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},COFRS.RqlNode,System.Boolean)">
-            <summary>
-            Asychronously get a collection of objects of type T
-            </summary>
-            <param name="keys">The list of keys and their values used to limit the collection of objects</param>
-            <param name="node">The RQL Query</param>
-            <param name="T">The type of objects to return</param>
-            <param name="NoPaging">Do not page results even if the result set exceeds the system defined limit. Default value = false.</param>
             <returns></returns>
         </member>
         <member name="M:COFRS.IRepository.GetCollectionAsync(System.Type,COFRS.RqlNode,System.Boolean)">
@@ -2345,12 +2482,11 @@
             <param name="NoPaging">Do not page results even if the result set exceeds the system defined limit. Default value = false.</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.IRepository.DeleteAsync(System.Type,System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},COFRS.RqlNode)">
+        <member name="M:COFRS.IRepository.DeleteAsync(System.Type,COFRS.RqlNode)">
             <summary>
             Asychronously delete an object of type T
             </summary>
             <param name="T">The type of object to delete</param>
-            <param name="keys">The list of keys and their values used to uniquely identifiy the object</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the delete.</param>
         </member>
         <member name="M:COFRS.IRepository.AddAsync(System.Object)">
@@ -2365,31 +2501,15 @@
             Asychronously update an object of type T
             </summary>
             <param name="item">The object to update</param>
-            <param name="node">The RQL Query</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the update.</param>
         </member>
-        <member name="M:COFRS.IRepository.PatchAsync(System.Type,System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.Collections.Generic.IEnumerable{COFRS.RawPatch})">
+        <member name="M:COFRS.IRepository.PatchAsync(System.Type,System.Collections.Generic.IEnumerable{COFRS.RawPatch},COFRS.RqlNode)">
             <summary>
             Patch Async
             </summary>
-            <param name="keys"></param>
             <param name="patchCommands"></param>
             <param name="T">The type of object to patch</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.IRepository.GetReferenceKeysAsync(System.Type,System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}})">
-            <summary>
-            Get reference keys
-            </summary>
-            <param name="T">The type of object to query</param>
-            <param name="keys">keys</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.IRepository.GetEntityReferenceKeysAsync``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}})">
-            <summary>
-            Get Entity Reference Keys
-            </summary>
-            <typeparam name="E"></typeparam>
-            <param name="keys"></param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the patch.</param>
             <returns></returns>
         </member>
         <member name="T:COFRS.IValidator`1">
@@ -2398,61 +2518,11 @@
             </summary>
             <typeparam name="T">The type of the domain model</typeparam>
         </member>
-        <member name="M:COFRS.IValidator`1.ValidateForGetAsync(System.Uri,System.String)">
-            <summary>
-            Validates a query request using the href
-            </summary>
-            <param name="href">The href of the item being queried</param>
-            <param name="queryString">The query string</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.IValidator`1.ValidateForGetAsync(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.String)">
+        <member name="M:COFRS.IValidator`1.ValidateForGetAsync(COFRS.RqlNode)">
             <summary>
             Validates a query request
             </summary>
-            <param name="keys">The names and values of key fields specific to the query</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.IValidator`1.ValidateForGetAsync(System.Uri,Microsoft.AspNetCore.Http.QueryString)">
-            <summary>
-            Validates a query request using the href
-            </summary>
-            <param name="href">The href of the item being queried</param>
-            <param name="queryString">The query string</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.IValidator`1.ValidateForGetAsync(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.Object}},Microsoft.AspNetCore.Http.QueryString)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="keys">The names and values of key fields specific to the query</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.IValidator`1.ValidateForGetAsync(System.Object,System.String)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="primaryKey">The primary key of the item</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.IValidator`1.ValidateForGetAsync(System.Object,Microsoft.AspNetCore.Http.QueryString)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="primaryKey">The primary key of the item</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.IValidator`1.ValidateForGetAsync(Microsoft.AspNetCore.Http.QueryString)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.IValidator`1.ValidateForGetAsync(System.String)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="queryString">The RQL queryString used for the Query</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the query</param>
         </member>
         <member name="M:COFRS.IValidator`1.ValidateForAddAsync(`0)">
             <summary>
@@ -2460,53 +2530,62 @@
             </summary>
             <param name="item">The item to validate</param>
         </member>
-        <member name="M:COFRS.IValidator`1.ValidateForUpdateAsync(`0)">
+        <member name="M:COFRS.IValidator`1.ValidateForUpdateAsync(`0,COFRS.RqlNode)">
             <summary>
             Validates an item for updating
             </summary>
             <param name="item">The item to update</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the update</param>
         </member>
-        <member name="M:COFRS.IValidator`1.ValidateForPatchAsync(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
+        <member name="M:COFRS.IValidator`1.ValidateForPatchAsync(System.Collections.Generic.IEnumerable{COFRS.PatchCommand},COFRS.RqlNode)">
             <summary>
             Validates a set of patch commands for an object
             </summary>
-            <param name="keys">The set of keys that uniquely identifies the object</param>
             <param name="patchCommands">The set of patch commands to validate</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the update</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.IValidator`1.ValidateForPatchAsync(System.Object,System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
-            <summary>
-            Validates a set of patch commands for an object
-            </summary>
-            <param name="id">The primary key value that uniquely identifies the object</param>
-            <param name="patchCommands">The set of patch commands to validate</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.IValidator`1.ValidateForPatchAsync(System.Uri,System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
-            <summary>
-            Validates a set of patch commands for an object
-            </summary>
-            <param name="href">The hypertext reference value that uniquely identifies the object</param>
-            <param name="patchCommands">The set of patch commands to validate</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.IValidator`1.ValidateForDeleteAsync(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.Object}})">
+        <member name="M:COFRS.IValidator`1.ValidateForDeleteAsync(COFRS.RqlNode)">
             <summary>
             Validates an item for deletion
             </summary>
-            <param name="keys">The list of keys that identify the items to delete</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the delete</param>
         </member>
-        <member name="M:COFRS.IValidator`1.ValidateForDeleteAsync(System.Object)">
+        <member name="T:COFRS.JsonTextActionResult">
             <summary>
-            Validates an item for deletion
+            JsonTextActionResult
             </summary>
-            <param name="primaryKey">The primary key of the object to delete</param>
         </member>
-        <member name="M:COFRS.IValidator`1.ValidateForDeleteAsync(System.Uri)">
+        <member name="P:COFRS.JsonTextActionResult.Request">
             <summary>
-            Validates an item for deletion
+            Request
             </summary>
-            <param name="href">The hypertext reference value that uniquely identifies the object</param>
+        </member>
+        <member name="P:COFRS.JsonTextActionResult.JsonText">
+            <summary>
+            JsonText
+            </summary>
+        </member>
+        <member name="M:COFRS.JsonTextActionResult.#ctor(System.Net.HttpStatusCode,System.Net.Http.HttpRequestMessage,System.String)">
+            <summary>
+            JsonTextActionResult constructor
+            </summary>
+            <param name="code"></param>
+            <param name="request"></param>
+            <param name="jsonText"></param>
+        </member>
+        <member name="M:COFRS.JsonTextActionResult.ExecuteAsync(System.Threading.CancellationToken)">
+            <summary>
+            Execute Async
+            </summary>
+            <param name="cancellationToken"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.JsonTextActionResult.Execute">
+            <summary>
+            Execute
+            </summary>
+            <returns></returns>
         </member>
         <member name="T:COFRS.Validator`1">
             <summary>
@@ -2530,60 +2609,11 @@
             </summary>
             <param name="user">The user making the call</param>
         </member>
-        <member name="M:COFRS.Validator`1.ValidateForGetAsync(System.Uri,System.String)">
+        <member name="M:COFRS.Validator`1.ValidateForGetAsync(COFRS.RqlNode)">
             <summary>
-            Validates a query request using the href
+            Validates a query request using the Href
             </summary>
-            <param name="href">The href of the item being queried</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForGetAsync(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.String)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="keys">The names and values of key fields specific to the query</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForGetAsync(System.Uri,Microsoft.AspNetCore.Http.QueryString)">
-            <summary>
-            Validates a query request using the href
-            </summary>
-            <param name="href">The href of the item being queried</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForGetAsync(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.Object}},Microsoft.AspNetCore.Http.QueryString)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="keys">The names and values of key fields specific to the query</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForGetAsync(Microsoft.AspNetCore.Http.QueryString)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForGetAsync(System.String)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForGetAsync(System.Object,Microsoft.AspNetCore.Http.QueryString)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="primaryKey">The value of the primary key of the item</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForGetAsync(System.Object,System.String)">
-            <summary>
-            Validates a query request
-            </summary>
-            <param name="primaryKey">The value of the primary key of the item</param>
-            <param name="queryString">The RQL queryString used for the Query</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the query</param>
         </member>
         <member name="M:COFRS.Validator`1.ValidateForAddAsync(`0)">
             <summary>
@@ -2591,53 +2621,26 @@
             </summary>
             <param name="item">The item to validate</param>
         </member>
-        <member name="M:COFRS.Validator`1.ValidateForDeleteAsync(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.Object}})">
-            <summary>
-            Validates an item for deleting
-            </summary>
-            <param name="keylist">The list of keys to search for</param>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForDeleteAsync(System.Object)">
-            <summary>
-            Validates an item for deleting
-            </summary>
-            <param name="primaryKey">The value of the primary key of the item</param>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForDeleteAsync(System.Uri)">
-            <summary>
-            Validates an item for deleting
-            </summary>
-            <param name="href">The value of the primary key of the item</param>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForUpdateAsync(`0)">
+        <member name="M:COFRS.Validator`1.ValidateForUpdateAsync(`0,COFRS.RqlNode)">
             <summary>
             Validates an item for updating
             </summary>
             <param name="item"></param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the update</param>
         </member>
-        <member name="M:COFRS.Validator`1.ValidateForPatchAsync(System.Object,System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
+        <member name="M:COFRS.Validator`1.ValidateForPatchAsync(System.Collections.Generic.IEnumerable{COFRS.PatchCommand},COFRS.RqlNode)">
             <summary>
             Validates a set of patch commands on an item
             </summary>
-            <param name="id">The primary key value that uniquely identifies the object</param>
             <param name="patchCommands">The set of patch commands to validate</param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the update</param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.Validator`1.ValidateForPatchAsync(System.Uri,System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
+        <member name="M:COFRS.Validator`1.ValidateForDeleteAsync(COFRS.RqlNode)">
             <summary>
-            Validates a set of patch commands on an item
+            Validates an item for deleting
             </summary>
-            <param name="href">The hypertext reference that uniquely identifies the object</param>
-            <param name="patchCommands">The set of patch commands to validate</param>
-            <returns></returns>
-        </member>
-        <member name="M:COFRS.Validator`1.ValidateForPatchAsync(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.Collections.Generic.IEnumerable{COFRS.PatchCommand})">
-            <summary>
-            Validates a set of patch commands on an item
-            </summary>
-            <param name="keys">The set of keys that uniquely identifies the object</param>
-            <param name="patchCommands">The set of patch commands to validate</param>
-            <returns></returns>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the delete</param>
         </member>
         <member name="M:COFRS.Validator`1.Require(System.Boolean,System.String)">
             <summary>
@@ -2646,13 +2649,12 @@
             <param name="test"></param>
             <param name="errorMessage"></param>
         </member>
-        <member name="M:COFRS.Validator`1.RequireIndexedQuery(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.Object}},System.String,System.String)">
+        <member name="M:COFRS.Validator`1.RequireIndexedQuery(COFRS.RqlNode,System.String)">
             <summary>
             Verify that the query is using at least one column that is reference in an index.
             </summary>
-            <param name="keys">The list of keys used to further limit the query</param>
-            <param name="queryString">The query string</param>
-            <param name="errorMessage"></param>
+            <param name="node">The <see cref="T:COFRS.RqlNode"/> that constrains the query</param>
+            <param name="errorMessage">The error message to return</param>
         </member>
         <member name="M:COFRS.Validator`1.FailUnique(System.Uri,System.String)">
             <summary>
@@ -2684,12 +2686,6 @@
             Fail not found
             </summary>
         </member>
-        <member name="M:COFRS.Validator`1.ValidateQueryString(System.String)">
-            <summary>
-            Validates the syntax and member functions of the RQL Query string
-            </summary>
-            <param name="queryString"></param>
-        </member>
         <member name="M:COFRS.Validator`1.Dispose(System.Boolean)">
             <summary>
             Performs application-defined tasks associated with freeing, releasing, or resetting
@@ -2712,22 +2708,39 @@
             Api Swagger Filter
             </summary>
         </member>
-        <member name="P:COFRS.ApiSwaggerFilter.apiOptions">
-            <summary>
-            apiOptions
-            </summary>
-        </member>
-        <member name="M:COFRS.ApiSwaggerFilter.#ctor(COFRS.IApiOptions)">
+        <member name="M:COFRS.ApiSwaggerFilter.#ctor">
             <summary>
             Instantiates an Api Swagger Filter
             </summary>
         </member>
-        <member name="M:COFRS.ApiSwaggerFilter.Apply(Microsoft.OpenApi.Models.OpenApiOperation,Swashbuckle.AspNetCore.SwaggerGen.OperationFilterContext)">
+        <member name="M:COFRS.ApiSwaggerFilter.Apply(Swashbuckle.Swagger.Operation,Swashbuckle.Swagger.SchemaRegistry,System.Web.Http.Description.ApiDescription)">
             <summary>
-            Applies the filter
+            Apply 
             </summary>
-            <param name="operation">The operation</param>
-            <param name="context">The context</param>
+            <param name="operation"></param>
+            <param name="schemaRegistry"></param>
+            <param name="apiDescription"></param>
+        </member>
+        <member name="M:COFRS.ApiSwaggerFilter.GenerateCorrelationId">
+            <summary>
+            Generates a unique correlation id
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.SwaggerDefaultValues">
+            <summary>
+            Represents the Swagger/Swashbuckle operation filter used to provide default values.
+            </summary>
+            <remarks>This <see cref="T:Swashbuckle.Swagger.IOperationFilter"/> is only required due to bugs in the <see cref="T:Swashbuckle.Swagger.SwaggerGenerator"/>.
+            Once they are fixed and published, this class can be removed.</remarks>
+        </member>
+        <member name="M:COFRS.SwaggerDefaultValues.Apply(Swashbuckle.Swagger.Operation,Swashbuckle.Swagger.SchemaRegistry,System.Web.Http.Description.ApiDescription)">
+            <summary>
+            Applies the filter to the specified operation using the given context.
+            </summary>
+            <param name="operation">The operation to apply the filter to.</param>
+            <param name="schemaRegistry">The API schema registry.</param>
+            <param name="apiDescription">The API description being filtered.</param>
         </member>
         <member name="T:COFRS.Translator">
             <summary>
@@ -2806,7 +2819,7 @@
             <param name="patchCommands"></param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.Translator.FixReferences``1(COFRS.RqlCollection{``0},COFRS.IRepositoryOptions,System.Net.Http.HttpRequestMessage,System.Boolean)">
+        <member name="M:COFRS.Translator.FixReferences``1(COFRS.RqlCollection{``0},COFRS.IRepositoryOptions,System.Web.HttpRequest,System.Boolean)">
             <summary>
             Fix References
             </summary>

@@ -175,17 +175,17 @@
             Represents a command to be executed as part of a PATCH request.
             </summary>
         </member>
-        <member name="P:COFRS.PatchCommand.op">
+        <member name="P:COFRS.PatchCommand.Op">
             <summary>
             The operation of the patch (replace, remove or add).
             </summary>
         </member>
-        <member name="P:COFRS.PatchCommand.path">
+        <member name="P:COFRS.PatchCommand.Path">
             <summary>
             The attribute of the object to be operated upon.
             </summary>
         </member>
-        <member name="P:COFRS.PatchCommand.value">
+        <member name="P:COFRS.PatchCommand.Value">
             <summary>
             For add or replace, the value to set the specified attribute to.
             </summary>
@@ -221,22 +221,22 @@
             </summary>
             <typeparam name="T">The type of item on which to perform the action</typeparam>
         </member>
-        <member name="P:COFRS.RqlBulkItem`1.action">
+        <member name="P:COFRS.RqlBulkItem`1.Action">
             <summary>
             The action to perform on this item.
             </summary>
         </member>
-        <member name="P:COFRS.RqlBulkItem`1.item">
+        <member name="P:COFRS.RqlBulkItem`1.Item">
             <summary>
             The item to perform the action on.
             </summary>
         </member>
-        <member name="P:COFRS.RqlBulkItem`1.success">
+        <member name="P:COFRS.RqlBulkItem`1.Success">
             <summary>
             Returned as true if the action was successful; false otherwise.
             </summary>
         </member>
-        <member name="P:COFRS.RqlBulkItem`1.errors">
+        <member name="P:COFRS.RqlBulkItem`1.Errors">
             <summary>
             The list of errors (if any) that occured while trying to perform the action.
             </summary>
@@ -247,12 +247,12 @@
             </summary>
             <typeparam name="T"></typeparam>
         </member>
-        <member name="P:COFRS.RqlBulkRequest`1.success">
+        <member name="P:COFRS.RqlBulkRequest`1.Success">
             <summary>
             Overall success. Returns true if all actions performed successfully; false otherwise
             </summary>
         </member>
-        <member name="P:COFRS.RqlBulkRequest`1.items">
+        <member name="P:COFRS.RqlBulkRequest`1.Items">
             <summary>
             The list of items and the actions to perform
             </summary>
@@ -263,37 +263,37 @@
             </summary>
             <typeparam name="T">Represents the type of items in the collection</typeparam>
         </member>
-        <member name="P:COFRS.RqlCollection`1.href">
+        <member name="P:COFRS.RqlCollection`1.Href">
             <summary>
             The hypertext reference to this batch of the collection
             </summary>
         </member>
-        <member name="P:COFRS.RqlCollection`1.next">
+        <member name="P:COFRS.RqlCollection`1.Next">
             <summary>
             The hypertext reference to the next batch in the collection
             </summary>
         </member>
-        <member name="P:COFRS.RqlCollection`1.first">
+        <member name="P:COFRS.RqlCollection`1.First">
             <summary>
             The hypertext reference to the first batch in the collection
             </summary>
         </member>
-        <member name="P:COFRS.RqlCollection`1.previous">
+        <member name="P:COFRS.RqlCollection`1.Previous">
             <summary>
             The hypertext reference to the previous batch in the collection
             </summary>
         </member>
-        <member name="P:COFRS.RqlCollection`1.count">
+        <member name="P:COFRS.RqlCollection`1.Count">
             <summary>
             The total number of items in the collection
             </summary>
         </member>
-        <member name="P:COFRS.RqlCollection`1.limit">
+        <member name="P:COFRS.RqlCollection`1.Limit">
             <summary>
             The number of items in the current batch
             </summary>
         </member>
-        <member name="P:COFRS.RqlCollection`1.items">
+        <member name="P:COFRS.RqlCollection`1.Items">
             <summary>
             The collection of items of type T
             </summary>

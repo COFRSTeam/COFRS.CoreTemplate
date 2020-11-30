@@ -145,7 +145,8 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the query</param>");
 			results.AppendLine($"\t\tpublic override async Task ValidateForGetAsync(RqlNode node)");
 			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tRequireIndexedQuery(node, \"The query is too broad. Please specify a more refined query that will produce fewer records.\");");
+			results.AppendLine("\t\t\t//\tUn-comment out the line below if this table is large, and you want to prevent users from requesting a full table scan");
+			results.AppendLine("\t\t\t//\tRequireIndexedQuery(node, \"The query is too broad. Please specify a more refined query that will produce fewer records.\");");
 			results.AppendLine();
 			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
 			results.AppendLine("\t\t}");
