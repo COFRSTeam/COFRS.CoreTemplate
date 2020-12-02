@@ -545,13 +545,6 @@ select c.name as column_name,
 										return;
 									}
 
-									if (string.Equals(dbColumn.dbDataType, "hierarchyId", StringComparison.OrdinalIgnoreCase))
-									{
-										_tableList.SelectedIndex = -1;
-										MessageBox.Show(".NET Core does not support the SQL Server hierarchyId data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-										return;
-									}
-
 									DatabaseColumns.Add(dbColumn);
 								}
 							}

@@ -2595,7 +2595,14 @@ select name
 				else
 					query.Append(", ");
 
-				query.Append($"[{column.ColumnName}]");
+				if (string.Equals(column.dbDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
+				{
+					query.Append($"REPLACE(CAST({column.ColumnName} AS nvarchar({column.Length})), '/', '-' ) as [{column.ColumnName}]");
+				}
+				else
+				{
+					query.Append($"[{column.ColumnName}]");
+				}
 			}
 
 			query.Append($" FROM [{table.Schema}].[{table.Table}] WITH(NOLOCK)");
