@@ -999,6 +999,10 @@ select c.name as column_name,
 				_entityModelList.SelectedIndex = -1;
 				_resourceModelList.SelectedIndex = -1;
 				_profileModelList.SelectedIndex = -1;
+
+				MessageBox.Show("No matching entity class found. You will not be able to create a validation model without a matching entity model.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				_tableList.SelectedIndex = -1;
+
 				Populating = false;
 			}
 			catch (Exception error)

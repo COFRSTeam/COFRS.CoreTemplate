@@ -545,6 +545,13 @@ select c.name as column_name,
 										return;
 									}
 
+									if (string.Equals(dbColumn.dbDataType, "variant", StringComparison.OrdinalIgnoreCase))
+									{
+										_tableList.SelectedIndex = -1;
+										MessageBox.Show("COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+										return;
+									}
+
 									DatabaseColumns.Add(dbColumn);
 								}
 							}

@@ -44,16 +44,6 @@ namespace COFRSCoreInstaller
 				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to translate between. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate the AutoMapper Profile. Then press OK to generate the AutoMapper Profile class.";
 				_titleLabel.Text = "COFRS AutoMapper Profile Generator";
 			}
-			else if (InstallType == 2)
-			{
-				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to translate between. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate the Rql Profile. Then press OK to generate the Rql Profile class.";
-				_titleLabel.Text = "COFRS Rql Profile Generator";
-			}
-			else if (InstallType == 3)
-			{
-				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to validate. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate the resource validator. Then press OK to generate the resource validator class.";
-				_titleLabel.Text = "COFRS Validator Class Generator";
-			}
 			else if (InstallType == 4)
 			{
 				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to create examples for. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate the example classes. Then press OK to generate the example classes.";
@@ -614,6 +604,21 @@ select c.name as column_name,
 
 				_entityModelList.SelectedIndex = -1;
 				_resourceModelList.SelectedIndex = -1;
+				_tableList.SelectedIndex = -1;
+
+				if (InstallType == 1)
+				{
+					MessageBox.Show("No matching entity class found. You will not be able to create a mapping model without a matching entity model.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				}
+				else if (InstallType == 4)
+				{
+					MessageBox.Show("No matching entity class found. You will not be able to create a example model without a matching entity model.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				}
+				else if (InstallType == 5)
+				{
+					MessageBox.Show("No matching entity class found. You will not be able to create a Controller without a matching entity model.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				}
+
 				Populating = false;
 			}
 			catch (Exception error)
