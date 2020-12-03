@@ -6,6 +6,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace COFRSCoreInstaller
 {
@@ -550,5 +551,117 @@ namespace COFRSCoreInstaller
 			return string.Empty;
 		}
 
+
+
+		public static void LoadClassList(string SolutionFolder, string resourceClass, 
+											ref ResourceClassFile Orchestrator, 
+											ref ResourceClassFile ValidatorClass,
+											ref ResourceClassFile ExampleClass,
+											ref ResourceClassFile CollectionExampleClass)
+		{
+			try
+			{
+				foreach (var file in Directory.GetFiles(SolutionFolder, "*.cs"))
+				{
+					LoadDomainClass(file, resourceClass, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
+				}
+
+				foreach (var folder in Directory.GetDirectories(SolutionFolder))
+				{
+					LoadDomainList(folder, resourceClass, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		private static void LoadDomainList(string folder, string DomainClassName, ref ResourceClassFile Orchestrator,
+											ref ResourceClassFile ValidatorClass,
+											ref ResourceClassFile ExampleClass,
+											ref ResourceClassFile CollectionExampleClass)
+		{
+			try
+			{
+				foreach (var file in Directory.GetFiles(folder, "*.cs"))
+				{
+					LoadDomainClass(file, DomainClassName, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
+				}
+
+				foreach (var subfolder in Directory.GetDirectories(folder))
+				{
+					LoadDomainList(subfolder, DomainClassName, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+
+		private static void LoadDomainClass(string file, string resourceClassName, ref ResourceClassFile Orchestrator,
+											ref ResourceClassFile ValidatorClass,
+											ref ResourceClassFile ExampleClass,
+											ref ResourceClassFile CollectionExampleClass)
+		{
+			try
+			{
+				var data = File.ReadAllText(file).Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries); ;
+				var className = string.Empty;
+				var baseClassName = string.Empty;
+				var namespaceName = string.Empty;
+
+				foreach (var line in data)
+				{
+					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)([ \t]*\\:[ \t]*(?<baseClass>[A-Za-z][A-Za-z0-9_\\<\\>]*))*");
+
+					if (match.Success)
+					{
+						className = match.Groups["className"].Value;
+						baseClassName = match.Groups["baseClass"].Value;
+					}
+
+					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
+
+					if (match.Success)
+						namespaceName = match.Groups["namespaceName"].Value;
+
+					if (!string.IsNullOrWhiteSpace(className) &&
+						!string.IsNullOrWhiteSpace(namespaceName))
+					{
+						var classfile = new ResourceClassFile
+						{
+							ClassName = $"{className}",
+							FileName = file,
+							EntityClass = string.Empty,
+							ClassNamespace = namespaceName
+						};
+
+						if (string.Equals(classfile.ClassName, "ServiceOrchestrator", StringComparison.OrdinalIgnoreCase))
+							Orchestrator = classfile;
+
+						if (!string.IsNullOrWhiteSpace(baseClassName) &&
+							string.Equals(baseClassName, $"Validator<{resourceClassName}>", StringComparison.OrdinalIgnoreCase))
+							ValidatorClass = classfile;
+
+						if (!string.IsNullOrWhiteSpace(baseClassName) &&
+							string.Equals(baseClassName, $"IExamplesProvider<{resourceClassName}>", StringComparison.OrdinalIgnoreCase))
+							ExampleClass = classfile;
+
+						if (!string.IsNullOrWhiteSpace(baseClassName) &&
+							string.Equals(baseClassName, $"IExamplesProvider<RqlCollection<{resourceClassName}>>", StringComparison.OrdinalIgnoreCase))
+							CollectionExampleClass = classfile;
+					}
+
+					className = string.Empty;
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
 	}
 }

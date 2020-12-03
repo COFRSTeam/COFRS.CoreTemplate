@@ -16,10 +16,10 @@ namespace COFRSCoreInstaller
 	{
 		private bool Proceed = false;
 		private string SolutionFolder { get; set; }
-		private ResourceClassFile Orchestrator { get; set; }
-		private ResourceClassFile ExampleClass { get; set; }
-		private ResourceClassFile ValidatorClass { get; set; }
-		private ResourceClassFile CollectionExampleClass { get; set; }
+		private ResourceClassFile Orchestrator;
+		private ResourceClassFile ExampleClass;
+		private ResourceClassFile ValidatorClass;
+		private ResourceClassFile CollectionExampleClass;
 
 		// This method is called before opening any item that
 		// has the OpenInEditor attribute.
@@ -66,9 +66,10 @@ namespace COFRSCoreInstaller
 
 					Orchestrator = null;
 					ExampleClass = null;
+					CollectionExampleClass = null;
 					ValidatorClass = null;
 
-					LoadClassList(resourceClassFile.ClassName);
+					Utilities.LoadClassList(SolutionFolder, resourceClassFile.ClassName, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
 					var policy = LoadPolicy(SolutionFolder);
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
@@ -181,7 +182,7 @@ namespace COFRSCoreInstaller
 			}
 
 			if (CollectionExampleClass != null)
-				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({domain.ClassName}CollectionExample))]");
+				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({CollectionExampleClass.ClassName})]");
 
 			results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
 			results.AppendLine("\t\t[SupportRQL]");
@@ -193,7 +194,7 @@ namespace COFRSCoreInstaller
 
 			if (hasValidator)
 			{
-				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
+				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{ValidatorClass.ClassName}>(User);");
 				results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(node).ConfigureAwait(false);");
 				results.AppendLine();
 			}
@@ -230,7 +231,7 @@ namespace COFRSCoreInstaller
 					results.AppendLine($"\t\t[ProducesResponseType((int)HttpStatusCode.OK, Type = typeof({domain.ClassName}))]");
 
 				if (ExampleClass != null)
-					results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({domain.ClassName}Example))]");
+					results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({ExampleClass.ClassName}))]");
 
 				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
 					results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NotFound)]");
@@ -253,7 +254,7 @@ namespace COFRSCoreInstaller
 
 				if (hasValidator)
 				{
-					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
+					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{ValidatorClass.ClassName}>(User);");
 					results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(node).ConfigureAwait(false);");
 					results.AppendLine();
 				}
@@ -295,9 +296,9 @@ namespace COFRSCoreInstaller
 				results.AppendLine($"\t\t[ProducesResponseType((int)HttpStatusCode.Created, Type = typeof({domain.ClassName}))]");
 
 			if (ExampleClass != null)
-				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.Created, typeof({domain.ClassName}Example))]");
+				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.Created, typeof({ExampleClass.ClassName}))]");
 			
-			results.AppendLine($"\t\t[SwaggerResponseHeader((int)HttpStatusCode.Created, \"Location\", \"string\", \"Returns Href or Int of new {domain.ClassName}\")]");
+			results.AppendLine($"\t\t[SwaggerResponseHeader((int)HttpStatusCode.Created, \"Location\", \"string\", \"Returns Href of new {domain.ClassName}\")]");
 			results.AppendLine($"\t\t[Consumes(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
 			results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
 			results.AppendLine($"\t\tpublic async Task<IActionResult> Add{domain.ClassName}Async([FromBody] {domain.ClassName} item)");
@@ -307,7 +308,7 @@ namespace COFRSCoreInstaller
 
 			if (hasValidator)
 			{
-				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
+				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{ValidatorClass.ClassName}>(User);");
 				results.AppendLine("\t\t\tawait validator.ValidateForAddAsync(item).ConfigureAwait(false);");
 				results.AppendLine();
 			}
@@ -337,7 +338,7 @@ namespace COFRSCoreInstaller
 
 			if (ExampleClass != null)
 			{
-				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({domain.ClassName}Example))]");
+				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({ExampleClass.ClassName}))]");
 			}
 
 			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
@@ -361,7 +362,7 @@ namespace COFRSCoreInstaller
 
 			if (hasValidator)
 			{
-				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
+				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{ValidatorClass.ClassName}>(User);");
 				results.AppendLine("\t\t\tawait validator.ValidateForUpdateAsync(item, node).ConfigureAwait(false);");
 				results.AppendLine();
 			}
@@ -418,7 +419,7 @@ namespace COFRSCoreInstaller
 
 				if (hasValidator)
 				{
-					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
+					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{ValidatorClass.ClassName}>(User);");
 					results.AppendLine("\t\t\tawait validator.ValidateForPatchAsync(commands, node).ConfigureAwait(false);");
 					results.AppendLine();
 				}
@@ -470,7 +471,7 @@ namespace COFRSCoreInstaller
 
 				if (hasValidator)
 				{
-					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{domain.ClassName}Validator>(User);");
+					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<I{ValidatorClass.ClassName}>(User);");
 					results.AppendLine("\t\t\tawait validator.ValidateForDeleteAsync(node).ConfigureAwait(false);");
 					results.AppendLine();
 				}
@@ -554,97 +555,6 @@ namespace COFRSCoreInstaller
 			return route.ToString();
 		}
 
-		private void LoadClassList(string DomainClassName)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(SolutionFolder, "*.cs"))
-				{
-					LoadDomainClass(file, DomainClassName);
-				}
-
-				foreach (var folder in Directory.GetDirectories(SolutionFolder))
-				{
-					LoadDomainList(folder, DomainClassName);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadDomainClass(string file, string domainClassName)
-		{
-			try
-			{
-				var data = File.ReadAllText(file).Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries); ;
-				var className = string.Empty;
-				var namespaceName = string.Empty;
-
-				foreach (var line in data)
-				{
-					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-					if (match.Success)
-						className = match.Groups["className"].Value;
-
-					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-					if (match.Success)
-						namespaceName = match.Groups["namespaceName"].Value;
-
-					if ( !string.IsNullOrWhiteSpace(className) &&
-						 !string.IsNullOrWhiteSpace(namespaceName))
-					{
-						var classfile = new ResourceClassFile
-						{
-							ClassName = $"{className}",
-							FileName = file,
-							EntityClass = string.Empty,
-							ClassNamespace = namespaceName
-						};
-
-						if (string.Equals(classfile.ClassName, "ServiceOrchestrator", StringComparison.OrdinalIgnoreCase))
-							Orchestrator = classfile;
-
-						if (string.Equals(classfile.ClassName, $"{domainClassName}Validator", StringComparison.OrdinalIgnoreCase))
-							ValidatorClass = classfile;
-
-						if (string.Equals(classfile.ClassName, $"{domainClassName}Example", StringComparison.OrdinalIgnoreCase))
-							ExampleClass = classfile;
-
-						if (string.Equals(classfile.ClassName, $"{domainClassName}CollectionExample", StringComparison.OrdinalIgnoreCase))
-							CollectionExampleClass = classfile;
-					}
-
-					className = string.Empty;
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-		private void LoadDomainList(string folder, string DomainClassName)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(folder, "*.cs"))
-				{
-					LoadDomainClass(file, DomainClassName);
-				}
-
-				foreach (var subfolder in Directory.GetDirectories(folder))
-				{
-					LoadDomainList(subfolder, DomainClassName);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
 		private string LoadPolicy(string folder)
 		{
 			try

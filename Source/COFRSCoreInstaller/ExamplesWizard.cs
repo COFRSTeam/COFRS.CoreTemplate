@@ -55,7 +55,7 @@ namespace COFRSCoreInstaller
 					var classFile = (EntityClassFile)form._entityModelList.SelectedItem;
 					var domainFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
 					var model = EmitModel(replacementsDictionary["$targetframeworkversion$"], classFile, domainFile, form.DatabaseColumns, form.Examples, replacementsDictionary);
-					var collectionmodel = EmitCollectionModel(replacementsDictionary["$targetframeworkversion$"], classFile, domainFile, form.DatabaseColumns, form.Examples);
+					var collectionmodel = EmitCollectionModel(replacementsDictionary["$targetframeworkversion$"], replacementsDictionary, classFile, domainFile, form.DatabaseColumns, form.Examples);
 
 					replacementsDictionary.Add("$model$", model);
 					replacementsDictionary.Add("$collectionmodel$", collectionmodel);
@@ -91,7 +91,7 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t///\t<summary>");
 			results.AppendLine($"\t///\t{domainClassFile.ClassName} Example");
 			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic class {domainClassFile.ClassName}Example : IExamplesProvider<{domainClassFile.ClassName}>");
+			results.AppendLine($"\tpublic class {replacementsDictionary["$safeitemname$"]} : IExamplesProvider<{domainClassFile.ClassName}>");
 			results.AppendLine("\t{");
 
 			results.AppendLine("\t\t///\t<summary>");
@@ -155,7 +155,7 @@ namespace COFRSCoreInstaller
 			return first;
 		}
 
-		private string EmitCollectionModel(string version, EntityClassFile entityClassFile, ResourceClassFile domainClassFile, List<DBColumn> Columns, JObject Example)
+		private string EmitCollectionModel(string version, Dictionary<string,string> replacementsDictionary, EntityClassFile entityClassFile, ResourceClassFile domainClassFile, List<DBColumn> Columns, JObject Example)
 		{
 			var results = new StringBuilder();
 			var classMembers = Utilities.LoadClassColumns(domainClassFile.FileName, entityClassFile.FileName, Columns);
@@ -163,7 +163,7 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t///\t<summary>");
 			results.AppendLine($"\t///\t{domainClassFile.ClassName} Collection Example");
 			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic class {domainClassFile.ClassName}CollectionExample : IExamplesProvider<RqlCollection<{domainClassFile.ClassName}>>");
+			results.AppendLine($"\tpublic class Collection{replacementsDictionary["$safeitemname$"]} : IExamplesProvider<RqlCollection<{domainClassFile.ClassName}>>");
 			results.AppendLine("\t{");
 
 			results.AppendLine("\t\t///\t<summary>");

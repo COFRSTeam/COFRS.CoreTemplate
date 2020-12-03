@@ -19,10 +19,10 @@ namespace COFRSCoreInstaller
 	{
 		private bool Proceed = false;
 		private string SolutionFolder { get; set; }
-		private ResourceClassFile Orchestrator { get; set; }
-		private ResourceClassFile ExampleClass { get; set; }
-		private ResourceClassFile AddExampleClass { get; set; }
-		private ResourceClassFile CollectionExampleClass { get; set; }
+		private ResourceClassFile Orchestrator;
+		private ResourceClassFile ExampleClass;
+		private ResourceClassFile CollectionExampleClass;
+		private ResourceClassFile ValidatorClass;
 
 		// This method is called before opening any item that
 		// has the OpenInEditor attribute.
@@ -64,14 +64,14 @@ namespace COFRSCoreInstaller
 
 					Orchestrator = null;
 					ExampleClass = null;
-					AddExampleClass = null;
 					CollectionExampleClass = null;
+					ValidatorClass = null;
 
 					var entityClassFile = (EntityClassFile)form._entityModelList.SelectedItem;
 					var resourceClassFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
 					var profileClassFile = (ProfileClassFile)form._profileModelList.SelectedItem;
 
-					LoadClassList(resourceClassFile.ClassName);
+					Utilities.LoadClassList(SolutionFolder, resourceClassFile.ClassName, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
 
 					var model = EmitModel(entityClassFile, resourceClassFile, profileClassFile, form.DatabaseColumns, replacementsDictionary);
 
@@ -107,7 +107,7 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t///\t<summary>");
 			results.AppendLine($"\t///\tInterface for the {resourceClassFile.ClassName} Validator");
 			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic interface I{resourceClassFile.ClassName}Validator : IValidator<{resourceClassFile.ClassName}>");
+			results.AppendLine($"\tpublic interface I{replacementsDictionary["$safeitemname$"]} : IValidator<{resourceClassFile.ClassName}>");
 			results.AppendLine("\t{");
 			results.AppendLine("\t}");
 			results.AppendLine();
@@ -116,7 +116,7 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t///\t<summary>");
 			results.AppendLine($"\t///\t{replacementsDictionary["$safeitemname$"]}");
 			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic class {replacementsDictionary["$safeitemname$"]} : Validator<{resourceClassFile.ClassName}>, I{resourceClassFile.ClassName}Validator");
+			results.AppendLine($"\tpublic class {replacementsDictionary["$safeitemname$"]} : Validator<{resourceClassFile.ClassName}>, I{replacementsDictionary["$safeitemname$"]}");
 			results.AppendLine("\t{");
 			results.AppendLine("\t\t///\t<summary>");
 			results.AppendLine($"\t\t///\tInitializes the {replacementsDictionary["$safeitemname$"]}");
@@ -339,7 +339,7 @@ namespace COFRSCoreInstaller
 										}
 										else if (state == 4)
 										{
-											if (line.ToLower().Contains(($"services.AddTransientWithParameters<I{domainClassFile.ClassName}Validator, {replacementsDictionary["$safeitemname$"]}>()").ToLower()))
+											if (line.ToLower().Contains(($"services.AddTransientWithParameters<I{replacementsDictionary["$safeitemname$"]}, {replacementsDictionary["$safeitemname$"]}>()").ToLower()))
 												validatorRegistered = true;
 
 											state += line.CountOf('{') - line.CountOf('}');
@@ -351,7 +351,7 @@ namespace COFRSCoreInstaller
 											{
 												if (!validatorRegistered)
 												{
-													writer.WriteLine($"\t\t\tservices.AddTransientWithParameters<I{domainClassFile.ClassName}Validator, {replacementsDictionary["$safeitemname$"]}>();");
+													writer.WriteLine($"\t\t\tservices.AddTransientWithParameters<I{replacementsDictionary["$safeitemname$"]}, {replacementsDictionary["$safeitemname$"]}>();");
 												}
 												state = 1000000;
 											}
@@ -400,97 +400,5 @@ namespace COFRSCoreInstaller
 			return string.Empty;
 		}
 
-		private void LoadClassList(string DomainClassName)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(SolutionFolder, "*.cs"))
-				{
-					LoadDomainClass(file, DomainClassName);
-				}
-
-				foreach (var folder in Directory.GetDirectories(SolutionFolder))
-				{
-					LoadDomainList(folder, DomainClassName);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadDomainClass(string file, string domainClassName)
-		{
-			try
-			{
-				var data = File.ReadAllText(file).Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries); ;
-				var className = string.Empty;
-				var namespaceName = string.Empty;
-
-				foreach (var line in data)
-				{
-					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-					if (match.Success)
-						className = match.Groups["className"].Value;
-
-					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-					if (match.Success)
-						namespaceName = match.Groups["namespaceName"].Value;
-
-					if (!string.IsNullOrWhiteSpace(className) &&
-						 !string.IsNullOrWhiteSpace(namespaceName))
-					{
-						var classfile = new ResourceClassFile
-						{
-							ClassName = $"{className}",
-							FileName = file,
-							EntityClass = string.Empty,
-							ClassNamespace = namespaceName
-						};
-
-						if (string.Equals(classfile.ClassName, "ServiceOrchestrator", StringComparison.OrdinalIgnoreCase))
-							Orchestrator = classfile;
-
-						if (string.Equals(classfile.ClassName, $"{domainClassName}Example", StringComparison.OrdinalIgnoreCase))
-							ExampleClass = classfile;
-
-						if (string.Equals(classfile.ClassName, $"Add{domainClassName}Example", StringComparison.OrdinalIgnoreCase))
-							AddExampleClass = classfile;
-
-						if (string.Equals(classfile.ClassName, $"{domainClassName}CollectionExample", StringComparison.OrdinalIgnoreCase))
-							CollectionExampleClass = classfile;
-					}
-
-					className = string.Empty;
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadDomainList(string folder, string DomainClassName)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(folder, "*.cs"))
-				{
-					LoadDomainClass(file, DomainClassName);
-				}
-
-				foreach (var subfolder in Directory.GetDirectories(folder))
-				{
-					LoadDomainList(subfolder, DomainClassName);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
 	}
 }
