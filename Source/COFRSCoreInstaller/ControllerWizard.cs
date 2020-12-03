@@ -182,7 +182,7 @@ namespace COFRSCoreInstaller
 			}
 
 			if (CollectionExampleClass != null)
-				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({CollectionExampleClass.ClassName})]");
+				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({CollectionExampleClass.ClassName}))]");
 
 			results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
 			results.AppendLine("\t\t[SupportRQL]");
@@ -288,7 +288,7 @@ namespace COFRSCoreInstaller
 				results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
 			if (ExampleClass != null)
-				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({domain.ClassName}Example))]");
+				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({ExampleClass.ClassName}))]");
 
 			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
 				results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.Created, Type = typeof({domain.ClassName}))]");
