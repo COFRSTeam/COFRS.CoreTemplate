@@ -724,30 +724,101 @@ select s.name, t.name
 		private void OnSelectedTableChanged(object sender, EventArgs e)
 		{
 			try
-			{
-				var server = (DBServer)_serverList.SelectedItem;
-				var db = (string)_dbList.SelectedItem;
-				var table = (DBTable)_tableList.SelectedItem;
-				DatabaseColumns.Clear();
+            {
+                var server = (DBServer)_serverList.SelectedItem;
 
-				if (server == null)
-					return;
+                if (server == null)
+                {
+                    MessageBox.Show("You must select a Database server to create a new validation model. Please select a database server and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
-				if (string.IsNullOrWhiteSpace(db))
-					return;
+                var db = (string)_dbList.SelectedItem;
+                if (string.IsNullOrWhiteSpace(db))
+                {
+                    MessageBox.Show("You must select a Database to create a new validation model. Please select a database and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
-				if (table == null)
-					return;
+                var table = (DBTable)_tableList.SelectedItem;
 
-				if (server.DBType == DBServerType.POSTGRESQL)
+                if (table == null)
+                {
+                    MessageBox.Show("You must select a Database table to create a new validation model. Please select a database table and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+
+                Populating = true;
+				bool foundit = false;
+
+                for (int i = 0; i < _entityModelList.Items.Count; i++)
+                {
+                    var entity = (EntityClassFile)_entityModelList.Items[i];
+
+                    if (entity.TableName == table.Table)
+                    {
+                        _entityModelList.SelectedIndex = i;
+
+                        for (int j = 0; j < _resourceModelList.Items.Count; j++)
+                        {
+                            var resource = (ResourceClassFile)_resourceModelList.Items[j];
+
+                            if (string.Equals(resource.EntityClass, entity.ClassName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                _resourceModelList.SelectedIndex = j;
+
+                                for (int r = 0; r < _profileModelList.Items.Count; r++)
+                                {
+                                    var profile = (ProfileClassFile)_profileModelList.Items[r];
+
+                                    if (string.Equals(profile.SourceClass, resource.ClassName, StringComparison.OrdinalIgnoreCase) &&
+                                        string.Equals(profile.DestinationClass, entity.ClassName, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        _profileModelList.SelectedIndex = r;
+										PopulateDatabaseColumns(server, db, table);
+										foundit = true;
+										break;
+                                    }
+                                }
+								break;
+                            }
+                        }
+						break;
+                    }
+                }
+
+				if (!foundit)
 				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+					_entityModelList.SelectedIndex = -1;
+					_resourceModelList.SelectedIndex = -1;
+					_profileModelList.SelectedIndex = -1;
 
-					using (var connection = new NpgsqlConnection(connectionString))
-					{
-						connection.Open();
+					MessageBox.Show("No matching entity/resource/mapping class found. You will not be able to create a validation model without a matching entity, resource, and mapping models.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					_tableList.SelectedIndex = -1;
+				}
 
-						var query = @"
+                Populating = false;
+            }
+            catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+        private void PopulateDatabaseColumns(DBServer server, string db, DBTable table)
+        {
+            DatabaseColumns.Clear();
+
+            if (server.DBType == DBServerType.POSTGRESQL)
+            {
+                string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+
+                using (var connection = new NpgsqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    var query = @"
 select a.attname as columnname,
 	   t.typname as datatype,
 	   case when t.typname = 'varchar' then a.atttypmod-4
@@ -782,46 +853,46 @@ select a.attname as columnname,
  order by a.attnum
 ";
 
-						using (var command = new NpgsqlCommand(query, connection))
-						{
-							command.Parameters.AddWithValue("@schema", table.Schema);
-							command.Parameters.AddWithValue("@tablename", table.Table);
-							using (var reader = command.ExecuteReader())
-							{
-								while (reader.Read())
-								{
-									var dbColumn = new DBColumn
-									{
-										ColumnName = reader.GetString(0),
-										DataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
-										dbDataType = reader.GetString(1),
-										Length = Convert.ToInt64(reader.GetValue(2)),
-										IsNullable = Convert.ToBoolean(reader.GetValue(3)),
-										IsComputed = Convert.ToBoolean(reader.GetValue(4)),
-										IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
-										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
-										IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
-										IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-										ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-										ServerType = DBServerType.POSTGRESQL
-									};
+                    using (var command = new NpgsqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@schema", table.Schema);
+                        command.Parameters.AddWithValue("@tablename", table.Table);
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                var dbColumn = new DBColumn
+                                {
+                                    ColumnName = reader.GetString(0),
+                                    DataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
+                                    dbDataType = reader.GetString(1),
+                                    Length = Convert.ToInt64(reader.GetValue(2)),
+                                    IsNullable = Convert.ToBoolean(reader.GetValue(3)),
+                                    IsComputed = Convert.ToBoolean(reader.GetValue(4)),
+                                    IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
+                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
+                                    IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
+                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+                                    ServerType = DBServerType.POSTGRESQL
+                                };
 
-									DatabaseColumns.Add(dbColumn);
+                                DatabaseColumns.Add(dbColumn);
 
-								}
-							}
-						}
-					}
-				}
-				else if (server.DBType == DBServerType.MYSQL)
-				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
+                            }
+                        }
+                    }
+                }
+            }
+            else if (server.DBType == DBServerType.MYSQL)
+            {
+                string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
 
-					using (var connection = new MySqlConnection(connectionString))
-					{
-						connection.Open();
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    connection.Open();
 
-						var query = @"
+                    var query = @"
 SELECT c.COLUMN_NAME as 'columnName',
        c.COLUMN_TYPE as 'datatype',
        case when c.CHARACTER_MAXIMUM_LENGTH is null then -1 else c.CHARACTER_MAXIMUM_LENGTH end as 'max_len',
@@ -841,53 +912,53 @@ left outer join information_schema.KEY_COLUMN_USAGE as cu on cu.CONSTRAINT_SCHEM
   AND c.TABLE_NAME=@tablename
 ORDER BY c.ORDINAL_POSITION;
 ";
-						using (var command = new MySqlCommand(query, connection))
-						{
-							command.Parameters.AddWithValue("@schema", db);
-							command.Parameters.AddWithValue("@tablename", table.Table);
-							using (var reader = command.ExecuteReader())
-							{
-								while (reader.Read())
-								{
-									var x = reader.GetValue(8);
+                    using (var command = new MySqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@schema", db);
+                        command.Parameters.AddWithValue("@tablename", table.Table);
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                var x = reader.GetValue(8);
 
-									var dbColumn = new DBColumn
-									{
-										ColumnName = reader.GetString(0),
-										DataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
-										dbDataType = reader.GetString(1),
-										Length = Convert.ToInt64(reader.GetValue(2)),
-										IsComputed = Convert.ToBoolean(reader.GetValue(3)),
-										IsIdentity = Convert.ToBoolean(reader.GetValue(4)),
-										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(5)),
-										IsIndexed = Convert.ToBoolean(reader.GetValue(6)),
-										IsNullable = Convert.ToBoolean(reader.GetValue(7)),
-										IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-										ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-										ServerType = DBServerType.MYSQL
-									};
+                                var dbColumn = new DBColumn
+                                {
+                                    ColumnName = reader.GetString(0),
+                                    DataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
+                                    dbDataType = reader.GetString(1),
+                                    Length = Convert.ToInt64(reader.GetValue(2)),
+                                    IsComputed = Convert.ToBoolean(reader.GetValue(3)),
+                                    IsIdentity = Convert.ToBoolean(reader.GetValue(4)),
+                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(5)),
+                                    IsIndexed = Convert.ToBoolean(reader.GetValue(6)),
+                                    IsNullable = Convert.ToBoolean(reader.GetValue(7)),
+                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+                                    ServerType = DBServerType.MYSQL
+                                };
 
-									DatabaseColumns.Add(dbColumn);
+                                DatabaseColumns.Add(dbColumn);
 
-								}
-							}
-						}
-					}
-				}
-				else
-				{
-					string connectionString;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                string connectionString;
 
-					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-						connectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
-					else
-						connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
+                if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
+                    connectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
+                else
+                    connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
 
-					using (var connection = new SqlConnection(connectionString))
-					{
-						connection.Open();
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
 
-						var query = @"
+                    var query = @"
 select c.name as column_name, 
        x.name as datatype, 
 	   case when x.name = 'nchar' then c.max_length / 2
@@ -916,103 +987,54 @@ select c.name as column_name,
  order by t.name, c.column_id
 ";
 
-						using (var command = new SqlCommand(query, connection))
-						{
-							command.Parameters.AddWithValue("@schema", table.Schema);
-							command.Parameters.AddWithValue("@tablename", table.Table);
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@schema", table.Schema);
+                        command.Parameters.AddWithValue("@tablename", table.Table);
 
-							using (var reader = command.ExecuteReader())
-							{
-								while (reader.Read())
-								{
-									var dbColumn = new DBColumn
-									{
-										ColumnName = reader.GetString(0),
-										dbDataType = reader.GetString(1),
-										DataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
-										Length = Convert.ToInt64(reader.GetValue(2)),
-										IsNullable = Convert.ToBoolean(reader.GetValue(3)),
-										IsComputed = Convert.ToBoolean(reader.GetValue(4)),
-										IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
-										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
-										IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
-										IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-										ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-										ServerType = DBServerType.SQLSERVER
-									};
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                var dbColumn = new DBColumn
+                                {
+                                    ColumnName = reader.GetString(0),
+                                    dbDataType = reader.GetString(1),
+                                    DataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
+                                    Length = Convert.ToInt64(reader.GetValue(2)),
+                                    IsNullable = Convert.ToBoolean(reader.GetValue(3)),
+                                    IsComputed = Convert.ToBoolean(reader.GetValue(4)),
+                                    IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
+                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
+                                    IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
+                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+                                    ServerType = DBServerType.SQLSERVER
+                                };
 
-									if (string.Equals(dbColumn.dbDataType, "geometry", StringComparison.OrdinalIgnoreCase))
-									{
-										_tableList.SelectedIndex = -1;
-										throw new Exception("COFRS .NET Core does not support the SQL Server geometry data type.");
-									}
+                                if (string.Equals(dbColumn.dbDataType, "geometry", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    _tableList.SelectedIndex = -1;
+                                    throw new Exception("COFRS .NET Core does not support the SQL Server geometry data type.");
+                                }
 
-									if (string.Equals(dbColumn.dbDataType, "geography", StringComparison.OrdinalIgnoreCase))
-									{
-										_tableList.SelectedIndex = -1;
-										throw new Exception("COFRS .NET Core does not support the SQL Server geography data type.");
-									}
+                                if (string.Equals(dbColumn.dbDataType, "geography", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    _tableList.SelectedIndex = -1;
+                                    throw new Exception("COFRS .NET Core does not support the SQL Server geography data type.");
+                                }
 
-									DatabaseColumns.Add(dbColumn);
-								}
-							}
-						}
-					}
-				}
+                                DatabaseColumns.Add(dbColumn);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
 
-				Populating = true;
-
-				for (int i = 0; i < _entityModelList.Items.Count; i++)
-				{
-					var entity = (EntityClassFile)_entityModelList.Items[i];
-
-					if (entity.TableName == table.Table)
-					{
-						_entityModelList.SelectedIndex = i;
-
-						for (int j = 0; j < _resourceModelList.Items.Count; j++)
-						{
-							var resource = (ResourceClassFile)_resourceModelList.Items[j];
-
-							if (string.Equals(resource.EntityClass, entity.ClassName, StringComparison.OrdinalIgnoreCase))
-							{
-								_resourceModelList.SelectedIndex = j;
-
-								for (int r = 0; r < _profileModelList.Items.Count; r++)
-								{
-									var profile = (ProfileClassFile)_profileModelList.Items[r];
-
-									if (string.Equals(profile.SourceClass, resource.ClassName, StringComparison.OrdinalIgnoreCase) &&
-										string.Equals(profile.DestinationClass, entity.ClassName, StringComparison.OrdinalIgnoreCase))
-									{
-										_profileModelList.SelectedIndex = r;
-										Populating = false;
-										return;
-									}
-								}
-							}
-						}
-					}
-				}
-
-				_entityModelList.SelectedIndex = -1;
-				_resourceModelList.SelectedIndex = -1;
-				_profileModelList.SelectedIndex = -1;
-
-				MessageBox.Show("No matching entity class found. You will not be able to create a validation model without a matching entity model.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-				_tableList.SelectedIndex = -1;
-
-				Populating = false;
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-		#endregion
-
-		#region Helper Functions
-		private void LoadClassList()
+        #region Helper Functions
+        private void LoadClassList()
 		{
 			try
 			{
