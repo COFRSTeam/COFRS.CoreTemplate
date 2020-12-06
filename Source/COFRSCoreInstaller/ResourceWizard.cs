@@ -55,7 +55,7 @@ namespace COFRSCoreInstaller
 
 		private string EmitModel(EntityClassFile entityClassFile, DBTable table, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary)
 		{
-			replacementsDictionary.Add("$Image$", "false");
+			replacementsDictionary.Add("$image$", "false");
 
 			var results = new StringBuilder();
 			bool hasPrimary = false;

@@ -540,7 +540,7 @@ namespace COFRSCoreInstaller
 						return "decimal";
 
 				case SqlDbType.Image:
-					return "byte[]";
+					return "Image";
 
 				case SqlDbType.UniqueIdentifier:
 					if (column.IsNullable)

@@ -1,21 +1,14 @@
 ﻿using EnvDTE;
-using Microsoft.CodeDom.Providers.DotNetCompilerPlatform;
 using Microsoft.VisualStudio.TemplateWizard;
-using MySql.Data.MySqlClient;
-using NpgsqlTypes;
 using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
-using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace COFRSCoreInstaller
 {
-	public class ValidationWizard : IWizard
+    public class ValidationWizard : IWizard
 	{
 		private bool Proceed = false;
 		private string SolutionFolder { get; set; }
@@ -78,7 +71,7 @@ namespace COFRSCoreInstaller
 					replacementsDictionary.Add("$orchestrationnamespace$", Orchestrator.ClassNamespace);
 					replacementsDictionary.Add("$model$", model);
 					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
-					replacementsDictionary.Add("$domainnamespace$", resourceClassFile.ClassNamespace);
+					replacementsDictionary.Add("$resourcenamespace$", resourceClassFile.ClassNamespace);
 
 					Proceed = UpdateServices(resourceClassFile, replacementsDictionary);
 				}
@@ -289,7 +282,7 @@ namespace COFRSCoreInstaller
 
 										if (state == 1)
 										{
-											if (line.ToLower().Contains(replacementsDictionary["$domainnamespace$"].ToLower()))
+											if (line.ToLower().Contains(replacementsDictionary["$resourcenamespace$"].ToLower()))
 											{
 												hasDomainNamespace = true;
 											}
@@ -308,7 +301,7 @@ namespace COFRSCoreInstaller
 											{
 												if (!hasDomainNamespace)
 												{
-													writer.WriteLine($"using {replacementsDictionary["$domainnamespace$"]};");
+													writer.WriteLine($"using {replacementsDictionary["$resourcenamespace$"]};");
 												}
 
 												if (!hasValidationNamespace)

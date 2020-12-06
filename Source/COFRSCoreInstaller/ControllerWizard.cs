@@ -76,7 +76,7 @@ namespace COFRSCoreInstaller
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
 					replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
 					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
-					replacementsDictionary.Add("$domainnamespace$", resourceClassFile.ClassNamespace);
+					replacementsDictionary.Add("$resourcenamespace$", resourceClassFile.ClassNamespace);
 					replacementsDictionary.Add("$orchestrationnamespace$", Orchestrator.ClassNamespace);
 
 					if (ValidatorClass != null)

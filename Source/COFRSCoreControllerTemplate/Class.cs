@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using $entitynamespace$;
-using $domainnamespace$;
+using $resourcenamespace$;
 using COFRS;
 $if$ ($singleexamplenamespace$ != none)using $singleexamplenamespace$;
 $endif$using Microsoft.Extensions.Logging;

@@ -1,5 +1,5 @@
 ﻿using COFRS;
-using $domainnamespace$;
+using $resourcenamespace$;
 using $entitynamespace$;
 using Swashbuckle.AspNetCore.Filters;
 using System;

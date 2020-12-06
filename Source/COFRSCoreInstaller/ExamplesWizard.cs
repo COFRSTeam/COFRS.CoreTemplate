@@ -60,7 +60,7 @@ namespace COFRSCoreInstaller
 					replacementsDictionary.Add("$model$", model);
 					replacementsDictionary.Add("$collectionmodel$", collectionmodel);
 					replacementsDictionary.Add("$entitynamespace$", classFile.ClassNameSpace);
-					replacementsDictionary.Add("$domainnamespace$", domainFile.ClassNamespace);
+					replacementsDictionary.Add("$resourcenamespace$", domainFile.ClassNamespace);
 
 					Proceed = true;
 				}
@@ -81,24 +81,24 @@ namespace COFRSCoreInstaller
 			return Proceed;
 		}
 
-		private string EmitModel(string version, EntityClassFile entityClassFile, ResourceClassFile domainClassFile, List<DBColumn> Columns, JObject Example, Dictionary<string, string> replacementsDictionary)
+		private string EmitModel(string version, EntityClassFile entityClassFile, ResourceClassFile resourceClassFile, List<DBColumn> Columns, JObject Example, Dictionary<string, string> replacementsDictionary)
 		{
 			replacementsDictionary.Add("$usexml$", "false");
 
 			var results = new StringBuilder();
-			var classMembers = Utilities.LoadClassColumns(domainClassFile.FileName, entityClassFile.FileName, Columns);
+			var classMembers = Utilities.LoadClassColumns(resourceClassFile.FileName, entityClassFile.FileName, Columns);
 
 			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\t{domainClassFile.ClassName} Example");
+			results.AppendLine($"\t///\t{resourceClassFile.ClassName} Example");
 			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic class {replacementsDictionary["$safeitemname$"]} : IExamplesProvider<{domainClassFile.ClassName}>");
+			results.AppendLine($"\tpublic class {replacementsDictionary["$safeitemname$"]} : IExamplesProvider<{resourceClassFile.ClassName}>");
 			results.AppendLine("\t{");
 
 			results.AppendLine("\t\t///\t<summary>");
 			results.AppendLine($"\t\t///\tGet Example");
 			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine($"\t\t///\t<returns>An example of {domainClassFile.ClassName}</returns>");
-			results.AppendLine($"\t\tpublic {domainClassFile.ClassName} GetExamples()");
+			results.AppendLine($"\t\t///\t<returns>An example of {resourceClassFile.ClassName}</returns>");
+			results.AppendLine($"\t\tpublic {resourceClassFile.ClassName} GetExamples()");
 			results.AppendLine("\t\t{");
 			results.AppendLine($"\t\t\tvar item = new {entityClassFile.ClassName}");
 			results.AppendLine("\t\t\t{");
@@ -113,7 +113,7 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t\t\t};");
 
 			results.AppendLine();
-			results.AppendLine($"\t\t\treturn AutoMapperFactory.Map<{entityClassFile.ClassName}, {domainClassFile.ClassName}>(item);");
+			results.AppendLine($"\t\t\treturn AutoMapperFactory.Map<{entityClassFile.ClassName}, {resourceClassFile.ClassName}>(item);");
 
 			results.AppendLine("\t\t}");
 			results.AppendLine("\t}");
@@ -148,7 +148,12 @@ namespace COFRSCoreInstaller
 					else if (column.ServerType == DBServerType.SQLSERVER)
 						value = GetSqlServerValue(column.ColumnName, Columns, Example);
 
-					results.Append($"\t\t\t\t{column.EntityName} = {value}");
+					if (string.Equals(column.EntityType, "Image", StringComparison.OrdinalIgnoreCase))
+						results.Append($"\t\t\t\t{column.EntityName} = ImageEx.Parse({value})");
+					else if (column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Image)
+						results.Append($"\t\t\t\t{column.EntityName} = Convert.FromBase64String({value})");
+					else
+						results.Append($"\t\t\t\t{column.EntityName} = {value}");
 				}
 			}
 
@@ -253,6 +258,16 @@ namespace COFRSCoreInstaller
 					}
 
 				case SqlDbType.Image:
+					{
+						if (column.IsNullable)
+						{
+							if (value.Value<byte[]>() == null)
+								return "null";
+						}
+
+						return $"\"{Convert.ToBase64String(value.Value<byte[]>())}\"";
+					}
+
 				case SqlDbType.Timestamp:
 					{
 						if (column.IsNullable)
