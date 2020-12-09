@@ -55,6 +55,8 @@ namespace $safeprojectname$
 			{
 				NullValueHandling = NullValueHandling.Ignore,   //	Null values are omitted from JSON output 
 				Formatting = Formatting.Indented,
+				DateParseHandling = DateParseHandling.DateTimeOffset,
+				DateFormatHandling = DateFormatHandling.IsoDateFormat,
 				Converters = new List<JsonConverter>
 					{
 						new ApiJsonEnumConverter(),			//	Enums will be output as ALL CAPS
