@@ -518,7 +518,7 @@ namespace COFRSCoreInstaller
 			}
 
 			if (string.Equals(action, "patch", StringComparison.OrdinalIgnoreCase))
-				results.AppendLine(", [FromBody] PatchCommand[] commands)");
+				results.AppendLine(", [FromBody] IEnumerable<PatchCommand> commands)");
 			else
 				results.AppendLine(")");
 		}
