@@ -38,7 +38,11 @@ namespace $safeprojectname$.App_Start
 			services.AddSingleton(new LoggerFactory().AddSerilog(loggerConfig.CreateLogger()));
 			services.AddLogging();
 
-			services.AddSingleton<ICacheProvider>(new DefaultCacheProvider(Configuration.GetSection("ApiSettings").GetValue<int>("CacheLimit")));
+			//	If you wish to use caching, uncomment out the next line, and replace the DefaultCacheProvider
+			//	with a provider to the caching service of your choice. Also, change the -1 to the number of
+			//	megabytes the cache should be limited to (-1 = no limit).
+
+			//	services.AddSingleton<ICacheProvider>(new DefaultCacheProvider(-1));
 
 			//	Configure API Settings
 			ApiOptions = ApiOptions.Load(Configuration);
