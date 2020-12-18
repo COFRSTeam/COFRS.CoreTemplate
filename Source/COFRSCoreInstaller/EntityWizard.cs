@@ -120,7 +120,7 @@ namespace COFRSCoreInstaller
 
 				else if (column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.NChar)
 				{
-					if ( column.Length > 1 )
+					if (column.Length > 1)
 						AppendFixed(result, column.Length, true, ref first);
 				}
 
@@ -138,14 +138,14 @@ namespace COFRSCoreInstaller
 				}
 
 				else if ((column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Bit) ||
-				         (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit)))
+						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit)))
 				{
 					//	Insert the column definition
 					AppendFixed(result, column.Length, true, ref first);
 				}
 
 				else if ((column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit) ||
-				         (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Varbit)))
+						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Varbit)))
 				{
 					AppendFixed(result, column.Length, false, ref first);
 				}
@@ -161,7 +161,7 @@ namespace COFRSCoreInstaller
 				else if ((column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Char) ||
 						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Char) ||
 						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Char)) ||
-					     (column.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.String))
+						 (column.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.String))
 				{
 					//	Insert the column definition
 					if (column.ServerType == DBServerType.POSTGRESQL)
@@ -178,7 +178,7 @@ namespace COFRSCoreInstaller
 					}
 					else if (column.ServerType == DBServerType.MYSQL)
 					{
-						if ( column.Length != 1 )
+						if (column.Length != 1)
 							AppendFixed(result, column.Length, true, ref first);
 					}
 					else
@@ -207,6 +207,13 @@ namespace COFRSCoreInstaller
 					AppendAutofield(result, ref first);
 				}
 
+				if ((column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Decimal) ||
+					(column.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Decimal ) ||
+					(column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Numeric))
+                {
+					AppendPrecision(result, column.NumericPrecision, column.NumericScale, ref first);
+                }
+
 				AppendDatabaseType(result, column, ref first);
 
 				if ( column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Image )
@@ -229,6 +236,13 @@ namespace COFRSCoreInstaller
 			result.AppendLine("\t}");
 
 			return result.ToString();
+		}
+
+		private void AppendPrecision(StringBuilder result, int NumericPrecision, int NumericScale, ref bool first)
+        {
+			AppendComma(result, ref first);
+
+			result.Append($"Precision={NumericPrecision}, Scale={NumericScale}");
 		}
 
 		private void AppendDatabaseType(StringBuilder result, DBColumn column, ref bool first)
