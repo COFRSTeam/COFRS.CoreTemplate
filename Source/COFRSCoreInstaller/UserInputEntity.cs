@@ -346,8 +346,27 @@ select a.attname as columnname,
 			when t.typname = '_bpchar' then a.atttypmod-4
 	        when a.atttypmod > -1 then a.atttypmod
 	        else a.attlen end as max_len,
+	   case atttypid
+            when 21 /*int2*/ then 16
+            when 23 /*int4*/ then 32
+            when 20 /*int8*/ then 64
+         	when 1700 /*numeric*/ then
+              	case when atttypmod = -1
+                     then 0
+                     else ((atttypmod - 4) >> 16) & 65535     -- calculate the precision
+                     end
+         	when 700 /*float4*/ then 24 /*FLT_MANT_DIG*/
+         	when 701 /*float8*/ then 53 /*DBL_MANT_DIG*/
+         	else 0
+  			end as numeric_precision,
+  		case when atttypid in (21, 23, 20) then 0
+    		 when atttypid in (1700) then            
+        		  case when atttypmod = -1 then 0       
+            		   else (atttypmod - 4) & 65535            -- calculate the scale  
+        			   end
+       		else 0
+  			end as numeric_scale,		
 	   not a.attnotnull as is_nullable,
-
 	   case when ( a.attgenerated = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
                  || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
                  || '''::regclass)')
@@ -362,13 +381,13 @@ select a.attname as columnname,
 	   case when (select indrelid from pg_index as ix where ix.indrelid = c.oid and a.attnum = ANY(ix.indkey)) = c.oid then true else false end as is_indexed,
 	   case when (select conrelid from pg_constraint as cx where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) = c.oid then true else false end as is_foreignkey,
        (  select cc.relname from pg_constraint as cx inner join pg_class as cc on cc.oid = cx.confrelid where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) as foeigntablename
-  from pg_class as c
+   from pg_class as c
   inner join pg_namespace as ns on ns.oid = c.relnamespace
   inner join pg_attribute as a on a.attrelid = c.oid and not a.attisdropped and attnum > 0
   inner join pg_type as t on t.oid = a.atttypid
   left outer join pg_attrdef as ad on ad.adrelid = a.attrelid and ad.adnum = a.attnum 
-  where ns.nspname = @schema
-    and c.relname = @tablename
+  where ns.nspname = 'public'
+    and c.relname = 'StandardNumerics'
  order by a.attnum
 ";
 
@@ -386,13 +405,15 @@ select a.attname as columnname,
 										DataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
 										dbDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
-										IsNullable = Convert.ToBoolean(reader.GetValue(3)),
-										IsComputed = Convert.ToBoolean(reader.GetValue(4)),
-										IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
-										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
-										IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
-										IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-										ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+										NumericScale = Convert.ToInt32(reader.GetValue(4)),
+										IsNullable = Convert.ToBoolean(reader.GetValue(5)),
+										IsComputed = Convert.ToBoolean(reader.GetValue(6)),
+										IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
+										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
+										IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
+										IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
 										ServerType = DBServerType.POSTGRESQL
 									};
 
@@ -414,7 +435,9 @@ select a.attname as columnname,
 SELECT c.COLUMN_NAME as 'columnName',
        c.COLUMN_TYPE as 'datatype',
        case when c.CHARACTER_MAXIMUM_LENGTH is null then -1 else c.CHARACTER_MAXIMUM_LENGTH end as 'max_len',
-       case when c.GENERATION_EXPRESSION != '' then 1 else 0 end as 'is_computed',
+       case when c.NUMERIC_PRECISION is null then 0 else c.NUMERIC_PRECISION end as 'precision',
+        case when c.NUMERIC_SCALE is null then 0 else c.NUMERIC_SCALE end as 'scale',       
+	   case when c.GENERATION_EXPRESSION != '' then 1 else 0 end as 'is_computed',
        case when c.EXTRA = 'auto_increment' then 1 else 0 end as 'is_identity',
        case when c.COLUMN_KEY = 'PRI' then 1 else 0 end as 'is_primary',
        case when c.COLUMN_KEY != '' then 1 else 0 end as 'is_indexed',
@@ -447,18 +470,19 @@ ORDER BY c.ORDINAL_POSITION;
 										DataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
 										dbDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
-										IsComputed = Convert.ToBoolean(reader.GetValue(3)),
-										IsIdentity = Convert.ToBoolean(reader.GetValue(4)),
-										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(5)),
-										IsIndexed = Convert.ToBoolean(reader.GetValue(6)),
-										IsNullable = Convert.ToBoolean(reader.GetValue(7)),
-										IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-										ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+										NumericScale = Convert.ToInt32(reader.GetValue(4)),
+										IsComputed = Convert.ToBoolean(reader.GetValue(5)),
+										IsIdentity = Convert.ToBoolean(reader.GetValue(6)),
+										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(7)),
+										IsIndexed = Convert.ToBoolean(reader.GetValue(8)),
+										IsNullable = Convert.ToBoolean(reader.GetValue(9)),
+										IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
 										ServerType = DBServerType.MYSQL
 									};
 
 									DatabaseColumns.Add(dbColumn);
-
 								}
 							}
 						}
@@ -486,6 +510,8 @@ select c.name as column_name,
 			when x.name = 'ntext' then -1
 			else c.max_length 
 			end as max_length,
+       case when c.precision is null then 0 else c.precision end as precision,
+       case when c.scale is null then 0 else c.scale end as scale,
 	   c.is_nullable, 
 	   c.is_computed, 
 	   c.is_identity,
@@ -521,13 +547,15 @@ select c.name as column_name,
 										dbDataType = reader.GetString(1),
 										DataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
 										Length = Convert.ToInt64(reader.GetValue(2)),
-										IsNullable = Convert.ToBoolean(reader.GetValue(3)),
-										IsComputed = Convert.ToBoolean(reader.GetValue(4)),
-										IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
-										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
-										IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
-										IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-										ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+										NumericScale = Convert.ToInt32(reader.GetValue(4)),
+										IsNullable = Convert.ToBoolean(reader.GetValue(5)),
+										IsComputed = Convert.ToBoolean(reader.GetValue(6)),
+										IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
+										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
+										IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
+										IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
 										ServerType = DBServerType.SQLSERVER
 									};
 

@@ -34,6 +34,16 @@ namespace COFRSCoreInstaller
 		public long Length { get; set; }
 
 		/// <summary>
+		/// The numeric percision of the column
+		/// </summary>
+		public int NumericPrecision { get; set; }
+
+		/// <summary>
+		/// The numeric scale of the column
+		/// </summary>
+		public int NumericScale { get; set; }
+
+		/// <summary>
 		/// True if this column is part of the primary key; false otherwise
 		/// </summary>
 		public bool IsPrimaryKey { get; set; }
