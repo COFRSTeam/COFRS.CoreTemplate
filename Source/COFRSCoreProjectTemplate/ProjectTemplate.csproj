@@ -15,7 +15,7 @@
     <PackageReference Include="COFRS" Version="0.0.17-alpha" />
     $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.18-alpha" />
     $endif$$if$ ($databaseTechnology$ == Postgresql)<PackageReference Include="COFRS.Postgresql" Version="0.0.3-alpha" />
-    $endif$$if$ ($databaseTechnology$ == MySQL)<PackageReference Include="COFRS.MySql" Version="0.0.3-alpha" />
+    $endif$$if$ ($databaseTechnology$ == MySQL)<PackageReference Include="COFRS.MySql" Version="0.0.4-alpha" />
     $endif$$if$ ($securitymodel$ == OAuth)<PackageReference Include="COFRS.OAuth" Version="0.0.1-alpha" />
     $endif$$if$ ($framework$ == netcoreapp2.1)<PackageReference Include="Microsoft.AspNetCore.App" />
     $endif$<PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
