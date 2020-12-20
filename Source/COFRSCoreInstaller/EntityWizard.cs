@@ -37,6 +37,29 @@ namespace COFRSCoreInstaller
 		{
 			try
 			{
+				var solutionDirectory = replacementsDictionary["$solutiondirectory$"];
+				var rootNamespace = replacementsDictionary["$rootnamespace$"];
+
+				var namespaceParts = rootNamespace.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+				var filePath = solutionDirectory;
+
+				for (int i = 0; i < namespaceParts.Length; i++)
+				{
+					if (i == 0)
+					{
+						var candidate = Path.Combine(filePath, namespaceParts[i]);
+
+						if (Directory.Exists(candidate))
+							filePath = candidate;
+					}
+					else
+						filePath = Path.Combine(filePath, namespaceParts[i]);
+				}
+
+				if (!Directory.Exists(filePath))
+					Directory.CreateDirectory(filePath);
+
 				var form = new UserInputEntity();
 
 				if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)

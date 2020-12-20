@@ -4,6 +4,7 @@ using MySqlX.XDevAPI.Common;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -32,6 +33,29 @@ namespace COFRSCoreInstaller
 
 		public void RunStarted(object automationObject, Dictionary<string, string> replacementsDictionary, WizardRunKind runKind, object[] customParams)
 		{
+			var solutionDirectory = replacementsDictionary["$solutiondirectory$"];
+			var rootNamespace = replacementsDictionary["$rootnamespace$"];
+
+			var namespaceParts = rootNamespace.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+			var filePath = solutionDirectory;
+
+			for (int i = 0; i < namespaceParts.Length; i++)
+			{
+				if (i == 0)
+				{
+					var candidate = Path.Combine(filePath, namespaceParts[i]);
+
+					if (Directory.Exists(candidate))
+						filePath = candidate;
+				}
+				else
+					filePath = Path.Combine(filePath, namespaceParts[i]);
+			}
+
+			if (!Directory.Exists(filePath))
+				Directory.CreateDirectory(filePath);
+
 			var form = new UserInputGeneral()
 			{
 				SolutionFolder = replacementsDictionary["$solutiondirectory$"],
