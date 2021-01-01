@@ -135,6 +135,7 @@ namespace COFRSCoreInstaller
 
 			throw new Exception($"Unrecognized data type: {dataType}");
 		}
+
 		public static MySqlDbType ConvertMySqlDataType(string dataType)
 		{
 			if (string.Equals(dataType, "tinyint", StringComparison.OrdinalIgnoreCase))
@@ -210,6 +211,7 @@ namespace COFRSCoreInstaller
 
 			throw new Exception($"Unrecognized data type: {dataType}");
 		}
+
 		public static SqlDbType ConvertSqlServerDataType(string dataType)
 		{
 			if (string.Equals(dataType, "image", StringComparison.OrdinalIgnoreCase))
@@ -283,6 +285,7 @@ namespace COFRSCoreInstaller
 
 			throw new Exception($"Unrecognized data type: {dataType}");
 		}
+
 		public static string GetNonNullableSqlServerDataType(DBColumn column)
 		{
 			switch ((SqlDbType)column.DataType)
@@ -355,11 +358,13 @@ namespace COFRSCoreInstaller
 
 			return "Unknown";
 		}
+
 		public static string GetNonNullablePostgresqlDataType(DBColumn column)
 		{
 			switch ((NpgsqlDbType)column.DataType)
 			{
 				case NpgsqlDbType.Bit:
+				case NpgsqlDbType.Boolean:
 					return "bool";
 
 				case NpgsqlDbType.Smallint:
@@ -374,6 +379,7 @@ namespace COFRSCoreInstaller
 				case NpgsqlDbType.Real:
 					return "float";
 
+				case NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Money:
 					return "decimal";
 
@@ -396,6 +402,7 @@ namespace COFRSCoreInstaller
 
 			return "Unknown";
 		}
+
 		public static string GetNonNullableMySqlDataType(DBColumn column)
 		{
 			switch ((MySqlDbType)column.DataType)
@@ -469,6 +476,7 @@ namespace COFRSCoreInstaller
 
 			return "Unknown";
 		}
+
 		public static string GetSQLServerDataType(DBColumn column)
 		{
 			switch ((SqlDbType)column.DataType)
@@ -579,6 +587,7 @@ namespace COFRSCoreInstaller
 
 			return "Unknown";
 		}
+
 		public static string GetPostgresDataType(DBColumn column)
 		{
 			switch ((NpgsqlDbType)column.DataType)
@@ -590,7 +599,7 @@ namespace COFRSCoreInstaller
 						return "bool";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Boolean:
-					return "bool[]";
+					return "BitArray";
 
 				case NpgsqlDbType.Bit:
 					if (column.Length == 1)
@@ -602,17 +611,20 @@ namespace COFRSCoreInstaller
 					}
 					else
 					{
-						return "bool[]";
+						return "BitArray";
 					}
 
 				case NpgsqlDbType.Varbit:
-					return "bool[]";
+					return "BitArray";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
-					return "bool[][]";
+					return "BitArray[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bit:
-					return "bool[][]";
+					if (column.Length == 1)
+						return "BitArray";
+					else
+						return "BitArray[]";
 
 				case NpgsqlDbType.Smallint:
 					if (column.IsNullable)
@@ -642,15 +654,7 @@ namespace COFRSCoreInstaller
 					return "long[]";
 
 				case NpgsqlDbType.Bytea:
-					if (column.Length == 1)
-					{
-						if (column.IsNullable)
-							return "byte?";
-						else
-							return "byte";
-					}
-					else
-						return "byte[]";
+					return "byte[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
 					return "byte[][]";
@@ -790,12 +794,16 @@ namespace COFRSCoreInstaller
 					return "string[]";
 
 				case NpgsqlDbType.Inet:
-				case NpgsqlDbType.Cidr:
 					return "IPAddress";
 
+				case NpgsqlDbType.Cidr:
+					return "IPEndPoint";
+
 				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
-				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
 					return "IPAddress[]";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
+					return "IPEndPoint[]";
 
 				case NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.MacAddr8:
@@ -804,6 +812,7 @@ namespace COFRSCoreInstaller
 
 			return "Unknown";
 		}
+
 		public static string GetMySqlDataType(DBColumn column)
 		{
 			switch ((MySqlDbType)column.DataType)
@@ -947,10 +956,20 @@ namespace COFRSCoreInstaller
 
 			return "Unknown";
 		}
+
 		public static string GetPostgresqlResourceDataType(DBColumn column)
 		{
 			switch ((NpgsqlDbType)column.DataType)
 			{
+				case NpgsqlDbType.Boolean:
+					if (column.IsNullable)
+						return "bool?";
+					else
+						return "bool";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Boolean:
+					return "BitArray";
+
 				case NpgsqlDbType.Bit:
 					if (column.Length == 1)
 					{
@@ -960,19 +979,21 @@ namespace COFRSCoreInstaller
 							return "bool";
 					}
 					else
-						return "bool[]";
+					{
+						return "BitArray";
+					}
+
+				case NpgsqlDbType.Varbit:
+					return "BitArray";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
+					return "BitArray[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bit:
-					return "bool[][]";
-
-				case NpgsqlDbType.Boolean:
-					if (column.IsNullable)
-						return "bool?";
+					if (column.Length == 1)
+						return "BitArray";
 					else
-						return "bool";
-
-				case NpgsqlDbType.Array | NpgsqlDbType.Boolean:
-					return "bool[]";
+						return "BitArray[]";
 
 				case NpgsqlDbType.Smallint:
 					if (column.IsNullable)
@@ -1020,12 +1041,6 @@ namespace COFRSCoreInstaller
 					}
 					else
 						return "string";
-
-				case NpgsqlDbType.Varbit:
-					return "bool[]";
-
-				case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
-					return "bool[][]";
 
 				case NpgsqlDbType.Bytea:
 					return "byte[]";
@@ -1127,19 +1142,25 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Jsonb:
 				case NpgsqlDbType.Json:
+				case NpgsqlDbType.Xml:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
 				case NpgsqlDbType.Array | NpgsqlDbType.Json:
+				case NpgsqlDbType.Array | NpgsqlDbType.Xml:
 					return "string[]";
 
 				case NpgsqlDbType.Inet:
-				case NpgsqlDbType.Cidr:
 					return "IPAddress";
 
+				case NpgsqlDbType.Cidr:
+					return "IPEndPoint";
+
 				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
-				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
 					return "IPAddress[]";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
+					return "IPEndPoint[]";
 
 				case NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.MacAddr8:
@@ -1148,6 +1169,7 @@ namespace COFRSCoreInstaller
 
 			return "Unknown";
 		}
+
 		public static string GetMySqlResourceDataType(DBColumn column)
 		{
 			switch ((MySqlDbType)column.DataType)
@@ -1291,6 +1313,7 @@ namespace COFRSCoreInstaller
 
 			return "Unknown";
 		}
+
 		public static string GetSqlServerResourceDataType(DBColumn column)
 		{
 			switch ((SqlDbType)column.DataType)

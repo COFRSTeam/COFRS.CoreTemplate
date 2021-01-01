@@ -187,6 +187,8 @@ namespace COFRSCoreInstaller
 		{
 			try
 			{
+				_tableList.SelectedIndex = -1;
+
 				var server = (DBServer)_serverList.SelectedItem;
 				var db = (string)_dbList.SelectedItem;
 
@@ -302,8 +304,7 @@ select s.name, t.name
 					}
 				}
 
-				if (_tableList.Items.Count > 0)
-					_tableList.SelectedIndex = 0;
+				_tableList.SelectedIndex = -1;
 			}
 			catch (Exception error)
 			{
@@ -386,8 +387,8 @@ select a.attname as columnname,
   inner join pg_attribute as a on a.attrelid = c.oid and not a.attisdropped and attnum > 0
   inner join pg_type as t on t.oid = a.atttypid
   left outer join pg_attrdef as ad on ad.adrelid = a.attrelid and ad.adnum = a.attnum 
-  where ns.nspname = 'public'
-    and c.relname = 'StandardNumerics'
+  where ns.nspname = @schema
+    and c.relname = @tablename
  order by a.attnum
 ";
 
