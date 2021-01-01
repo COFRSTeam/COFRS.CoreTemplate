@@ -89,13 +89,15 @@ namespace COFRSCoreInstaller
 		private string EmitObject(DBTable table, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary)
 		{
 			var result = new StringBuilder();
-			replacementsDictionary.Add("$Image$", "false");
+			replacementsDictionary.Add("$image$", "false");
+			replacementsDictionary.Add("$net$", "false");
+			replacementsDictionary.Add("$netinfo$", "false");
 
 			result.AppendLine("\t///\t<summary>");
 			result.AppendLine($"\t///\t{replacementsDictionary["$safeitemname$"]}");
 			result.AppendLine("\t///\t</summary>");
 
-			if ( string.IsNullOrWhiteSpace(table.Schema))
+			if (string.IsNullOrWhiteSpace(table.Schema))
 				result.AppendLine($"\t[Table(\"{table.Table}\")]");
 			else
 				result.AppendLine($"\t[Table(\"{table.Table}\", Schema = \"{table.Schema}\")]");
@@ -231,16 +233,28 @@ namespace COFRSCoreInstaller
 				}
 
 				if ((column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Decimal) ||
-					(column.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Decimal ) ||
+					(column.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Decimal) ||
 					(column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Numeric))
-                {
+				{
 					AppendPrecision(result, column.NumericPrecision, column.NumericScale, ref first);
-                }
+				}
 
 				AppendDatabaseType(result, column, ref first);
 
-				if ( column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Image )
+				if (column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Image)
 					replacementsDictionary["$image$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Inet)
+					replacementsDictionary["$net$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Cidr)
+					replacementsDictionary["$net$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr)
+					replacementsDictionary["$netinfo$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr8)
+					replacementsDictionary["$netinfo$"] = "true";
 
 				//	Correct for reserved words
 				CorrectForReservedNames(result, column, ref first);
