@@ -4,12 +4,15 @@ using Newtonsoft.Json.Linq;
 using Npgsql;
 using NpgsqlTypes;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -1815,7 +1818,41 @@ select name
 									else
 									{
 										var value = reader.GetValue(reader.GetOrdinal(columnName));
-										values.Add(columnName, JToken.FromObject(value));
+
+
+										if (value.GetType() == typeof(IPAddress))
+										{
+											var ipAddress = (IPAddress)value;
+											values.Add(columnName, JToken.FromObject(ipAddress.ToString()));
+										}
+										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>))
+										{
+											var ipAddress = ((ValueTuple<IPAddress, int>)value).Item1;
+											int port = ((ValueTuple<IPAddress, int>)value).Item2;
+
+											var ipEndPoint = new IPEndPoint(ipAddress, port);
+											values.Add(columnName, JToken.FromObject(ipEndPoint.ToString()));
+										}
+										else if (value.GetType() == typeof(PhysicalAddress))
+										{
+											var physicalAddress = (PhysicalAddress)value;
+											values.Add(columnName, JToken.FromObject(physicalAddress.ToString()));
+										}
+										else if (value.GetType() == typeof(BitArray))
+										{
+											var answer = new StringBuilder();
+
+											foreach (bool val in (BitArray)value)
+											{
+												var strVal = val ? "1" : "0";
+												answer.Append(strVal);
+											}
+											values.Add(columnName, JToken.FromObject(answer.ToString()));
+										}
+										else
+										{
+											values.Add(columnName, JToken.FromObject(value));
+										}
 									}
 								}
 

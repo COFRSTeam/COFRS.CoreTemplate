@@ -84,6 +84,7 @@ namespace COFRSCoreInstaller
 			replacementsDictionary.Add("$image$", "false");
 			replacementsDictionary.Add("$net$", "false");
 			replacementsDictionary.Add("$netinfo$", "false");
+			replacementsDictionary.Add("$barray$", "false");
 
 			var results = new StringBuilder();
 			bool hasPrimary = false;
@@ -138,6 +139,18 @@ namespace COFRSCoreInstaller
 						replacementsDictionary["$netinfo$"] = "true";
 					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.MacAddr8)
 						replacementsDictionary["$netinfo$"] = "true";
+
+					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == (NpgsqlDbType.Array | NpgsqlDbType.Boolean))
+						replacementsDictionary["$barray$"] = "true";
+
+					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit))
+						replacementsDictionary["$barray$"] = "true";
+
+					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Bit && member.EntityNames[0].Length > 1)
+						replacementsDictionary["$barray$"] = "true";
+
+					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Varbit)
+						replacementsDictionary["$barray$"] = "true";
 
 					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL)
 						results.AppendLine($"\t\tpublic {DBHelper.GetPostgresqlResourceDataType(member.EntityNames[0])} {member.ResourceMemberName} {{ get; set; }}");
