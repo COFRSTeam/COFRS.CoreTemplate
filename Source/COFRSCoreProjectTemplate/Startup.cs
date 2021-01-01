@@ -59,9 +59,7 @@ namespace $safeprojectname$
 				DateFormatHandling = DateFormatHandling.IsoDateFormat,
 				Converters = new List<JsonConverter>
 					{
-						new ApiJsonEnumConverter(),			//	Enums will be output as ALL CAPS
-						new ApiJsonByteArrayConverter(),	//	Byte Arrays are output as Base64 strings
-						new ApiJsonImageConverter()			//	Images are output as Base64 strings
+						new ApiJsonSpecialTypesConverter()
 					}
 			};
 
