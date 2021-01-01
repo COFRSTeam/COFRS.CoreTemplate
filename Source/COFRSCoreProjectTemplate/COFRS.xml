@@ -218,6 +218,16 @@
             The length of the field, in bytes. The maximum length if the member is a varying length type column.
             </summary>
         </member>
+        <member name="P:COFRS.MemberAttribute.Precision">
+            <summary>
+            The precision length 
+            </summary>
+        </member>
+        <member name="P:COFRS.MemberAttribute.Scale">
+            <summary>
+            The Scale
+            </summary>
+        </member>
         <member name="P:COFRS.MemberAttribute.TableName">
             <summary>
             The name of the table containing the member. If not specified, the table is assumed
@@ -415,9 +425,74 @@
             The schema that holds the table
             </summary>
         </member>
+        <member name="T:COFRS.Cache">
+            <summary>
+            Cache
+            </summary>
+        </member>
+        <member name="P:COFRS.Cache.MaxAge">
+            <summary>
+            The maximum amount of time a resource is considered fresh. Unlike Expires, this directive
+            is relative to the time of the request.
+            </summary>
+        </member>
+        <member name="P:COFRS.Cache.SMaxAge">
+            <summary>
+            Overrides max-age or the Expires header, but only for shared caches (e.g., proxies). Ignored
+            by private caches.
+            </summary>
+        </member>
+        <member name="P:COFRS.Cache.MaxStale">
+            <summary>
+            Indicates the client will accept a stale response. An optional value in seconds indicates the
+            upper limit of staleness the client will accept.
+            </summary>
+        </member>
+        <member name="P:COFRS.Cache.MinFresh">
+            <summary>
+            Indicates the client wants a response that will still be fresh for at least the specified number
+            of seconds.
+            </summary>
+        </member>
+        <member name="P:COFRS.Cache.StaleWhileRevalidate">
+            <summary>
+            Indicates the client will accept a stale response, while asynchronously checking in the background
+            for a fresh one. The seconds value indicates how long the client will accept a stale response. See
+            "Keeping things fresh with stale-while-revalidate" for more information.
+            </summary>
+        </member>
+        <member name="P:COFRS.Cache.StaleIfError">
+            <summary>
+            Indicates the client will accept a stale response if the check for a fresh one fails. The seconds
+            value indicates how long the client will accept the stale response after the initial expiration.
+            </summary>
+        </member>
+        <member name="M:COFRS.Cache.#ctor(System.Int32)">
+            <summary>
+            Implements a Cache filter
+            </summary>
+            <param name="cacheDirective"></param>
+        </member>
+        <member name="M:COFRS.Cache.OnActionExecuting(System.Web.Http.Controllers.HttpActionContext)">
+            <summary>
+            On
+            </summary>
+            <param name="actionContext"></param>
+        </member>
+        <member name="M:COFRS.Cache.OnActionExecuted(System.Web.Http.Filters.HttpActionExecutedContext)">
+            <summary>
+            
+            </summary>
+            <param name="actionExecutedContext"></param>
+        </member>
         <member name="T:COFRS.CacheDirective">
             <summary>
             Cache Directives
+            </summary>
+        </member>
+        <member name="F:COFRS.CacheDirective.NONE">
+            <summary>
+            Do not use a cache directive
             </summary>
         </member>
         <member name="F:COFRS.CacheDirective.PUBLIC">
@@ -481,9 +556,19 @@
             copy and avoid contacting the origin-server to see if a newer copy exists.
             </summary>
         </member>
+        <member name="F:COFRS.CacheDirective.FORCE_CLEAR">
+            <summary>
+            Force Clear, will decare a no-store, max-age=0 header.
+            </summary>
+        </member>
         <member name="T:COFRS.DefaultCacheProvider">
             <summary>
             Default Cache PRovider
+            </summary>
+        </member>
+        <member name="M:COFRS.DefaultCacheProvider.#ctor">
+            <summary>
+            Instantiates a default cache provider
             </summary>
         </member>
         <member name="M:COFRS.DefaultCacheProvider.#ctor(System.Int32)">
@@ -491,12 +576,17 @@
             Instantiates a default cache provider
             </summary>
         </member>
-        <member name="M:COFRS.DefaultCacheProvider.Contains(System.String)">
+        <member name="M:COFRS.DefaultCacheProvider.ReleaseCollection(System.String)">
             <summary>
-            Does the cache contain the item and is it still valid?
+            Remove any collections from the cache
             </summary>
-            <param name="etag"></param>
-            <returns></returns>
+            <param name="baseUri"></param>
+        </member>
+        <member name="M:COFRS.DefaultCacheProvider.ReleaseReference(System.String)">
+            <summary>
+            Remove any items that match the reference
+            </summary>
+            <param name="reference"></param>
         </member>
         <member name="M:COFRS.DefaultCacheProvider.Set(System.Net.Http.HttpContent)">
             <summary>
@@ -505,32 +595,78 @@
             <param name="result"></param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.DefaultCacheProvider.RemoveItems(System.String)">
+        <member name="M:COFRS.DefaultCacheProvider.SetItem(System.String,System.String)">
             <summary>
-            Remove any items that match the reference
+            Adds or Updates an item in the cache
             </summary>
-            <param name="reference"></param>
+            <param name="key">The key of the item</param>
+            <param name="item">The item to add or update</param>
         </member>
-        <member name="M:COFRS.DefaultCacheProvider.Cleanup(System.Object)">
+        <member name="M:COFRS.DefaultCacheProvider.RemoveItem(System.String)">
             <summary>
-            Cleanup Thread
+            Removed items from the cache
+            </summary>
+            <param name="key">The key of the item to remove</param>
+        </member>
+        <member name="M:COFRS.DefaultCacheProvider.Contains(System.String)">
+            <summary>
+            Determine if a key is in the cache
+            </summary>
+            <param name="key">The key for the cached item</param>
+            <returns><see langword="true"/> if the key is in the cache; <see langword="false"/> otherwise</returns>
+        </member>
+        <member name="M:COFRS.DefaultCacheProvider.ReadItem(System.String)">
+            <summary>
+            Reads an item from the cache
+            </summary>
+            <param name="key"></param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.CollectionCacheItem">
+            <summary>
+            Cached collection items
             </summary>
         </member>
-        <member name="M:COFRS.DefaultCacheProvider.Dispose(System.Boolean)">
+        <member name="P:COFRS.CollectionCacheItem.BaseUrl">
             <summary>
-            Implement Dispose pattern
-            </summary>
-            <param name="disposing"></param>
-        </member>
-        <member name="M:COFRS.DefaultCacheProvider.Finalize">
-            <summary>
-            override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+            The Base url of collections
             </summary>
         </member>
-        <member name="M:COFRS.DefaultCacheProvider.Dispose">
+        <member name="P:COFRS.CollectionCacheItem.Collection">
             <summary>
-            This code added to correctly implement the disposable pattern.
+            The list of cached collections
             </summary>
+        </member>
+        <member name="T:COFRS.ETagCacheItem">
+            <summary>
+            Cached Item
+            </summary>
+        </member>
+        <member name="P:COFRS.ETagCacheItem.ETag">
+            <summary>
+            The key of the item
+            </summary>
+        </member>
+        <member name="P:COFRS.ETagCacheItem.IsCollection">
+            <summary>
+            Returns <see langword="true"/> if the result is a collection; <see langword="false"/> othersise/>
+            </summary>
+        </member>
+        <member name="P:COFRS.ETagCacheItem.BaseUrl">
+            <summary>
+            The base url of the item
+            </summary>
+        </member>
+        <member name="P:COFRS.ETagCacheItem.References">
+            <summary>
+            References
+            </summary>
+        </member>
+        <member name="M:COFRS.ETagCacheItem.#ctor(System.Net.Http.HttpContent)">
+            <summary>
+            Implements a Resource Cache Item
+            </summary>
+            <param name="result"></param>
         </member>
         <member name="T:COFRS.ICacheProvider">
             <summary>
@@ -551,97 +687,32 @@
             <param name="result"></param>
             <returns></returns>
         </member>
-        <member name="M:COFRS.ICacheProvider.RemoveItems(System.String)">
+        <member name="M:COFRS.ICacheProvider.ReleaseReference(System.String)">
             <summary>
             Remove any modified items
             </summary>
             <param name="reference">The Href to the item that was modified</param>
+        </member>
+        <member name="M:COFRS.ICacheProvider.ReleaseCollection(System.String)">
+            <summary>
+            Remove any collections from the cache
+            </summary>
+            <param name="baseUri"></param>
         </member>
         <member name="T:COFRS.ResourceCacheItem">
             <summary>
             Cached Item
             </summary>
         </member>
-        <member name="P:COFRS.ResourceCacheItem.eTag">
+        <member name="P:COFRS.ResourceCacheItem.HRef">
             <summary>
             The key of the item
             </summary>
         </member>
-        <member name="P:COFRS.ResourceCacheItem.References">
+        <member name="P:COFRS.ResourceCacheItem.ETags">
             <summary>
             References
             </summary>
-        </member>
-        <member name="P:COFRS.ResourceCacheItem.LastAccessed">
-            <summary>
-            Last Modifed date/time
-            </summary>
-        </member>
-        <member name="M:COFRS.ResourceCacheItem.#ctor(System.Net.Http.HttpContent)">
-            <summary>
-            Implements a Resource Cache Item
-            </summary>
-            <param name="result"></param>
-        </member>
-        <member name="T:COFRS.Cache">
-            <summary>
-            Cache
-            </summary>
-        </member>
-        <member name="P:COFRS.Cache.MaxAge">
-            <summary>
-            The maximum amount of time a resource is considered fresh. Unlike Expires, this directive
-            is relative to the time of the request.
-            </summary>
-        </member>
-        <member name="P:COFRS.Cache.SMaxAge">
-            <summary>
-            Overrides max-age or the Expires header, but only for shared caches (e.g., proxies). Ignored
-            by private caches.
-            </summary>
-        </member>
-        <member name="P:COFRS.Cache.MaxStale">
-            <summary>
-            Indicates the client will accept a stale response. An optional value in seconds indicates the
-            upper limit of staleness the client will accept.
-            </summary>
-        </member>
-        <member name="P:COFRS.Cache.MinFresh">
-            <summary>
-            Indicates the client wants a response that will still be fresh for at least the specified number
-            of seconds.
-            </summary>
-        </member>
-        <member name="P:COFRS.Cache.StaleWhileRevalidate">
-            <summary>
-            Indicates the client will accept a stale response, while asynchronously checking in the background
-            for a fresh one. The seconds value indicates how long the client will accept a stale response. See
-            "Keeping things fresh with stale-while-revalidate" for more information.
-            </summary>
-        </member>
-        <member name="P:COFRS.Cache.StaleIfError">
-            <summary>
-            Indicates the client will accept a stale response if the check for a fresh one fails. The seconds
-            value indicates how long the client will accept the stale response after the initial expiration.
-            </summary>
-        </member>
-        <member name="M:COFRS.Cache.#ctor(System.Int32)">
-            <summary>
-            Implements a Cache filter
-            </summary>
-            <param name="cacheDirective"></param>
-        </member>
-        <member name="M:COFRS.Cache.OnActionExecuting(System.Web.Http.Controllers.HttpActionContext)">
-            <summary>
-            On
-            </summary>
-            <param name="actionContext"></param>
-        </member>
-        <member name="M:COFRS.Cache.OnActionExecuted(System.Web.Http.Filters.HttpActionExecutedContext)">
-            <summary>
-            
-            </summary>
-            <param name="actionExecutedContext"></param>
         </member>
         <member name="T:COFRS.COFRSExceptionHandler">
             <summary>
@@ -871,35 +942,6 @@
             <param name="p"></param>
             <returns></returns>
         </member>
-        <member name="T:COFRS.ApiJsonByteArrayConverter">
-            <summary>
-            Converts a byte array to and from JSON
-            </summary>
-        </member>
-        <member name="P:COFRS.ApiJsonByteArrayConverter.Node">
-            <summary>
-            Gets or sets the RQL Node associated with this operation
-            </summary>
-        </member>
-        <member name="M:COFRS.ApiJsonByteArrayConverter.ReadJson(Newtonsoft.Json.JsonReader,System.Type,System.Byte[],System.Boolean,Newtonsoft.Json.JsonSerializer)">
-            <summary>
-            Reads the JSON representation of the object.
-            </summary>
-            <param name="reader">The <see cref="T:Newtonsoft.Json.JsonReader"/> to read from.</param>
-            <param name="objectType">Type of the object.</param>
-            <param name="existingValue">The existing value of object being read.</param>
-            <param name="hasExistingValue"><see langword="true"/> if the value is not null; otherwise <see langword="false"/></param>
-            <param name="serializer">The calling serializer.</param>
-            <returns>The object value.</returns>
-        </member>
-        <member name="M:COFRS.ApiJsonByteArrayConverter.WriteJson(Newtonsoft.Json.JsonWriter,System.Byte[],Newtonsoft.Json.JsonSerializer)">
-            <summary>
-            Writes the JSON representation of the object.
-            </summary>
-            <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter"/> to write to.</param>
-            <param name="value">The value.</param>
-            <param name="serializer">The calling serializer.</param>
-        </member>
         <member name="T:COFRS.ApiJsonConverter">
             <summary>
             Converts an object to and from JSON
@@ -916,12 +958,6 @@
             Sets the <see cref="T:COFRS.RqlNode"/> used in the conversion
             </summary>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> used in the conversion</param>
-        </member>
-        <member name="M:COFRS.ApiJsonConverter.SetSelectNode(COFRS.RqlNode)">
-            <summary>
-            Sets the select node for this object
-            </summary>
-            <param name="select"></param>
         </member>
         <member name="M:COFRS.ApiJsonConverter.#ctor">
             <summary>
@@ -965,6 +1001,54 @@
             <param name="value">The value.</param>
             <param name="serializer">The calling serializer.</param>
         </member>
+        <member name="M:COFRS.ApiJsonConverter.WriteCustomTypes(Newtonsoft.Json.JsonWriter,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Checks to see if the type is registered with any of the custom converters, and 
+            writes it to the output json stream if it is.
+            </summary>
+            <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter"/> for the output stream</param>
+            <param name="value">The value to serialize</param>
+            <param name="serializer">The <see cref="T:Newtonsoft.Json.JsonSerializer"/> for the output stream</param>
+            <returns><see langword="true"/> if the value was serialized by a custom converter; <see langword="false"/> otherwise.</returns>
+        </member>
+        <member name="M:COFRS.ApiJsonConverter.WriteArray(Newtonsoft.Json.JsonWriter,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Serializes a collection of objects to the output json stream
+            </summary>
+            <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter"/> for the output stream</param>
+            <param name="value">The value to serialize</param>
+            <param name="serializer">The <see cref="T:Newtonsoft.Json.JsonSerializer"/> for the output stream</param>
+        </member>
+        <member name="M:COFRS.ApiJsonConverter.WriteObject(Newtonsoft.Json.JsonWriter,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Serializes an object to the output json stream
+            </summary>
+            <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter"/> for the output stream</param>
+            <param name="value">The value to serialize</param>
+            <param name="serializer">The <see cref="T:Newtonsoft.Json.JsonSerializer"/> for the output stream</param>
+        </member>
+        <member name="M:COFRS.ApiJsonConverter.DropLevel(System.String,System.Boolean@)">
+            <summary>
+            Create a new Rql SELECT node, including only the children of this property (if any)
+            </summary>
+            <param name="propertyName">The name of this property</param>
+            <param name="foundit">This flag is set to <see langword="true"/> if the property was found in the SELECT node; <see langword="false"/> otherwise.</param>
+            <returns>The <see cref="T:COFRS.RqlNode"/> that represents the SELECT clause for the children of this property.</returns>
+        </member>
+        <member name="M:COFRS.ApiJsonConverter.IsCollection(System.Type)">
+            <summary>
+            Checks to see if a type represents a collection or not
+            </summary>
+            <param name="type">The <see cref="T:System.Type"/> to check</param>
+            <returns><see langword="true"/> if the type represents a collection; <see langword="false"/> otherwise.</returns>
+        </member>
+        <member name="M:COFRS.ApiJsonConverter.IsPrimitiveType(System.Type)">
+            <summary>
+            Checks a type to see if it is a primative value or not
+            </summary>
+            <param name="type">The <see cref="T:System.Type"/> to check</param>
+            <returns><see langword="true"/> if the type represents a primative type; <see langword="false"/> otherwise.</returns>
+        </member>
         <member name="T:COFRS.ApiJsonConverterPolicy">
             <summary>
             Api Json Converter policy
@@ -982,35 +1066,6 @@
             </summary>
             <param name="obj"></param>
             <returns></returns>
-        </member>
-        <member name="T:COFRS.ApiJsonEnumConverter">
-            <summary>
-            Converts an Enumerator to and from JSON
-            </summary>
-        </member>
-        <member name="P:COFRS.ApiJsonEnumConverter.Node">
-            <summary>
-            Gets or sets the RQL Node associated with this operation
-            </summary>
-        </member>
-        <member name="M:COFRS.ApiJsonEnumConverter.ReadJson(Newtonsoft.Json.JsonReader,System.Type,System.Enum,System.Boolean,Newtonsoft.Json.JsonSerializer)">
-            <summary>
-            Reads the JSON representation of the object.
-            </summary>
-            <param name="reader">The <see cref="T:Newtonsoft.Json.JsonReader"/> to read from.</param>
-            <param name="objectType">Type of the object.</param>
-            <param name="existingValue">The existing value of object being read.</param>
-            <param name="hasExistingValue"><see langword="true"/> if the value is not null; otherwise <see langword="false"/></param>
-            <param name="serializer">The calling serializer.</param>
-            <returns>The object value.</returns>
-        </member>
-        <member name="M:COFRS.ApiJsonEnumConverter.WriteJson(Newtonsoft.Json.JsonWriter,System.Enum,Newtonsoft.Json.JsonSerializer)">
-            <summary>
-            Writes the JSON representation of the object.
-            </summary>
-            <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter"/> to write to.</param>
-            <param name="value">The value.</param>
-            <param name="serializer">The calling serializer.</param>
         </member>
         <member name="T:COFRS.COFRSJsonContractResolver">
             <summary>
@@ -1692,6 +1747,13 @@
             </summary>
             <returns>A 32-bit signed interger hash code.</returns>
         </member>
+        <member name="M:COFRS.RqlNode.ToProperty(System.String)">
+            <summary>
+            Turn a string into a property node
+            </summary>
+            <param name="propertyName">The name of the property</param>
+            <returns>A <see cref="T:COFRS.RqlNode"/> that represents the property</returns>
+        </member>
         <member name="T:COFRS.RqlOperation">
             <summary>
             RQL Operations
@@ -2054,6 +2116,34 @@
             <param name="patchCommands">The list of patch commands</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that represets the system defined constriants on the query.</param>
         </member>
+        <member name="M:COFRS.BaseDualOrchestrator`2.BustCollection``1(System.Uri)">
+            <summary>
+            Bust any cached collections for this endpoint
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="href"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.BaseDualOrchestrator`2.BustCacheAndCollection``1(COFRS.RqlNode)">
+            <summary>
+            Remove updated items from the cache
+            </summary>
+            <param name="node">The node that defines the items that have changed</param>
+        </member>
+        <member name="M:COFRS.BaseDualOrchestrator`2.BustCache``1(COFRS.RqlNode)">
+            <summary>
+            Remove updated items from the cache
+            </summary>
+            <param name="node">The node that defines the items that have changed</param>
+        </member>
+        <member name="M:COFRS.BaseDualOrchestrator`2.ParseNode(COFRS.RqlNode,System.String)">
+            <summary>
+            Parse the node, removing all non-where clause entires
+            </summary>
+            <param name="node"></param>
+            <param name="op"></param>
+            <returns></returns>
+        </member>
         <member name="M:COFRS.BaseDualOrchestrator`2.Dispose(System.Boolean)">
             <summary>
             Dispose
@@ -2165,6 +2255,34 @@
             <typeparam name="T">The resource type of the items to patch</typeparam>
             <param name="patchCommands">The list of patch commands</param>
             <param name="node">The <see cref="T:COFRS.RqlNode"/> that further constrains the query.</param>
+        </member>
+        <member name="M:COFRS.BaseOrchestrator`1.BustCollection``1(System.Uri)">
+            <summary>
+            Bust any cached collections for this endpoint
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="href"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.BaseOrchestrator`1.BustCacheAndCollection``1(COFRS.RqlNode)">
+            <summary>
+            Remove updated items from the cache
+            </summary>
+            <param name="node">The node that defines the items that have changed</param>
+        </member>
+        <member name="M:COFRS.BaseOrchestrator`1.BustCache``1(COFRS.RqlNode)">
+            <summary>
+            Remove updated items from the cache
+            </summary>
+            <param name="node">The node that defines the items that have changed</param>
+        </member>
+        <member name="M:COFRS.BaseOrchestrator`1.ParseNode(COFRS.RqlNode,System.String)">
+            <summary>
+            Parse the node, removing all non-where clause entires
+            </summary>
+            <param name="node"></param>
+            <param name="op"></param>
+            <returns></returns>
         </member>
         <member name="M:COFRS.BaseOrchestrator`1.Dispose(System.Boolean)">
             <summary>
@@ -2751,16 +2869,16 @@
             <summary>
             Returns the list of entity members that are used to construct this domain member
             </summary>
-            <typeparam name="TDomain">The domain type</typeparam>
-            <param name="domainMember">The domain member name</param>
+            <typeparam name="TResource">The domain type</typeparam>
+            <param name="resourceMember">The domain member name</param>
             <returns></returns>
         </member>
         <member name="M:COFRS.Translator.TranslateMemberD2E(System.Type,System.String)">
             <summary>
-            Returns the list of entity members that are used to construct this domain member
+            Returns the list of entity members that are used to construct this resource member
             </summary>
-            <param name="T">The domain type</param>
-            <param name="domainMember">The domain member name</param>
+            <param name="TResource">The resource type</param>
+            <param name="resourceMember">The domain member name</param>
             <returns></returns>
         </member>
         <member name="M:COFRS.Translator.GetInstance``1">
@@ -2774,8 +2892,8 @@
             <summary>
             Translate value from domain to entity
             </summary>
-            <typeparam name="TDomain"></typeparam>
-            <param name="domainMember"></param>
+            <typeparam name="TResource"></typeparam>
+            <param name="resourceMember"></param>
             <param name="entityMember"></param>
             <param name="originalValue"></param>
             <returns></returns>
@@ -2784,7 +2902,7 @@
             <summary>
             Translate a query string from domain to Entity
             </summary>
-            <typeparam name="TDomain">The domain type</typeparam>
+            <typeparam name="TResource">The domain type</typeparam>
             <param name="queryString">The query string</param>
             <returns></returns>
         </member>
@@ -2792,7 +2910,7 @@
             <summary>
             Translate a query string from domain to Entity
             </summary>
-            <typeparam name="TDomain">The domain type</typeparam>
+            <typeparam name="TResource">The domain type</typeparam>
             <param name="request">The <see cref="T:System.Net.Http.HttpRequestMessage"/> that contains the query string.</param>
             <returns></returns>
         </member>
@@ -2800,13 +2918,13 @@
             <summary>
             Translate Nodes from domain to entity
             </summary>
-            <typeparam name="TDomain"></typeparam>
+            <typeparam name="TResource"></typeparam>
             <param name="node"></param>
             <returns></returns>
         </member>
         <member name="M:COFRS.Translator.TranslateKeysD2E``1(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.Object}})">
             <summary>
-            Translates a list of key/value pairs from domain to entity representation
+            Translates a list of key/value pairs from resource to entity representation
             </summary>
             <param name="keys">The list of keys to translate</param>
             <returns></returns>
@@ -2815,7 +2933,7 @@
             <summary>
             Translate Patch Commands
             </summary>
-            <typeparam name="T"></typeparam>
+            <typeparam name="TResource"></typeparam>
             <param name="patchCommands"></param>
             <returns></returns>
         </member>
@@ -2831,16 +2949,16 @@
         </member>
         <member name="M:COFRS.Translator.GetEntityType``1">
             <summary>
-            Given a domain model, returns the associated entity model type
+            Given a resource model, returns the associated entity model type
             </summary>
-            <typeparam name="T">Type of the domain model</typeparam>
+            <typeparam name="TResource">Type of the resource model</typeparam>
             <returns></returns>
         </member>
         <member name="M:COFRS.Translator.GetEntityType(System.Type)">
             <summary>
             Given a domain model, returns the associated entity model type
             </summary>
-            <param name="domainType">Type of the domain model</param>
+            <param name="resourceType">Type of the domain model</param>
             <returns></returns>
         </member>
     </members>

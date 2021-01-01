@@ -108,12 +108,38 @@ namespace COFRSCoreInstaller
 				return NpgsqlDbType.Json;
 			else if (string.Equals(dataType, "_json", StringComparison.OrdinalIgnoreCase))
 				return NpgsqlDbType.Array | NpgsqlDbType.Json;
+			else if (string.Equals(dataType, "jsonb", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Jsonb;
+			else if (string.Equals(dataType, "_jsonb", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Array | NpgsqlDbType.Jsonb;
+			else if (string.Equals(dataType, "xml", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Xml;
+			else if (string.Equals(dataType, "_xml", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Array | NpgsqlDbType.Xml;
+			else if (string.Equals(dataType, "inet", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Inet;
+			else if (string.Equals(dataType, "_inet", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Array | NpgsqlDbType.Inet;
+			else if (string.Equals(dataType, "cidr", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Cidr;
+			else if (string.Equals(dataType, "_cidr", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Array | NpgsqlDbType.Cidr;
+			else if (string.Equals(dataType, "macaddr", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.MacAddr;
+			else if (string.Equals(dataType, "_macaddr", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Array | NpgsqlDbType.MacAddr;
+			else if (string.Equals(dataType, "macaddr8", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.MacAddr8;
+			else if (string.Equals(dataType, "_macaddr8", StringComparison.OrdinalIgnoreCase))
+				return NpgsqlDbType.Array | NpgsqlDbType.MacAddr8;
 
 			throw new Exception($"Unrecognized data type: {dataType}");
 		}
 		public static MySqlDbType ConvertMySqlDataType(string dataType)
 		{
 			if (string.Equals(dataType, "tinyint", StringComparison.OrdinalIgnoreCase))
+				return MySqlDbType.Byte;
+			else if (string.Equals(dataType, "tinyint(1)", StringComparison.OrdinalIgnoreCase))
 				return MySqlDbType.Byte;
 			else if (string.Equals(dataType, "tinyint unsigned", StringComparison.OrdinalIgnoreCase))
 				return MySqlDbType.UByte;
@@ -179,6 +205,8 @@ namespace COFRSCoreInstaller
 				return MySqlDbType.MediumBlob;
 			else if (dataType.StartsWith("longblob", StringComparison.OrdinalIgnoreCase))
 				return MySqlDbType.LongBlob;
+			else if (dataType.StartsWith("json", StringComparison.OrdinalIgnoreCase))
+				return MySqlDbType.JSON;
 
 			throw new Exception($"Unrecognized data type: {dataType}");
 		}
@@ -257,7 +285,7 @@ namespace COFRSCoreInstaller
 		}
 		public static string GetNonNullableSqlServerDataType(DBColumn column)
 		{
-			switch ((SqlDbType) column.DataType)
+			switch ((SqlDbType)column.DataType)
 			{
 				case SqlDbType.Bit:
 					return "bool";
@@ -329,7 +357,7 @@ namespace COFRSCoreInstaller
 		}
 		public static string GetNonNullablePostgresqlDataType(DBColumn column)
 		{
-			switch ((NpgsqlDbType) column.DataType)
+			switch ((NpgsqlDbType)column.DataType)
 			{
 				case NpgsqlDbType.Bit:
 					return "bool";
@@ -370,7 +398,7 @@ namespace COFRSCoreInstaller
 		}
 		public static string GetNonNullableMySqlDataType(DBColumn column)
 		{
-			switch ((MySqlDbType) column.DataType)
+			switch ((MySqlDbType)column.DataType)
 			{
 				case MySqlDbType.Bit:
 					return "bool";
@@ -443,7 +471,7 @@ namespace COFRSCoreInstaller
 		}
 		public static string GetSQLServerDataType(DBColumn column)
 		{
-			switch ((SqlDbType) column.DataType)
+			switch ((SqlDbType)column.DataType)
 			{
 				case SqlDbType.Bit:
 					if (column.IsNullable)
@@ -596,27 +624,27 @@ namespace COFRSCoreInstaller
 					return "short[]";
 
 				case NpgsqlDbType.Integer:
-						if (column.IsNullable)
-							return "int?";
-						else
-							return "int";
+					if (column.IsNullable)
+						return "int?";
+					else
+						return "int";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Integer:
-						return "int[]";
+					return "int[]";
 
 				case NpgsqlDbType.Bigint:
-						if (column.IsNullable)
-							return "long?";
-						else
-							return "long";
+					if (column.IsNullable)
+						return "long?";
+					else
+						return "long";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bigint:
-						return "long[]";
+					return "long[]";
 
 				case NpgsqlDbType.Bytea:
 					if (column.Length == 1)
 					{
-						if ( column.IsNullable )
+						if (column.IsNullable)
 							return "byte?";
 						else
 							return "byte";
@@ -625,7 +653,7 @@ namespace COFRSCoreInstaller
 						return "byte[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
-						return "byte[][]";
+					return "byte[][]";
 
 				case NpgsqlDbType.Text:
 					return "string";
@@ -751,6 +779,27 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Xml:
 					return "string";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Xml:
+					return "string[]";
+
+				case NpgsqlDbType.Jsonb:
+					return "string";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
+					return "string[]";
+
+				case NpgsqlDbType.Inet:
+				case NpgsqlDbType.Cidr:
+					return "IPAddress";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
+				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
+					return "IPAddress[]";
+
+				case NpgsqlDbType.MacAddr:
+				case NpgsqlDbType.MacAddr8:
+					return "PhysicalAddress";
 			}
 
 			return "Unknown";
@@ -892,6 +941,7 @@ namespace COFRSCoreInstaller
 
 				case MySqlDbType.Enum:
 				case MySqlDbType.Set:
+				case MySqlDbType.JSON:
 					return "string";
 			}
 
@@ -899,7 +949,7 @@ namespace COFRSCoreInstaller
 		}
 		public static string GetPostgresqlResourceDataType(DBColumn column)
 		{
-			switch ((NpgsqlDbType) column.DataType)
+			switch ((NpgsqlDbType)column.DataType)
 			{
 				case NpgsqlDbType.Bit:
 					if (column.Length == 1)
@@ -953,13 +1003,11 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Text:
 				case NpgsqlDbType.Varchar:
-				case NpgsqlDbType.Json:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Text:
 				case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
 				case NpgsqlDbType.Array | NpgsqlDbType.Char:
-				case NpgsqlDbType.Array | NpgsqlDbType.Json:
 					return "string[]";
 
 				case NpgsqlDbType.Char:
@@ -1076,6 +1124,26 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Uuid:
 					return "Guid[]";
+
+				case NpgsqlDbType.Jsonb:
+				case NpgsqlDbType.Json:
+					return "string";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
+				case NpgsqlDbType.Array | NpgsqlDbType.Json:
+					return "string[]";
+
+				case NpgsqlDbType.Inet:
+				case NpgsqlDbType.Cidr:
+					return "IPAddress";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
+				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
+					return "IPAddress[]";
+
+				case NpgsqlDbType.MacAddr:
+				case NpgsqlDbType.MacAddr8:
+					return "PhysicalAddress";
 			}
 
 			return "Unknown";
@@ -1217,6 +1285,7 @@ namespace COFRSCoreInstaller
 
 				case MySqlDbType.Enum:
 				case MySqlDbType.Set:
+				case MySqlDbType.JSON:
 					return "string";
 			}
 

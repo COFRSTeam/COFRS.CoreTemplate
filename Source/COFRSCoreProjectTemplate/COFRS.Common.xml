@@ -19,6 +19,36 @@
             The type of entity model associated with the domain model
             </summary>
         </member>
+        <member name="T:COFRS.ApiJsonSpecialTypesConverter">
+            <summary>
+            Converts an <see cref="T:System.Net.IPEndPoint"/> to and from JSON
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiJsonSpecialTypesConverter.CanConvert(System.Type)">
+            <summary>
+            Determines whether this instance can convert the specified object type.
+            </summary>
+            <param name="objectType">Type of the object.</param>
+            <returns><see langword="true"/> if this instance can convert the specified object type; otherwise, <see langword="false"/>.</returns>
+        </member>
+        <member name="M:COFRS.ApiJsonSpecialTypesConverter.ReadJson(Newtonsoft.Json.JsonReader,System.Type,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Reads the JSON representation of the object.
+            </summary>
+            <param name="reader">The <see cref="T:Newtonsoft.Json.JsonReader"/> to read from.</param>
+            <param name="objectType">Type of the object.</param>
+            <param name="existingValue">The existing value of object being read.</param>
+            <param name="serializer">The calling serializer.</param>
+            <returns>The object value.</returns>
+        </member>
+        <member name="M:COFRS.ApiJsonSpecialTypesConverter.WriteJson(Newtonsoft.Json.JsonWriter,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Writes the JSON representation of the object.
+            </summary>
+            <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter"/> to write to.</param>
+            <param name="value">The value.</param>
+            <param name="serializer">The calling serializer.</param>
+        </member>
         <member name="T:COFRS.ApiError">
             <summary>
             A generic error type that describes the error
@@ -147,6 +177,68 @@
             </summary>
             <param name="info">The object that holds the serialized object data.</param>
             <param name="context">The contextual information about the source or destination.</param>
+        </member>
+        <member name="T:COFRS.BitArrayExt">
+            <summary>
+            A set of helper function for manipulating <see cref="T:System.Collections.BitArray"/> objects
+            </summary>
+        </member>
+        <member name="M:COFRS.BitArrayExt.Parse(System.String)">
+            <summary>
+            Converts a string of 0's and 1's into a <see cref="T:System.Collections.BitArray"/> object
+            </summary>
+            <param name="value">A string containing only 0's and 1's</param>
+            <returns>The <see cref="T:System.Collections.BitArray"/> representation of the string</returns>
+        </member>
+        <member name="M:COFRS.BitArrayExt.Extract(System.Collections.BitArray)">
+            <summary>
+            Converts a <see cref="T:System.Collections.BitArray"/> to a string representation
+            </summary>
+            <param name="array">The <see cref="T:System.Collections.BitArray"/> to convert</param>
+            <returns>A string containing only 0's and 1's, that represents the value of the <see cref="T:System.Collections.BitArray"/></returns>
+        </member>
+        <member name="T:COFRS.ImageExtensions">
+            <summary>
+            Image Extensions
+            </summary>
+        </member>
+        <member name="M:COFRS.ImageExtensions.GetBytes(System.Drawing.Image)">
+            <summary>
+            Get the bytes from the image
+            </summary>
+            <param name="image">The image</param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.ImageEx">
+            <summary>
+            Let's try a partial class, shall we
+            </summary>
+        </member>
+        <member name="M:COFRS.ImageEx.Parse(System.String)">
+            <summary>
+            Converts a base64 string to an image
+            </summary>
+            <param name="source"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ImageEx.Parse(System.Byte[])">
+            <summary>
+            Converts a base64 string to an image
+            </summary>
+            <param name="source"></param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.IPEndPointExt">
+            <summary>
+            IPEndPoint Extensions
+            </summary>
+        </member>
+        <member name="M:COFRS.IPEndPointExt.Parse(System.String)">
+            <summary>
+            Returns teh IPEndPoint represented by the string value
+            </summary>
+            <param name="value">The standard notation string that represents an IP End Point address</param>
+            <returns>The <see cref="T:System.Net.IPEndPoint"/> that respresents the address.</returns>
         </member>
         <member name="T:COFRS.UriExtensions">
             <summary>
