@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using $safeprojectname$.Orchestration;
 using $safeprojectname$.Repository;
-$if$ ($framework$ == netcoreapp3.1)using Swashbuckle.AspNetCore.Filters;
+$if$ ($framework$ == netcoreapp3.1 || $framework$ == net5.0)using Swashbuckle.AspNetCore.Filters;
 $endif$
 
 namespace $safeprojectname$.App_Start
@@ -57,7 +57,7 @@ namespace $safeprojectname$.App_Start
 			AutoMapperFactory.MapperConfiguration = new MapperConfiguration(cfg => cfg.AddMaps(myAssembly));
 			AutoMapperFactory.CreateMapper();
 
-			$if$ ($framework$ == netcoreapp3.1)services.AddSwaggerExamplesFromAssemblyOf<Startup>();
+			$if$ ($framework$ == netcoreapp3.1 || $framework$ == net5.0)services.AddSwaggerExamplesFromAssemblyOf<Startup>();
 
 			$endif$RepositoryOptions = new RepositoryOptions(Configuration.GetConnectionString("DefaultConnection"),
 													  Configuration.GetSection("ApiSettings").GetValue<int>("QueryLimit"),

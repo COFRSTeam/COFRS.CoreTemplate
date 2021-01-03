@@ -104,7 +104,8 @@
             this.framework.FormattingEnabled = true;
             this.framework.Items.AddRange(new object[] {
             ".NET Core 2.1",
-            ".NET Core 3.1"});
+            ".NET Core 3.1",
+            ".NET 5.0"});
             this.framework.Location = new System.Drawing.Point(406, 70);
             this.framework.Name = "framework";
             this.framework.Size = new System.Drawing.Size(216, 21);

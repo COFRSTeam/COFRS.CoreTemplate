@@ -48,7 +48,7 @@ namespace $safeprojectname$
 		{
 			new ConfigurationBuilder()
 				.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-				.AddJsonFile($"appsettings.{ Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true)
+				.AddJsonFile($"appsettings.{ Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true, reloadOnChange: true)
 				.AddEnvironmentVariables().Build();
 
 			//	In this fuction, we will configure logging using Serilog. See LoggingOptions under

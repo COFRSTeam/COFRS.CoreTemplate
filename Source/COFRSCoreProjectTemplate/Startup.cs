@@ -89,7 +89,7 @@ namespace $safeprojectname$
 
 			$if$ ( $securitymodel$ == OAuth )services.AddApiAuthentication(authorityUrl, scopes, policies);
 
-			$endif$$if$ ( $framework$ == netcoreapp3.1 )services.Configure<IISServerOptions>(options =>
+			$endif$$if$ ( $framework$ == netcoreapp3.1 || $framework$ == net5.0 )services.Configure<IISServerOptions>(options =>
 			 {
 				 options.AllowSynchronousIO = true;
 			 });$endif$
@@ -128,9 +128,9 @@ namespace $safeprojectname$
 		///	</summary>
 		///	<param name="app">Defines a class that provides the mechanisms to configure an application's request pipeline</param>
 		///	<param name="env">Provides information about the web hosting environment an application is running in</param>
-		$if$ ( $framework$ < netcoreapp3.1 )public void Configure(IApplicationBuilder app, IHostingEnvironment env)$else$public void Configure(IApplicationBuilder app, IWebHostEnvironment env)$endif$
+		$if$ ( $framework$ == netcoreapp2.1 )public void Configure(IApplicationBuilder app, IHostingEnvironment env)$else$public void Configure(IApplicationBuilder app, IWebHostEnvironment env)$endif$
 		{
-			$if$ ( $framework$ < netcoreapp3.1 )if (env.IsDevelopment())$else$if (string.Equals(env.EnvironmentName, "Development", StringComparison.OrdinalIgnoreCase))$endif$
+			$if$ ( $framework$ == netcoreapp2.1 )if (env.IsDevelopment())$else$if (string.Equals(env.EnvironmentName, "Development", StringComparison.OrdinalIgnoreCase))$endif$
 			{
 				app.UseDeveloperExceptionPage();
 			}
@@ -145,7 +145,7 @@ namespace $safeprojectname$
 			app.UseStaticFiles();
 
 			app.UseRqlHandler();
-			$if$ ( $framework$ == netcoreapp3.1 )app.UseRouting();
+			$if$ ( $framework$ == netcoreapp3.1 || $framework$ == net5.0 )app.UseRouting();
 			$endif$app.UseSwagger();
 
 			app.UseSwaggerUI(c =>
@@ -162,7 +162,7 @@ namespace $safeprojectname$
 			app.UseAuthorization();$endif$
 			$if$ ( $security$ == OAuth21)app.UseAuthentication();$endif$
 
-			$if$ ( $framework$ < netcoreapp3.1 )app.UseMvc();$else$app.UseEndpoints(endpoints =>
+			$if$ ( $framework$ == netcoreapp2.1 )app.UseMvc();$else$app.UseEndpoints(endpoints =>
 			{
 				endpoints.MapControllers();
 			});$endif$
