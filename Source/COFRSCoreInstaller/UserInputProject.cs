@@ -16,7 +16,7 @@ namespace COFRSCoreInstaller
 
 		private void OnLoad(object sender, EventArgs e)
 		{
-			framework.SelectedIndex = 1;
+			framework.SelectedIndex = 2;
 			securityModel.SelectedIndex = 1;
 			databaseList.SelectedIndex = 2;
 		}
@@ -37,6 +37,10 @@ namespace COFRSCoreInstaller
 
 				case 1:
 					Framework = "netcoreapp3.1";
+					break;
+
+				case 2:
+					Framework = "net5.0";
 					break;
 			}
 
