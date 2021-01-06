@@ -108,10 +108,7 @@ namespace COFRSCoreInstaller
 								shortColumnName = column.ForeignTableName;
 
 							var normalizer = new NameNormalizer(shortColumnName);
-							var domainName = normalizer.PluralForm;
-
-							if (string.Equals(shortColumnName, normalizer.SingleForm, StringComparison.OrdinalIgnoreCase))
-								domainName = normalizer.SingleForm;
+							var domainName = normalizer.SingleForm;
 
 							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, domainName, StringComparison.OrdinalIgnoreCase));
 
@@ -335,10 +332,7 @@ namespace COFRSCoreInstaller
 								shortColumnName = column.ForeignTableName;
 
 							var normalizer = new NameNormalizer(shortColumnName);
-							var domainName = normalizer.PluralForm;
-
-							if (string.Equals(shortColumnName, normalizer.SingleForm, StringComparison.OrdinalIgnoreCase))
-								domainName = normalizer.SingleForm;
+							var domainName = normalizer.SingleForm;
 
 							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, domainName, StringComparison.OrdinalIgnoreCase));
 
@@ -378,21 +372,15 @@ namespace COFRSCoreInstaller
 						}
 						else
 						{
-							var normalizer = new NameNormalizer(column.EntityName);
-							var domainName = normalizer.PluralForm;
-
-							if (string.Equals(column.EntityName, normalizer.SingleForm, StringComparison.OrdinalIgnoreCase))
-								domainName = normalizer.SingleForm;
-
-							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, domainName, StringComparison.OrdinalIgnoreCase));
+							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, column.EntityName, StringComparison.OrdinalIgnoreCase));
 
 							if (member == null)
 							{
-								var potentialMember = members.FirstOrDefault(m => domainName.Length > m.ResourceMemberName.Length ? string.Equals(m.ResourceMemberName, domainName.Substring(0, m.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase) : false);
+								var potentialMember = members.FirstOrDefault(m => column.EntityName.Length > m.ResourceMemberName.Length ? string.Equals(m.ResourceMemberName, column.EntityName.Substring(0, m.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase) : false);
 
 								if (potentialMember != null)
 								{
-									var childMember = potentialMember.ChildMembers.FirstOrDefault(c => string.Equals(c.ResourceMemberName, domainName.Substring(potentialMember.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase));
+									var childMember = potentialMember.ChildMembers.FirstOrDefault(c => string.Equals(c.ResourceMemberName, column.EntityName.Substring(potentialMember.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase));
 
 									if (childMember != null)
 										member = childMember;
