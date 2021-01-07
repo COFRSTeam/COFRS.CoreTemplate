@@ -221,7 +221,7 @@ namespace COFRSCoreInstaller
 
 			foreach (var line in resourceContent)
 			{
-				var match = Regex.Match(line, "[ \\t]*public[ \\t]+(?<datatype>[^ \\t]+)[ \\t]+(?<column>[a-zA-Z0-9_]+)[ \\t]*\\{[ \\t]*get\\;[ \\t]*set\\;[ \\t]*\\}");
+				var match = Regex.Match(line, "[ \\t]*public[ \\t]+(?<datatype>[^ \\t]+)[ \\t]+(?<column>[a-zA-Z0-9_\\<\\>]+)[ \\t]*\\{[ \\t]*get\\;[ \\t]*set\\;[ \\t]*\\}");
 				if (match.Success)
 				{
 					var memberName = match.Groups["column"].Value;
@@ -491,7 +491,20 @@ namespace COFRSCoreInstaller
 
 		private static void LoadChildMembers(string folder, ClassMember member)
 		{
-			var fileName = FindFile(folder, member.ResourceMemberType + ".cs");
+			string memberProperName = string.Empty;
+
+			if (member.ResourceMemberType.Contains("<"))
+				return;
+
+			if (member.ResourceMemberType.Contains(">"))
+				return;
+
+			if (member.ResourceMemberType.EndsWith("?"))
+				memberProperName = member.ResourceMemberType.Substring(0, member.ResourceMemberType.Length-1);
+			else
+				memberProperName = member.ResourceMemberType;
+
+			var fileName = FindFile(folder, memberProperName + ".cs");
 
 			if (!string.IsNullOrWhiteSpace(fileName))
 			{
