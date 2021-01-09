@@ -50,6 +50,30 @@ namespace $safeprojectname$
 			$endif$//	Configure services
 			var options = services.ConfigureServices(AppConfig);
 
+			$if$ ($framework$ == net5.0)
+ 			//	Configure JSON formatting
+            var defaultSettings = new JsonSerializerOptions
+			{
+				WriteIndented = true,
+				DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+				PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+			};
+
+			defaultSettings.Converters.Add(new ApiJsonBitArrayConverter());
+			defaultSettings.Converters.Add(new ApiJsonPhysicalAddressConverter());
+			defaultSettings.Converters.Add(new ApiJsonIPAddressConverter());
+			defaultSettings.Converters.Add(new ApiJsonByteArrayConverter());
+			defaultSettings.Converters.Add(new ApiJsonImageConverter());
+			defaultSettings.Converters.Add(new ApiJsonBitmapConverter());
+
+			services.Configure<IISServerOptions>(options =>
+			{
+				options.AllowSynchronousIO = true;
+			});
+
+			services.AddSingleton<JsonSerializerOptions>(defaultSettings);
+
+			$endif$$if$ ($framework$ == netcoreapp2.1 || $framework$ == netcoreapp3.1 )
 			//	Configure JSON formatting
 			var defaultSettings = new JsonSerializerSettings
 			{
@@ -66,7 +90,7 @@ namespace $safeprojectname$
 			JsonConvert.DefaultSettings = () => { return defaultSettings; };
 			services.AddSingleton<JsonSerializerSettings>(defaultSettings);
 
-			//	Configure CORS Origins
+			#endif$//	Configure CORS Origins
 			AllowedCorsOrigins = AppConfig["ApiSettings:AllowedCors"].Split(", ");
 
 			services.AddCors(o =>
@@ -87,7 +111,16 @@ namespace $safeprojectname$
 				o.DefaultApiVersion = new ApiVersion(1, 0);
 			});
 
-			$if$ ( $securitymodel$ == OAuth )services.AddApiAuthentication(authorityUrl, scopes, policies);
+			$if$ ( $securitymodel$ == OAuth )var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+
+			//	Only set the requireSSL flag to false in development environments where the Identity Server does not use SSL.
+			//	This flag should never be set to false in production environments.
+			if (string.Equals(env, "local", StringComparison.OrdinalIgnoreCase))
+				services.AddApiAuthentication(authorityUrl, scopes, policies, false);
+			else if (string.Equals(env, "development", StringComparison.OrdinalIgnoreCase))
+				services.AddApiAuthentication(authorityUrl, scopes, policies, false);
+			else
+				services.AddApiAuthentication(authorityUrl, scopes, policies);
 
 			$endif$$if$ ( $framework$ == netcoreapp3.1 || $framework$ == net5.0 )services.Configure<IISServerOptions>(options =>
 			 {
@@ -130,7 +163,8 @@ namespace $safeprojectname$
 		///	<param name="env">Provides information about the web hosting environment an application is running in</param>
 		$if$ ( $framework$ == netcoreapp2.1 )public void Configure(IApplicationBuilder app, IHostingEnvironment env)$else$public void Configure(IApplicationBuilder app, IWebHostEnvironment env)$endif$
 		{
-			$if$ ( $framework$ == netcoreapp2.1 )if (env.IsDevelopment())$else$if (string.Equals(env.EnvironmentName, "Development", StringComparison.OrdinalIgnoreCase))$endif$
+			$if$ ( $framework$ == netcoreapp2.1 )if (env.IsDevelopment())$else$if (string.Equals(env.EnvironmentName, "Development", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(env.EnvironmentName, "Local", StringComparison.OrdinalIgnoreCase))$endif$
 			{
 				app.UseDeveloperExceptionPage();
 			}
@@ -148,6 +182,10 @@ namespace $safeprojectname$
 			$if$ ( $framework$ == netcoreapp3.1 || $framework$ == net5.0 )app.UseRouting();
 			$endif$app.UseSwagger();
 
+
+			//	To do: change the client-id and client-secret to something appropriate to your application
+			//		   you can obtain this information from your security provider when you get the 
+			//		   OAuth client that will be used to call into your service
 			app.UseSwaggerUI(c =>
 			{
 				c.SwaggerEndpoint("/swagger/v1.0/swagger.json", "$safeprojectname$ 1.0");
