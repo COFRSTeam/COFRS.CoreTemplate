@@ -224,7 +224,7 @@ namespace COFRSCoreInstaller
 
 			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
 			results.AppendLine($"\t\t\t{{");
-			results.AppendLine($"\t\t\t\tvar collection = await service.GetCollectionAsync<{domain.ClassName}>(Request, node).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\t\tvar collection = await service.GetCollectionAsync<{domain.ClassName}>(Request.QueryString.Value, node).ConfigureAwait(false);");
 			results.AppendLine($"\t\t\t\treturn Ok(collection);");
 			results.AppendLine($"\t\t\t}}");
 			results.AppendLine("\t\t}");
