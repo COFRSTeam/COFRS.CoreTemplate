@@ -65,6 +65,8 @@ namespace $safeprojectname$
 			defaultSettings.Converters.Add(new ApiJsonByteArrayConverter());
 			defaultSettings.Converters.Add(new ApiJsonImageConverter());
 			defaultSettings.Converters.Add(new ApiJsonBitmapConverter());
+			defaultSettings.Converters.Add(new ApiJsonTimeSpanConverter());
+			defaultSettings.Converters.Add(new ApiEnumConverterFactory());
 
 			services.Configure<IISServerOptions>(options =>
 			{
