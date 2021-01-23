@@ -117,12 +117,15 @@ namespace $safeprojectname$
 
 			//	Only set the requireSSL flag to false in development environments where the Identity Server does not use SSL.
 			//	This flag should never be set to false in production environments.
-			if (string.Equals(env, "local", StringComparison.OrdinalIgnoreCase))
+			if (string.Equals(env, "local", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(env, "development", StringComparison.OrdinalIgnoreCase))
+			{
 				services.AddApiAuthentication(authorityUrl, scopes, policies, false);
-			else if (string.Equals(env, "development", StringComparison.OrdinalIgnoreCase))
-				services.AddApiAuthentication(authorityUrl, scopes, policies, false);
+			}
 			else
+			{
 				services.AddApiAuthentication(authorityUrl, scopes, policies);
+			}
 
 			$endif$$if$ ( $framework$ == netcoreapp3.1 || $framework$ == net5.0 )services.Configure<IISServerOptions>(options =>
 			 {

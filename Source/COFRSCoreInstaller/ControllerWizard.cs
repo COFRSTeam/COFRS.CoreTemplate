@@ -269,10 +269,7 @@ namespace COFRSCoreInstaller
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
 				results.AppendLine();
-				results.AppendLine("\t\t\tvar translationOptions = HttpContext.RequestServices.GetService<ITranslationOptions>();");
-				results.AppendLine($"\t\t\tvar url = new Uri(translationOptions.RootUrl, $\"{BuildRoute(nn.PluralCamelCase, pkcolumns)}\");");
-				results.AppendLine();
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href={{url.AbsoluteUri}}\")");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
 				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				if (hasValidator)
@@ -380,7 +377,7 @@ namespace COFRSCoreInstaller
 			results.AppendLine($"\t\tpublic async Task<IActionResult> Update{domain.ClassName}Async([FromBody] {domain.ClassName} item)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-			results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href={{item.Href.AbsoluteUri}}\")");
+			results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href=uri:{{item.Href}}\")");
 			results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 			results.AppendLine();
 
@@ -435,10 +432,7 @@ namespace COFRSCoreInstaller
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
 				results.AppendLine();
-				results.AppendLine("\t\t\tvar translationOptions = HttpContext.RequestServices.GetService<ITranslationOptions>();");
-				results.AppendLine($"\t\t\tvar url = new Uri(translationOptions.RootUrl, $\"{BuildRoute(nn.PluralCamelCase, pkcolumns)}\");");
-				results.AppendLine();
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href={{url.AbsoluteUri}}\")");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
 				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				if (hasValidator)
@@ -487,10 +481,7 @@ namespace COFRSCoreInstaller
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
 				results.AppendLine();
-				results.AppendLine("\t\t\tvar translationOptions = HttpContext.RequestServices.GetService<ITranslationOptions>();");
-				results.AppendLine($"\t\t\tvar url = new Uri(translationOptions.RootUrl, $\"{BuildRoute(nn.PluralCamelCase, pkcolumns)}\");");
-				results.AppendLine();
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href={{url.AbsoluteUri}}\")");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
 				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				if (hasValidator)
