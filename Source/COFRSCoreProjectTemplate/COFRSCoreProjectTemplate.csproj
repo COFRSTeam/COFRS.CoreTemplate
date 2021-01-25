@@ -63,6 +63,7 @@
     <None Include="Orchestration\IServiceOrchestrator.cs" />
     <None Include="Orchestration\ServiceOrchestrator.cs" />
     <None Include="Models\ResourceModels\Heartbeat.cs" />
+    <None Include="Models\SwaggerExamples\PatchExample.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="Startup.cs" />
   </ItemGroup>
