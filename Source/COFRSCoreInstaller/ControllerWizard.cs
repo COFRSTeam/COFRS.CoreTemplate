@@ -195,7 +195,8 @@ namespace COFRSCoreInstaller
 			if ( !string.IsNullOrWhiteSpace(policy))
 				results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
-			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
+			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(replacementsDictionary["$targetframeworkversion$"], "5.0", StringComparison.OrdinalIgnoreCase))
 			{
 				results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(RqlCollection<{domain.ClassName}>))]");
 			}
@@ -248,7 +249,8 @@ namespace COFRSCoreInstaller
 				if (!string.IsNullOrWhiteSpace(policy))
 					results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
-				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
+				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase) ||
+					string.Equals(replacementsDictionary["$targetframeworkversion$"], "5.0", StringComparison.OrdinalIgnoreCase))
 					results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.OK, Type = typeof({domain.ClassName}))]");
 				else
 					results.AppendLine($"\t\t[ProducesResponseType((int)HttpStatusCode.OK, Type = typeof({domain.ClassName}))]");
@@ -256,7 +258,8 @@ namespace COFRSCoreInstaller
 				if (ExampleClass != null)
 					results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({ExampleClass.ClassName}))]");
 
-				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
+				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase) ||
+					string.Equals(replacementsDictionary["$targetframeworkversion$"], "5.0", StringComparison.OrdinalIgnoreCase))
 					results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NotFound)]");
 				else
 					results.AppendLine($"\t\t[ProducesResponseType((int)HttpStatusCode.NotFound)]");
@@ -310,7 +313,8 @@ namespace COFRSCoreInstaller
 			if (ExampleClass != null)
 				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({ExampleClass.ClassName}))]");
 
-			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
+			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(replacementsDictionary["$targetframeworkversion$"], "5.0", StringComparison.OrdinalIgnoreCase))
 				results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.Created, Type = typeof({domain.ClassName}))]");
 			else
 				results.AppendLine($"\t\t[ProducesResponseType((int)HttpStatusCode.Created, Type = typeof({domain.ClassName}))]");
@@ -361,7 +365,8 @@ namespace COFRSCoreInstaller
 				results.AppendLine($"\t\t[SwaggerRequestExample(typeof({domain.ClassName}), typeof({ExampleClass.ClassName}))]");
 			}
 
-			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
+			if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(replacementsDictionary["$targetframeworkversion$"], "5.0", StringComparison.OrdinalIgnoreCase))
 			{
 				results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NoContent)]");
 				results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NotFound)]");
@@ -414,8 +419,11 @@ namespace COFRSCoreInstaller
 				if (!string.IsNullOrWhiteSpace(policy))
 					results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
-				results.AppendLine($"\t\t[SwaggerRequestExample(typeof(IEnumerable<PatchCommand>), typeof(PatchExample))]");
-				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
+				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "5.0", StringComparison.OrdinalIgnoreCase))
+					results.AppendLine($"\t\t[SwaggerRequestExample(typeof(IEnumerable<PatchCommand>), typeof(PatchExample))]");
+
+				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase) ||
+					string.Equals(replacementsDictionary["$targetframeworkversion$"], "5.0", StringComparison.OrdinalIgnoreCase))
 				{
 					results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NoContent)]");
 					results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NotFound)]");
@@ -466,7 +474,8 @@ namespace COFRSCoreInstaller
 				if (!string.IsNullOrWhiteSpace(policy))
 					results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
-				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
+				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase) ||
+					string.Equals(replacementsDictionary["$targetframeworkversion$"], "5.0", StringComparison.OrdinalIgnoreCase))
 				{
 					results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NoContent)]");
 					results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NotFound)]");
