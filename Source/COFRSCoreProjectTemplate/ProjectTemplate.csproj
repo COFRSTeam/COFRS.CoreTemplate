@@ -12,8 +12,8 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="10.1.1" />
     <PackageReference Include="COFRS.Common" Version="0.0.10-alpha" />
-    <PackageReference Include="COFRS" Version="0.0.30-alpha" />
-    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.31-alpha" />
+    <PackageReference Include="COFRS" Version="0.0.31-alpha" />
+    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.32-alpha" />
     $endif$$if$ ($databaseTechnology$ == Postgresql)<PackageReference Include="COFRS.Postgresql" Version="0.0.16-alpha" />
     <PackageReference Include="Npgsql" Version="5.0.1.1" />
     $endif$$if$ ($databaseTechnology$ == MySQL)<PackageReference Include="COFRS.MySql" Version="0.0.20-alpha" />

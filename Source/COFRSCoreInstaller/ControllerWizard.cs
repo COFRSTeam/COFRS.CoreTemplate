@@ -414,6 +414,7 @@ namespace COFRSCoreInstaller
 				if (!string.IsNullOrWhiteSpace(policy))
 					results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
+				results.AppendLine($"\t\t[SwaggerRequestExample(typeof(IEnumerable<PatchCommand>), typeof(PatchExample))]");
 				if (string.Equals(replacementsDictionary["$targetframeworkversion$"], "3.1", StringComparison.OrdinalIgnoreCase))
 				{
 					results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NoContent)]");

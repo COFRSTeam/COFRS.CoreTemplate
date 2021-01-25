@@ -41,6 +41,7 @@
         </Folder>
         <Folder Name="SwaggerExamples">
           <ProjectItem ReplaceParameters="true">HeartbeatExample.cs</ProjectItem>
+          <ProjectItem ReplaceParameters="true">PatchExample.cs</ProjectItem>
         </Folder>
       </Folder>
       <Folder Name="Orchestration">
