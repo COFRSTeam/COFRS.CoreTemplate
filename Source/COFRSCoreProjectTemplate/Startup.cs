@@ -75,7 +75,7 @@ namespace $safeprojectname$
 
 			services.AddSingleton<JsonSerializerOptions>(defaultSettings);
 
-			$endif$$if$ ($framework$ == netcoreapp2.1 || $framework$ == netcoreapp3.1 )
+			$endif$$if$ ($framework$ == netcoreapp2.1 )
 			//	Configure JSON formatting
 			var defaultSettings = new JsonSerializerSettings
 			{
@@ -92,7 +92,24 @@ namespace $safeprojectname$
 			JsonConvert.DefaultSettings = () => { return defaultSettings; };
 			services.AddSingleton<JsonSerializerSettings>(defaultSettings);
 
-			#endif$//	Configure CORS Origins
+			$endif$$if$ ($framework$ == netcoreapp3.1 )
+			//	Configure JSON formatting
+			var defaultSettings = new JsonSerializerSettings
+			{
+				NullValueHandling = NullValueHandling.Ignore,   //	Null values are omitted from JSON output 
+				Formatting = Formatting.Indented,
+				DateParseHandling = DateParseHandling.DateTimeOffset,
+				DateFormatHandling = DateFormatHandling.IsoDateFormat,
+				Converters = new List<JsonConverter>
+						{
+							new ApiJsonSpecialTypesConverter()
+						}
+			};
+
+			JsonConvert.DefaultSettings = () => { return defaultSettings; };
+			services.AddSingleton<JsonSerializerSettings>(defaultSettings);
+
+			$endif$//	Configure CORS Origins
 			AllowedCorsOrigins = AppConfig["ApiSettings:AllowedCors"].Split(", ");
 
 			services.AddCors(o =>
@@ -127,7 +144,10 @@ namespace $safeprojectname$
 				services.AddApiAuthentication(authorityUrl, scopes, policies);
 			}
 
-			$endif$$if$ ( $framework$ == netcoreapp3.1 || $framework$ == net5.0 )services.Configure<IISServerOptions>(options =>
+			$endif$$if$ ( $framework$ == netcoreapp3.1 )services.Configure<IISServerOptions>(options =>
+			 {
+				 options.AllowSynchronousIO = true;
+			 });$endif$$if$ ( $framework$ == net5.0 )services.Configure<IISServerOptions>(options =>
 			 {
 				 options.AllowSynchronousIO = true;
 			 });$endif$
@@ -184,7 +204,8 @@ namespace $safeprojectname$
 			app.UseStaticFiles();
 
 			app.UseRqlHandler();
-			$if$ ( $framework$ == netcoreapp3.1 || $framework$ == net5.0 )app.UseRouting();
+			$if$ ( $framework$ == netcoreapp3.1 )app.UseRouting();
+			$endif$$if$ ( $framework$ == net5.0 )app.UseRouting();
 			$endif$app.UseSwagger();
 
 

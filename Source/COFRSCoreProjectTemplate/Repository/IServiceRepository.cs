@@ -1,4 +1,5 @@
-﻿$if$ ($databaseTechnology$ == SQLServer)using COFRS.SqlServer;
+﻿using COFRS;
+$if$ ($databaseTechnology$ == SQLServer)using COFRS.SqlServer;
 $else$$if$ ($databaseTechnology$ == Postgresql)using COFRS.Postgresql;
 $else$$if$ ($databaseTechnology$ == MySQL)using COFRS.MySql;
 $endif$
