@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using COFRS;
+$if$ ($framework$ == net5.0 )using System.Text.Json;
+using System.Text.Json.Serialization;
+$endif$using COFRS;
 $if$ ($securitymodel$ == OAuth)using COFRS.OAuth;
 $endif$using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

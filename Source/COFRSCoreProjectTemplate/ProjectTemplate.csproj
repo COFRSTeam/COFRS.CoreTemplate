@@ -11,14 +11,14 @@
 
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="10.1.1" />
-    <PackageReference Include="COFRS.Common" Version="0.0.10-alpha" />
-    <PackageReference Include="COFRS" Version="0.0.31-alpha" />
-    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.32-alpha" />
-    $endif$$if$ ($databaseTechnology$ == Postgresql)<PackageReference Include="COFRS.Postgresql" Version="0.0.16-alpha" />
-    <PackageReference Include="Npgsql" Version="5.0.1.1" />
-    $endif$$if$ ($databaseTechnology$ == MySQL)<PackageReference Include="COFRS.MySql" Version="0.0.20-alpha" />
-    <PackageReference Include="MySql.Data" Version="8.0.22" />
-    $endif$$if$ ($securitymodel$ == OAuth)<PackageReference Include="COFRS.OAuth" Version="0.0.8-alpha" />
+    <PackageReference Include="COFRS.Common" Version="0.0.11-alpha" />
+    <PackageReference Include="COFRS" Version="0.0.38-alpha" />
+    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.34-alpha" />
+    $endif$$if$ ($databaseTechnology$ == Postgresql)<PackageReference Include="COFRS.Postgresql" Version="0.0.17-alpha" />
+    <PackageReference Include="Npgsql" Version="5.0.3" />
+    $endif$$if$ ($databaseTechnology$ == MySQL)<PackageReference Include="COFRS.MySql" Version="0.0.21-alpha" />
+    <PackageReference Include="MySql.Data" Version="8.0.23" />
+    $endif$$if$ ($securitymodel$ == OAuth)<PackageReference Include="COFRS.OAuth" Version="0.0.9-alpha" />
     $endif$$if$ ($framework$ == netcoreapp2.1)<PackageReference Include="Microsoft.AspNetCore.App" />
     $endif$<PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="1.4.0" />
