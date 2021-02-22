@@ -32,14 +32,10 @@ namespace COFRSCoreInstaller
 			switch (framework.SelectedIndex)
 			{
 				case 0:
-					Framework = "netcoreapp2.1";
-					break;
-
-				case 1:
 					Framework = "netcoreapp3.1";
 					break;
 
-				case 2:
+				case 1:
 					Framework = "net5.0";
 					break;
 			}
