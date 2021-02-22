@@ -67,10 +67,7 @@ namespace COFRSCoreInstaller
 
 					if (string.Equals(securityModel, "OAuth", StringComparison.OrdinalIgnoreCase))
 					{
-						if (string.Equals(framework, "netcoreapp2.1", StringComparison.OrdinalIgnoreCase))
-							replacementsDictionary.Add("$security$", "OAuth21");
-						else
-							replacementsDictionary.Add("$security$", "OAuth31");
+						replacementsDictionary.Add("$security$", "OAuth31");
 					}
 					else
 						replacementsDictionary.Add("$security$", "none");

@@ -77,23 +77,6 @@ namespace $safeprojectname$
 
 			services.AddSingleton<JsonSerializerOptions>(defaultSettings);
 
-			$endif$$if$ ($framework$ == netcoreapp2.1 )
-			//	Configure JSON formatting
-			var defaultSettings = new JsonSerializerSettings
-			{
-				NullValueHandling = NullValueHandling.Ignore,   //	Null values are omitted from JSON output 
-				Formatting = Formatting.Indented,
-				DateParseHandling = DateParseHandling.DateTimeOffset,
-				DateFormatHandling = DateFormatHandling.IsoDateFormat,
-				Converters = new List<JsonConverter>
-					{
-						new ApiJsonSpecialTypesConverter()
-					}
-			};
-
-			JsonConvert.DefaultSettings = () => { return defaultSettings; };
-			services.AddSingleton<JsonSerializerSettings>(defaultSettings);
-
 			$endif$$if$ ($framework$ == netcoreapp3.1 )
 			//	Configure JSON formatting
 			var defaultSettings = new JsonSerializerSettings
@@ -159,19 +142,7 @@ namespace $safeprojectname$
 
 			var supportedJsonTypes = new string[] { "application/json", "text/json", "application/vnd.$companymoniker$.v1+json" };
 
-			$if$ ($framework$ == netcoreapp2.1)services.AddMvc(mvcOptions =>
-			{
-				var serviceProvider = services.BuildServiceProvider();
-
-				mvcOptions.RespectBrowserAcceptHeader = true; // false by default
-				mvcOptions.OutputFormatters.Clear();
-				mvcOptions.OutputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes));
-				mvcOptions.InputFormatters.Clear();
-				mvcOptions.InputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes));
-			});
-
-			services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-			$else$services.AddMvc();
+			services.AddMvc();
 
 			services.AddControllers(o => 
 			{
@@ -181,17 +152,17 @@ namespace $safeprojectname$
 				o.InputFormatters.Clear();
 				o.InputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes));
 			});
-		$endif$}
+		}
 
 		///	<summary>
 		///	This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
 		///	</summary>
 		///	<param name="app">Defines a class that provides the mechanisms to configure an application's request pipeline</param>
 		///	<param name="env">Provides information about the web hosting environment an application is running in</param>
-		$if$ ( $framework$ == netcoreapp2.1 )public void Configure(IApplicationBuilder app, IHostingEnvironment env)$else$public void Configure(IApplicationBuilder app, IWebHostEnvironment env)$endif$
+		public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 		{
-			$if$ ( $framework$ == netcoreapp2.1 )if (env.IsDevelopment())$else$if (string.Equals(env.EnvironmentName, "Development", StringComparison.OrdinalIgnoreCase) || 
-                string.Equals(env.EnvironmentName, "Local", StringComparison.OrdinalIgnoreCase))$endif$
+			if (string.Equals(env.EnvironmentName, "Development", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(env.EnvironmentName, "Local", StringComparison.OrdinalIgnoreCase))
 			{
 				app.UseDeveloperExceptionPage();
 			}
@@ -228,10 +199,10 @@ namespace $safeprojectname$
 			app.UseAuthorization();$endif$
 			$if$ ( $security$ == OAuth21)app.UseAuthentication();$endif$
 
-			$if$ ( $framework$ == netcoreapp2.1 )app.UseMvc();$else$app.UseEndpoints(endpoints =>
+			app.UseEndpoints(endpoints =>
 			{
 				endpoints.MapControllers();
-			});$endif$
+			});
 		}
 	}
 }
