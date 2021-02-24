@@ -12,7 +12,7 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="10.1.1" />
     <PackageReference Include="COFRS.Common" Version="0.0.16-alpha" />
-    <PackageReference Include="COFRS" Version="0.0.44-alpha" />
+    <PackageReference Include="COFRS" Version="0.0.45-alpha" />
     $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.39-alpha" />
     $endif$$if$ ($databaseTechnology$ == Postgresql)<PackageReference Include="COFRS.Postgresql" Version="0.0.17-alpha" />
     <PackageReference Include="Npgsql" Version="5.0.3" />
