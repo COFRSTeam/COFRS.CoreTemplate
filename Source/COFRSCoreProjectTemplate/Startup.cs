@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 $if$ ($framework$ == net5.0 )using System.Text.Json;
 using System.Text.Json.Serialization;
 $endif$using COFRS;
@@ -9,9 +8,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.ObjectPool;
-using Newtonsoft.Json;
-using $safeprojectname$.App_Start;
+$if$ ($framework$ == netcoreapp3.1 )using Newtonsoft.Json;
+$endif$using $safeprojectname$.App_Start;
 
 namespace $safeprojectname$
 {
@@ -129,18 +127,15 @@ namespace $safeprojectname$
 				services.AddApiAuthentication(authorityUrl, scopes, policies);
 			}
 
-			$endif$$if$ ( $framework$ == netcoreapp3.1 )services.Configure<IISServerOptions>(options =>
-			 {
-				 options.AllowSynchronousIO = true;
-			 });$endif$$if$ ( $framework$ == net5.0 )services.Configure<IISServerOptions>(options =>
-			 {
-				 options.AllowSynchronousIO = true;
-			 });$endif$
+			$endif$services.Configure<IISServerOptions>(options =>
+			{
+				options.AllowSynchronousIO = true;
+			});
 
 			//	Configure Swagger
-			$if$ ( $securitymodel$ == OAuth )services.UseSwagger(authorityUrl, options, scopes);$else$services.UseSwagger(options);$endif$
+			$if$ ( $securitymodel$ == OAuth )services.UseSwagger(authorityUrl, options, scopes);$else$services.UseSwagger(options);
 
-			var supportedJsonTypes = new string[] { "application/json", "text/json", "application/vnd.$companymoniker$.v1+json" };
+			$endif$var supportedJsonTypes = new string[] { "application/json", "text/json", "application/vnd.$companymoniker$.v1+json" };
 
 			services.AddMvc();
 
@@ -181,11 +176,10 @@ namespace $safeprojectname$
 			$endif$$if$ ( $framework$ == net5.0 )app.UseRouting();
 			$endif$app.UseSwagger();
 
-
-			//	To do: change the client-id and client-secret to something appropriate to your application
+			$if$ ( $securitymodel$ == OAuth )//	To do: change the client-id and client-secret to something appropriate to your application
 			//		   you can obtain this information from your security provider when you get the 
 			//		   OAuth client that will be used to call into your service
-			app.UseSwaggerUI(c =>
+			$endif$app.UseSwaggerUI(c =>
 			{
 				c.SwaggerEndpoint("/swagger/v1.0/swagger.json", "$safeprojectname$ 1.0");
 				c.RoutePrefix = string.Empty;
@@ -196,10 +190,9 @@ namespace $safeprojectname$
 			$endif$});
 
 			$if$ ( $security$ == OAuth31)app.UseAuthentication();
-			app.UseAuthorization();$endif$
-			$if$ ( $security$ == OAuth21)app.UseAuthentication();$endif$
-
-			app.UseEndpoints(endpoints =>
+			app.UseAuthorization();
+			
+			$endif$app.UseEndpoints(endpoints =>
 			{
 				endpoints.MapControllers();
 			});

@@ -5,15 +5,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using $safeprojectname$.Orchestration;
+$if$ ($framework$ == netcoreapp3.1using Newtonsoft.Json;
+$endif$using $safeprojectname$.Orchestration;
 using $safeprojectname$.Repository;
-$if$ ($framework$ == netcoreapp3.1 || $framework$ == net5.0)using Swashbuckle.AspNetCore.Filters;
-$endif$
+using Swashbuckle.AspNetCore.Filters;
 
 namespace $safeprojectname$.App_Start
 {
