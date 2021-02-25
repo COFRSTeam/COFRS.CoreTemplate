@@ -16,7 +16,7 @@ namespace COFRSCoreInstaller
 
 		private void OnLoad(object sender, EventArgs e)
 		{
-			framework.SelectedIndex = 2;
+			framework.SelectedIndex = 1;
 			securityModel.SelectedIndex = 1;
 			databaseList.SelectedIndex = 2;
 		}
