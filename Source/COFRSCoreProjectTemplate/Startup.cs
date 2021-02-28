@@ -1,15 +1,14 @@
 ﻿using System;
-$if$ ($framework$ == net5.0 )using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
-$endif$using COFRS;
+using COFRS;
 $if$ ($securitymodel$ == OAuth)using COFRS.OAuth;
 $endif$using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-$if$ ($framework$ == netcoreapp3.1 )using Newtonsoft.Json;
-$endif$using $safeprojectname$.App_Start;
+using $safeprojectname$.App_Start;
 
 namespace $safeprojectname$
 {
@@ -50,7 +49,6 @@ namespace $safeprojectname$
 			$endif$//	Configure services
 			var options = services.ConfigureServices(AppConfig);
 
-			$if$ ($framework$ == net5.0)
  			//	Configure JSON formatting
             var defaultSettings = new JsonSerializerOptions
 			{
@@ -75,24 +73,7 @@ namespace $safeprojectname$
 
 			services.AddSingleton<JsonSerializerOptions>(defaultSettings);
 
-			$endif$$if$ ($framework$ == netcoreapp3.1 )
-			//	Configure JSON formatting
-			var defaultSettings = new JsonSerializerSettings
-			{
-				NullValueHandling = NullValueHandling.Ignore,   //	Null values are omitted from JSON output 
-				Formatting = Formatting.Indented,
-				DateParseHandling = DateParseHandling.DateTimeOffset,
-				DateFormatHandling = DateFormatHandling.IsoDateFormat,
-				Converters = new List<JsonConverter>
-						{
-							new ApiJsonSpecialTypesConverter()
-						}
-			};
-
-			JsonConvert.DefaultSettings = () => { return defaultSettings; };
-			services.AddSingleton<JsonSerializerSettings>(defaultSettings);
-
-			$endif$//	Configure CORS Origins
+			//	Configure CORS Origins
 			AllowedCorsOrigins = AppConfig["ApiSettings:AllowedCors"].Split(", ");
 
 			services.AddCors(o =>
@@ -172,9 +153,8 @@ namespace $safeprojectname$
 			app.UseStaticFiles();
 
 			app.UseRqlHandler();
-			$if$ ( $framework$ == netcoreapp3.1 )app.UseRouting();
-			$endif$$if$ ( $framework$ == net5.0 )app.UseRouting();
-			$endif$app.UseSwagger();
+			app.UseRouting();
+			app.UseSwagger();
 
 			$if$ ( $securitymodel$ == OAuth )//	To do: change the client-id and client-secret to something appropriate to your application
 			//		   you can obtain this information from your security provider when you get the 
