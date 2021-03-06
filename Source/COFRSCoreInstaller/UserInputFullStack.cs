@@ -2,55 +2,63 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
+using NpgsqlTypes;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace COFRSCoreInstaller
 {
-	public partial class UserInputEntity : Form
-	{
-		#region Variables
-		private ServerConfig _serverConfig;
-		private bool Populating = false;
-		public DBTable DatabaseTable { get; set; }
-		public List<DBColumn> DatabaseColumns { get; set; }
-		public string SolutionFolder { get; set; }
+    public partial class UserInputFullStack : Form
+    {
+        #region Variables
+        private ServerConfig _serverConfig;
+        private bool Populating = false;
+        public DBTable DatabaseTable { get; set; }
+        public List<DBColumn> DatabaseColumns { get; set; }
+        public string SolutionFolder { get; set; }
 
-		public string ConnectionString { get; set; }
-		public string DefaultConnectionString { get; set; }
+		public string SingularResourceName { get; set; }
+		public string PluralResourceName { get; set; }
+        public string ConnectionString { get; set; }
+        public string DefaultConnectionString { get; set; }
+		public JObject Examples { get; set; }
+
 		#endregion
 
 		#region Utility functions
-		/// <summary>
-		/// Instantiates a User Input Entity form
-		/// </summary>
-		public UserInputEntity()
-		{
-			InitializeComponent();
-		}
+		public UserInputFullStack()
+        {
+            InitializeComponent();
+        }
 
-		/// <summary>
-		/// Called when the form loads
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void OnLoad(object sender, EventArgs e)
-		{
-			_portNumber.Location = new Point(93, 60);
-			DatabaseColumns = new List<DBColumn>();
+        private void OnLoad(object sender, EventArgs e)
+        {
+            _portNumber.Location = new Point(93, 60);
+            DatabaseColumns = new List<DBColumn>();
+
+			SingularName.Text = SingularResourceName;
+			PluralName.Text = PluralResourceName;
+
 			LoadAppSettings();
-			ReadServerList();
-		}
-		#endregion
+            ReadServerList();
+        }
+        #endregion
 
-		#region User interactions
-		private void OnServerTypeChanged(object sender, EventArgs e)
-		{
+        #region user interactions
+        private void OnServerTypeChanged(object sender, EventArgs e)
+        {
 			try
 			{
 				if (_serverTypeList.SelectedIndex == 0 || _serverTypeList.SelectedIndex == 1)
@@ -86,8 +94,8 @@ namespace COFRSCoreInstaller
 			}
 		}
 
-		private void OnServerChanged(object sender, EventArgs e)
-		{
+        private void OnServerChanged(object sender, EventArgs e)
+        {
 			try
 			{
 				if (!Populating)
@@ -188,8 +196,250 @@ namespace COFRSCoreInstaller
 			}
 		}
 
-		private void OnSelectedDatabaseChanged(object sender, EventArgs e)
+		private void OnAuthenticationChanged(object sender, EventArgs e)
 		{
+			if (!Populating)
+			{
+				_dbList.Items.Clear();
+				_tableList.Items.Clear();
+				var server = (DBServer)_serverList.SelectedItem;
+
+				if (server != null)
+				{
+					server.DBAuth = _authenticationList.SelectedIndex == 0 ? DBAuthentication.SQLSERVERAUTH : DBAuthentication.WINDOWSAUTH;
+
+					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
+					{
+						_userName.Text = string.Empty;
+						_userName.Enabled = false;
+						_userNameLabel.Enabled = false;
+
+						_password.Text = string.Empty;
+						_password.Enabled = false;
+						_passwordLabel.Enabled = false;
+
+						_rememberPassword.Checked = false;
+						_rememberPassword.Enabled = false;
+					}
+					else
+					{
+						_userName.Enabled = true;
+						_userNameLabel.Enabled = true;
+
+						_password.Enabled = true;
+						_passwordLabel.Enabled = true;
+
+						_rememberPassword.Checked = server.RememberPassword;
+						_rememberPassword.Enabled = true;
+					}
+
+					Save();
+
+					if (TestConnection(server))
+						PopulateDatabases();
+				}
+			}
+		}
+
+		private void OnUserNameChanged(object sender, EventArgs e)
+		{
+			try
+			{
+				if (!Populating)
+				{
+					_dbList.Items.Clear();
+					_tableList.Items.Clear();
+					var server = (DBServer)_serverList.SelectedItem;
+
+					if (server != null)
+					{
+						server.Username = _userName.Text;
+
+						var otherServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
+
+						Save();
+
+						if (TestConnection(server))
+							PopulateDatabases();
+					}
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		private void OnPasswordChanged(object sender, EventArgs e)
+		{
+			try
+			{
+				if (!Populating)
+				{
+					_dbList.Items.Clear();
+					_tableList.Items.Clear();
+					var server = (DBServer)_serverList.SelectedItem;
+
+					if (server != null)
+					{
+						if (server.RememberPassword)
+							server.Password = _password.Text;
+						else
+							server.Password = string.Empty;
+
+						var otherServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
+
+						Save();
+
+						if (TestConnection(server))
+							PopulateDatabases();
+					}
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+        private void OnRememberPasswordChanged(object sender, EventArgs e)
+        {
+			try
+			{
+				if (!Populating)
+				{
+					_dbList.Items.Clear();
+					_tableList.Items.Clear();
+					var server = (DBServer)_serverList.SelectedItem;
+
+					if (server != null)
+					{
+						server.RememberPassword = _rememberPassword.Checked;
+
+						if (!server.RememberPassword)
+							server.Password = string.Empty;
+						else
+							server.Password = _password.Text;
+
+						var savedServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
+
+						Save();
+
+						if (TestConnection(server))
+							PopulateDatabases();
+					}
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		private void OnPortNumberChanged(object sender, EventArgs e)
+		{
+			try
+			{
+				if (!Populating)
+				{
+					_dbList.Items.Clear();
+					_tableList.Items.Clear();
+					var server = (DBServer)_serverList.SelectedItem;
+
+					if (server != null)
+					{
+						server.PortNumber = Convert.ToInt32(_portNumber.Value);
+
+						var otherServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
+
+						Save();
+
+						if (TestConnection(server))
+							PopulateDatabases();
+					}
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+        private void OnAddNewServer(object sender, EventArgs e)
+        {
+			try
+			{
+				var dialog = new AddConnection
+				{
+					LastServerUsed = (DBServer)_serverList.SelectedItem
+				};
+
+				if (dialog.ShowDialog() == DialogResult.OK)
+				{
+					_dbList.Items.Clear();
+					_tableList.Items.Clear();
+					_serverConfig.Servers.Add(dialog.Server);
+					Save();
+
+					switch (dialog.Server.DBType)
+					{
+						case DBServerType.MYSQL: _serverTypeList.SelectedIndex = 0; break;
+						case DBServerType.POSTGRESQL: _serverTypeList.SelectedIndex = 1; break;
+						case DBServerType.SQLSERVER: _serverTypeList.SelectedIndex = 2; break;
+					}
+
+					OnServerTypeChanged(this, new EventArgs());
+
+					for (int index = 0; index < _serverList.Items.Count; index++)
+					{
+						if (string.Equals((_serverList.Items[index] as DBServer).ServerName, dialog.Server.ServerName, StringComparison.OrdinalIgnoreCase))
+						{
+							_serverList.SelectedIndex = index;
+							break;
+						}
+					}
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		private void OnRemoveServer(object sender, EventArgs e)
+		{
+			try
+			{
+				var deprecatedServer = (DBServer)_serverList.SelectedItem;
+				var newList = new List<DBServer>();
+
+				foreach (var server in _serverConfig.Servers)
+				{
+					if (!string.Equals(server.ServerName, deprecatedServer.ServerName, StringComparison.OrdinalIgnoreCase))
+					{
+						newList.Add(server);
+					}
+				}
+
+				_serverConfig.Servers = newList;
+
+				if (_serverConfig.LastServerUsed >= _serverConfig.Servers.Count())
+				{
+					_serverConfig.LastServerUsed = 0;
+				}
+
+				Save();
+
+				OnServerTypeChanged(this, new EventArgs());
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+        private void OnDatabaseChanged(object sender, EventArgs e)
+        {
 			try
 			{
 				_tableList.SelectedIndex = -1;
@@ -317,8 +567,8 @@ select s.name, t.name
 			}
 		}
 
-		private void OnSelectedTableChanged(object sender, EventArgs e)
-		{
+        private void OnTableChanged(object sender, EventArgs e)
+        {
 			try
 			{
 				var server = (DBServer)_serverList.SelectedItem;
@@ -599,259 +849,21 @@ select c.name as column_name,
 			}
 		}
 
-		private void OnUserNameChanged(object sender, EventArgs e)
-		{
-			try
-			{
-				if (!Populating)
-				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					var server = (DBServer)_serverList.SelectedItem;
-
-					if (server != null)
-					{
-						server.Username = _userName.Text;
-
-						var otherServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
-
-						Save();
-
-						if (TestConnection(server))
-							PopulateDatabases();
-					}
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void OnPasswordChanged(object sender, EventArgs e)
-		{
-			try
-			{
-				if (!Populating)
-				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					var server = (DBServer)_serverList.SelectedItem;
-
-					if (server != null)
-					{
-						if (server.RememberPassword)
-							server.Password = _password.Text;
-						else
-							server.Password = string.Empty;
-
-						var otherServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
-
-						Save();
-
-						if (TestConnection(server))
-							PopulateDatabases();
-					}
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void OnPortNumberChanged(object sender, EventArgs e)
-		{
-			try
-			{
-				if (!Populating)
-				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					var server = (DBServer)_serverList.SelectedItem;
-
-					if (server != null)
-					{
-						server.PortNumber = Convert.ToInt32(_portNumber.Value);
-
-						var otherServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
-
-						Save();
-
-						if (TestConnection(server))
-							PopulateDatabases();
-					}
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-
-		private void OnSavePasswordChanged(object sender, EventArgs e)
-		{
-			try
-			{
-				if (!Populating)
-				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					var server = (DBServer)_serverList.SelectedItem;
-
-					if (server != null)
-					{
-						server.RememberPassword = _rememberPassword.Checked;
-
-						if (!server.RememberPassword)
-							server.Password = string.Empty;
-						else
-							server.Password = _password.Text;
-
-						var savedServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
-
-						Save();
-
-						if (TestConnection(server))
-							PopulateDatabases();
-					}
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void OnAuthenticationChanged(object sender, EventArgs e)
-		{
-			if (!Populating)
-			{
-				_dbList.Items.Clear();
-				_tableList.Items.Clear();
-				var server = (DBServer)_serverList.SelectedItem;
-
-				if (server != null)
-				{
-					server.DBAuth = _authenticationList.SelectedIndex == 0 ? DBAuthentication.SQLSERVERAUTH : DBAuthentication.WINDOWSAUTH;
-
-					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-					{
-						_userName.Text = string.Empty;
-						_userName.Enabled = false;
-						_userNameLabel.Enabled = false;
-
-						_password.Text = string.Empty;
-						_password.Enabled = false;
-						_passwordLabel.Enabled = false;
-
-						_rememberPassword.Checked = false;
-						_rememberPassword.Enabled = false;
-					}
-					else
-					{
-						_userName.Enabled = true;
-						_userNameLabel.Enabled = true;
-
-						_password.Enabled = true;
-						_passwordLabel.Enabled = true;
-
-						_rememberPassword.Checked = server.RememberPassword;
-						_rememberPassword.Enabled = true;
-					}
-
-					Save();
-
-					if (TestConnection(server))
-						PopulateDatabases();
-				}
-			}
-		}
-
-		private void OnAddServer(object sender, EventArgs e)
-		{
-			try
-			{
-				var dialog = new AddConnection
-				{
-					LastServerUsed = (DBServer)_serverList.SelectedItem
-				};
-
-				if (dialog.ShowDialog() == DialogResult.OK)
-				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					_serverConfig.Servers.Add(dialog.Server);
-					Save();
-
-					switch (dialog.Server.DBType)
-					{
-						case DBServerType.MYSQL: _serverTypeList.SelectedIndex = 0; break;
-						case DBServerType.POSTGRESQL: _serverTypeList.SelectedIndex = 1; break;
-						case DBServerType.SQLSERVER: _serverTypeList.SelectedIndex = 2; break;
-					}
-
-					OnServerTypeChanged(this, new EventArgs());
-
-					for (int index = 0; index < _serverList.Items.Count; index++)
-					{
-						if (string.Equals((_serverList.Items[index] as DBServer).ServerName, dialog.Server.ServerName, StringComparison.OrdinalIgnoreCase))
-						{
-							_serverList.SelectedIndex = index;
-							break;
-						}
-					}
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void OnRemoveServer(object sender, EventArgs e)
-		{
-			try
-			{
-				var deprecatedServer = (DBServer)_serverList.SelectedItem;
-				var newList = new List<DBServer>();
-
-				foreach (var server in _serverConfig.Servers)
-				{
-					if (!string.Equals(server.ServerName, deprecatedServer.ServerName, StringComparison.OrdinalIgnoreCase))
-					{
-						newList.Add(server);
-					}
-				}
-
-				_serverConfig.Servers = newList;
-
-				if (_serverConfig.LastServerUsed >= _serverConfig.Servers.Count())
-				{
-					_serverConfig.LastServerUsed = 0;
-				}
-
-				Save();
-
-				OnServerTypeChanged(this, new EventArgs());
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
 		private void OnOK(object sender, EventArgs e)
 		{
-			if ( _tableList.SelectedIndex == -1 )
+			if (_tableList.SelectedIndex == -1)
 			{
-				MessageBox.Show("You must select a database table in order to create an entity model", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show("You must select a database table in order to create a controller", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				return;
 			}
 
+			SingularResourceName = SingularName.Text;
+			PluralResourceName = PluralName.Text;
+
 			Save();
-			DatabaseTable = (DBTable) _tableList.SelectedItem;
+			DatabaseTable = (DBTable)_tableList.SelectedItem;
+
+			Examples = ConstructExample();
 
 			DialogResult = DialogResult.OK;
 			Close();
@@ -962,7 +974,7 @@ select c.name as column_name,
 		private void Save()
 		{
 			int index = 0;
-			var server = (DBServer) _serverList.SelectedItem;
+			var server = (DBServer)_serverList.SelectedItem;
 
 			if (server != null)
 			{
@@ -1495,6 +1507,974 @@ select name
 			}
 
 			return false;
+		}
+		private JObject ConstructExample()
+		{
+			var server = (DBServer)_serverList.SelectedItem;
+			var table = (DBTable)_tableList.SelectedItem;
+			var db = (string)_dbList.SelectedItem;
+			var values = new JObject();
+
+			//	-----------------------------------------------------------------
+			//	Read data from MySQL
+			//	-----------------------------------------------------------------
+			if (server.DBType == DBServerType.MYSQL)
+			{
+				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};uid={server.Username};pwd={_password.Text};";
+
+				using (var connection = new MySqlConnection(connectionString))
+				{
+					connection.Open();
+
+					var query = GenerateMySQLQuery(table);
+
+					using (var command = new MySqlCommand(query, connection))
+					{
+						using (var reader = command.ExecuteReader())
+						{
+							if (reader.Read())
+							{
+								foreach (var column in DatabaseColumns)
+								{
+									var columnName = column.ColumnName;
+
+									if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+									{
+										values.Add(columnName, null);
+									}
+									else
+									{
+										var value = reader.GetValue(reader.GetOrdinal(columnName));
+										values.Add(columnName, JToken.FromObject(value));
+									}
+								}
+
+								return values;
+							}
+						}
+
+						return GetMySqlValues(values);
+					}
+				}
+			}
+
+			//	-----------------------------------------------------------------
+			//	Read data from Postgresql
+			//	-----------------------------------------------------------------
+			else if (server.DBType == DBServerType.POSTGRESQL)
+			{
+				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+
+				using (var connection = new NpgsqlConnection(connectionString))
+				{
+					connection.Open();
+
+					var query = GeneratePostgresqlQuery(table);
+
+					using (var command = new NpgsqlCommand(query, connection))
+					{
+						using (var reader = command.ExecuteReader())
+						{
+							if (reader.Read())
+							{
+								foreach (var column in DatabaseColumns)
+								{
+									var columnName = column.ColumnName;
+
+									if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+									{
+										values.Add(columnName, null);
+									}
+									else
+									{
+										var value = reader.GetValue(reader.GetOrdinal(columnName));
+
+
+										if (value.GetType() == typeof(IPAddress))
+										{
+											var ipAddress = (IPAddress)value;
+											values.Add(columnName, JToken.FromObject(ipAddress.ToString()));
+										}
+										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>))
+										{
+											var ipAddress = ((ValueTuple<IPAddress, int>)value).Item1;
+											int port = ((ValueTuple<IPAddress, int>)value).Item2;
+
+											var ipEndPoint = new IPEndPoint(ipAddress, port);
+											values.Add(columnName, JToken.FromObject(ipEndPoint.ToString()));
+										}
+										else if (value.GetType() == typeof(PhysicalAddress))
+										{
+											var physicalAddress = (PhysicalAddress)value;
+											values.Add(columnName, JToken.FromObject(physicalAddress.ToString()));
+										}
+										else if (value.GetType() == typeof(BitArray))
+										{
+											var answer = new StringBuilder();
+
+											foreach (bool val in (BitArray)value)
+											{
+												var strVal = val ? "1" : "0";
+												answer.Append(strVal);
+											}
+											values.Add(columnName, JToken.FromObject(answer.ToString()));
+										}
+										else
+										{
+											values.Add(columnName, JToken.FromObject(value));
+										}
+									}
+								}
+
+								return values;
+							}
+						}
+					}
+
+					return GetPostgresqlValues(values);
+				}
+			}
+
+			//	-----------------------------------------------------------------
+			//	Read data from SQL Server
+			//	-----------------------------------------------------------------
+			else
+			{
+				string connectionString;
+
+				if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
+					connectionString = $"Server={server.ServerName};Database={(string)_dbList.SelectedItem};Trusted_Connection=True;";
+				else
+					connectionString = $"Server={server.ServerName};Database={(string)_dbList.SelectedItem};uid={server.Username};pwd={_password.Text};";
+
+				using (var connection = new SqlConnection(connectionString))
+				{
+					connection.Open();
+
+					var query = GenerateSQLServerQuery(table);
+
+					using (var command = new SqlCommand(query, connection))
+					{
+						using (var reader = command.ExecuteReader())
+						{
+							if (reader.Read())
+							{
+								foreach (var column in DatabaseColumns)
+								{
+									var columnName = column.ColumnName;
+
+									if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+									{
+										values.Add(columnName, null);
+									}
+									else
+									{
+										var value = reader.GetValue(reader.GetOrdinal(columnName));
+										values.Add(columnName, JToken.FromObject(value));
+									}
+								}
+								return values;
+							}
+						}
+					}
+
+					return GetSqlServerValues(values);
+				}
+			}
+		}
+		private JObject GetSqlServerValues(JObject values)
+		{
+			foreach (var column in DatabaseColumns)
+			{
+				var columnName = column.ColumnName;
+
+				switch ((SqlDbType)column.DataType)
+				{
+					#region tinyint, smallint, int, bigint
+					case SqlDbType.TinyInt:
+						values.Add(columnName, JToken.FromObject((byte)1));
+						break;
+
+					case SqlDbType.SmallInt:
+						values.Add(columnName, JToken.FromObject((short)1));
+						break;
+
+					case SqlDbType.Int:
+						values.Add(columnName, JToken.FromObject((int)1));
+						break;
+
+					case SqlDbType.BigInt:
+						values.Add(columnName, JToken.FromObject((long)1));
+						break;
+					#endregion
+
+					#region varchar, nvarchar, text, ntext
+					case SqlDbType.VarChar:
+					case SqlDbType.NVarChar:
+						{
+							var answer = "The dog barked at the moon.";
+
+							if (column.Length > -1)
+								if (column.Length < answer.Length)
+									answer = answer.Substring(0, (int)column.Length);
+
+							values.Add(columnName, JToken.FromObject(answer));
+						}
+						break;
+
+					case SqlDbType.Text:
+					case SqlDbType.NText:
+						values.Add(columnName, JToken.FromObject("The dog barked at the moon"));
+						break;
+					#endregion
+
+					#region binary, varbinary
+					case SqlDbType.Binary:
+						{
+							if (column.Length == 1)
+							{
+								values.Add(columnName, JToken.FromObject((byte)32));
+							}
+							else if (column.Length == -1)
+							{
+								values.Add(columnName, JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
+							}
+							else
+							{
+								var answer = new byte[column.Length];
+								for (int i = 0; i < column.Length; i++)
+								{
+									var byteValue = (byte)(i & 0x00FF);
+									answer[i] = byteValue;
+								}
+
+								values.Add(columnName, JToken.FromObject(answer));
+							}
+						}
+						break;
+
+					case SqlDbType.VarBinary:
+						values.Add(columnName, JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
+						break;
+					#endregion
+
+					#region bit
+					case SqlDbType.Bit:
+						values.Add(columnName, JToken.FromObject(true));
+						break;
+					#endregion
+
+					#region char, nchar
+					case SqlDbType.NChar:
+					case SqlDbType.Char:
+						{
+							if (column.Length == 1)
+							{
+								values.Add(columnName, JToken.FromObject('A'));
+							}
+							else if (column.Length == -1)
+							{
+								values.Add(columnName, JToken.FromObject("The brown cow jumped over the moon.The dog barked at the cow, and the bull chased the dog."));
+							}
+							else
+							{
+								const string alphabet = "The brown cow jumped over the moon. The dog barked at the cow, and the bull chased the dog.";
+								var chars = new char[column.Length];
+								for (int i = 0; i < chars.Length; i++)
+								{
+									int j = i % alphabet.Length;
+									chars[i] = alphabet[j];
+								}
+
+								values.Add(columnName, JToken.FromObject(new string(chars)));
+							}
+						}
+						break;
+					#endregion
+
+					#region image
+					case SqlDbType.Image:
+						{
+							var image = (Image)new Bitmap(100, 100);
+							var imageConverter = new ImageConverter();
+
+							var bytes = imageConverter.ConvertTo(image, typeof(byte[]));
+							values.Add(columnName, JToken.FromObject(bytes));
+						}
+						break;
+					#endregion
+
+					case SqlDbType.Date: values.Add(columnName, JToken.FromObject(DateTime.Now)); break;
+					case SqlDbType.DateTime: values.Add(columnName, JToken.FromObject(DateTime.Now)); break;
+					case SqlDbType.DateTime2: values.Add(columnName, JToken.FromObject(DateTime.Now)); break;
+					case SqlDbType.DateTimeOffset: values.Add(columnName, JToken.FromObject(DateTimeOffset.Now)); break;
+					case SqlDbType.Decimal: values.Add(columnName, JToken.FromObject(Decimal.Parse("123.45"))); break;
+					case SqlDbType.Float: values.Add(columnName, JToken.FromObject(Single.Parse("123.45"))); break;
+
+					case SqlDbType.Money: values.Add(columnName, JToken.FromObject(Decimal.Parse("123.45"))); break;
+					case SqlDbType.Real: values.Add(columnName, JToken.FromObject(Double.Parse("123.45"))); break;
+					case SqlDbType.SmallDateTime: values.Add(columnName, JToken.FromObject(DateTime.Now)); break;
+
+
+					case SqlDbType.SmallMoney: values.Add(columnName, JToken.FromObject(Decimal.Parse("123.45"))); break;
+
+					case SqlDbType.Time: values.Add(columnName, JToken.FromObject(TimeSpan.FromMinutes(3))); break;
+					case SqlDbType.Timestamp: values.Add(columnName, JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 })); break;
+					case SqlDbType.UniqueIdentifier: values.Add(columnName, JToken.FromObject(Guid.NewGuid())); break;
+
+					default:
+						values.Add(columnName, JToken.FromObject("Unrecognized"));
+						break;
+				}
+			}
+
+			return values;
+		}
+
+		private JObject GetMySqlValues(JObject values)
+		{
+			foreach (var column in DatabaseColumns)
+			{
+				var columnName = column.ColumnName;
+
+				switch ((MySqlDbType)column.DataType)
+				{
+					#region tinyint, smallint, int, bigint
+					case MySqlDbType.Byte:
+						values.Add(columnName, JToken.FromObject((sbyte)1));
+						break;
+
+					case MySqlDbType.UByte:
+						values.Add(columnName, JToken.FromObject((byte)1));
+						break;
+
+					case MySqlDbType.Int16:
+						values.Add(columnName, JToken.FromObject((short)1));
+						break;
+
+					case MySqlDbType.UInt16:
+						values.Add(columnName, JToken.FromObject((ushort)1));
+						break;
+
+					case MySqlDbType.Int24:
+						values.Add(columnName, JToken.FromObject((int)1));
+						break;
+
+					case MySqlDbType.UInt24:
+						values.Add(columnName, JToken.FromObject((uint)1));
+						break;
+
+					case MySqlDbType.Int32:
+						values.Add(columnName, JToken.FromObject((int)1));
+						break;
+
+					case MySqlDbType.UInt32:
+						values.Add(columnName, JToken.FromObject((uint)1));
+						break;
+
+					case MySqlDbType.Int64:
+						values.Add(columnName, JToken.FromObject((long)1));
+						break;
+
+					case MySqlDbType.UInt64:
+						values.Add(columnName, JToken.FromObject((ulong)1));
+						break;
+					#endregion
+
+					#region decimal, double, float
+					case MySqlDbType.Decimal:
+						values.Add(columnName, JToken.FromObject((decimal)1.24m));
+						break;
+					case MySqlDbType.Double:
+						values.Add(columnName, JToken.FromObject((double)1.24));
+						break;
+					case MySqlDbType.Float:
+						values.Add(columnName, JToken.FromObject((float)1.24f));
+						break;
+					#endregion
+
+					#region varchar, nvarchar, text, ntext
+					case MySqlDbType.VarChar:
+					case MySqlDbType.VarString:
+						{
+							var answer = "The dog barked at the moon.";
+
+							if (column.Length > -1)
+								if (column.Length < answer.Length)
+									answer = answer.Substring(0, (int)column.Length);
+
+							values.Add(columnName, JToken.FromObject(answer));
+						}
+						break;
+
+					case MySqlDbType.Text:
+					case MySqlDbType.TinyText:
+					case MySqlDbType.MediumText:
+					case MySqlDbType.LongText:
+						values.Add(columnName, JToken.FromObject("The dog barked at the moon"));
+						break;
+
+					case MySqlDbType.String:
+						if (column.Length == 1)
+							values.Add(columnName, JToken.FromObject('A'));
+						else
+						{
+							const string alphabet = "The brown cow jumped over the moon. The dog barked at the cow, and the bull chased the dog.";
+							var chars = new char[column.Length];
+							for (int i = 0; i < chars.Length; i++)
+							{
+								int j = i % alphabet.Length;
+								chars[i] = alphabet[j];
+							}
+
+							values.Add(columnName, JToken.FromObject(new string(chars)));
+						}
+						break;
+
+					#endregion
+
+					#region binary, varbinary
+					case MySqlDbType.Binary:
+						{
+							if (column.Length == 1)
+							{
+								values.Add(columnName, JToken.FromObject((byte)32));
+							}
+							else if (column.Length == -1)
+							{
+								values.Add(columnName, JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
+							}
+							else
+							{
+								var answer = new byte[column.Length];
+								for (int i = 0; i < column.Length; i++)
+								{
+									var byteValue = (byte)(i & 0x00FF);
+									answer[i] = byteValue;
+								}
+
+								values.Add(columnName, JToken.FromObject(answer));
+							}
+						}
+						break;
+
+					case MySqlDbType.VarBinary:
+					case MySqlDbType.TinyBlob:
+					case MySqlDbType.Blob:
+					case MySqlDbType.MediumBlob:
+					case MySqlDbType.LongBlob:
+						values.Add(columnName, JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
+						break;
+					#endregion
+
+					#region bit
+					case MySqlDbType.Bit:
+						if (column.Length == 1)
+							values.Add(columnName, JToken.FromObject(true));
+						else
+							values.Add(columnName, JToken.FromObject((ulong)1));
+						break;
+					#endregion
+
+					#region enum, set
+					case MySqlDbType.Enum:
+						{
+							var theValues = column.dbDataType.Split(new char[] { '(', ')', ',', '\'' }, StringSplitOptions.RemoveEmptyEntries);
+							values.Add(columnName, JToken.FromObject(theValues[1]));
+						}
+						break;
+
+					case MySqlDbType.Set:
+						{
+							var theValues = column.dbDataType.Split(new char[] { '(', ')', ',', '\'' }, StringSplitOptions.RemoveEmptyEntries);
+							values.Add(columnName, JToken.FromObject(theValues[1]));
+						}
+						break;
+					#endregion
+
+					#region Datetime, timestamp, time, date, year
+					case MySqlDbType.DateTime:
+					case MySqlDbType.Date:
+					case MySqlDbType.Timestamp:
+						values.Add(columnName, JToken.FromObject(DateTime.Now));
+						break;
+
+					case MySqlDbType.Time:
+						values.Add(columnName, JToken.FromObject(TimeSpan.FromMinutes(2)));
+						break;
+
+					case MySqlDbType.Year:
+						values.Add(columnName, JToken.FromObject(2020));
+						break;
+					#endregion
+
+					default:
+						values.Add(columnName, JToken.FromObject("Unrecognized"));
+						break;
+				}
+			}
+
+			return values;
+		}
+
+		private JObject GetPostgresqlValues(JObject values)
+		{
+			foreach (var column in DatabaseColumns)
+			{
+				var columnName = column.ColumnName;
+
+				switch ((NpgsqlDbType)column.DataType)
+				{
+					#region smallint, int, bigint
+					case NpgsqlDbType.Smallint:
+						values.Add(columnName, JToken.FromObject((short)1));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Smallint:
+						values.Add(columnName, JToken.FromObject(new short[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
+						break;
+
+					case NpgsqlDbType.Integer:
+						values.Add(columnName, JToken.FromObject((int)1));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Integer:
+						values.Add(columnName, JToken.FromObject(new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
+						break;
+
+					case NpgsqlDbType.Bigint:
+						values.Add(columnName, JToken.FromObject((long)1));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Bigint:
+						values.Add(columnName, JToken.FromObject(new long[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
+						break;
+					#endregion
+
+					#region real, double, numeric
+					case NpgsqlDbType.Real:
+						values.Add(columnName, JToken.FromObject((float)1.3f));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Real:
+						values.Add(columnName, JToken.FromObject(new float[] { 1.23f, 2.45f, 3.67f, 4.89f, 5.01f, 6.23f, 7.45f, 8.67f, 9.89f }));
+						break;
+
+					case NpgsqlDbType.Double:
+						values.Add(columnName, JToken.FromObject((double)1.3f));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Double:
+						values.Add(columnName, JToken.FromObject(new double[] { 1.23f, 2.45f, 3.67f, 4.89f, 5.01f, 6.23f, 7.45f, 8.67f, 9.89f }));
+						break;
+
+					case NpgsqlDbType.Numeric:
+					case NpgsqlDbType.Money:
+						values.Add(columnName, JToken.FromObject((decimal)1.3f));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Numeric:
+					case NpgsqlDbType.Array | NpgsqlDbType.Money:
+						values.Add(columnName, JToken.FromObject(new decimal[] { 1.23m, 2.45m, 3.67m, 4.89m, 5.01m, 6.23m, 7.45m, 8.67m, 9.89m }));
+						break;
+					#endregion
+
+
+					#region Guid
+					case NpgsqlDbType.Uuid:
+						values.Add(columnName, JToken.FromObject(Guid.NewGuid()));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Uuid:
+						values.Add(columnName, JToken.FromObject(new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() }));
+						break;
+					#endregion
+
+					#region json
+					case NpgsqlDbType.Json:
+						{
+							var answer = "{ \"Name\": \"John\" }";
+							values.Add(columnName, JToken.FromObject(answer));
+						}
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Json:
+						{
+							var theList = new List<string>();
+
+							var answer1 = "{ \"Name\": \"John\" }";
+							theList.Add(answer1);
+
+							var answer2 = "{ \"Name\": \"Jane\" }";
+							theList.Add(answer2);
+
+							var answer3 = "{ \"Name\": \"Bill\" }";
+							theList.Add(answer3);
+
+							values.Add(columnName, JToken.FromObject(theList.ToArray()));
+						}
+						break;
+
+					#endregion
+
+					#region varchar, text
+					case NpgsqlDbType.Varchar:
+						{
+							var answer = "The dog barked at the moon.";
+
+							if (column.Length > -1)
+								if (column.Length < answer.Length)
+									answer = answer.Substring(0, (int)column.Length);
+
+							values.Add(columnName, JToken.FromObject(answer));
+						}
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
+						{
+							var array = new JArray();
+							var answer = "The dog barked at the moon.";
+
+							if (column.Length > -1)
+								if (column.Length < answer.Length)
+									answer = answer.Substring(0, (int)column.Length);
+
+							array.Add(new JValue(answer));
+
+							answer = "The cow mooed at the moon.";
+
+							if (column.Length > -1)
+								if (column.Length < answer.Length)
+									answer = answer.Substring(0, (int)column.Length);
+
+							array.Add(new JValue(answer));
+
+							answer = "The cat watched the dog and the cow.";
+
+							if (column.Length > -1)
+								if (column.Length < answer.Length)
+									answer = answer.Substring(0, (int)column.Length);
+
+							array.Add(new JValue(answer));
+
+							values.Add(columnName, array);
+						}
+						break;
+
+					case NpgsqlDbType.Text:
+						values.Add(columnName, JToken.FromObject("The dog barked at the moon"));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Text:
+						{
+							var array = new JArray
+							{
+								new JValue("The dog barked at the moon"),
+								new JValue("The cow mooed at the moon"),
+								new JValue("The cat watched the dog and the cow.")
+							};
+							values.Add(columnName, array);
+						}
+						break;
+					#endregion
+
+					#region bytea
+					case NpgsqlDbType.Bytea:
+						values.Add(columnName, JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
+						{
+							var array = new JArray
+							{
+								JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }),
+								JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }),
+								JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 })
+							};
+							values.Add(columnName, array);
+						}
+						break;
+					#endregion
+
+					#region bit, varbit
+					case NpgsqlDbType.Bit:
+						{
+							if (column.Length == 1)
+								values.Add(columnName, JToken.FromObject(true));
+							else
+							{
+								var str = new StringBuilder();
+								for (int i = 0; i < column.Length; i++)
+									str.Append("1");
+
+								values.Add(columnName, JToken.FromObject(str.ToString()));
+							}
+						}
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Bit:
+						{
+							if (column.Length == 1)
+							{
+								var array = new JArray
+								{
+									JToken.FromObject(true),
+									JToken.FromObject(true),
+									JToken.FromObject(false),
+									JToken.FromObject(true)
+								};
+								values.Add(columnName, array);
+							}
+							else
+							{
+								var array = new JArray();
+
+								for (int i = 0; i < 3; i++)
+								{
+									var str = new StringBuilder();
+									for (int j = 0; j < column.Length; j++)
+										str.Append("1");
+									array.Add(JToken.FromObject(str.ToString()));
+								}
+
+								values.Add(columnName, array);
+							}
+						}
+						break;
+
+					case NpgsqlDbType.Varbit:
+						{
+							var str = new StringBuilder();
+							for (int i = 0; i < column.Length && i < 10; i++)
+								str.Append("1");
+
+							values.Add(columnName, JToken.FromObject(str.ToString()));
+						}
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
+						{
+							if (column.Length == 1)
+							{
+								var array = new JArray
+								{
+									JToken.FromObject(true),
+									JToken.FromObject(true),
+									JToken.FromObject(false),
+									JToken.FromObject(true)
+								};
+								values.Add(columnName, array);
+							}
+							else
+							{
+								var array = new JArray();
+
+								for (int i = 0; i < 3; i++)
+								{
+									var str = new StringBuilder();
+									for (int j = 0; j < column.Length && j < 10; j++)
+										str.Append("1");
+									array.Add(JToken.FromObject(str.ToString()));
+								}
+
+								values.Add(columnName, array);
+							}
+						}
+						break;
+					#endregion
+
+					#region char
+					case NpgsqlDbType.Char:
+						{
+							if (string.Equals(column.dbDataType, "_char", StringComparison.OrdinalIgnoreCase))
+							{
+								values.Add(columnName, JToken.FromObject("The brown cow jumped over the moon.The dog barked at the cow, and the bull chased the dog."));
+							}
+							else if (string.Equals(column.dbDataType, "char", StringComparison.OrdinalIgnoreCase))
+							{
+								values.Add(columnName, JToken.FromObject('A'));
+							}
+							else
+							{
+								const string alphabet = "The brown cow jumped over the moon. The dog barked at the cow, and the bull chased the dog.";
+								var chars = new char[column.Length];
+								for (int i = 0; i < chars.Length; i++)
+								{
+									int j = i % alphabet.Length;
+									chars[i] = alphabet[j];
+								}
+
+								values.Add(columnName, JToken.FromObject(new string(chars)));
+							}
+						}
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Char:
+						{
+							var array = new JArray();
+							var answer = "The dog barked at the moon.";
+
+							if (column.Length > -1)
+								if (column.Length < answer.Length)
+									answer = answer.Substring(0, (int)column.Length);
+
+							array.Add(new JValue(answer));
+
+							answer = "The cow mooed at the moon.";
+
+							if (column.Length > -1)
+								if (column.Length < answer.Length)
+									answer = answer.Substring(0, (int)column.Length);
+
+							array.Add(new JValue(answer));
+
+							answer = "The cat watched the dog and the cow.";
+
+							if (column.Length > -1)
+								if (column.Length < answer.Length)
+									answer = answer.Substring(0, (int)column.Length);
+
+							array.Add(new JValue(answer));
+
+							values.Add(columnName, array);
+						}
+						break;
+					#endregion
+
+					#region Boolean
+					case NpgsqlDbType.Boolean:
+						values.Add(columnName, JToken.FromObject((bool)true));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Boolean:
+						values.Add(columnName, JToken.FromObject(new bool[] { true, true, false }));
+						break;
+					#endregion
+
+					#region DateTime
+					case NpgsqlDbType.Date:
+						values.Add(columnName, JToken.FromObject(DateTime.Now));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Date:
+						values.Add(columnName, JToken.FromObject(new DateTime[] { DateTime.Now, DateTime.Now.AddDays(1), DateTime.Now.AddDays(2) }));
+						break;
+
+					case NpgsqlDbType.Timestamp:
+						values.Add(columnName, JToken.FromObject(DateTime.Now));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Timestamp:
+						values.Add(columnName, JToken.FromObject(new DateTime[] { DateTime.Now, DateTime.Now.AddDays(1), DateTime.Now.AddDays(2) }));
+						break;
+
+					case NpgsqlDbType.Time:
+						values.Add(columnName, JToken.FromObject(TimeSpan.FromMinutes(10)));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Time:
+						values.Add(columnName, JToken.FromObject(new TimeSpan[] { TimeSpan.FromSeconds(20), TimeSpan.FromMinutes(30), TimeSpan.FromHours(2) }));
+						break;
+
+					case NpgsqlDbType.Interval:
+						values.Add(columnName, JToken.FromObject(TimeSpan.FromMinutes(15)));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Interval:
+						values.Add(columnName, JToken.FromObject(new TimeSpan[] { TimeSpan.FromSeconds(20), TimeSpan.FromMinutes(30), TimeSpan.FromHours(2) }));
+						break;
+
+					case NpgsqlDbType.TimeTz:
+						values.Add(columnName, JToken.FromObject(DateTimeOffset.Now));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.TimeTz:
+						values.Add(columnName, JToken.FromObject(new DateTimeOffset[] { DateTimeOffset.Now, DateTimeOffset.Now.AddDays(1), DateTimeOffset.Now.AddDays(2) }));
+						break;
+
+					case NpgsqlDbType.TimestampTz:
+						values.Add(columnName, JToken.FromObject(DateTime.Now));
+						break;
+
+					case NpgsqlDbType.Array | NpgsqlDbType.TimestampTz:
+						values.Add(columnName, JToken.FromObject(new DateTime[] { DateTime.Now, DateTime.Now.AddDays(1), DateTime.Now.AddDays(2) }));
+						break;
+					#endregion
+
+					default:
+						values.Add(columnName, JToken.FromObject("Unrecognized"));
+						break;
+				}
+			}
+
+			return values;
+		}
+
+		private string GenerateSQLServerQuery(DBTable table)
+		{
+			var query = new StringBuilder("SELECT TOP 1");
+
+			bool firstColumn = true;
+
+			foreach (var column in DatabaseColumns)
+			{
+				if (firstColumn)
+					firstColumn = false;
+				else
+					query.Append(", ");
+
+				if (string.Equals(column.dbDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
+				{
+					query.Append($"REPLACE(CAST({column.ColumnName} AS nvarchar({column.Length})), '/', '-' ) as [{column.ColumnName}]");
+				}
+				else
+				{
+					query.Append($"[{column.ColumnName}]");
+				}
+			}
+
+			query.Append($" FROM [{table.Schema}].[{table.Table}] WITH(NOLOCK)");
+			return query.ToString();
+		}
+
+		private string GeneratePostgresqlQuery(DBTable table)
+		{
+			var query = new StringBuilder("SELECT ");
+
+			bool firstColumn = true;
+
+			foreach (var column in DatabaseColumns)
+			{
+				if (firstColumn)
+					firstColumn = false;
+				else
+					query.Append(", ");
+
+				query.Append($"\"{column.ColumnName}\"");
+			}
+
+			query.Append($" FROM \"{table.Schema}\".\"{table.Table}\" LIMIT 1");
+			return query.ToString();
+		}
+
+		private string GenerateMySQLQuery(DBTable table)
+		{
+			var query = new StringBuilder("SELECT ");
+
+			bool firstColumn = true;
+
+			foreach (var column in DatabaseColumns)
+			{
+				if (firstColumn)
+					firstColumn = false;
+				else
+					query.Append(", ");
+
+				query.Append($"`{column.ColumnName}`");
+			}
+
+			query.Append($" FROM `{table.Table}` LIMIT 1;");
+			return query.ToString();
 		}
 		#endregion
 	}

@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("COFRSCoreExamplesTemplate")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Michael Zuniga")]
+[assembly: AssemblyCompany("COFRS Team")]
 [assembly: AssemblyProduct("COFRSCoreExamplesTemplate")]
-[assembly: AssemblyCopyright("Copyright © Michael Zuniga 2020")]
+[assembly: AssemblyCopyright("Copyright © COFRS Team 2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

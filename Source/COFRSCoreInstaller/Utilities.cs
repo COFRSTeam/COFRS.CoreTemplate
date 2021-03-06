@@ -24,18 +24,22 @@ namespace COFRSCoreInstaller
 			{
 				var entityName = string.Empty;
 
+				//	Is this a table annotation?
 				if (line.Trim().StartsWith("[table", StringComparison.OrdinalIgnoreCase))
 				{
 					var matcht = Regex.Match(line, "[Table([ \\t]*\\\"(?<tableName>[a-zA-Z0-9_]+)\\\"");
 
+					//	If this was a table annotation, we now know the tablename the entity class was based upon
 					if (matcht.Success)
 						tableName = matcht.Groups["tableName"].Value;
 				}
 
+				//	Is this a member annotation?
 				if (line.Trim().StartsWith("[member", StringComparison.OrdinalIgnoreCase))
 				{
 					var match = Regex.Match(line, "ColumnName[ \\t]*\\=[ \\t]*\\\"(?<columnName>[a-zA-Z0-9_]+)\\\"");
 
+					//	If the entity specified a different column name than the member name, remember it.
 					if (match.Success)
 						columnName = match.Groups["columnName"].Value;
 					else
@@ -46,8 +50,10 @@ namespace COFRSCoreInstaller
 
 				if (match2.Success)
 				{
+					//	Okay, we got a column. Get the member name can call it the entityName.
 					entityName = match2.Groups["column"].Value;
 
+					//	But if the previous annotation specified a column name, then use that instead
 					var matchName = string.IsNullOrWhiteSpace(columnName) ? entityName : columnName;
 
 					var column = columns.FirstOrDefault(c => string.Equals(c.ColumnName, matchName, StringComparison.OrdinalIgnoreCase));
