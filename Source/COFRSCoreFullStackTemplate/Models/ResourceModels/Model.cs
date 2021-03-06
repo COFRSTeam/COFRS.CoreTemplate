@@ -9,4 +9,4 @@ using COFRS;
 
 namespace $rootnamespace$
 {
-$model$}
+$resourceModel$}

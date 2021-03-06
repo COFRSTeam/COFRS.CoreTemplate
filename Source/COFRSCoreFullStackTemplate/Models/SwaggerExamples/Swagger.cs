@@ -11,6 +11,6 @@ using COFRS;
 
 namespace $rootnamespace$
 {
-$model$
+$exampleModel$
 
-$collectionmodel$}
+$exampleCollectionModel$}

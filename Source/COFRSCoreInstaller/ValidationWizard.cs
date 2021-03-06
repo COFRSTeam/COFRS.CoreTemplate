@@ -89,14 +89,17 @@ namespace COFRSCoreInstaller
 
 					Utilities.LoadClassList(SolutionFolder, resourceClassFile.ClassName, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
 
-					var model = EmitModel(entityClassFile, resourceClassFile, profileClassFile, form.DatabaseColumns, replacementsDictionary);
+					var emitter = new Emitter();
+					var model = emitter.EmitValidationModel(entityClassFile.ClassName, resourceClassFile.ClassName, replacementsDictionary["$safeitemname$"]);
 
 					replacementsDictionary.Add("$orchestrationnamespace$", Orchestrator.ClassNamespace);
 					replacementsDictionary.Add("$model$", model);
 					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceClassFile.ClassNamespace);
 
-					Proceed = UpdateServices(resourceClassFile, replacementsDictionary);
+					Proceed = emitter.UpdateServices(solutionDirectory, replacementsDictionary["$safeitemname$"],
+														entityClassFile.ClassNameSpace, resourceClassFile.ClassNamespace,
+														rootNamespace);
 				}
 				else
 					Proceed = false;
@@ -113,168 +116,6 @@ namespace COFRSCoreInstaller
 		public bool ShouldAddProjectItem(string filePath)
 		{
 			return Proceed;
-		}
-
-		private string EmitModel(EntityClassFile entityClassFile, ResourceClassFile resourceClassFile, ProfileClassFile profileClassFile, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary)
-		{
-			var results = new StringBuilder();
-
-			//	IValidator interface
-			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\tInterface for the {resourceClassFile.ClassName} Validator");
-			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic interface I{replacementsDictionary["$safeitemname$"]} : IValidator<{resourceClassFile.ClassName}>");
-			results.AppendLine("\t{");
-			results.AppendLine("\t}");
-			results.AppendLine();
-
-			//	Validator Class with constructor
-			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\t{replacementsDictionary["$safeitemname$"]}");
-			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic class {replacementsDictionary["$safeitemname$"]} : Validator<{resourceClassFile.ClassName}>, I{replacementsDictionary["$safeitemname$"]}");
-			results.AppendLine("\t{");
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tInitializes the {replacementsDictionary["$safeitemname$"]}");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine($"\t\tpublic {replacementsDictionary["$safeitemname$"]}() : base()");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//	Validator Class with constructor with user
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tInitializes the {replacementsDictionary["$safeitemname$"]}");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine($"\t\tpublic {replacementsDictionary["$safeitemname$"]}(ClaimsPrincipal user) : base(user)");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for GET
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tValidation for Queries");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the query</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForGetAsync(RqlNode node, object[] parms)");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\t//\tUn-comment out the line below if this table is large, and you want to prevent users from requesting a full table scan");
-			results.AppendLine("\t\t\t//\tRequireIndexedQuery(node, \"The query is too broad. Please specify a more refined query that will produce fewer records.\");");
-			results.AppendLine();
-			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for PUT and POST
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tValidations common to adding and updating items");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added or updated</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic async Task ValidateForAddAndUpdateAsync({resourceClassFile.ClassName} item, object[] parms)");
-			results.AppendLine("\t\t{");
-
-			results.AppendLine();
-			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to");
-			results.AppendLine("\t\t\t//\t       adding or updating an item.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for PUT
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine("\t\t///\tValidation for updating existing items");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being updated</param>");
-			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the update</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceClassFile.ClassName} item, RqlNode node, object[] parms)");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms).ConfigureAwait(false);");
-			results.AppendLine();
-			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to updating an item.");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for POST
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tValidation for adding new items");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForAddAsync({resourceClassFile.ClassName} item, object[] parms)");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms).ConfigureAwait(false);");
-			results.AppendLine();
-			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to adding an item.");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for PATCH
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine("\t\t///\tValidates a set of patch commands on an item");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"patchCommands\">The set of patch commands to validate</param>");
-			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the update</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine("\t\tpublic override async Task ValidateForPatchAsync(IEnumerable<PatchCommand> patchCommands, RqlNode node, object[] parms)");
-			results.AppendLine("\t\t{");
-
-			results.AppendLine("\t\t\tforeach (var command in patchCommands)");
-			results.AppendLine("\t\t\t{");
-			results.AppendLine("\t\t\t\tif (string.Equals(command.Op, \"replace\", StringComparison.OrdinalIgnoreCase))");
-			results.AppendLine("\t\t\t\t{");
-
-			results.AppendLine("\t\t\t\t}");
-			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"add\", StringComparison.OrdinalIgnoreCase))");
-			results.AppendLine("\t\t\t\t{");
-
-			results.AppendLine("\t\t\t\t}");
-			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"delete\", StringComparison.OrdinalIgnoreCase))");
-			results.AppendLine("\t\t\t\t{");
-
-			results.AppendLine("\t\t\t\t}");
-			results.AppendLine("\t\t\t}");
-			results.AppendLine();
-
-			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to patching an item.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for DELETE
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tValidation for deleting an item");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the delete</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForDeleteAsync(RqlNode node, object[] parms)");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to deleting an item.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
-			results.AppendLine("\t\t}");
-			results.AppendLine("\t}");
-
-			return results.ToString();
 		}
 
 		private bool UpdateServices(ResourceClassFile domainClassFile, Dictionary<string, string> replacementsDictionary)

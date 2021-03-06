@@ -1,26 +1,20 @@
-﻿using Microsoft.VisualStudio.Shell.Interop;
-using MySql.Data.MySqlClient;
+﻿using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
-using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace COFRSCoreInstaller
 {
-	public partial class UserInputValidation : Form
+    public partial class UserInputValidation : Form
 	{
 		#region variables
 		private ServerConfig _serverConfig;
