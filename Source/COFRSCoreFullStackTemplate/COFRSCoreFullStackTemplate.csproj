@@ -36,6 +36,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <CopyVsixExtensionFiles>False</CopyVsixExtensionFiles>
+    <CopyVsixExtensionLocation>ASP.NET Core\\Web\\ASP.NET</CopyVsixExtensionLocation>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -67,7 +69,9 @@
     <None Include="COFRS.ico" />
   </ItemGroup>
   <ItemGroup>
-    <VSTemplate Include="COFRSCoreFullStackTemplate.vstemplate" />
+    <VSTemplate Include="COFRSCoreFullStackTemplate.vstemplate">
+      <OutputSubPath>ASP.NET%2520Core\\Web\\ASP.NET</OutputSubPath>
+    </VSTemplate>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />

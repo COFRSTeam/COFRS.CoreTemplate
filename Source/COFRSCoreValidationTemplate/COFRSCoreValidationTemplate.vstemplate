@@ -8,7 +8,7 @@
     <ProjectType>CSharp</ProjectType>
     <TemplateGroupID>AspNetCore</TemplateGroupID>
     <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
-    <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+    <NumberOfParentCategoriesToRollUp>2</NumberOfParentCategoriesToRollUp>
     <DefaultName>ClassValidator.cs</DefaultName>
   </TemplateData>
   <TemplateContent>

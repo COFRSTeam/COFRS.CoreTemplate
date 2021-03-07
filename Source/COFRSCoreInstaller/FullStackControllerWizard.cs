@@ -1,5 +1,6 @@
 ﻿using EnvDTE;
 using Microsoft.VisualStudio.TemplateWizard;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -102,6 +103,9 @@ namespace COFRSCoreInstaller
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
+					var connectionString = form.ConnectionString;
+					ReplaceConnectionString(connectionString, replacementsDictionary);
+
 					replacementsDictionary["$safeitemname$"] = form.PluralResourceName;
 
 					var entityClassName = $"E{form.SingularResourceName}";
@@ -345,5 +349,60 @@ namespace COFRSCoreInstaller
 			}
 		}
 
+		private void ReplaceConnectionString(string connectionString, Dictionary<string, string> replacementsDictionary)
+		{
+			//	The first thing we need to do, is we need to load the appSettings.local.json file
+			var fileName = GetLocalFileName(replacementsDictionary["$solutiondirectory$"]);
+			string content;
+
+			using (var stream = new FileStream(fileName, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+			{
+				using (var reader = new StreamReader(stream))
+				{
+					content = reader.ReadToEnd();
+				}
+			}
+
+			var appSettings = JObject.Parse(content);
+			var connectionStrings = appSettings.Value<JObject>("ConnectionStrings");
+
+			if (string.Equals(connectionStrings.Value<string>("DefaultConnection"), "Server=developmentdb;Database=master;Trusted_Connection=True;", StringComparison.OrdinalIgnoreCase))
+			{
+				connectionStrings["DefaultConnection"] = connectionString;
+
+				using (var stream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+				{
+					using (var writer = new StreamWriter(stream))
+					{
+						writer.Write(appSettings.ToString());
+						writer.Flush();
+					}
+				}
+			}
+		}
+
+		private string GetLocalFileName(string rootFolder)
+		{
+			var files = Directory.GetFiles(rootFolder);
+
+			foreach (var file in files)
+			{
+				if (file.ToLower().Contains("appsettings.local.json"))
+					return file;
+			}
+
+			var childFolders = Directory.GetDirectories(rootFolder);
+
+			foreach (var childFolder in childFolders)
+			{
+				var theFile = GetLocalFileName(childFolder);
+
+				if (!string.IsNullOrWhiteSpace(theFile))
+					return theFile;
+			}
+
+
+			return string.Empty;
+		}
 	}
 }

@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
   <TemplateData>
-    <Name>COFRS Web API Controller with full stack support</Name>
-    <Description>Creates a Web API Controller for a COFRS REST Service with full stack support</Description>
+    <Name>COFRS Web API Controller Full Stack</Name>
+    <Description>Creates a Web API Controller for a COFRS REST Service with entity model, resource model, model mapping, examples and validation</Description>
     <Icon>COFRS.ico</Icon>
-    <TemplateID>79f16093-70ec-4b92-9f36-f17db7a77765</TemplateID>
     <ProjectType>CSharp</ProjectType>
     <TemplateGroupID>AspNetCore</TemplateGroupID>
-    <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+    <TemplateID>79f16093-70ec-4b92-9f36-f17db7a77765</TemplateID>
+    <NumberOfParentCategoriesToRollUp>2</NumberOfParentCategoriesToRollUp>
     <ShowByDefault>false</ShowByDefault>
     <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
     <DefaultName>ValuesController.cs</DefaultName>
