@@ -96,7 +96,7 @@ namespace COFRSCoreInstaller
             // 
             // _portNumber
             // 
-            this._portNumber.Location = new System.Drawing.Point(707, 124);
+            this._portNumber.Location = new System.Drawing.Point(707, 255);
             this._portNumber.Maximum = new decimal(new int[] {
             65534,
             0,
@@ -150,7 +150,7 @@ namespace COFRSCoreInstaller
             // 
             this._InstructionsLabel.Location = new System.Drawing.Point(440, 162);
             this._InstructionsLabel.Name = "_InstructionsLabel";
-            this._InstructionsLabel.Size = new System.Drawing.Size(393, 61);
+            this._InstructionsLabel.Size = new System.Drawing.Size(393, 95);
             this._InstructionsLabel.TabIndex = 22;
             this._InstructionsLabel.Text = resources.GetString("_InstructionsLabel.Text");
             // 
@@ -159,23 +159,23 @@ namespace COFRSCoreInstaller
             this._titleLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._titleLabel.Location = new System.Drawing.Point(574, 16);
             this._titleLabel.Name = "_titleLabel";
-            this._titleLabel.Size = new System.Drawing.Size(259, 94);
+            this._titleLabel.Size = new System.Drawing.Size(259, 127);
             this._titleLabel.TabIndex = 21;
-            this._titleLabel.Text = "COFRS Controller Class Generator";
+            this._titleLabel.Text = "COFRS Controller Class Generator Full Stack";
             // 
             // _tableList
             // 
             this._tableList.FormattingEnabled = true;
-            this._tableList.Location = new System.Drawing.Point(440, 252);
+            this._tableList.Location = new System.Drawing.Point(440, 291);
             this._tableList.Name = "_tableList";
-            this._tableList.Size = new System.Drawing.Size(393, 212);
+            this._tableList.Size = new System.Drawing.Size(393, 173);
             this._tableList.TabIndex = 24;
             this._tableList.SelectedIndexChanged += new System.EventHandler(this.OnTableChanged);
             // 
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(437, 232);
+            this.label8.Location = new System.Drawing.Point(440, 275);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(39, 13);
             this.label8.TabIndex = 23;
@@ -385,6 +385,7 @@ namespace COFRSCoreInstaller
             this.Controls.Add(this.label2);
             this.Controls.Add(this._serverTypeList);
             this.Controls.Add(this.label1);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "UserInputFullStack";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
