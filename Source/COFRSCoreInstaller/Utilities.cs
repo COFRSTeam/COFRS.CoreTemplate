@@ -670,5 +670,45 @@ namespace COFRSCoreInstaller
 				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
+
+		public static string GetRootNamespace(string SolutionFolder)
+		{
+			string fullPath = Path.Combine(SolutionFolder, "Startup.cs");
+
+			if (File.Exists(fullPath))
+			{
+				using (var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+				{
+					using (var reader = new StreamReader(stream))
+					{
+						while (!reader.EndOfStream)
+						{
+							var line = reader.ReadLine();
+
+							var match = Regex.Match(line, "[ \t]*namespace[ \t]+(?<namespace>[a-zA-Z_][a-zA-Z0-9_\\.]*)");
+
+							if (match.Success)
+							{
+								return match.Groups["namespace"].Value;
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				var subFolders = Directory.GetDirectories(SolutionFolder);
+
+				foreach (var subFolder in subFolders)
+				{
+					var ns = GetRootNamespace(subFolder);
+
+					if (!string.IsNullOrWhiteSpace(ns))
+						return ns;
+				}
+			}
+
+			return string.Empty;
+		}
 	}
 }

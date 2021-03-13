@@ -77,7 +77,6 @@ namespace COFRSCoreInstaller
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
-
 					Orchestrator = null;
 					ExampleClass = null;
 					CollectionExampleClass = null;
