@@ -1123,6 +1123,7 @@ namespace COFRSCoreInstaller
 			AppendComma(result, ref first);
 			result.Append("IsPrimaryKey = true");
 		}
+		
 		private void AppendComma(StringBuilder result, ref bool first)
 		{
 			if (first)
@@ -1130,16 +1131,19 @@ namespace COFRSCoreInstaller
 			else
 				result.Append(", ");
 		}
+		
 		private void AppendIdentity(StringBuilder result, ref bool first)
 		{
 			AppendComma(result, ref first);
 			result.Append("IsIdentity = true, AutoField = true");
 		}
+		
 		private void AppendIndexed(StringBuilder result, ref bool first)
 		{
 			AppendComma(result, ref first);
 			result.Append("IsIndexed = true");
 		}
+		
 		private void AppendForeignKey(StringBuilder result, ref bool first)
 		{
 			AppendComma(result, ref first);
@@ -1155,6 +1159,7 @@ namespace COFRSCoreInstaller
 			else
 				result.Append("IsNullable = false");
 		}
+		
 		private void CorrectForReservedNames(StringBuilder result, DBColumn column, ref bool first)
 		{
 			if (string.Equals(column.ColumnName, "abstract", StringComparison.OrdinalIgnoreCase) ||
@@ -1269,6 +1274,7 @@ namespace COFRSCoreInstaller
 				column.ColumnName += "_Value";
 			}
 		}
+		
 		private void AppendDatabaseType(StringBuilder result, DBColumn column, ref bool first)
 		{
 			AppendComma(result, ref first);
@@ -1304,17 +1310,20 @@ namespace COFRSCoreInstaller
 					result.Append($"Length = {length}, IsFixed = false");
 			}
 		}
+		
 		private void AppendAutofield(StringBuilder result, ref bool first)
 		{
 			AppendComma(result, ref first);
 			result.Append("AutoField = true");
 		}
+		
 		private void AppendPrecision(StringBuilder result, int NumericPrecision, int NumericScale, ref bool first)
 		{
 			AppendComma(result, ref first);
 
 			result.Append($"Precision={NumericPrecision}, Scale={NumericScale}");
 		}
+		
 		private bool CheckMapping(ClassMember member)
 		{
 			if (member.EntityNames.Count > 0)
@@ -1770,6 +1779,7 @@ namespace COFRSCoreInstaller
 				}
 			}
 		}
+		
 		private string GetSqlServerValue(string columnName, List<DBColumn> Columns, JObject ExampleValue)
 		{
 			var column = Columns.FirstOrDefault(c => string.Equals(c.ColumnName, columnName, StringComparison.OrdinalIgnoreCase));
@@ -2005,6 +2015,7 @@ namespace COFRSCoreInstaller
 
 			return "unknown";
 		}
+		
 		private string GetMySqlValue(string columnName, List<DBColumn> Columns, JObject ExampleValue)
 		{
 			var column = Columns.FirstOrDefault(c => string.Equals(c.ColumnName, columnName, StringComparison.OrdinalIgnoreCase));
@@ -2300,6 +2311,7 @@ namespace COFRSCoreInstaller
 
 			return "unknown";
 		}
+		
 		private string GetPostgresqlValue(string columnName, List<DBColumn> Columns, JObject ExampleValue)
 		{
 			var column = Columns.FirstOrDefault(c => string.Equals(c.ColumnName, columnName, StringComparison.OrdinalIgnoreCase));
@@ -3415,6 +3427,7 @@ namespace COFRSCoreInstaller
 				throw error;
 			}
 		}
+		
 		private bool EmitEntiyMemeberSetting(List<DBColumn> Columns, JObject Example, StringBuilder results, bool first, ClassMember member)
 		{
 			if (member.ChildMembers.Count > 0)
@@ -3453,6 +3466,7 @@ namespace COFRSCoreInstaller
 
 			return first;
 		}
+		
 		public bool UpdateServices(string solutionFolder, string validationClass, string entityNamespace, string resourceNamespace, string validationNamespace)
 		{
 			var servicesFile = FindServices(solutionFolder);
@@ -3597,6 +3611,7 @@ namespace COFRSCoreInstaller
 
 			return string.Empty;
 		}
+		
 		private void EmitEndpoint(string resourceClassName, string action, StringBuilder results, IEnumerable<ClassMember> pkcolumns)
 		{
 			results.Append($"\t\tpublic async Task<IActionResult> {action}{resourceClassName}Async(");

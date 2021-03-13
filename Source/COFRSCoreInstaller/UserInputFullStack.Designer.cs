@@ -389,7 +389,7 @@ namespace COFRSCoreInstaller
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "UserInputFullStack";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "COFRS Controller Generator";
+            this.Text = "COFRS Controller Generator Full Stack";
             this.Load += new System.EventHandler(this.OnLoad);
             this.panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this._portNumber)).EndInit();

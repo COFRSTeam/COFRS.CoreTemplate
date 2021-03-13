@@ -18,23 +18,23 @@
         <Assembly>System</Assembly>
       </Reference>
     </References>
-    <Folder Name="Controllers" TargetFolderName="..\Controllers">
+    <Folder Name="Controllers">
       <ProjectItem ReplaceParameters="true" TargetFileName="$controllerClass$.cs" OpenInEditor="true">Controller.cs</ProjectItem>
     </Folder>
-    <Folder Name="Validation" TargetFolderName="..\Validation">
+    <Folder Name="Validation">
       <ProjectItem ReplaceParameters="true" TargetFileName="$validatorClass$.cs" OpenInEditor="true">Validator.cs</ProjectItem>
     </Folder>
-    <Folder Name="Models" TargetFolderName="..\Models">
-      <Folder Name="EntityModels" TargetFolderName="..\Models\EntityModels">
+    <Folder Name="Models">
+      <Folder Name="EntityModels">
         <ProjectItem ReplaceParameters="true" TargetFileName="$entityClass$.cs" OpenInEditor="true">Emodel.cs</ProjectItem>
       </Folder>
-      <Folder Name="Mapping" TargetFolderName="..\Models\Mapping">
+      <Folder Name="Mapping">
         <ProjectItem ReplaceParameters="true" TargetFileName="$mapClass$.cs" OpenInEditor="true">Map.cs</ProjectItem>
       </Folder>
-      <Folder Name="ResourceModels" TargetFolderName="..\Models\ResourceModels">
+      <Folder Name="ResourceModels">
         <ProjectItem ReplaceParameters="true" TargetFileName="$resourceClass$.cs" OpenInEditor="true">Model.cs</ProjectItem>
       </Folder>
-      <Folder Name="SwaggerExamples" TargetFolderName="..\Models\SwaggerExamples">
+      <Folder Name="SwaggerExamples">
         <ProjectItem ReplaceParameters="true" TargetFileName="$swaggerClass$.cs" OpenInEditor="true">Swagger.cs</ProjectItem>
       </Folder>
     </Folder>

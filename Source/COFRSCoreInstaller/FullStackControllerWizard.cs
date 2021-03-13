@@ -48,6 +48,15 @@ namespace COFRSCoreInstaller
 			{
 				var solutionDirectory = replacementsDictionary["$solutiondirectory$"];
 				var rootNamespace = replacementsDictionary["$rootnamespace$"];
+				var computedRootNamespace = Utilities.GetRootNamespace(solutionDirectory);
+
+				if (!string.Equals(rootNamespace, computedRootNamespace, StringComparison.OrdinalIgnoreCase))
+				{
+					MessageBox.Show("The COFRS Controller Full Stack should be placed at the project root. It will add the appropriate components in the appropriate folders.", "Placement Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					Proceed = false;
+					return;
+				}
+
 				var candidateName = replacementsDictionary["$safeitemname$"];
 
 				if (candidateName.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
@@ -199,7 +208,7 @@ namespace COFRSCoreInstaller
 		}
 
 		private List<ClassMember> LoadClassMembers(DBTable table, List<DBColumn> columns)
-        {
+		{
 			var members = new List<ClassMember>();
 
 			var member = new ClassMember()
@@ -210,23 +219,141 @@ namespace COFRSCoreInstaller
 				ChildMembers = new List<ClassMember>()
 			};
 
-			foreach ( var column in columns )
-            {
+			foreach (var column in columns)
+			{
 				if (column.IsPrimaryKey)
 					member.EntityNames.Add(column);
-            }
+			}
 
 			members.Add(member);
 
-			foreach ( var column in columns )
-            {
-				column.EntityName = column.ColumnName;
+			foreach (var column in columns)
+			{
+				if (string.Equals(column.ColumnName, "abstract", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "as", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "base", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "bool", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "break", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "byte", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "case", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "catch", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "char", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "checked", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "class", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "const", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "continue", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "decimal", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "default", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "delegate", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "do", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "double", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "else", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "enum", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "event", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "explicit", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "extern", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "false", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "finally", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "fixed", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "float", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "for", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "foreach", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "goto", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "if", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "implicit", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "in", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "int", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "interface", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "internal", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "is", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "lock", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "long", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "namespace", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "new", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "null", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "object", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "operator", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "out", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "override", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "params", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "private", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "protected", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "public", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "readonly", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "ref", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "return", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "sealed", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "short", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "sizeof", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "stackalloc", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "static", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "string", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "struct", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "switch", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "this", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "throw", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "true", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "try", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "typeof", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "uint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "ulong", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "unchecked", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "unsafe", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "ushort", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "using", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "virtual", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "void", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "volatile", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "while", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "add", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "alias", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "ascending", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "async", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "await", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "by", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "descending", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "dynamic", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "equals", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "from", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "get", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "global", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "group", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "into", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "join", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "let", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "nameof", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "on", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "orderby", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "partial", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "remove", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "select", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "set", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "unmanaged", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "value", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "var", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "when", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "where", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.ColumnName, "yield", StringComparison.OrdinalIgnoreCase))
+				{
+					column.EntityName = $"{column.ColumnName}_Value";
+				}
+				else
+				{
+					column.EntityName = column.ColumnName;
+				}
+
+				if (column.ServerType == DBServerType.POSTGRESQL)
+					column.EntityType = DBHelper.GetPostgresDataType(column);
+				else if (column.ServerType == DBServerType.MYSQL)
+					column.EntityType = DBHelper.GetMySqlDataType(column);
+				else if (column.ServerType == DBServerType.SQLSERVER)
+					column.EntityType = DBHelper.GetSQLServerDataType(column);
 
 				if (!column.IsPrimaryKey)
 				{
 					if (!column.IsForeignKey)
 					{
-
 						var childMember = new ClassMember()
 						{
 							ResourceMemberName = column.ColumnName,
@@ -238,7 +365,7 @@ namespace COFRSCoreInstaller
 						members.Add(childMember);
 					}
 					else
-                    {
+					{
 						string shortColumnName;
 
 						if (string.Equals(column.ForeignTableName, table.Table, StringComparison.OrdinalIgnoreCase))
@@ -263,10 +390,11 @@ namespace COFRSCoreInstaller
 						members.Add(childMember);
 					}
 				}
-            }
+			}
 
 			return members;
-        }
+		}
+
 		private string LoadPolicy(string folder)
 		{
 			try
