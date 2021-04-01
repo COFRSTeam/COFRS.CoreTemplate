@@ -12,13 +12,13 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="10.1.1" />
     <PackageReference Include="COFRS.Common" Version="0.0.22-alpha" />
-    <PackageReference Include="COFRS" Version="0.0.51-alpha" />
-    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.45-alpha" />
+    <PackageReference Include="COFRS" Version="0.0.59-alpha" />
+    $if$ ($databaseTechnology$ == SQLServer)<PackageReference Include="COFRS.SqlServer" Version="0.0.52-alpha" />
     $endif$$if$ ($databaseTechnology$ == Postgresql)<PackageReference Include="COFRS.Postgresql" Version="0.0.18-alpha" />
     <PackageReference Include="Npgsql" Version="5.0.3" />
     $endif$$if$ ($databaseTechnology$ == MySQL)<PackageReference Include="COFRS.MySql" Version="0.0.22-alpha" />
     <PackageReference Include="MySql.Data" Version="8.0.23" />
-    $endif$$if$ ($securitymodel$ == OAuth)<PackageReference Include="COFRS.OAuth" Version="0.0.19-alpha" />
+    $endif$$if$ ($securitymodel$ == OAuth)<PackageReference Include="COFRS.OAuth" Version="0.0.29-alpha" />
     $endif$<PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="1.4.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
