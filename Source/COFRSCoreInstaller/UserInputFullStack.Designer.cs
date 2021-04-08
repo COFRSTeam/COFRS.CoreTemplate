@@ -59,6 +59,8 @@ namespace COFRSCoreInstaller
             this.label5 = new System.Windows.Forms.Label();
             this.SingularName = new System.Windows.Forms.TextBox();
             this.PluralName = new System.Windows.Forms.TextBox();
+            this.policyLabel = new System.Windows.Forms.Label();
+            this.policyCombo = new System.Windows.Forms.ComboBox();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this._portNumber)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -96,7 +98,7 @@ namespace COFRSCoreInstaller
             // 
             // _portNumber
             // 
-            this._portNumber.Location = new System.Drawing.Point(707, 255);
+            this._portNumber.Location = new System.Drawing.Point(291, 158);
             this._portNumber.Maximum = new decimal(new int[] {
             65534,
             0,
@@ -351,6 +353,24 @@ namespace COFRSCoreInstaller
             this.PluralName.Size = new System.Drawing.Size(198, 20);
             this.PluralName.TabIndex = 18;
             // 
+            // policyLabel
+            // 
+            this.policyLabel.AutoSize = true;
+            this.policyLabel.Location = new System.Drawing.Point(503, 257);
+            this.policyLabel.Name = "policyLabel";
+            this.policyLabel.Size = new System.Drawing.Size(35, 13);
+            this.policyLabel.TabIndex = 58;
+            this.policyLabel.Text = "Policy";
+            // 
+            // policyCombo
+            // 
+            this.policyCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.policyCombo.FormattingEnabled = true;
+            this.policyCombo.Location = new System.Drawing.Point(544, 254);
+            this.policyCombo.Name = "policyCombo";
+            this.policyCombo.Size = new System.Drawing.Size(289, 21);
+            this.policyCombo.TabIndex = 59;
+            // 
             // UserInputFullStack
             // 
             this.AcceptButton = this._okButton;
@@ -358,6 +378,8 @@ namespace COFRSCoreInstaller
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this._cancelButton;
             this.ClientSize = new System.Drawing.Size(846, 525);
+            this.Controls.Add(this.policyCombo);
+            this.Controls.Add(this.policyLabel);
             this.Controls.Add(this.PluralName);
             this.Controls.Add(this.SingularName);
             this.Controls.Add(this.label5);
@@ -430,5 +452,7 @@ namespace COFRSCoreInstaller
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.TextBox SingularName;
         private System.Windows.Forms.TextBox PluralName;
+        private System.Windows.Forms.Label policyLabel;
+        private System.Windows.Forms.ComboBox policyCombo;
     }
 }

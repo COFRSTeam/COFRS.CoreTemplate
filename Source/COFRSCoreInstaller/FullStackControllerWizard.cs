@@ -57,15 +57,13 @@ namespace COFRSCoreInstaller
 					return;
 				}
 
+				var namespaceParts = rootNamespace.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
 				var candidateName = replacementsDictionary["$safeitemname$"];
 
 				if (candidateName.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
 					candidateName = candidateName.Substring(0, candidateName.Length - 10);
 
 				var resourceName = new NameNormalizer(candidateName);
-
-				var namespaceParts = rootNamespace.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-
 				var filePath = solutionDirectory;
 
 				for (int i = 0; i < namespaceParts.Length; i++)
@@ -84,22 +82,12 @@ namespace COFRSCoreInstaller
 				if (!Directory.Exists(filePath))
 					Directory.CreateDirectory(filePath);
 
-				var root = string.Empty;
-
-				for (int i = 0; i < namespaceParts.Count() - 1; i++)
-				{
-					if (i > 0)
-						root += ".";
-
-					root += namespaceParts[i];
-				}
-
-				replacementsDictionary["$entitynamespace$"] = $"{root}.Models.EntityModels";
-				replacementsDictionary["$resourcenamespace$"] = $"{root}.Models.ResourceModels";
-				replacementsDictionary["$orchestrationnamespace$"] = $"{root}.Orchestration";
-				replacementsDictionary["$validatornamespace$"] = $"{root}.Validation";
-				replacementsDictionary["$validationnamespace$"] = $"{root}.Validation";
-				replacementsDictionary["$singleexamplenamespace$"] = $"{root}.Models.SwaggerExamples";
+				replacementsDictionary["$entitynamespace$"] = $"{rootNamespace}.Models.EntityModels";
+				replacementsDictionary["$resourcenamespace$"] = $"{rootNamespace}.Models.ResourceModels";
+				replacementsDictionary["$orchestrationnamespace$"] = $"{rootNamespace}.Orchestration";
+				replacementsDictionary["$validatornamespace$"] = $"{rootNamespace}.Validation";
+				replacementsDictionary["$validationnamespace$"] = $"{rootNamespace}.Validation";
+				replacementsDictionary["$singleexamplenamespace$"] = $"{rootNamespace}.Models.SwaggerExamples";
 
 				SolutionFolder = replacementsDictionary["$solutiondirectory$"];
 
@@ -115,8 +103,6 @@ namespace COFRSCoreInstaller
 					var connectionString = form.ConnectionString;
 					ReplaceConnectionString(connectionString, replacementsDictionary);
 
-					replacementsDictionary["$safeitemname$"] = form.PluralResourceName;
-
 					var entityClassName = $"E{form.SingularResourceName}";
 					var resourceClassName = form.SingularResourceName;
 					var mappingClassName = $"{form.PluralResourceName}Profile";
@@ -127,14 +113,14 @@ namespace COFRSCoreInstaller
 
 					replacementsDictionary["$entityClass$"] = entityClassName;
 					replacementsDictionary["$resourceClass$"] = resourceClassName;
-					replacementsDictionary["$controllerClass$"] = controllerClassName;
 					replacementsDictionary["$swaggerClass$"] = exampleClassName;
 					replacementsDictionary["$swaggerCollectionClass$"] = exampleCollectionClassName;
 					replacementsDictionary["$mapClass$"] = mappingClassName;
 					replacementsDictionary["$validatorClass$"] = validationClassName;
+					replacementsDictionary["$controllerClass$"] = controllerClassName;
 
 					var moniker = LoadMoniker(SolutionFolder);
-					var policy = LoadPolicy(SolutionFolder);
+					var policy = form.Policy;
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");

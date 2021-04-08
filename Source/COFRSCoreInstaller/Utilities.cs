@@ -1,4 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
@@ -12,6 +14,41 @@ namespace COFRSCoreInstaller
 {
 	public static class Utilities
 	{
+		public static List<string> LoadPolicies(string solutionFolder)
+		{
+			var results = new List<string>();
+
+			try
+			{
+				var configFile = Utilities.FindFile(solutionFolder, "appSettings.json");
+
+				if (string.IsNullOrWhiteSpace(configFile))
+					return null;
+
+				using (var stream = new FileStream(configFile, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+				{
+					using (var textReader = new StreamReader(stream))
+					{
+						using (var reader = new JsonTextReader(textReader))
+						{
+							var jsonConfig = JObject.Load(reader, new JsonLoadSettings { CommentHandling = CommentHandling.Ignore, LineInfoHandling = LineInfoHandling.Ignore });
+							var oAuth2Settings = jsonConfig["OAuth2"].Value<JObject>();
+							var policyArray = oAuth2Settings["Policies"].Value<JArray>();
+
+							foreach (var policy in policyArray)
+								results.Add(policy["Policy"].Value<string>());
+						}
+					}
+				}
+			}
+			catch (Exception)
+			{
+				results = null;
+			}
+
+			return results;
+		}
+
 		public static List<ClassMember> LoadEntityClassMembers(string entityFileName, List<DBColumn> columns)
 		{
 			List<ClassMember> members = new List<ClassMember>();
