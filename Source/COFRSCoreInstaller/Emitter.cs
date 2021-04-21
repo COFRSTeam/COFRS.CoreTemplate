@@ -1,5 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
 using Newtonsoft.Json.Linq;
+using Npgsql;
 using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
@@ -11,8 +12,8 @@ using System.Windows.Forms;
 
 namespace COFRSCoreInstaller
 {
-    public class Emitter
-    {
+	public class Emitter
+	{
 		public string EmitController(List<ClassMember> columns, bool hasValidator, string moniker, string resourceClassName, string controllerClassName, string validationClassName, string exampleClassName, string exampleCollectionClassName, string policy)
 		{
 			var results = new StringBuilder();
@@ -326,7 +327,7 @@ namespace COFRSCoreInstaller
 			return results.ToString();
 		}
 
-		public string EmitValidationModel(string entityClassName, string resourceClassName, string validatorClassName)
+		public string EmitValidationModel(string resourceClassName, string validatorClassName)
 		{
 			var results = new StringBuilder();
 
@@ -488,7 +489,7 @@ namespace COFRSCoreInstaller
 			return results.ToString();
 		}
 
-		public string EmitExampleModel(string version, List<ClassMember> classMembers, string entityClassName, string resourceClassName, string exampleClassName, List<DBColumn> Columns, JObject Example, Dictionary<string, string> replacementsDictionary)
+		public string EmitExampleModel(string version, string schema, string connectionString, List<ClassMember> classMembers, string entityClassName, string resourceClassName, string exampleClassName, List<DBColumn> Columns, JObject Example, Dictionary<string, string> replacementsDictionary)
 		{
 			var results = new StringBuilder();
 			replacementsDictionary.Add("$exampleimage$", "false");
@@ -526,28 +527,51 @@ namespace COFRSCoreInstaller
 					if (column.ServerType == DBServerType.MYSQL)
 						value = GetMySqlValue(column.ColumnName, Columns, Example);
 					else if (column.ServerType == DBServerType.POSTGRESQL)
-						value = GetPostgresqlValue(column.ColumnName, Columns, Example);
+						value = GetPostgresqlValue(column.ColumnName, Columns, schema, connectionString, replacementsDictionary["$solutiondirectory$"], Example);
 					else if (column.ServerType == DBServerType.SQLSERVER)
 						value = GetSqlServerValue(column.ColumnName, Columns, Example);
 
 					if (column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Image)
 						replacementsDictionary["$exampleimage$"] = "true";
-					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Inet)
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Inet)
 						replacementsDictionary["$examplenet$"] = "true";
-					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Cidr)
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Cidr)
 						replacementsDictionary["$examplenet$"] = "true";
-					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr)
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr)
 						replacementsDictionary["$examplenetinfo$"] = "true";
-					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr8)
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr8)
 						replacementsDictionary["$examplenetinfo$"] = "true";
-					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Boolean))
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Boolean))
 						replacementsDictionary["$examplebarray$"] = "true";
-					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit))
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit))
 						replacementsDictionary["$examplebarray$"] = "true";
-					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Bit && column.Length > 1)
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit)
 						replacementsDictionary["$examplebarray$"] = "true";
-					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit)
-						replacementsDictionary["$examplebarray$"] = "true";
+
+					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Point)
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.LSeg)
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Line)
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Box)
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Circle)
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Polygon)
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Point))
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.LSeg))
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Line))
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Box))
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Circle))
+						replacementsDictionary["$usenpgtypes$"] = "true";
+					else if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Polygon))
+						replacementsDictionary["$usenpgtypes$"] = "true";
 
 					if (string.Equals(column.EntityType, "Image", StringComparison.OrdinalIgnoreCase))
 						results.Append($"\t\t\t\t{column.EntityName} = ImageEx.Parse({value})");
@@ -570,7 +594,7 @@ namespace COFRSCoreInstaller
 			return results.ToString();
 		}
 
-		public string EmitExampleCollectionModel(string version, List<ClassMember> classMembers, string entityClassName, string resourceClassName, string exampleCollectionClassName,  List<DBColumn> Columns, JObject Example, Dictionary<string, string> replacementsDictionary)
+		public string EmitExampleCollectionModel(string version, string schema, string connectionString, List<ClassMember> classMembers, string entityClassName, string resourceClassName, string exampleCollectionClassName, List<DBColumn> Columns, JObject Example, Dictionary<string, string> replacementsDictionary)
 		{
 			var results = new StringBuilder();
 
@@ -592,7 +616,7 @@ namespace COFRSCoreInstaller
 
 			foreach (var member in classMembers)
 			{
-				first = EmitEntiyMemeberSetting(Columns, Example, results, first, member);
+				first = EmitEntiyMemeberSetting(Columns, schema, connectionString, replacementsDictionary["$solutiondirectory$"], Example, results, first, member);
 			}
 
 			results.AppendLine();
@@ -615,6 +639,397 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t}");
 
 			return results.ToString();
+		}
+
+		public string EmitEnum(string schema, string dataType, string className, string connectionString)
+		{
+			var nn = new NameNormalizer(className);
+			var builder = new StringBuilder();
+
+			builder.Clear();
+			builder.AppendLine("\t///\t<summary>");
+			builder.AppendLine($"\t///\tEnumerates a list of {nn.PluralForm}");
+			builder.AppendLine("\t///\t</summary>");
+
+			if (string.IsNullOrWhiteSpace(schema))
+				builder.AppendLine($"\t[PgEnum(\"{dataType}\")]");
+			else
+				builder.AppendLine($"\t[PgEnum(\"{dataType}\", Schema = \"{schema}\")]");
+
+			builder.AppendLine($"\tpublic enum {className}");
+			builder.AppendLine("\t{");
+
+			string query = @"
+select e.enumlabel as enum_value
+from pg_type t 
+   join pg_enum e on t.oid = e.enumtypid  
+   join pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+where t.typname = @dataType
+  and n.nspname = @schema";
+
+			using (var connection = new NpgsqlConnection(connectionString))
+			{
+				connection.Open();
+				using (var command = new NpgsqlCommand(query, connection))
+				{
+					command.Parameters.AddWithValue("@dataType", dataType);
+					command.Parameters.AddWithValue("@schema", schema);
+
+					bool firstUse = true;
+
+					using (var reader = command.ExecuteReader())
+					{
+						while (reader.Read())
+						{
+							if (firstUse)
+								firstUse = false;
+							else
+							{
+								builder.AppendLine(",");
+								builder.AppendLine();
+							}
+
+							var element = reader.GetString(0);
+
+							builder.AppendLine("\t\t///\t<summary>");
+							builder.AppendLine($"\t\t///\t{element}");
+							builder.AppendLine("\t\t///\t</summary>");
+							builder.AppendLine($"\t\t[PgName(\"{element}\")]");
+
+							var elementName = NormalizeClassName(element);
+							builder.Append($"\t\t{elementName}");
+						}
+					}
+				}
+			}
+
+			builder.AppendLine();
+			builder.AppendLine("\t}");
+
+			return builder.ToString();
+		}
+
+		public string EmitComposite(string schema, string dataType, string className, string connectionString, Dictionary<string, string> replacementsDictionary, List<EntityClassFile> definedElements, List<EntityClassFile> undefinedElements)
+		{
+			var nn = new NameNormalizer(className);
+			var result = new StringBuilder();
+
+			result.Clear();
+			result.AppendLine("\t///\t<summary>");
+			result.AppendLine($"\t///\t{className}");
+			result.AppendLine("\t///\t</summary>");
+
+			if (string.IsNullOrWhiteSpace(schema))
+				result.AppendLine($"\t[PgComposite(\"{dataType}\")]");
+			else
+				result.AppendLine($"\t[PgComposite(\"{dataType}\", Schema = \"{schema}\")]");
+
+			result.AppendLine($"\tpublic class {className}");
+			result.AppendLine("\t{");
+
+			string query = @"
+select a.attname as columnname,
+	   t.typname as datatype,
+	   case when t.typname = 'varchar' then a.atttypmod-4
+	        when t.typname = 'bpchar' then a.atttypmod-4
+			when t.typname = '_varchar' then a.atttypmod-4
+			when t.typname = '_bpchar' then a.atttypmod-4
+	        when a.atttypmod > -1 then a.atttypmod
+	        else a.attlen end as max_len,
+	   case atttypid
+            when 21 /*int2*/ then 16
+            when 23 /*int4*/ then 32
+            when 20 /*int8*/ then 64
+         	when 1700 /*numeric*/ then
+              	case when atttypmod = -1
+                     then 0
+                     else ((atttypmod - 4) >> 16) & 65535     -- calculate the precision
+                     end
+         	when 700 /*float4*/ then 24 /*FLT_MANT_DIG*/
+         	when 701 /*float8*/ then 53 /*DBL_MANT_DIG*/
+         	else 0
+  			end as numeric_precision,
+  		case when atttypid in (21, 23, 20) then 0
+    		 when atttypid in (1700) then            
+        		  case when atttypmod = -1 then 0       
+            		   else (atttypmod - 4) & 65535            -- calculate the scale  
+        			   end
+       		else 0
+  			end as numeric_scale,		
+	   not a.attnotnull as is_nullable,
+	   case when ( a.attgenerated = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
+                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
+                 || '''::regclass)')
+	        then true else false end as is_computed,
+
+	   case when ( a.attidentity = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
+                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
+                 || '''::regclass)')
+	        then true else false end as is_identity,
+
+	   case when (select indrelid from pg_index as px where px.indisprimary = true and px.indrelid = c.oid and a.attnum = ANY(px.indkey)) = c.oid then true else false end as is_primary,
+	   case when (select indrelid from pg_index as ix where ix.indrelid = c.oid and a.attnum = ANY(ix.indkey)) = c.oid then true else false end as is_indexed,
+	   case when (select conrelid from pg_constraint as cx where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) = c.oid then true else false end as is_foreignkey,
+       (  select cc.relname from pg_constraint as cx inner join pg_class as cc on cc.oid = cx.confrelid where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) as foeigntablename
+   from pg_class as c
+  inner join pg_namespace as ns on ns.oid = c.relnamespace
+  inner join pg_attribute as a on a.attrelid = c.oid and not a.attisdropped and attnum > 0
+  inner join pg_type as t on t.oid = a.atttypid
+  left outer join pg_attrdef as ad on ad.adrelid = a.attrelid and ad.adnum = a.attnum 
+  where ns.nspname = @schema
+    and c.relname = @dataType
+ order by a.attnum";
+
+			var columns = new List<DBColumn>();
+			var candidates = new List<EntityClassFile>();
+
+			using (var connection = new NpgsqlConnection(connectionString))
+			{
+				connection.Open();
+				using (var command = new NpgsqlCommand(query, connection))
+				{
+					command.Parameters.AddWithValue("@dataType", dataType);
+					command.Parameters.AddWithValue("@schema", schema);
+
+					using (var reader = command.ExecuteReader())
+					{
+						while (reader.Read())
+						{
+							NpgsqlDbType theDataType = NpgsqlDbType.Unknown;
+
+							try
+							{
+								theDataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
+							}
+							catch (InvalidCastException)
+							{
+								var classFile = new EntityClassFile()
+								{
+									ClassName = NormalizeClassName(reader.GetString(1)),
+									SchemaName = schema,
+									TableName = reader.GetString(1)
+								};
+
+								candidates.Add(classFile);
+							}
+
+							var column = new DBColumn
+							{
+								ColumnName = reader.GetString(0),
+								DataType = theDataType,
+								dbDataType = reader.GetString(1),
+								Length = Convert.ToInt64(reader.GetValue(2)),
+								NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+								NumericScale = Convert.ToInt32(reader.GetValue(4)),
+								IsNullable = Convert.ToBoolean(reader.GetValue(5)),
+								IsComputed = Convert.ToBoolean(reader.GetValue(6)),
+								IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
+								IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
+								IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
+								IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+								ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+								ServerType = DBServerType.POSTGRESQL
+							};
+
+							columns.Add(column);
+						}
+					}
+				}
+			}
+
+			foreach ( var candidate in candidates )
+            {
+				if (definedElements.FirstOrDefault(c => string.Equals(c.SchemaName, candidate.SchemaName, StringComparison.OrdinalIgnoreCase) &&
+														string.Equals(c.TableName, candidate.TableName, StringComparison.OrdinalIgnoreCase)) == null)
+                {
+					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, connectionString);
+					undefinedElements.Add(candidate);
+				}
+            }
+
+			if (undefinedElements.Count > 0)
+				return string.Empty;
+
+			bool firstColumn = true;
+
+			foreach (var column in columns)
+			{
+
+				if (firstColumn)
+					firstColumn = false;
+				else
+					result.AppendLine();
+
+				result.AppendLine("\t\t///\t<summary>");
+				result.AppendLine($"\t\t///\t{column.ColumnName}");
+				result.AppendLine("\t\t///\t</summary>");
+
+				//	Construct the [Member] attribute
+				result.Append("\t\t[Member(");
+				bool first = true;
+
+				if (column.IsPrimaryKey)
+				{
+					AppendPrimaryKey(result, ref first);
+				}
+
+				if (column.IsIdentity)
+				{
+					AppendIdentity(result, ref first);
+				}
+
+				if (column.IsIndexed || column.IsForeignKey)
+				{
+					AppendIndexed(result, ref first);
+				}
+
+				if (column.IsForeignKey)
+				{
+					AppendForeignKey(result, ref first);
+				}
+
+				AppendNullable(result, column.IsNullable, ref first);
+
+
+				if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Varchar) ||
+					((NpgsqlDbType)column.DataType == NpgsqlDbType.Name) ||
+					((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Varchar)))
+				{
+					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Varchar && column.Length < 0)
+						AppendFixed(result, -1, false, ref first);
+					else
+						AppendFixed(result, column.Length, false, ref first);
+				}
+
+				else if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Bit) ||
+						 ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit)))
+				{
+					//	Insert the column definition
+					AppendFixed(result, column.Length, true, ref first);
+				}
+
+				else if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit) ||
+						 ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Varbit)))
+				{
+					AppendFixed(result, column.Length, false, ref first);
+				}
+
+				else if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Text) ||
+						 ((NpgsqlDbType)column.DataType == NpgsqlDbType.Citext) ||
+						 ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Text)))
+				{
+					AppendFixed(result, -1, false, ref first);
+				}
+
+				else if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Char) ||
+						 ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Char)))
+				{
+					//	Insert the column definition
+					if (string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
+					{
+						AppendFixed(result, column.Length, true, ref first);
+					}
+					else if (string.Equals(column.dbDataType, "_bpchar", StringComparison.OrdinalIgnoreCase))
+					{
+						AppendFixed(result, column.Length, true, ref first);
+					}
+				}
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Bytea)
+				{
+					AppendFixed(result, column.Length, false, ref first);
+				}
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Numeric)
+				{
+					AppendPrecision(result, column.NumericPrecision, column.NumericScale, ref first);
+				}
+
+				AppendDatabaseType(result, column, ref first);
+
+				if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Inet)
+					replacementsDictionary["$net$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Cidr)
+					replacementsDictionary["$net$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr)
+					replacementsDictionary["$netinfo$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr8)
+					replacementsDictionary["$netinfo$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Boolean))
+					replacementsDictionary["$barray$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit))
+					replacementsDictionary["$barray$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Bit && column.Length > 1)
+					replacementsDictionary["$barray$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit)
+					replacementsDictionary["$barray$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Point)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.LSeg)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Circle)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Box)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Line)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Path)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.LSeg)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Polygon)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				//	Correct for reserved words
+				CorrectForReservedNames(result, column, ref first);
+
+				result.AppendLine(")]");
+
+				var memberName = NormalizeClassName(column.ColumnName);
+				result.AppendLine($"\t\t[PgName(\"{column.ColumnName}\")]");
+
+				//	Insert the column definition
+				result.AppendLine($"\t\tpublic {DBHelper.GetPostgresDataType(schema, column, connectionString, replacementsDictionary["$solutiondirectory$"])} {memberName} {{ get; set; }}");
+			}
+
+			result.AppendLine("\t}");
+
+			return result.ToString();
+		}
+
+		private static string NormalizeClassName(string className)
+		{
+			className = className.Substring(0, 1).ToUpper() + className.Substring(1);
+			int index = className.IndexOf("_");
+
+			while (index != -1)
+			{
+				//	0----*----1----*----2
+				//	display_name
+
+				var tempString = className.Substring(0, index);
+				tempString += className.Substring(index + 1, 1).ToUpper();
+				tempString += className.Substring(index + 2);
+				className = tempString;
+				index = className.IndexOf("_");
+			}
+
+			return className;
 		}
 
 		public string EmitMappingModel(List<ClassMember> classMembers, string resourceClassName, string entityClassName, string mappingClassName, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary)
@@ -825,12 +1240,13 @@ namespace COFRSCoreInstaller
 			return results.ToString();
 		}
 
-		public string EmitResourceModel(List<ClassMember> entityClassMembers, string resourceClassName, string entityClassName, DBTable table, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary)
+		public string EmitResourceModel(List<ClassMember> entityClassMembers, string resourceClassName, string entityClassName, DBTable table, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary, string connectionString)
 		{
 			replacementsDictionary.Add("$resourceimage$", "false");
 			replacementsDictionary.Add("$resourcenet$", "false");
 			replacementsDictionary.Add("$resourcenetinfo$", "false");
 			replacementsDictionary.Add("$resourcebarray$", "false");
+			replacementsDictionary.Add("$usenpgtypes$", "false");
 
 			var results = new StringBuilder();
 			bool hasPrimary = false;
@@ -897,8 +1313,22 @@ namespace COFRSCoreInstaller
 					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Varbit)
 						replacementsDictionary["$resourcebarray$"] = "true";
 
+					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Unknown ||
+						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Point ||
+						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.LSeg ||
+						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Path ||
+						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Circle ||
+						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Polygon ||
+						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Line ||
+						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Box	)
+						replacementsDictionary["$usenpgtypes$"] = "true";
+
 					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL)
-						results.AppendLine($"\t\tpublic {DBHelper.GetPostgresqlResourceDataType(member.EntityNames[0])} {member.ResourceMemberName} {{ get; set; }}");
+					{
+						var solutionFolder = replacementsDictionary["$solutiondirectory$"];
+						var dataType = DBHelper.GetPostgresqlResourceDataType(member.EntityNames[0], connectionString, table.Schema, solutionFolder);
+						results.AppendLine($"\t\tpublic {dataType} {member.ResourceMemberName} {{ get; set; }}");
+					}
 					else if (member.EntityNames[0].ServerType == DBServerType.MYSQL)
 						results.AppendLine($"\t\tpublic {DBHelper.GetMySqlResourceDataType(member.EntityNames[0])} {member.ResourceMemberName} {{ get; set; }}");
 					else if (member.EntityNames[0].ServerType == DBServerType.SQLSERVER)
@@ -911,7 +1341,7 @@ namespace COFRSCoreInstaller
 			return results.ToString();
 		}
 
-		public string EmitEntityModel(DBTable table, string entityClassName, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary)
+		public string EmitEntityModel(DBTable table, string entityClassName, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary, string connectionString)
 		{
 			var result = new StringBuilder();
 			replacementsDictionary.Add("$image$", "false");
@@ -987,10 +1417,14 @@ namespace COFRSCoreInstaller
 
 				else if ((column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.VarChar) ||
 						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varchar) ||
+						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Name) ||
 						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Varchar)) ||
 						 (column.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.VarChar))
 				{
-					AppendFixed(result, column.Length, false, ref first);
+					if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varchar && column.Length < 0)
+						AppendFixed(result, -1, false, ref first);
+					else
+						AppendFixed(result, column.Length, false, ref first);
 				}
 
 				else if ((column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Bit) ||
@@ -1008,6 +1442,7 @@ namespace COFRSCoreInstaller
 
 				else if ((column.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Text) ||
 						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Text) ||
+						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Citext) ||
 						 (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Text)) ||
 						 (column.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Text))
 				{
@@ -1026,8 +1461,7 @@ namespace COFRSCoreInstaller
 						{
 							AppendFixed(result, column.Length, true, ref first);
 						}
-
-						if (string.Equals(column.dbDataType, "_bpchar", StringComparison.OrdinalIgnoreCase))
+						else if (string.Equals(column.dbDataType, "_bpchar", StringComparison.OrdinalIgnoreCase))
 						{
 							AppendFixed(result, column.Length, true, ref first);
 						}
@@ -1099,6 +1533,30 @@ namespace COFRSCoreInstaller
 				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit)
 					replacementsDictionary["$barray$"] = "true";
 
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Point)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.LSeg)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Circle)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Box)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Line)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Path)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.LSeg)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
+				if (column.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Polygon)
+					replacementsDictionary["$npgsqltypes$"] = "true";
+
 				//	Correct for reserved words
 				CorrectForReservedNames(result, column, ref first);
 
@@ -1106,7 +1564,7 @@ namespace COFRSCoreInstaller
 
 				//	Insert the column definition
 				if (column.ServerType == DBServerType.POSTGRESQL)
-					result.AppendLine($"\t\tpublic {DBHelper.GetPostgresDataType(column)} {column.ColumnName} {{ get; set; }}");
+					result.AppendLine($"\t\tpublic {DBHelper.GetPostgresDataType(table.Schema, column, connectionString, replacementsDictionary["$solutiondirectory$"])} {column.ColumnName} {{ get; set; }}");
 				else if (column.ServerType == DBServerType.MYSQL)
 					result.AppendLine($"\t\tpublic {DBHelper.GetMySqlDataType(column)} {column.ColumnName} {{ get; set; }}");
 				else if (column.ServerType == DBServerType.SQLSERVER)
@@ -2312,7 +2770,7 @@ namespace COFRSCoreInstaller
 			return "unknown";
 		}
 		
-		private string GetPostgresqlValue(string columnName, List<DBColumn> Columns, JObject ExampleValue)
+		private string GetPostgresqlValue(string columnName, List<DBColumn> Columns, string schema, string connectionString, string solutionFolder, JObject ExampleValue)
 		{
 			var column = Columns.FirstOrDefault(c => string.Equals(c.ColumnName, columnName, StringComparison.OrdinalIgnoreCase));
 			var value = ExampleValue[columnName];
@@ -2321,6 +2779,371 @@ namespace COFRSCoreInstaller
 			{
 				switch ((NpgsqlDbType)column.DataType)
 				{
+					case NpgsqlDbType.Point:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var x = value["X"];
+							var y = value["Y"];
+
+							return $"new NpgsqlPoint({x.Value<double>()}, {y.Value<double>()})";
+						}
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Point:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var pointList = new StringBuilder();
+							bool first = true;
+							foreach (var point in value)
+							{
+								var x = point["X"];
+								var y = point["Y"];
+
+								if (first)
+									first = false;
+								else
+									pointList.Append(",");
+
+								pointList.Append($"new NpgsqlPoint({x.Value<double>()}, {y.Value<double>()})");
+							}
+
+							return $"new NpgsqlPoint[] {{ {pointList} }}";
+						}
+
+					case NpgsqlDbType.LSeg:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var start = value["Start"].Value<JObject>();
+							var end = value["End"].Value<JObject>();
+
+							var x1 = start["X"];
+							var y1 = start["Y"];
+
+							var x2 = end["X"];
+							var y2 = end["Y"];
+
+							return $"new NpgsqlLSeg(new NpgsqlPoint({x1.Value<double>()}, {y1.Value<double>()}), new NpgsqlPoint({x2.Value<double>()}, {y2.Value<double>()}))";
+						}
+
+					case NpgsqlDbType.Array | NpgsqlDbType.LSeg:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var seglist = new StringBuilder();
+							var first = true;
+
+							foreach (var lseg in value)
+							{
+								var start = lseg["Start"].Value<JObject>();
+								var end = lseg["End"].Value<JObject>();
+
+								var x1 = start["X"];
+								var y1 = start["Y"];
+
+								var x2 = end["X"];
+								var y2 = end["Y"];
+
+								if (first)
+									first = false;
+								else
+									seglist.Append(",");
+
+								seglist.Append($"new NpgsqlLSeg(new NpgsqlPoint({x1.Value<double>()}, {y1.Value<double>()}), new NpgsqlPoint({x2.Value<double>()}, {y2.Value<double>()}))");
+							}
+
+							return $"new NpgsqlLSeg[] {{ {seglist} }}";
+						}
+
+					case NpgsqlDbType.Path:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var pointlist = new StringBuilder();
+							bool first = true;
+
+							foreach (var pointValue in value)
+							{
+								var x = pointValue["X"];
+								var y = pointValue["Y"];
+
+								if (first)
+									first = false;
+								else
+									pointlist.Append(",");
+
+								pointlist.Append($"new NpgsqlPoint({x},{y})");
+							}
+
+							return $"new NpgsqlPath(new NpgsqlPoint[] {{{pointlist}}})";
+						}
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Path:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var pathlist = new StringBuilder();
+							var firstpath = true;
+
+							foreach (var path in value)
+							{
+								var pointlist = new StringBuilder();
+								bool first = true;
+
+								foreach (var pointValue in path)
+								{
+									var x = pointValue["X"];
+									var y = pointValue["Y"];
+
+									if (first)
+										first = false;
+									else
+										pointlist.Append(",");
+
+									pointlist.Append($"new NpgsqlPoint({x},{y})");
+								}
+
+								if (firstpath)
+									firstpath = false;
+								else
+									pathlist.Append(",");
+
+								pathlist.Append($"new NpgsqlPath(new NpgsqlPoint[] {{{pointlist}}})");
+							}
+
+							return $"new NpgsqlPath[] {{ {pathlist} }}";
+						}
+
+					case NpgsqlDbType.Polygon:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var pointlist = new StringBuilder();
+							bool first = true;
+
+							foreach (var pointValue in value)
+							{
+								var x = pointValue["X"];
+								var y = pointValue["Y"];
+
+								if (first)
+									first = false;
+								else
+									pointlist.Append(",");
+
+								pointlist.Append($"new NpgsqlPoint({x},{y})");
+							}
+
+							return $"new NpgsqlPolygon(new NpgsqlPoint[] {{{pointlist}}})";
+						}
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Polygon:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var polylist = new StringBuilder();
+							var firstpoly = true;
+
+							foreach (var poly in value)
+							{
+
+								var pointlist = new StringBuilder();
+								bool first = true;
+
+								foreach (var pointValue in poly)
+								{
+									var x = pointValue["X"];
+									var y = pointValue["Y"];
+
+									if (first)
+										first = false;
+									else
+										pointlist.Append(",");
+
+									pointlist.Append($"new NpgsqlPoint({x},{y})");
+								}
+
+								if (firstpoly)
+									firstpoly = false;
+								else
+									polylist.Append(",");
+
+								polylist.Append($"new NpgsqlPolygon(new NpgsqlPoint[] {{{pointlist}}})");
+							}
+
+							return $"new NpgsqlPolygon[] {{ {polylist} }}";
+						}
+
+					case NpgsqlDbType.Circle:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var x = value["X"];
+							var y = value["Y"];
+							var r = value["Radius"];
+
+							return $"new NpgsqlCircle({x.Value<double>()}, {y.Value<double>()}, {r.Value<double>()})";
+						}
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Circle:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var circleList = new StringBuilder();
+							var first = true;
+
+							foreach (var circle in value)
+							{
+								var x = circle["X"];
+								var y = circle["Y"];
+								var r = circle["Radius"];
+
+								if (first)
+									first = false;
+								else
+									circleList.Append(",");
+
+								circleList.Append($"new NpgsqlCircle({x.Value<double>()}, {y.Value<double>()}, {r.Value<double>()})");
+							}
+
+							return $"new NpgsqlCircle[] {{{circleList}}}";
+						}
+
+					case NpgsqlDbType.Line:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var x = value["A"];
+							var y = value["B"];
+							var r = value["C"];
+
+							return $"new NpgsqlLine({x.Value<double>()}, {y.Value<double>()}, {r.Value<double>()})";
+						}
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Line:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var lineList = new StringBuilder();
+							var first = true;
+
+							foreach (var line in value)
+							{
+								var x = line["A"];
+								var y = line["B"];
+								var r = line["C"];
+
+								if (first)
+									first = false;
+								else
+									lineList.Append(",");
+
+								lineList.Append($"new NpgsqlLine({x.Value<double>()}, {y.Value<double>()}, {r.Value<double>()})");
+							}
+
+							return $"new NpgsqlLine[] {{{lineList}}}";
+						}
+
+					case NpgsqlDbType.Box:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var pointa = value["UpperRight"];
+							var pointb = value["LowerLeft"];
+
+							var x1 = pointa["X"];
+							var y1 = pointa["Y"];
+							var x2 = pointb["X"];
+							var y2 = pointb["Y"];
+
+							return $"new NpgsqlBox(new NpgsqlPoint({x1.Value<double>()}, {y1.Value<double>()}), new NpgsqlPoint({x2.Value<double>()},{y2.Value<double>()}))";
+						}
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Box:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var boxlist = new StringBuilder();
+							var first = true;
+
+							foreach (var box in value)
+							{
+								var pointa = box["UpperRight"];
+								var pointb = box["LowerLeft"];
+
+								var x1 = pointa["X"];
+								var y1 = pointa["Y"];
+								var x2 = pointb["X"];
+								var y2 = pointb["Y"];
+
+								if (first)
+									first = false;
+								else
+									boxlist.Append(",");
+
+								boxlist.Append($"new NpgsqlBox(new NpgsqlPoint({x1.Value<double>()}, {y1.Value<double>()}), new NpgsqlPoint({x2.Value<double>()},{y2.Value<double>()}))");
+							}
+
+							return $"new NpgsqlBox[] {{{boxlist}}}";
+						}
+
 					case NpgsqlDbType.Smallint:
 						{
 							if (column.IsNullable)
@@ -2756,13 +3579,20 @@ namespace COFRSCoreInstaller
 									if (string.IsNullOrWhiteSpace(value.Value<string>()))
 										return null;
 								}
-								else if (value.Value<JArray>() == null)
-									return "null";
+								else if (value.Type == JTokenType.Array)
+								{
+									if (value.Value<JArray>() == null)
+										return "null";
+								}
 							}
 
 							if (value.Type == JTokenType.String)
 							{
 								return $"BitArrayExt.Parse(\"{value.Value<string>()}\")";
+							}
+							else if (value.Type == JTokenType.Boolean)
+                            {
+								return value.Value<bool>() ? "true" : "false";
 							}
 							else if (value.Type == JTokenType.Array)
 							{
@@ -2883,7 +3713,6 @@ namespace COFRSCoreInstaller
 
 							return $"IPEndPointExt.Parse(\"{value.Value<string>()}\")";
 						}
-
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
 						{
@@ -3418,6 +4247,20 @@ namespace COFRSCoreInstaller
 
 							return result.ToString();
 						}
+
+
+					case NpgsqlDbType.Unknown:
+                        {
+							var elementType = DBHelper.GetElementType(schema, column.dbDataType, connectionString);
+
+							if (elementType == ElementType.Enum)
+							{
+								var enumClass = DBHelper.SearchForEnum(schema, column.dbDataType, solutionFolder);
+
+								return $"{enumClass.ClassName}.{NormalizeClassName(value.Value<string>())}";
+							}
+						}
+						break;
 				}
 
 				return "unknown";
@@ -3428,13 +4271,13 @@ namespace COFRSCoreInstaller
 			}
 		}
 		
-		private bool EmitEntiyMemeberSetting(List<DBColumn> Columns, JObject Example, StringBuilder results, bool first, ClassMember member)
+		private bool EmitEntiyMemeberSetting(List<DBColumn> Columns, string schema, string connectionString, string solutionFolder, JObject Example, StringBuilder results, bool first, ClassMember member)
 		{
 			if (member.ChildMembers.Count > 0)
 			{
 				foreach (var childMember in member.ChildMembers)
 				{
-					first = EmitEntiyMemeberSetting(Columns, Example, results, first, childMember);
+					first = EmitEntiyMemeberSetting(Columns, schema, connectionString, solutionFolder, Example, results, first, childMember);
 				}
 			}
 			else
@@ -3451,7 +4294,7 @@ namespace COFRSCoreInstaller
 					if (column.ServerType == DBServerType.MYSQL)
 						value = GetMySqlValue(column.ColumnName, Columns, Example);
 					else if (column.ServerType == DBServerType.POSTGRESQL)
-						value = GetPostgresqlValue(column.ColumnName, Columns, Example);
+						value = GetPostgresqlValue(column.ColumnName, Columns, schema, connectionString, solutionFolder, Example);
 					else if (column.ServerType == DBServerType.SQLSERVER)
 						value = GetSqlServerValue(column.ColumnName, Columns, Example);
 
@@ -3676,6 +4519,113 @@ namespace COFRSCoreInstaller
 			}
 
 			return route.ToString();
+		}
+
+		private string FindEntityModelsFolder(string folder)
+		{
+			if (string.Equals(Path.GetFileName(folder), "EntityModels", StringComparison.OrdinalIgnoreCase))
+				return folder;
+
+			foreach (var childfolder in Directory.GetDirectories(folder))
+			{
+				var result = FindEntityModelsFolder(childfolder);
+
+				if (!string.IsNullOrWhiteSpace(result))
+					return result;
+			}
+
+			return string.Empty;
+		}
+
+
+		/// <summary>
+		/// Generate undefined elements
+		/// </summary>
+		/// <param name="composites">The list of elements to be defined"/></param>
+		/// <param name="connectionString">The connection string to the database server</param>
+		/// <param name="rootnamespace">The root namespace for the newly defined elements</param>
+		/// <param name="replacementsDictionary">The replacements dictionary</param>
+		/// <param name="definedElements">The lise of elements that are defined</param>
+		public void GenerateComposites(List<EntityClassFile> composites, string connectionString, string rootnamespace, Dictionary<string, string> replacementsDictionary, List<EntityClassFile> definedElements)
+        {
+			foreach ( var composite in composites )
+            {
+				if (composite.ElementType == ElementType.Enum)
+				{
+					var result = new StringBuilder();
+
+					result.AppendLine("using COFRS;");
+					result.AppendLine("using NpgsqlTypes;");
+					result.AppendLine();
+					result.AppendLine($"namespace {rootnamespace}");
+					result.AppendLine("{");
+					result.Append(EmitEnum(composite.SchemaName, composite.TableName, composite.ClassName, connectionString));
+					result.AppendLine("}");
+
+					var destinationFolder = FindEntityModelsFolder(replacementsDictionary["$solutiondirectory$"]);
+
+					var fileName = Path.Combine(destinationFolder, $"{composite.ClassName}.cs");
+					File.WriteAllText(fileName, result.ToString());
+				}
+				else if (composite.ElementType == ElementType.Composite)
+				{
+					var result = new StringBuilder();
+					var allElementsDefined = false;
+					string body = string.Empty;
+
+					while (!allElementsDefined)
+					{
+						var undefinedElements = new List<EntityClassFile>();
+						body = EmitComposite(composite.SchemaName, composite.TableName, composite.ClassName, connectionString, replacementsDictionary, definedElements, undefinedElements);
+
+						if (undefinedElements.Count > 0)
+						{
+							GenerateComposites(undefinedElements, connectionString, rootnamespace, replacementsDictionary, definedElements);
+							definedElements.AddRange(undefinedElements);
+						}
+						else
+							allElementsDefined = true;
+					}
+
+					result.AppendLine("using COFRS;");
+					result.AppendLine("using NpgsqlTypes;");
+
+					if (replacementsDictionary.ContainsKey("$net$"))
+					{
+						if (string.Equals(replacementsDictionary["$net$"], "true", StringComparison.OrdinalIgnoreCase))
+							result.AppendLine("using System.Net;");
+					}
+
+					if (replacementsDictionary.ContainsKey("$barray$"))
+					{
+						if (string.Equals(replacementsDictionary["$barray$"], "true", StringComparison.OrdinalIgnoreCase))
+							result.AppendLine("using System.Collections;");
+					}
+
+					if (replacementsDictionary.ContainsKey("$image$"))
+					{
+						if (string.Equals(replacementsDictionary["$image$"], "true", StringComparison.OrdinalIgnoreCase))
+							result.AppendLine("using System.Drawing;");
+					}
+
+					if (replacementsDictionary.ContainsKey("$netinfo$"))
+					{
+						if (string.Equals(replacementsDictionary["$netinfo$"], "true", StringComparison.OrdinalIgnoreCase))
+							result.AppendLine("using System.Net.NetworkInformation;");
+					}
+
+					result.AppendLine();
+					result.AppendLine($"namespace {rootnamespace}");
+					result.AppendLine("{");
+					result.Append(body);
+					result.AppendLine("}");
+
+					var destinationFolder = FindEntityModelsFolder(replacementsDictionary["$solutiondirectory$"]);
+
+					var fileName = Path.Combine(destinationFolder, $"{composite.ClassName}.cs");
+					File.WriteAllText(fileName, result.ToString());
+				}
+			}
 		}
 	}
 }

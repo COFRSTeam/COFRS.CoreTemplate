@@ -54,7 +54,7 @@
             this._portNumber = new System.Windows.Forms.NumericUpDown();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
             this.panel1 = new System.Windows.Forms.Panel();
-            this._TheFinishButton = new System.Windows.Forms.Button();
+            this._okButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this._portNumber)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.panel1.SuspendLayout();
@@ -309,26 +309,26 @@
             // panel1
             // 
             this.panel1.BackColor = System.Drawing.SystemColors.ActiveCaption;
-            this.panel1.Controls.Add(this._TheFinishButton);
+            this.panel1.Controls.Add(this._okButton);
             this.panel1.Controls.Add(this._cancelButton);
             this.panel1.Location = new System.Drawing.Point(-9, 461);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(930, 73);
             this.panel1.TabIndex = 47;
             // 
-            // _TheFinishButton
+            // _okButton
             // 
-            this._TheFinishButton.Location = new System.Drawing.Point(683, 17);
-            this._TheFinishButton.Name = "_TheFinishButton";
-            this._TheFinishButton.Size = new System.Drawing.Size(75, 23);
-            this._TheFinishButton.TabIndex = 21;
-            this._TheFinishButton.Text = "OK";
-            this._TheFinishButton.UseVisualStyleBackColor = true;
-            this._TheFinishButton.Click += new System.EventHandler(this.OnFInishDialog);
+            this._okButton.Location = new System.Drawing.Point(683, 17);
+            this._okButton.Name = "_okButton";
+            this._okButton.Size = new System.Drawing.Size(75, 23);
+            this._okButton.TabIndex = 21;
+            this._okButton.Text = "OK";
+            this._okButton.UseVisualStyleBackColor = true;
+            this._okButton.Click += new System.EventHandler(this.OnFInishDialog);
             // 
             // UserInputResource
             // 
-            this.AcceptButton = this._TheFinishButton;
+            this.AcceptButton = this._okButton;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this._cancelButton;
@@ -397,6 +397,6 @@
 		private System.Windows.Forms.Button _removeServer;
 		private System.Windows.Forms.NumericUpDown _portNumber;
 		private System.Windows.Forms.Panel panel1;
-		private System.Windows.Forms.Button _TheFinishButton;
+		private System.Windows.Forms.Button _okButton;
 	}
 }

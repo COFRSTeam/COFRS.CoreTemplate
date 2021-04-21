@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -841,8 +842,10 @@ select a.attname as columnname,
     and c.relname = @tablename
  order by a.attnum
 ";
-
-                    using (var command = new NpgsqlCommand(query, connection))
+					var candidateDataType = string.Empty;
+					var candidateSchema = string.Empty;
+					
+					using (var command = new NpgsqlCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@schema", table.Schema);
                         command.Parameters.AddWithValue("@tablename", table.Table);
@@ -850,10 +853,22 @@ select a.attname as columnname,
                         {
                             while (reader.Read())
                             {
-                                var dbColumn = new DBColumn
+								NpgsqlDbType dataType = NpgsqlDbType.Unknown;
+
+								try
+								{
+									dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
+								}
+								catch (InvalidCastException)
+								{
+									candidateSchema = table.Schema;
+									candidateDataType = reader.GetString(1);
+								}
+
+								var dbColumn = new DBColumn
                                 {
                                     ColumnName = reader.GetString(0),
-                                    DataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
+                                    DataType = dataType,
                                     dbDataType = reader.GetString(1),
                                     Length = Convert.ToInt64(reader.GetValue(2)),
                                     IsNullable = Convert.ToBoolean(reader.GetValue(3)),
@@ -868,8 +883,39 @@ select a.attname as columnname,
 
                                 DatabaseColumns.Add(dbColumn);
 
-                            }
-                        }
+								if (!string.IsNullOrWhiteSpace(candidateDataType))
+								{
+									var etype = DBHelper.GetElementType(table.Schema, candidateDataType, connectionString);
+
+									if (etype == ElementType.Enum)
+									{
+										var entityFile = DBHelper.SearchForEnum(table.Schema, candidateDataType, SolutionFolder);
+
+										if (entityFile == null)
+										{
+											var answer = MessageBox.Show($"The composite {table.Table} uses an enum type of {candidateDataType}.\r\n\r\nNo enum class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+											_okButton.Enabled = false;
+										}
+										else
+											_okButton.Enabled = true;
+									}
+									else if (etype == ElementType.Composite)
+									{
+										var entityFile = DBHelper.SearchForComposite(table.Schema, candidateDataType, SolutionFolder);
+
+										if (entityFile == null)
+										{
+											var answer = MessageBox.Show($"The composite {table.Table} uses a composite of {candidateDataType}.\r\n\r\nNo composite class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+											_okButton.Enabled = false;
+										}
+										else
+											_okButton.Enabled = true;
+									}
+								}
+								else
+									_okButton.Enabled = true;
+							}
+						}
                     }
                 }
             }
