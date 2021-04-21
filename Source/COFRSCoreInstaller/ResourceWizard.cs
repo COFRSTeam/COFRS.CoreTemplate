@@ -62,11 +62,12 @@ namespace COFRSCoreInstaller
 
 			if (form.ShowDialog() == DialogResult.OK)
 			{
+				var connectionString = form.ConnectionString;
 				var entityClassFile = (EntityClassFile)form._entityClassList.SelectedItem;
 				var entityClassMembers = Utilities.LoadEntityClassMembers(entityClassFile.FileName, form.DatabaseColumns);
 
 				var emitter = new Emitter();
-				var model = emitter.EmitResourceModel(entityClassMembers, replacementsDictionary["$safeitemname$"], entityClassFile.ClassName, form.DatabaseTable, form.DatabaseColumns, replacementsDictionary);
+				var model = emitter.EmitResourceModel(entityClassMembers, replacementsDictionary["$safeitemname$"], entityClassFile.ClassName, form.DatabaseTable, form.DatabaseColumns, replacementsDictionary, connectionString);
 
 				replacementsDictionary.Add("$model$", model);
 				replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);

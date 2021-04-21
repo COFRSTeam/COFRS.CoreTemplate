@@ -89,7 +89,7 @@ namespace COFRSCoreInstaller
 					Utilities.LoadClassList(SolutionFolder, resourceClassFile.ClassName, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
 
 					var emitter = new Emitter();
-					var model = emitter.EmitValidationModel(entityClassFile.ClassName, resourceClassFile.ClassName, replacementsDictionary["$safeitemname$"]);
+					var model = emitter.EmitValidationModel(resourceClassFile.ClassName, replacementsDictionary["$safeitemname$"]);
 
 					replacementsDictionary.Add("$orchestrationnamespace$", Orchestrator.ClassNamespace);
 					replacementsDictionary.Add("$model$", model);

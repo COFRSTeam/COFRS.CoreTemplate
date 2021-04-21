@@ -2,17 +2,20 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace COFRSCoreInstaller
 {
-	public partial class UserInputEntity : Form
+    public partial class UserInputEntity : Form
 	{
 		#region Variables
 		private ServerConfig _serverConfig;
@@ -20,9 +23,11 @@ namespace COFRSCoreInstaller
 		public DBTable DatabaseTable { get; set; }
 		public List<DBColumn> DatabaseColumns { get; set; }
 		public string SolutionFolder { get; set; }
-
+		public string RootNamespace { get; set; }
 		public string ConnectionString { get; set; }
 		public string DefaultConnectionString { get; set; }
+		public List<EntityClassFile> _entityClassList { get; set; }
+		public Dictionary<string, string> replacementsDictionary { get; set; }
 		#endregion
 
 		#region Utility functions
@@ -43,9 +48,184 @@ namespace COFRSCoreInstaller
 		{
 			_portNumber.Location = new Point(93, 60);
 			DatabaseColumns = new List<DBColumn>();
+			_entityClassList = new List<EntityClassFile>();
 			LoadAppSettings();
 			ReadServerList();
+			LoadEntityClassList(SolutionFolder);
 		}
+
+		private void LoadEntityClassList(string folder)
+		{
+			foreach (var file in Directory.GetFiles(folder, "*.cs"))
+			{
+				LoadEntityClass(file);
+			}
+
+			foreach (var childFolder in Directory.GetDirectories(folder))
+			{
+				LoadEntityClassList(childFolder);
+			}
+		}
+
+		private void LoadEntityClass(string file)
+		{
+			var content = File.ReadAllText(file);
+
+			if (content.Contains("[Table"))
+			{
+				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+				var className = string.Empty;
+				var namespaceName = string.Empty;
+				var schemaName = string.Empty;
+				var tableName = string.Empty;
+
+				foreach (var line in data)
+				{
+					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
+
+					if (match.Success)
+					{
+						className = match.Groups["className"].Value;
+						break;
+					}
+
+					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
+
+					if (match.Success)
+						namespaceName = match.Groups["namespaceName"].Value;
+
+					// 	[Table("Products", Schema = "dbo")]
+					match = Regex.Match(line, "\\[[ \t]*Table[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
+
+					if (match.Success)
+					{
+						tableName = match.Groups["tableName"].Value;
+						schemaName = match.Groups["schemaName"].Value;
+					}
+				}
+
+				if (!string.IsNullOrWhiteSpace(tableName) &&
+					 !string.IsNullOrWhiteSpace(className) &&
+					 !string.IsNullOrWhiteSpace(namespaceName))
+				{
+					var classfile = new EntityClassFile
+					{
+						ClassName = $"{className}",
+						FileName = file,
+						TableName = tableName,
+						SchemaName = schemaName,
+						ClassNameSpace = namespaceName,
+						ElementType = ElementType.Table
+					};
+
+					_entityClassList.Add(classfile);
+				}
+			}
+			else if (content.Contains("[PgEnum"))
+			{
+				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+				var className = string.Empty;
+				var namespaceName = string.Empty;
+				var schemaName = string.Empty;
+				var tableName = string.Empty;
+
+				foreach (var line in data)
+				{
+					var match = Regex.Match(line, "enum[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
+
+					if (match.Success)
+					{
+						className = match.Groups["className"].Value;
+						break;
+					}
+
+					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
+
+					if (match.Success)
+						namespaceName = match.Groups["namespaceName"].Value;
+
+					// 	[Table("Products", Schema = "dbo")]
+					match = Regex.Match(line, "\\[[ \t]*PgEnum[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
+
+					if (match.Success)
+					{
+						tableName = match.Groups["tableName"].Value;
+						schemaName = match.Groups["schemaName"].Value;
+					}
+				}
+
+				if (!string.IsNullOrWhiteSpace(tableName) &&
+					 !string.IsNullOrWhiteSpace(className) &&
+					 !string.IsNullOrWhiteSpace(namespaceName))
+				{
+					var classfile = new EntityClassFile
+					{
+						ClassName = $"{className}",
+						FileName = file,
+						TableName = tableName,
+						SchemaName = schemaName,
+						ClassNameSpace = namespaceName,
+						ElementType = ElementType.Enum
+					};
+
+					_entityClassList.Add(classfile);
+				}
+			}
+			else if (content.Contains("[PgComposite"))
+			{
+				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+				var className = string.Empty;
+				var namespaceName = string.Empty;
+				var schemaName = string.Empty;
+				var tableName = string.Empty;
+
+				foreach (var line in data)
+				{
+					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
+
+					if (match.Success)
+					{
+						className = match.Groups["className"].Value;
+						break;
+					}
+
+					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
+
+					if (match.Success)
+						namespaceName = match.Groups["namespaceName"].Value;
+
+					// 	[Table("Products", Schema = "dbo")]
+					match = Regex.Match(line, "\\[[ \t]*PgComposite[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
+
+					if (match.Success)
+					{
+						tableName = match.Groups["tableName"].Value;
+						schemaName = match.Groups["schemaName"].Value;
+					}
+				}
+
+				if (!string.IsNullOrWhiteSpace(tableName) &&
+					 !string.IsNullOrWhiteSpace(className) &&
+					 !string.IsNullOrWhiteSpace(namespaceName))
+				{
+					var classfile = new EntityClassFile
+					{
+						ClassName = $"{className}",
+						FileName = file,
+						TableName = tableName,
+						SchemaName = schemaName,
+						ClassNameSpace = namespaceName,
+						ElementType = ElementType.Composite
+					};
+
+					_entityClassList.Add(classfile);
+				}
+			}
+		}
+
 		#endregion
 
 		#region User interactions
@@ -208,10 +388,33 @@ namespace COFRSCoreInstaller
 						connection.Open();
 
 						var query = @"
-SELECT schemaname, tablename
+select schemaname, elementname
+  from (
+SELECT schemaname as schemaName, 
+       tablename as elementName
   FROM pg_catalog.pg_tables
- WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';
-";
+ WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'
+
+union all
+
+select n.nspname as schemaName, 
+       t.typname as elementName
+  from pg_type as t 
+ inner join pg_catalog.pg_namespace n on n.oid = t.typnamespace
+ WHERE ( t.typrelid = 0
+                OR ( SELECT c.relkind = 'c'
+                        FROM pg_catalog.pg_class c
+                        WHERE c.oid = t.typrelid ) )
+            AND NOT EXISTS (
+                    SELECT 1
+                        FROM pg_catalog.pg_type el
+                        WHERE el.oid = t.typelem
+                        AND el.typarray = t.oid )
+            AND n.nspname <> 'pg_catalog'
+            AND n.nspname <> 'information_schema'
+            AND n.nspname !~ '^pg_toast'
+			and ( t.typcategory = 'C' or t.typcategory = 'E' ) ) as X
+order by schemaname, elementname";
 
 						using (var command = new NpgsqlCommand(query, connection))
 						{
@@ -317,8 +520,137 @@ select s.name, t.name
 			}
 		}
 
+		private string FindEntityModelsFolder(string folder)
+        {
+			if (string.Equals(Path.GetFileName(folder), "EntityModels", StringComparison.OrdinalIgnoreCase))
+				return folder;
+
+			foreach ( var childfolder in Directory.GetDirectories(folder) )
+            {
+				var result = FindEntityModelsFolder(childfolder);
+
+				if (!string.IsNullOrWhiteSpace(result))
+					return result;
+            }
+
+			return string.Empty;
+        }
+
+		private void GenerateEnumFromDatabase(string schema, string dataType, NpgsqlConnection connection)
+		{
+			var className = NormalizeClassName(dataType);
+
+			var nn = new NameNormalizer(className);
+
+			var builder = new StringBuilder();
+			var destinationPath = FindEntityModelsFolder(SolutionFolder);
+			var fileName = Path.Combine(destinationPath, $"E{className}.cs");
+
+			builder.Clear();
+			builder.AppendLine("using COFRS;");
+			builder.AppendLine("using NpgsqlTypes;");
+			builder.AppendLine();
+			builder.AppendLine($"namespace {RootNamespace}");
+			builder.AppendLine("{");
+			builder.AppendLine("\t///\t<summary>");
+			builder.AppendLine($"\t///\tEnumerates a list of {nn.PluralForm}");
+			builder.AppendLine("\t///\t</summary>");
+
+			if (string.IsNullOrWhiteSpace(schema))
+				builder.AppendLine($"\t[PgEnum(\"{dataType}\")]");
+			else
+				builder.AppendLine($"\t[PgEnum(\"{dataType}\", Schema = \"{schema}\")]");
+
+			builder.AppendLine($"\tpublic enum E{className}");
+			builder.AppendLine("\t{");
+
+			string query = @"
+select e.enumlabel as enum_value
+from pg_type t 
+   join pg_enum e on t.oid = e.enumtypid  
+   join pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+where t.typname = @dataType
+  and n.nspname = @schema";
+
+			using (var command = new NpgsqlCommand(query, connection))
+			{
+				command.Parameters.AddWithValue("@dataType", dataType);
+				command.Parameters.AddWithValue("@schema", schema);
+
+				bool firstUse = true;
+
+				using (var reader = command.ExecuteReader())
+				{
+					while (reader.Read())
+					{
+						if (firstUse)
+							firstUse = false;
+						else
+						{
+							builder.AppendLine(",");
+							builder.AppendLine();
+						}
+
+						var element = reader.GetString(0);
+
+						builder.AppendLine("\t\t///\t<summary>");
+						builder.AppendLine($"\t\t///\t{element}");
+						builder.AppendLine("\t\t///\t</summary>");
+						builder.AppendLine($"\t\t[PgName(\"{element}\")]");
+
+						var elementName = NormalizeClassName(element);
+						builder.Append($"\t\t{elementName}");
+					}
+				}
+			}
+
+			builder.AppendLine();
+			builder.AppendLine("\t}");
+			builder.AppendLine("}");
+
+			using (var stream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
+			{
+				var buffer = Encoding.UTF8.GetBytes(builder.ToString());
+				stream.Write(buffer, 0, buffer.Length);
+			}
+
+			OnSelectedTableChanged(this, new EventArgs());
+		}
+
+		private static string NormalizeClassName(string className)
+		{
+			className = className.Substring(0, 1).ToUpper() + className.Substring(1);
+			int index = className.IndexOf("_");
+
+			while (index != -1)
+			{
+				//	0----*----1----*----2
+				//	display_name
+
+				var tempString = className.Substring(0, index);
+				tempString += className.Substring(index + 1, 1).ToUpper();
+				tempString += className.Substring(index + 2);
+				className = tempString;
+				index = className.IndexOf("_");
+			}
+
+			return className;
+		}
+
+		private ElementType GetElementType(string Schema, string elementName, string connectionString)
+        {
+			var classFile = _entityClassList.FirstOrDefault(c => string.Equals(c.SchemaName, Schema, StringComparison.OrdinalIgnoreCase) && string.Equals(c.TableName, elementName, StringComparison.OrdinalIgnoreCase));
+
+			if (classFile != null)
+				return classFile.ElementType;
+
+			return DBHelper.GetElementType(Schema, elementName, connectionString);
+        }
+
 		private void OnSelectedTableChanged(object sender, EventArgs e)
 		{
+			_okButton.Enabled = true;
+
 			try
 			{
 				var server = (DBServer)_serverList.SelectedItem;
@@ -339,11 +671,20 @@ select s.name, t.name
 				{
 					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
 
-					using (var connection = new NpgsqlConnection(connectionString))
-					{
-						connection.Open();
+					var elementType = GetElementType(table.Schema, table.Table, connectionString);
 
-						var query = @"
+					switch ( elementType )
+                    {
+						case ElementType.Enum:
+							break;
+
+						case ElementType.Composite:
+							{
+								using (var connection = new NpgsqlConnection(connectionString))
+								{
+									connection.Open();
+
+									var query = @"
 select a.attname as columnname,
 	   t.typname as datatype,
 	   case when t.typname = 'varchar' then a.atttypmod-4
@@ -397,37 +738,245 @@ select a.attname as columnname,
  order by a.attnum
 ";
 
-						using (var command = new NpgsqlCommand(query, connection))
-						{
-							command.Parameters.AddWithValue("@schema", table.Schema);
-							command.Parameters.AddWithValue("@tablename", table.Table);
-							using (var reader = command.ExecuteReader())
-							{
-								while (reader.Read())
-								{
-									var dbColumn = new DBColumn
-									{
-										ColumnName = reader.GetString(0),
-										DataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
-										dbDataType = reader.GetString(1),
-										Length = Convert.ToInt64(reader.GetValue(2)),
-										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
-										NumericScale = Convert.ToInt32(reader.GetValue(4)),
-										IsNullable = Convert.ToBoolean(reader.GetValue(5)),
-										IsComputed = Convert.ToBoolean(reader.GetValue(6)),
-										IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
-										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
-										IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
-										IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
-										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
-										ServerType = DBServerType.POSTGRESQL
-									};
+									List<EntityClassFile> UnknownElementsList = new List<EntityClassFile>();
 
-									DatabaseColumns.Add(dbColumn);
+									using (var command = new NpgsqlCommand(query, connection))
+									{
+										command.Parameters.AddWithValue("@schema", table.Schema);
+										command.Parameters.AddWithValue("@tablename", table.Table);
+
+										using (var reader = command.ExecuteReader())
+										{
+											while (reader.Read())
+											{
+												NpgsqlDbType dataType = NpgsqlDbType.Unknown;
+
+												try
+												{
+													dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
+												}
+												catch (InvalidCastException)
+												{
+													var unknownClass = new EntityClassFile()
+													{
+														SchemaName = table.Schema,
+														ClassName = NormalizeClassName(reader.GetString(1)),
+														TableName = reader.GetString(1),
+													};
+
+													UnknownElementsList.Add(unknownClass);
+												}
+
+												var dbColumn = new DBColumn
+												{
+													ColumnName = reader.GetString(0),
+													DataType = dataType,
+													dbDataType = reader.GetString(1),
+													Length = Convert.ToInt64(reader.GetValue(2)),
+													NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+													NumericScale = Convert.ToInt32(reader.GetValue(4)),
+													IsNullable = Convert.ToBoolean(reader.GetValue(5)),
+													IsComputed = Convert.ToBoolean(reader.GetValue(6)),
+													IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
+													IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
+													IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
+													IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+													ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+													ServerType = DBServerType.POSTGRESQL
+												};
+
+												DatabaseColumns.Add(dbColumn);
+											}
+										}
+									}
+
+									var undefinedElements = new List<EntityClassFile>();
+
+									foreach ( var unknownClass in UnknownElementsList)
+                                    {
+										var entityFile = _entityClassList.FirstOrDefault(c => string.Equals(c.SchemaName, unknownClass.SchemaName, StringComparison.OrdinalIgnoreCase) && string.Equals(c.TableName, unknownClass.TableName, StringComparison.OrdinalIgnoreCase));
+
+										if (entityFile == null)
+										{
+											unknownClass.ElementType = GetElementType(unknownClass.SchemaName, unknownClass.TableName, connectionString);
+											undefinedElements.Add(unknownClass);
+
+											if (unknownClass.ElementType == ElementType.Enum)
+											{
+												var answer = MessageBox.Show($"The composite {table.Table} uses an enum type of {unknownClass.TableName}.\r\n\r\nNo enum class corresponding to {unknownClass.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {unknownClass.TableName}.\r\n\r\nWould you like to generate the {unknownClass.TableName} enum as part of generating this class?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+												if (answer == DialogResult.No)
+													_okButton.Enabled = false;
+											}
+											else if (unknownClass.ElementType == ElementType.Composite)
+											{
+												var answer = MessageBox.Show($"The composite {table.Table} uses a composite type of {unknownClass.TableName}.\r\n\r\nNo composite class corresponding to {unknownClass.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {unknownClass.TableName}.\r\n\r\nWould you like to generate the {unknownClass.TableName} composite as part of generating this class?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+												if (answer == DialogResult.No)
+													_okButton.Enabled = false;
+											}
+										}
+
+									}
+
+									if ( _okButton.Enabled )
+                                    {
+										var emitter = new Emitter();
+										emitter.GenerateComposites(undefinedElements, connectionString, replacementsDictionary["$rootnamespace$"], replacementsDictionary, _entityClassList);
+                                    }
 								}
 							}
-						}
-					}
+							break;
+
+						case ElementType.Table:
+							{
+								using (var connection = new NpgsqlConnection(connectionString))
+								{
+									connection.Open();
+
+									var query = @"
+select a.attname as columnname,
+	   t.typname as datatype,
+	   case when t.typname = 'varchar' then a.atttypmod-4
+	        when t.typname = 'bpchar' then a.atttypmod-4
+			when t.typname = '_varchar' then a.atttypmod-4
+			when t.typname = '_bpchar' then a.atttypmod-4
+	        when a.atttypmod > -1 then a.atttypmod
+	        else a.attlen end as max_len,
+	   case atttypid
+            when 21 /*int2*/ then 16
+            when 23 /*int4*/ then 32
+            when 20 /*int8*/ then 64
+         	when 1700 /*numeric*/ then
+              	case when atttypmod = -1
+                     then 0
+                     else ((atttypmod - 4) >> 16) & 65535     -- calculate the precision
+                     end
+         	when 700 /*float4*/ then 24 /*FLT_MANT_DIG*/
+         	when 701 /*float8*/ then 53 /*DBL_MANT_DIG*/
+         	else 0
+  			end as numeric_precision,
+  		case when atttypid in (21, 23, 20) then 0
+    		 when atttypid in (1700) then            
+        		  case when atttypmod = -1 then 0       
+            		   else (atttypmod - 4) & 65535            -- calculate the scale  
+        			   end
+       		else 0
+  			end as numeric_scale,		
+	   not a.attnotnull as is_nullable,
+	   case when ( a.attgenerated = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
+                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
+                 || '''::regclass)')
+	        then true else false end as is_computed,
+
+	   case when ( a.attidentity = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
+                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
+                 || '''::regclass)')
+	        then true else false end as is_identity,
+
+	   case when (select indrelid from pg_index as px where px.indisprimary = true and px.indrelid = c.oid and a.attnum = ANY(px.indkey)) = c.oid then true else false end as is_primary,
+	   case when (select indrelid from pg_index as ix where ix.indrelid = c.oid and a.attnum = ANY(ix.indkey)) = c.oid then true else false end as is_indexed,
+	   case when (select conrelid from pg_constraint as cx where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) = c.oid then true else false end as is_foreignkey,
+       (  select cc.relname from pg_constraint as cx inner join pg_class as cc on cc.oid = cx.confrelid where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) as foeigntablename
+   from pg_class as c
+  inner join pg_namespace as ns on ns.oid = c.relnamespace
+  inner join pg_attribute as a on a.attrelid = c.oid and not a.attisdropped and attnum > 0
+  inner join pg_type as t on t.oid = a.atttypid
+  left outer join pg_attrdef as ad on ad.adrelid = a.attrelid and ad.adnum = a.attnum 
+  where ns.nspname = @schema
+    and c.relname = @tablename
+ order by a.attnum
+";
+									List<EntityClassFile> UnknownElementsList = new List<EntityClassFile>();
+
+									using (var command = new NpgsqlCommand(query, connection))
+									{
+										command.Parameters.AddWithValue("@schema", table.Schema);
+										command.Parameters.AddWithValue("@tablename", table.Table);
+
+										using (var reader = command.ExecuteReader())
+										{
+											while (reader.Read())
+											{
+												NpgsqlDbType dataType = NpgsqlDbType.Unknown;
+
+												try
+												{
+													dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
+												}
+												catch (InvalidCastException)
+												{
+													var unknownClass = new EntityClassFile()
+													{
+														SchemaName = table.Schema,
+														ClassName = NormalizeClassName(reader.GetString(1)),
+														TableName = reader.GetString(1),
+													};
+
+													UnknownElementsList.Add(unknownClass);
+												}
+
+												var dbColumn = new DBColumn
+												{
+													ColumnName = reader.GetString(0),
+													DataType = dataType,
+													dbDataType = reader.GetString(1),
+													Length = Convert.ToInt64(reader.GetValue(2)),
+													NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+													NumericScale = Convert.ToInt32(reader.GetValue(4)),
+													IsNullable = Convert.ToBoolean(reader.GetValue(5)),
+													IsComputed = Convert.ToBoolean(reader.GetValue(6)),
+													IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
+													IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
+													IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
+													IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+													ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+													ServerType = DBServerType.POSTGRESQL
+												};
+
+												DatabaseColumns.Add(dbColumn);
+											}
+										}
+									}
+
+									var undefinedElements = new List<EntityClassFile>();
+
+									foreach (var unknownClass in UnknownElementsList)
+									{
+										var entityFile = _entityClassList.FirstOrDefault(c => string.Equals(c.SchemaName, unknownClass.SchemaName, StringComparison.OrdinalIgnoreCase) && string.Equals(c.TableName, unknownClass.TableName, StringComparison.OrdinalIgnoreCase));
+
+										if (entityFile == null)
+										{
+											unknownClass.ElementType = GetElementType(unknownClass.SchemaName, unknownClass.TableName, connectionString);
+											undefinedElements.Add(unknownClass);
+
+											if (unknownClass.ElementType == ElementType.Enum)
+											{
+												var answer = MessageBox.Show($"The composite {table.Table} uses an enum type of {unknownClass.TableName}.\r\n\r\nNo enum class corresponding to {unknownClass.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {unknownClass.TableName}.\r\n\r\nWould you like to generate the {unknownClass.TableName} enum as part of generating this class?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+												if (answer == DialogResult.No)
+													_okButton.Enabled = false;
+											}
+											else if (unknownClass.ElementType == ElementType.Composite)
+											{
+												var answer = MessageBox.Show($"The composite {table.Table} uses a composite type of {unknownClass.TableName}.\r\n\r\nNo composite class corresponding to {unknownClass.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {unknownClass.TableName}.\r\n\r\nWould you like to generate the {unknownClass.TableName} composite as part of generating this class?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+												if (answer == DialogResult.No)
+													_okButton.Enabled = false;
+											}
+										}
+
+									}
+
+									if (_okButton.Enabled)
+									{
+										var emitter = new Emitter();
+										emitter.GenerateComposites(undefinedElements, connectionString, replacementsDictionary["$rootnamespace$"], replacementsDictionary, _entityClassList);
+									}
+								}
+							}
+							break;
+                    }
 				}
 				else if (server.DBType == DBServerType.MYSQL)
 				{
@@ -442,7 +991,7 @@ SELECT c.COLUMN_NAME as 'columnName',
        c.COLUMN_TYPE as 'datatype',
        case when c.CHARACTER_MAXIMUM_LENGTH is null then -1 else c.CHARACTER_MAXIMUM_LENGTH end as 'max_len',
        case when c.NUMERIC_PRECISION is null then 0 else c.NUMERIC_PRECISION end as 'precision',
-        case when c.NUMERIC_SCALE is null then 0 else c.NUMERIC_SCALE end as 'scale',       
+       case when c.NUMERIC_SCALE is null then 0 else c.NUMERIC_SCALE end as 'scale',       
 	   case when c.GENERATION_EXPRESSION != '' then 1 else 0 end as 'is_computed',
        case when c.EXTRA = 'auto_increment' then 1 else 0 end as 'is_identity',
        case when c.COLUMN_KEY = 'PRI' then 1 else 0 end as 'is_primary',

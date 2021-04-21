@@ -15,6 +15,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -28,7 +29,7 @@ namespace COFRSCoreInstaller
         public DBTable DatabaseTable { get; set; }
         public List<DBColumn> DatabaseColumns { get; set; }
         public string SolutionFolder { get; set; }
-
+		public string RootNamespace { get; set; }
 		public string SingularResourceName { get; set; }
 		public string PluralResourceName { get; set; }
         public string ConnectionString { get; set; }
@@ -600,6 +601,223 @@ select s.name, t.name
 			}
 		}
 
+		private bool CheckEnumType(string datatype, NpgsqlConnection connection)
+        {
+			string query = @"
+select typtype
+  from pg_type
+ where ""typname"" = @typname";
+
+			using ( var command = new NpgsqlCommand(query, connection))
+            {
+				command.Parameters.AddWithValue("@typname", datatype);
+
+				using (var reader = command.ExecuteReader())
+                {
+					if ( reader.Read())
+                    {
+						var theType = reader.GetChar(0);
+
+						if (theType == 'e' || theType == 'E')
+							return true;
+                    }
+                }
+            }
+
+			return false;
+        }
+
+		private EntityClassFile SearchForEnum(string datatype, string folder)
+        {
+			var className = string.Empty;
+			var entityName = string.Empty;
+			var schemaName = string.Empty;
+			var theNamespace = string.Empty;
+
+			foreach ( var file in Directory.GetFiles(folder, "*.cs") )
+            {
+				using ( var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+					using (var reader = new StreamReader(stream))
+                    {
+						while ( !reader.EndOfStream )
+                        {
+							var line = reader.ReadLine();
+
+							var match = Regex.Match(line, "enum[ \t]+(?<classname>[a-zA-Z_][a-zA-Z0-9_]+)");
+
+							if (match.Success)
+							{
+								className = match.Groups["classname"].Value;
+
+								if (!string.IsNullOrWhiteSpace(entityName) &&
+									!string.IsNullOrWhiteSpace(schemaName) &&
+									string.Equals(entityName, datatype, StringComparison.OrdinalIgnoreCase))
+								{
+									var entityClassFile = new EntityClassFile()
+									{
+										ClassName = className,
+										FileName = file,
+										TableName = entityName,
+										SchemaName = schemaName,
+										ClassNameSpace = theNamespace
+									};
+
+									return entityClassFile;
+								}
+							}
+							else
+							{
+								match = Regex.Match(line, "\\[PgEnum[ \t]*\\([ \t]*\"(?<enumName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\)[ \t]*\\]");
+
+								if (match.Success)
+								{
+									entityName = match.Groups["enumName"].Value;
+									schemaName = match.Groups["schemaName"].Value;
+								}
+								else
+								{
+									match = Regex.Match(line, "namespace[ \t]+(?<namespace>[a-zA-Z_][a-zA-Z0-9_\\.]+)");
+
+									if (match.Success)
+									{
+										theNamespace = match.Groups["namespace"].Value;
+									}
+								}
+							}
+						}
+					}
+                }
+            }
+
+			foreach ( var subfolder in Directory.GetDirectories(folder))
+            {
+				var theFile = SearchForEnum(datatype, subfolder);
+
+				if (theFile != null)
+					return theFile;
+			}
+
+			return null;
+        }
+
+		private string FindEntityModelsFolder(string folder)
+		{
+			if (string.Equals(Path.GetFileName(folder), "EntityModels", StringComparison.OrdinalIgnoreCase))
+				return folder;
+
+			foreach (var childfolder in Directory.GetDirectories(folder))
+			{
+				var result = FindEntityModelsFolder(childfolder);
+
+				if (!string.IsNullOrWhiteSpace(result))
+					return result;
+			}
+
+			return string.Empty;
+		}
+
+		private void GenerateEnumFromDatabase(string schema, string dataType, NpgsqlConnection connection)
+		{
+			var className = NormalizeClassName(dataType);
+
+			var nn = new NameNormalizer(className);
+
+			var builder = new StringBuilder();
+			var destinationPath = FindEntityModelsFolder(SolutionFolder);
+			var fileName = Path.Combine(destinationPath, $"E{className}.cs");
+
+			builder.Clear();
+			builder.AppendLine("using COFRS;");
+			builder.AppendLine("using NpgsqlTypes;");
+			builder.AppendLine();
+			builder.AppendLine($"namespace {RootNamespace}");
+			builder.AppendLine("{");
+			builder.AppendLine("\t///\t<summary>");
+			builder.AppendLine($"\t///\tEnumerates a list of {nn.PluralForm}");
+			builder.AppendLine("\t///\t</summary>");
+
+			if (string.IsNullOrWhiteSpace(schema))
+				builder.AppendLine($"\t[PgEnum(\"{dataType}\")]");
+			else
+				builder.AppendLine($"\t[PgEnum(\"{dataType}\", Schema = \"{schema}\")]");
+
+			builder.AppendLine($"\tpublic enum E{className}");
+			builder.AppendLine("\t{");
+
+			string query = @"
+select e.enumlabel as enum_value
+from pg_type t 
+   join pg_enum e on t.oid = e.enumtypid  
+   join pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+where t.typname = @dataType
+  and n.nspname = @schema";
+
+			using (var command = new NpgsqlCommand(query, connection))
+			{
+				command.Parameters.AddWithValue("@dataType", dataType);
+				command.Parameters.AddWithValue("@schema", schema);
+
+				bool firstUse = true;
+
+				using (var reader = command.ExecuteReader())
+				{
+					while (reader.Read())
+					{
+						if (firstUse)
+							firstUse = false;
+						else
+						{
+							builder.AppendLine(",");
+							builder.AppendLine();
+						}
+
+						var element = reader.GetString(0);
+
+						builder.AppendLine("\t\t///\t<summary>");
+						builder.AppendLine($"\t\t///\t{element}");
+						builder.AppendLine("\t\t///\t</summary>");
+						builder.AppendLine($"\t\t[PgName(\"{element}\")]");
+
+						var elementName = NormalizeClassName(element);
+						builder.Append($"\t\t{elementName}");
+					}
+				}
+			}
+
+			builder.AppendLine();
+			builder.AppendLine("\t}");
+			builder.AppendLine("}");
+
+			using (var stream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
+			{
+				var buffer = Encoding.UTF8.GetBytes(builder.ToString());
+				stream.Write(buffer, 0, buffer.Length);
+			}
+
+			OnTableChanged(this, new EventArgs());
+		}
+
+		private static string NormalizeClassName(string className)
+        {
+			className = className.Substring(0, 1).ToUpper() + className.Substring(1);
+            int index = className.IndexOf("_");
+
+            while (index != -1)
+            {
+                //	0----*----1----*----2
+                //	display_name
+
+                var tempString = className.Substring(0, index);
+                tempString += className.Substring(index + 1, 1).ToUpper();
+                tempString += className.Substring(index + 2);
+                className = tempString;
+                index = className.IndexOf("_");
+            }
+
+            return className;
+        }
+
         private void OnTableChanged(object sender, EventArgs e)
         {
 			try
@@ -680,6 +898,9 @@ select a.attname as columnname,
  order by a.attnum
 ";
 
+						var candidateDataType = string.Empty;
+						var candidateSchema = string.Empty;
+
 						using (var command = new NpgsqlCommand(query, connection))
 						{
 							command.Parameters.AddWithValue("@schema", table.Schema);
@@ -688,11 +909,31 @@ select a.attname as columnname,
 							{
 								while (reader.Read())
 								{
+									NpgsqlDbType dataType = NpgsqlDbType.Unknown;
+
+									try
+									{
+										dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
+									}
+									catch (InvalidCastException)
+									{
+										if (CheckEnumType(reader.GetString(1), connection))
+										{
+											var entityFile = SearchForEnum(reader.GetString(1), SolutionFolder);
+
+											if (entityFile == null )
+                                            {
+												candidateSchema = table.Schema;
+												candidateDataType = reader.GetString(1);
+                                            }
+										}
+									}
+
 									var dbColumn = new DBColumn
 									{
 										ColumnName = reader.GetString(0),
-										DataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
 										dbDataType = reader.GetString(1),
+										DataType = dataType,
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
 										NumericScale = Convert.ToInt32(reader.GetValue(4)),
@@ -710,6 +951,28 @@ select a.attname as columnname,
 								}
 							}
 						}
+
+						if (!string.IsNullOrWhiteSpace(candidateDataType))
+						{
+							if (CheckEnumType(candidateDataType, connection))
+							{
+								var entityFile = SearchForEnum(candidateDataType, SolutionFolder);
+
+								if (entityFile == null)
+								{
+									var answer = MessageBox.Show($"The table {table.Schema}.{table.Table} uses an enum type of {candidateDataType}.\r\nWe did not find an enum class corresponding to {candidateDataType} in your solution. An entity class for {table.Schema}.{table.Table} cannot be generated without a corresponding enum type of the same name as {candidateDataType} (case does not matter).\r\nWould you like us to generate an enum class for you?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+									if (answer == DialogResult.Yes)
+									{
+										GenerateEnumFromDatabase(candidateSchema, candidateDataType, connection);
+									}
+									else
+										_okButton.Enabled = false;
+								}
+							}
+						}
+						else
+							_okButton.Enabled = true;
 					}
 				}
 				else if (server.DBType == DBServerType.MYSQL)

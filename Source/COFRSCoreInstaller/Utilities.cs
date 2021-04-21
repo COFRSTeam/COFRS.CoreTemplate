@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
@@ -595,8 +596,6 @@ namespace COFRSCoreInstaller
 			return string.Empty;
 		}
 
-
-
 		public static void LoadClassList(string SolutionFolder, string resourceClass, 
 											ref ResourceClassFile Orchestrator, 
 											ref ResourceClassFile ValidatorClass,
@@ -746,6 +745,145 @@ namespace COFRSCoreInstaller
 			}
 
 			return string.Empty;
+		}
+
+		public static void ReplaceConnectionString(string connectionString, Dictionary<string, string> replacementsDictionary)
+		{
+			//	The first thing we need to do, is we need to load the appSettings.local.json file
+			var fileName = GetLocalFileName("appsettings.local.json", replacementsDictionary["$solutiondirectory$"]);
+			string content;
+
+			using (var stream = new FileStream(fileName, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+			{
+				using (var reader = new StreamReader(stream))
+				{
+					content = reader.ReadToEnd();
+				}
+			}
+
+			var appSettings = JObject.Parse(content);
+			var connectionStrings = appSettings.Value<JObject>("ConnectionStrings");
+
+			if (string.Equals(connectionStrings.Value<string>("DefaultConnection"), "Server=developmentdb;Database=master;Trusted_Connection=True;", StringComparison.OrdinalIgnoreCase))
+			{
+				connectionStrings["DefaultConnection"] = connectionString;
+
+				using (var stream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+				{
+					using (var writer = new StreamWriter(stream))
+					{
+						writer.Write(appSettings.ToString());
+						writer.Flush();
+					}
+				}
+			}
+		}
+
+		private static string GetLocalFileName(string fileName, string rootFolder)
+		{
+			var files = Directory.GetFiles(rootFolder);
+
+			foreach (var file in files)
+			{
+				if (file.ToLower().Contains(fileName))
+					return file;
+			}
+
+			var childFolders = Directory.GetDirectories(rootFolder);
+
+			foreach (var childFolder in childFolders)
+			{
+				var theFile = GetLocalFileName(fileName, childFolder);
+
+				if (!string.IsNullOrWhiteSpace(theFile))
+					return theFile;
+			}
+
+
+			return string.Empty;
+		}
+
+		public static void RegisterEnum(string solutionFolder, EntityClassFile classFile)
+		{
+			var fileName = FindFile(solutionFolder, "ServiceConfig.cs");
+			var content = File.ReadAllText(fileName, Encoding.UTF8);
+
+
+			if (!content.Contains($"NpgsqlConnection.GlobalTypeMapper.MapEnum<{classFile.ClassName}>(\"{classFile.TableName}\");"))
+			{
+				var lines = content.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+
+				using (var stream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
+				{
+					using (var writer = new StreamWriter(stream))
+					{
+						if (!content.Contains("Npgsql"))
+							writer.WriteLine("using Npgsql;");
+
+						if (!content.Contains(classFile.ClassNameSpace))
+							writer.WriteLine($"using {classFile.ClassNameSpace};");
+
+						bool insertLines = false;
+
+						foreach (var line in lines)
+						{
+							if (line.Contains("AutoMapperFactory.CreateMapper();"))
+							{
+								insertLines = true;
+							}
+
+							writer.WriteLine(line);
+
+							if ( insertLines )
+                            {
+								writer.WriteLine($"\t\t\tNpgsqlConnection.GlobalTypeMapper.MapEnum<{classFile.ClassName}>(\"{classFile.TableName}\");");
+								insertLines = false;
+                            }
+						}
+					}
+				}
+			}
+		}
+
+		public static void RegisterComposite(string solutionFolder, EntityClassFile classFile)
+		{
+			var fileName = FindFile(solutionFolder, "ServiceConfig.cs");
+			var content = File.ReadAllText(fileName, Encoding.UTF8);
+
+			if (!content.Contains($"NpgsqlConnection.GlobalTypeMapper.MapComposite<{classFile.ClassName}>(\"{classFile.TableName}\");"))
+			{
+				var lines = content.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+
+				using (var stream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
+				{
+					using (var writer = new StreamWriter(stream))
+					{
+						if (!content.Contains("Npgsql"))
+							writer.WriteLine("using Npgsql;");
+
+						if (!content.Contains(classFile.ClassNameSpace))
+							writer.WriteLine($"using {classFile.ClassNameSpace};");
+
+						bool insertLines = false;
+
+						foreach (var line in lines)
+						{
+							if (line.Contains("AutoMapperFactory.CreateMapper();"))
+							{
+								insertLines = true;
+							}
+
+							writer.WriteLine(line);
+
+							if (insertLines)
+							{
+								writer.WriteLine($"\t\t\tNpgsqlConnection.GlobalTypeMapper.MapComposite<{classFile.ClassName}>(\"{classFile.TableName}\");");
+								insertLines = false;
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 }

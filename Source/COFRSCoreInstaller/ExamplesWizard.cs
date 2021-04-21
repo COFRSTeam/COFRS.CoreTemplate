@@ -76,12 +76,15 @@ namespace COFRSCoreInstaller
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
+					string connectionString = form.ConnectionString;
 					var classFile = (EntityClassFile)form._entityModelList.SelectedItem;
 					var domainFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
 
 					var emitter = new Emitter();
 
 					var model = emitter.EmitExampleModel(replacementsDictionary["$targetframeworkversion$"],
+						classFile.SchemaName,
+						connectionString,
 						Utilities.LoadClassColumns(domainFile.FileName, classFile.FileName, form.DatabaseColumns),
 						classFile.ClassName,
 						domainFile.ClassName,
@@ -89,6 +92,8 @@ namespace COFRSCoreInstaller
 						form.DatabaseColumns, form.Examples, replacementsDictionary);
 
 					var collectionmodel = emitter.EmitExampleCollectionModel(replacementsDictionary["$targetframeworkversion$"],
+						classFile.SchemaName,
+						connectionString,
 						Utilities.LoadClassColumns(domainFile.FileName, classFile.FileName, form.DatabaseColumns),
 						classFile.ClassName,
 						domainFile.ClassName,

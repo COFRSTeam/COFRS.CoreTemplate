@@ -30,6 +30,7 @@ namespace COFRSCoreInstaller
 		public List<DBColumn> DatabaseColumns { get; set; }
 		public JObject Examples { get; set; }
 		public string DefaultConnectionString { get; set; }
+		public string ConnectionString { get; set; }
 
 		#endregion
 
@@ -231,10 +232,10 @@ namespace COFRSCoreInstaller
 
 				if (server.DBType == DBServerType.POSTGRESQL)
 				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+					ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
 					_tableList.Items.Clear();
 
-					using (var connection = new NpgsqlConnection(connectionString))
+					using (var connection = new NpgsqlConnection(ConnectionString))
 					{
 						connection.Open();
 
@@ -264,10 +265,10 @@ SELECT schemaname, tablename
 				}
 				else if (server.DBType == DBServerType.MYSQL)
 				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
+					ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
 					_tableList.Items.Clear();
 
-					using (var connection = new MySqlConnection(connectionString))
+					using (var connection = new MySqlConnection(ConnectionString))
 					{
 						connection.Open();
 
@@ -300,16 +301,14 @@ SELECT TABLE_SCHEMA, TABLE_NAME FROM information_schema.tables
 				}
 				else
 				{
-					string connectionString;
-
 					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-						connectionString = $"Server ={server.ServerName};Database={db};Trusted_Connection=True;";
+						ConnectionString = $"Server ={server.ServerName};Database={db};Trusted_Connection=True;";
 					else
-						connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
+						ConnectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
 
 					_tableList.Items.Clear();
 
-					using (var connection = new SqlConnection(connectionString))
+					using (var connection = new SqlConnection(ConnectionString))
 					{
 						connection.Open();
 
@@ -433,9 +432,9 @@ select s.name, t.name
 
             if (server.DBType == DBServerType.POSTGRESQL)
             {
-                string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+                ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
 
-                using (var connection = new NpgsqlConnection(connectionString))
+                using (var connection = new NpgsqlConnection(ConnectionString))
                 {
                     connection.Open();
 
@@ -473,21 +472,36 @@ select a.attname as columnname,
     and c.relname = @tablename
  order by a.attnum
 ";
+					var candidateDataType = string.Empty;
+					var candidateSchema = string.Empty;
 
-                    using (var command = new NpgsqlCommand(query, connection))
+					using (var command = new NpgsqlCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@schema", table.Schema);
                         command.Parameters.AddWithValue("@tablename", table.Table);
+
                         using (var reader = command.ExecuteReader())
                         {
                             while (reader.Read())
                             {
-                                var dbColumn = new DBColumn
+								NpgsqlDbType dataType = NpgsqlDbType.Unknown;
+
+								try
+								{
+									dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
+								}
+								catch (InvalidCastException)
+								{
+									candidateSchema = table.Schema;
+									candidateDataType = reader.GetString(1);
+								}
+
+								var dbColumn = new DBColumn
                                 {
                                     ColumnName = reader.GetString(0),
-                                    DataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
-                                    dbDataType = reader.GetString(1),
-                                    Length = Convert.ToInt64(reader.GetValue(2)),
+									dbDataType = reader.GetString(1),
+									DataType = dataType,
+									Length = Convert.ToInt64(reader.GetValue(2)),
                                     IsNullable = Convert.ToBoolean(reader.GetValue(3)),
                                     IsComputed = Convert.ToBoolean(reader.GetValue(4)),
                                     IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
@@ -499,17 +513,48 @@ select a.attname as columnname,
                                 };
 
                                 DatabaseColumns.Add(dbColumn);
+								if (!string.IsNullOrWhiteSpace(candidateDataType))
+								{
+									var etype = DBHelper.GetElementType(table.Schema, candidateDataType, ConnectionString);
 
-                            }
-                        }
+									if (etype == ElementType.Enum)
+									{
+										var entityFile = DBHelper.SearchForEnum(table.Schema, candidateDataType, SolutionFolder);
+
+										if (entityFile == null)
+										{
+											var answer = MessageBox.Show($"The composite {table.Table} uses an enum type of {candidateDataType}.\r\n\r\nNo enum class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+											_okButton.Enabled = false;
+										}
+										else
+											_okButton.Enabled = true;
+									}
+									else if (etype == ElementType.Composite)
+									{
+										var entityFile = DBHelper.SearchForComposite(table.Schema, candidateDataType, SolutionFolder);
+
+										if (entityFile == null)
+										{
+											var answer = MessageBox.Show($"The composite {table.Table} uses a composite of {candidateDataType}.\r\n\r\nNo composite class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+											_okButton.Enabled = false;
+										}
+										else
+											_okButton.Enabled = true;
+									}
+								}
+								else
+									_okButton.Enabled = true;
+
+							}
+						}
                     }
                 }
             }
             else if (server.DBType == DBServerType.MYSQL)
             {
-                string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
+                ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
 
-                using (var connection = new MySqlConnection(connectionString))
+                using (var connection = new MySqlConnection(ConnectionString))
                 {
                     connection.Open();
 
@@ -568,14 +613,12 @@ ORDER BY c.ORDINAL_POSITION;
             }
             else
             {
-                string connectionString;
-
                 if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-                    connectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
+                    ConnectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
                 else
-                    connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
+                    ConnectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
 
-                using (var connection = new SqlConnection(connectionString))
+                using (var connection = new SqlConnection(ConnectionString))
                 {
                     connection.Open();
 
@@ -1357,7 +1400,7 @@ select c.name as column_name,
 				if (string.IsNullOrWhiteSpace(_password.Text))
 					return;
 
-				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=postgres;User ID={server.Username};Password={_password.Text};";
+				ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=postgres;User ID={server.Username};Password={_password.Text};";
 
 				_dbList.Items.Clear();
 				_tableList.Items.Clear();
@@ -1365,7 +1408,7 @@ select c.name as column_name,
 
 				try
 				{
-					using (var connection = new NpgsqlConnection(connectionString))
+					using (var connection = new NpgsqlConnection(ConnectionString))
 					{
 						connection.Open();
 
@@ -1412,7 +1455,7 @@ SELECT datname
 				if (string.IsNullOrWhiteSpace(_password.Text))
 					return;
 
-				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=mysql;UID={server.Username};PWD={_password.Text};";
+				ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=mysql;UID={server.Username};PWD={_password.Text};";
 
 				_dbList.Items.Clear();
 				_tableList.Items.Clear();
@@ -1420,7 +1463,7 @@ SELECT datname
 
 				try
 				{
-					using (var connection = new MySqlConnection(connectionString))
+					using (var connection = new MySqlConnection(ConnectionString))
 					{
 						connection.Open();
 
@@ -1461,15 +1504,13 @@ select SCHEMA_NAME from information_schema.SCHEMATA
 			}
 			else
 			{
-				string connectionString;
-
 				if (server.DBAuth == DBAuthentication.SQLSERVERAUTH && string.IsNullOrWhiteSpace(_password.Text))
 					return;
 
 				if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-					connectionString = $"Server={server.ServerName};Database=master;Trusted_Connection=True;";
+					ConnectionString = $"Server={server.ServerName};Database=master;Trusted_Connection=True;";
 				else
-					connectionString = $"Server={server.ServerName};Database=master;uid={server.Username};pwd={_password.Text};";
+					ConnectionString = $"Server={server.ServerName};Database=master;uid={server.Username};pwd={_password.Text};";
 
 				_dbList.Items.Clear();
 				_tableList.Items.Clear();
@@ -1477,7 +1518,7 @@ select SCHEMA_NAME from information_schema.SCHEMATA
 
 				try
 				{
-					using (var connection = new SqlConnection(connectionString))
+					using (var connection = new SqlConnection(ConnectionString))
 					{
 						connection.Open();
 
@@ -1822,9 +1863,9 @@ select name
 			//	-----------------------------------------------------------------
 			if (server.DBType == DBServerType.MYSQL)
 			{
-				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};uid={server.Username};pwd={_password.Text};";
+				ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};uid={server.Username};pwd={_password.Text};";
 
-				using (var connection = new MySqlConnection(connectionString))
+				using (var connection = new MySqlConnection(ConnectionString))
 				{
 					connection.Open();
 
@@ -1865,9 +1906,9 @@ select name
 			//	-----------------------------------------------------------------
 			else if (server.DBType == DBServerType.POSTGRESQL)
 			{
-				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+				ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
 
-				using (var connection = new NpgsqlConnection(connectionString))
+				using (var connection = new NpgsqlConnection(ConnectionString))
 				{
 					connection.Open();
 
@@ -1942,14 +1983,12 @@ select name
 			//	-----------------------------------------------------------------
 			else
 			{
-				string connectionString;
-
 				if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-					connectionString = $"Server={server.ServerName};Database={(string)_dbList.SelectedItem};Trusted_Connection=True;";
+					ConnectionString = $"Server={server.ServerName};Database={(string)_dbList.SelectedItem};Trusted_Connection=True;";
 				else
-					connectionString = $"Server={server.ServerName};Database={(string)_dbList.SelectedItem};uid={server.Username};pwd={_password.Text};";
+					ConnectionString = $"Server={server.ServerName};Database={(string)_dbList.SelectedItem};uid={server.Username};pwd={_password.Text};";
 
-				using (var connection = new SqlConnection(connectionString))
+				using (var connection = new SqlConnection(ConnectionString))
 				{
 					connection.Open();
 

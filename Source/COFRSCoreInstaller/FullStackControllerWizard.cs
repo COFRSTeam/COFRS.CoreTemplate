@@ -95,11 +95,13 @@ namespace COFRSCoreInstaller
 				{
 					SolutionFolder = replacementsDictionary["$solutiondirectory$"],
 					SingularResourceName = resourceName.SingleForm,
-					PluralResourceName = resourceName.PluralForm
+					PluralResourceName = resourceName.PluralForm,
+					RootNamespace = rootNamespace
 				};
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
+					//	Replace the ConnectionString
 					var connectionString = form.ConnectionString;
 					ReplaceConnectionString(connectionString, replacementsDictionary);
 
@@ -127,18 +129,25 @@ namespace COFRSCoreInstaller
 					replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
 
 					var emitter = new Emitter();
-					var entityModel = emitter.EmitEntityModel(form.DatabaseTable, entityClassName, form.DatabaseColumns, replacementsDictionary);
+
+					//	Emit Entity Model
+					var entityModel = emitter.EmitEntityModel(form.DatabaseTable, entityClassName, form.DatabaseColumns, replacementsDictionary, connectionString);
 					replacementsDictionary.Add("$entityModel$", entityModel);
 
-					List<ClassMember> classMembers = LoadClassMembers(form.DatabaseTable, form.DatabaseColumns);
+					List<ClassMember> classMembers = LoadClassMembers(form.DatabaseTable, form.DatabaseColumns, connectionString);
 
-					var resourceModel = emitter.EmitResourceModel(classMembers, resourceClassName, entityClassName, form.DatabaseTable, form.DatabaseColumns, replacementsDictionary);
+					//	Emit Resource Model
+					var resourceModel = emitter.EmitResourceModel(classMembers, resourceClassName, entityClassName, form.DatabaseTable, form.DatabaseColumns, replacementsDictionary, connectionString);
 					replacementsDictionary.Add("$resourceModel$", resourceModel);
 
+					//	Emit Mapping Model
 					var mappingModel = emitter.EmitMappingModel(classMembers, resourceClassName, entityClassName, mappingClassName, form.DatabaseColumns, replacementsDictionary);
 					replacementsDictionary.Add("$mappingModel$", mappingModel);
 
+					//	Emit Example Model
 					var exampleModel = emitter.EmitExampleModel(replacementsDictionary["$targetframeworkversion$"],
+											form.DatabaseTable.Schema,
+											connectionString,
 											classMembers,
 											entityClassName,
 											resourceClassName,
@@ -147,6 +156,8 @@ namespace COFRSCoreInstaller
 					replacementsDictionary.Add("$exampleModel$", exampleModel);
 
 					var exampleCollectionModel = emitter.EmitExampleCollectionModel(replacementsDictionary["$targetframeworkversion$"],
+						form.DatabaseTable.Schema,
+						connectionString,
 						classMembers,
 						entityClassName,
 						resourceClassName,
@@ -154,14 +165,16 @@ namespace COFRSCoreInstaller
 						form.DatabaseColumns, form.Examples, replacementsDictionary);
 					replacementsDictionary.Add("$exampleCollectionModel$", exampleCollectionModel);
 
-					var validationModel = emitter.EmitValidationModel(entityClassName, resourceClassName, validationClassName);
+					//	Emit Validation Model
+					var validationModel = emitter.EmitValidationModel(resourceClassName, validationClassName);
 					replacementsDictionary.Add("$validationModel$", validationModel);
 
+					//	Register the validation model
 					Proceed = emitter.UpdateServices(solutionDirectory, validationClassName,
 									replacementsDictionary["$entitynamespace$"], replacementsDictionary["$resourcenamespace$"],
 									replacementsDictionary["$validatornamespace$"]);
 
-
+					//	Emit Controller
 					var controllerModel = emitter.EmitController(classMembers,
 								   true,
 								   moniker,
@@ -193,7 +206,7 @@ namespace COFRSCoreInstaller
 			return Proceed;
 		}
 
-		private List<ClassMember> LoadClassMembers(DBTable table, List<DBColumn> columns)
+		private List<ClassMember> LoadClassMembers(DBTable table, List<DBColumn> columns, string connectionString)
 		{
 			var members = new List<ClassMember>();
 
@@ -330,7 +343,7 @@ namespace COFRSCoreInstaller
 				}
 
 				if (column.ServerType == DBServerType.POSTGRESQL)
-					column.EntityType = DBHelper.GetPostgresDataType(column);
+					column.EntityType = DBHelper.GetPostgresDataType(table.Schema, column, connectionString, SolutionFolder);
 				else if (column.ServerType == DBServerType.MYSQL)
 					column.EntityType = DBHelper.GetMySqlDataType(column);
 				else if (column.ServerType == DBServerType.SQLSERVER)
@@ -463,10 +476,10 @@ namespace COFRSCoreInstaller
 			}
 		}
 
-		private void ReplaceConnectionString(string connectionString, Dictionary<string, string> replacementsDictionary)
+		public static void ReplaceConnectionString(string connectionString, Dictionary<string, string> replacementsDictionary)
 		{
 			//	The first thing we need to do, is we need to load the appSettings.local.json file
-			var fileName = GetLocalFileName(replacementsDictionary["$solutiondirectory$"]);
+			var fileName = GetLocalFileName("appsettings.local.json", replacementsDictionary["$solutiondirectory$"]);
 			string content;
 
 			using (var stream = new FileStream(fileName, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
@@ -495,13 +508,13 @@ namespace COFRSCoreInstaller
 			}
 		}
 
-		private string GetLocalFileName(string rootFolder)
+		private static string GetLocalFileName(string fileName, string rootFolder)
 		{
 			var files = Directory.GetFiles(rootFolder);
 
 			foreach (var file in files)
 			{
-				if (file.ToLower().Contains("appsettings.local.json"))
+				if (file.ToLower().Contains(fileName))
 					return file;
 			}
 
@@ -509,7 +522,7 @@ namespace COFRSCoreInstaller
 
 			foreach (var childFolder in childFolders)
 			{
-				var theFile = GetLocalFileName(childFolder);
+				var theFile = GetLocalFileName(fileName, childFolder);
 
 				if (!string.IsNullOrWhiteSpace(theFile))
 					return theFile;

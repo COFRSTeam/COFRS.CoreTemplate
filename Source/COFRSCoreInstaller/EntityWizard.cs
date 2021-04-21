@@ -60,21 +60,63 @@ namespace COFRSCoreInstaller
 				if (!Directory.Exists(filePath))
 					Directory.CreateDirectory(filePath);
 
-				var form = new UserInputEntity();
-				form.SolutionFolder = replacementsDictionary["$solutiondirectory$"];
+                var form = new UserInputEntity
+                {
+                    SolutionFolder = replacementsDictionary["$solutiondirectory$"],
+                    RootNamespace = rootNamespace,
+					replacementsDictionary = replacementsDictionary
+                };
 
-				if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)
 				{
 					Proceed = true;
 					var connectionString = form.ConnectionString;
-					ReplaceConnectionString(connectionString, replacementsDictionary);
+					Utilities.ReplaceConnectionString(connectionString, replacementsDictionary);
 					var className = replacementsDictionary["$safeitemname$"];
 					replacementsDictionary["$entityClass$"] = className;
 
 					var emitter = new Emitter();
-					var entityModel = emitter.EmitEntityModel(form.DatabaseTable, replacementsDictionary["$safeitemname$"], form.DatabaseColumns, replacementsDictionary);
-					replacementsDictionary.Add("$model$", entityModel);
 
+					var etype = DBHelper.GetElementType(form.DatabaseTable.Schema, form.DatabaseTable.Table, connectionString);
+					string entityModel = string.Empty;
+
+					if (etype == ElementType.Enum)
+					{
+						entityModel = emitter.EmitEnum(form.DatabaseTable.Schema, form.DatabaseTable.Table, replacementsDictionary["$safeitemname$"], connectionString);
+						replacementsDictionary["$npgsqltypes$"] = "true";
+
+						var entityclassFile = new EntityClassFile()
+						{
+							ClassName = replacementsDictionary["$safeitemname$"],
+							SchemaName = form.DatabaseTable.Schema,
+							TableName = form.DatabaseTable.Table,
+							ClassNameSpace = rootNamespace
+						};
+
+						Utilities.RegisterEnum(solutionDirectory, entityclassFile);
+					}
+					else if (etype == ElementType.Composite)
+					{
+						var undefinedElements = new List<EntityClassFile>();
+						entityModel = emitter.EmitComposite(form.DatabaseTable.Schema, form.DatabaseTable.Table, replacementsDictionary["$safeitemname$"], connectionString, replacementsDictionary, form._entityClassList, undefinedElements);
+						replacementsDictionary["$npgsqltypes$"] = "true";
+
+						var classFile = new EntityClassFile()
+						{
+							ClassName = replacementsDictionary["$safeitemname$"],
+							SchemaName = form.DatabaseTable.Schema,
+							TableName = form.DatabaseTable.Table,
+							ClassNameSpace = rootNamespace
+						};
+
+						Utilities.RegisterComposite(solutionDirectory, classFile);
+					}
+					else
+					{
+						entityModel = emitter.EmitEntityModel(form.DatabaseTable, replacementsDictionary["$safeitemname$"], form.DatabaseColumns, replacementsDictionary, connectionString);
+					}
+
+					replacementsDictionary.Add("$model$", entityModel);
 				}
 				else
 					Proceed = false;
@@ -89,65 +131,6 @@ namespace COFRSCoreInstaller
 		public bool ShouldAddProjectItem(string filePath)
 		{
 			return Proceed;
-		}
-
-
-
-
-		private void ReplaceConnectionString(string connectionString, Dictionary<string, string> replacementsDictionary)
-		{
-			//	The first thing we need to do, is we need to load the appSettings.local.json file
-			var fileName = GetLocalFileName(replacementsDictionary["$solutiondirectory$"]);
-			string content;
-
-			using (var stream = new FileStream(fileName, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-			{
-				using (var reader = new StreamReader(stream))
-				{
-					content = reader.ReadToEnd();
-				}
-			}
-
-			var appSettings = JObject.Parse(content);
-			var connectionStrings = appSettings.Value<JObject>("ConnectionStrings");
-
-			if (string.Equals(connectionStrings.Value<string>("DefaultConnection"), "Server=developmentdb;Database=master;Trusted_Connection=True;", StringComparison.OrdinalIgnoreCase))
-			{
-				connectionStrings["DefaultConnection"] = connectionString;
-
-				using (var stream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
-				{
-					using (var writer = new StreamWriter(stream))
-					{
-						writer.Write(appSettings.ToString());
-						writer.Flush();
-					}
-				}
-			}
-		}
-
-		private string GetLocalFileName(string rootFolder)
-		{
-			var files = Directory.GetFiles(rootFolder);
-
-			foreach (var file in files)
-			{
-				if (file.ToLower().Contains("appsettings.local.json"))
-					return file;
-			}
-
-			var childFolders = Directory.GetDirectories(rootFolder);
-
-			foreach (var childFolder in childFolders)
-			{
-				var theFile = GetLocalFileName(childFolder);
-
-				if (!string.IsNullOrWhiteSpace(theFile))
-					return theFile;
-			}
-
-
-			return string.Empty;
 		}
 	}
 }
