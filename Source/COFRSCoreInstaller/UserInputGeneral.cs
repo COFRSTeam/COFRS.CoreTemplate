@@ -31,6 +31,7 @@ namespace COFRSCoreInstaller
 		public JObject Examples { get; set; }
 		public string DefaultConnectionString { get; set; }
 		public string ConnectionString { get; set; }
+		public List<EntityClassFile> _entityClasses { get; set; }
 
 		#endregion
 
@@ -63,18 +64,57 @@ namespace COFRSCoreInstaller
 
 			LoadAppSettings();
 			ReadServerList();
-			LoadClassList();
+
+			_entityModelList.Items.Clear();
+			_resourceModelList.Items.Clear();
+
+			_entityClasses = Utilities.LoadEntityClassList(SolutionFolder);
+
+			foreach (var classFile in _entityClasses)
+			{
+				if (classFile.ElementType == ElementType.Table)
+					_entityModelList.Items.Add(classFile);
+			}
+
+			var resourceClasses = Utilities.LoadResourceClassList(SolutionFolder);
+
+			foreach (var resourceFile in resourceClasses)
+				_resourceModelList.Items.Add(resourceFile);
 
 			if (_entityModelList.Items.Count == 0)
 			{
-				MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create the class.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				if (InstallType == 1)
+				{
+					MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create a mapping model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+				else if (InstallType == 4)
+				{
+					MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create an example model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+				else if (InstallType == 5)
+				{
+					MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create a controller class.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+
 				DialogResult = DialogResult.Cancel;
 				Close();
 			}
 
 			if (_resourceModelList.Items.Count == 0)
 			{
-				MessageBox.Show("No resource models were found in the project. Please create a corresponding resource model before attempting to create the class.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				if (InstallType == 1)
+				{
+					MessageBox.Show("No resource models were found in the project. To create a mapping, you must first create the entity model and its corresponding resource model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+				else if (InstallType == 4)
+				{
+					MessageBox.Show("No resource models were found in the project. Please create a corresponding resource model before attempting to create an example model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+				else if (InstallType == 5)
+				{
+					MessageBox.Show("No resource models were found in the project. Please create a corresponding resource model before attempting to create a controller class.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+
 				DialogResult = DialogResult.Cancel;
 				Close();
 			}
@@ -430,15 +470,16 @@ select s.name, t.name
         {
             DatabaseColumns.Clear();
 
-            if (server.DBType == DBServerType.POSTGRESQL)
-            {
-                ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+			if (server.DBType == DBServerType.POSTGRESQL)
+			{
+				ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+				List<EntityClassFile> _undefinedElements = new List<EntityClassFile>();
 
-                using (var connection = new NpgsqlConnection(ConnectionString))
-                {
-                    connection.Open();
+				using (var connection = new NpgsqlConnection(ConnectionString))
+				{
+					connection.Open();
 
-                    var query = @"
+					var query = @"
 select a.attname as columnname,
 	   t.typname as datatype,
 	   case when t.typname = 'varchar' then a.atttypmod-4
@@ -472,18 +513,16 @@ select a.attname as columnname,
     and c.relname = @tablename
  order by a.attnum
 ";
-					var candidateDataType = string.Empty;
-					var candidateSchema = string.Empty;
 
 					using (var command = new NpgsqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@schema", table.Schema);
-                        command.Parameters.AddWithValue("@tablename", table.Table);
+					{
+						command.Parameters.AddWithValue("@schema", table.Schema);
+						command.Parameters.AddWithValue("@tablename", table.Table);
 
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
 								NpgsqlDbType dataType = NpgsqlDbType.Unknown;
 
 								try
@@ -492,73 +531,73 @@ select a.attname as columnname,
 								}
 								catch (InvalidCastException)
 								{
-									candidateSchema = table.Schema;
-									candidateDataType = reader.GetString(1);
+									var entityFile = _entityClasses.FirstOrDefault(c =>
+												string.Equals(c.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase) &&
+												string.Equals(c.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase));
+
+									if (entityFile == null)
+									{
+										entityFile = new EntityClassFile()
+										{
+											SchemaName = table.Schema,
+											TableName = reader.GetString(1),
+											ClassName = Utilities.NormalizeClassName(reader.GetString(1))
+										};
+
+										_undefinedElements.Add(entityFile);
+									}
 								}
 
+
 								var dbColumn = new DBColumn
-                                {
-                                    ColumnName = reader.GetString(0),
+								{
+									ColumnName = reader.GetString(0),
 									dbDataType = reader.GetString(1),
 									DataType = dataType,
 									Length = Convert.ToInt64(reader.GetValue(2)),
-                                    IsNullable = Convert.ToBoolean(reader.GetValue(3)),
-                                    IsComputed = Convert.ToBoolean(reader.GetValue(4)),
-                                    IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
-                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
-                                    IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
-                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-                                    ServerType = DBServerType.POSTGRESQL
-                                };
+									IsNullable = Convert.ToBoolean(reader.GetValue(3)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(4)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+									ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+									ServerType = DBServerType.POSTGRESQL
+								};
 
-                                DatabaseColumns.Add(dbColumn);
-								if (!string.IsNullOrWhiteSpace(candidateDataType))
-								{
-									var etype = DBHelper.GetElementType(table.Schema, candidateDataType, ConnectionString);
-
-									if (etype == ElementType.Enum)
-									{
-										var entityFile = DBHelper.SearchForEnum(table.Schema, candidateDataType, SolutionFolder);
-
-										if (entityFile == null)
-										{
-											var answer = MessageBox.Show($"The composite {table.Table} uses an enum type of {candidateDataType}.\r\n\r\nNo enum class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-											_okButton.Enabled = false;
-										}
-										else
-											_okButton.Enabled = true;
-									}
-									else if (etype == ElementType.Composite)
-									{
-										var entityFile = DBHelper.SearchForComposite(table.Schema, candidateDataType, SolutionFolder);
-
-										if (entityFile == null)
-										{
-											var answer = MessageBox.Show($"The composite {table.Table} uses a composite of {candidateDataType}.\r\n\r\nNo composite class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-											_okButton.Enabled = false;
-										}
-										else
-											_okButton.Enabled = true;
-									}
-								}
-								else
-									_okButton.Enabled = true;
-
+								DatabaseColumns.Add(dbColumn);
 							}
 						}
-                    }
-                }
-            }
-            else if (server.DBType == DBServerType.MYSQL)
-            {
-                ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
+					}
+				}
 
-                using (var connection = new MySqlConnection(ConnectionString))
-                {
-                    connection.Open();
+				_okButton.Enabled = true;
 
-                    var query = @"
+				foreach (var candidate in _undefinedElements)
+				{
+					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, ConnectionString);
+
+					if (candidate.ElementType == ElementType.Enum)
+					{
+						MessageBox.Show($"The class {table.Table} uses an enum type of {candidate.TableName}.\r\n\r\nNo enum class corresponding to {candidate.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {candidate.TableName}.\r\n\r\nPlease generate the enum before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						_okButton.Enabled = false;
+					}
+					else if (candidate.ElementType == ElementType.Composite)
+					{
+						MessageBox.Show($"The class {table.Table} uses a composite of {candidate.TableName}.\r\n\r\nNo composite class corresponding to {candidate.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {candidate.TableName}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						_okButton.Enabled = false;
+					}
+				}
+			}
+			else if (server.DBType == DBServerType.MYSQL)
+			{
+				ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
+
+				using (var connection = new MySqlConnection(ConnectionString))
+				{
+					connection.Open();
+
+					var query = @"
 SELECT c.COLUMN_NAME as 'columnName',
        c.COLUMN_TYPE as 'datatype',
        case when c.CHARACTER_MAXIMUM_LENGTH is null then -1 else c.CHARACTER_MAXIMUM_LENGTH end as 'max_len',
@@ -578,51 +617,51 @@ left outer join information_schema.KEY_COLUMN_USAGE as cu on cu.CONSTRAINT_SCHEM
   AND c.TABLE_NAME=@tablename
 ORDER BY c.ORDINAL_POSITION;
 ";
-                    using (var command = new MySqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@schema", db);
-                        command.Parameters.AddWithValue("@tablename", table.Table);
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                var x = reader.GetValue(8);
+					using (var command = new MySqlCommand(query, connection))
+					{
+						command.Parameters.AddWithValue("@schema", db);
+						command.Parameters.AddWithValue("@tablename", table.Table);
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
+								var x = reader.GetValue(8);
 
-                                var dbColumn = new DBColumn
-                                {
-                                    ColumnName = reader.GetString(0),
-                                    DataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
-                                    dbDataType = reader.GetString(1),
-                                    Length = Convert.ToInt64(reader.GetValue(2)),
-                                    IsComputed = Convert.ToBoolean(reader.GetValue(3)),
-                                    IsIdentity = Convert.ToBoolean(reader.GetValue(4)),
-                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(5)),
-                                    IsIndexed = Convert.ToBoolean(reader.GetValue(6)),
-                                    IsNullable = Convert.ToBoolean(reader.GetValue(7)),
-                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-                                    ServerType = DBServerType.MYSQL
-                                };
+								var dbColumn = new DBColumn
+								{
+									ColumnName = reader.GetString(0),
+									DataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
+									dbDataType = reader.GetString(1),
+									Length = Convert.ToInt64(reader.GetValue(2)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(3)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(4)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(5)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(6)),
+									IsNullable = Convert.ToBoolean(reader.GetValue(7)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+									ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+									ServerType = DBServerType.MYSQL
+								};
 
-                                DatabaseColumns.Add(dbColumn);
+								DatabaseColumns.Add(dbColumn);
 
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-                    ConnectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
-                else
-                    ConnectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
+					ConnectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
+				else
+					ConnectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
 
-                using (var connection = new SqlConnection(ConnectionString))
-                {
-                    connection.Open();
+				using (var connection = new SqlConnection(ConnectionString))
+				{
+					connection.Open();
 
-                    var query = @"
+					var query = @"
 select c.name as column_name, 
        x.name as datatype, 
 	   case when x.name = 'nchar' then c.max_length / 2
@@ -651,49 +690,49 @@ select c.name as column_name,
  order by t.name, c.column_id
 ";
 
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@schema", table.Schema);
-                        command.Parameters.AddWithValue("@tablename", table.Table);
+					using (var command = new SqlCommand(query, connection))
+					{
+						command.Parameters.AddWithValue("@schema", table.Schema);
+						command.Parameters.AddWithValue("@tablename", table.Table);
 
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                var dbColumn = new DBColumn
-                                {
-                                    ColumnName = reader.GetString(0),
-                                    dbDataType = reader.GetString(1),
-                                    DataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
-                                    Length = Convert.ToInt64(reader.GetValue(2)),
-                                    IsNullable = Convert.ToBoolean(reader.GetValue(3)),
-                                    IsComputed = Convert.ToBoolean(reader.GetValue(4)),
-                                    IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
-                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
-                                    IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
-                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-                                    ServerType = DBServerType.SQLSERVER
-                                };
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
+								var dbColumn = new DBColumn
+								{
+									ColumnName = reader.GetString(0),
+									dbDataType = reader.GetString(1),
+									DataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
+									Length = Convert.ToInt64(reader.GetValue(2)),
+									IsNullable = Convert.ToBoolean(reader.GetValue(3)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(4)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+									ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+									ServerType = DBServerType.SQLSERVER
+								};
 
-                                if (string.Equals(dbColumn.dbDataType, "geometry", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    _tableList.SelectedIndex = -1;
-                                    throw new Exception("COFRS .NET Core does not support the SQL Server geometry data type.");
-                                }
+								if (string.Equals(dbColumn.dbDataType, "geometry", StringComparison.OrdinalIgnoreCase))
+								{
+									_tableList.SelectedIndex = -1;
+									throw new Exception("COFRS .NET Core does not support the SQL Server geometry data type.");
+								}
 
-                                if (string.Equals(dbColumn.dbDataType, "geography", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    _tableList.SelectedIndex = -1;
-                                    throw new Exception("COFRS .NET Core does not support the SQL Server geography data type.");
-                                }
+								if (string.Equals(dbColumn.dbDataType, "geography", StringComparison.OrdinalIgnoreCase))
+								{
+									_tableList.SelectedIndex = -1;
+									throw new Exception("COFRS .NET Core does not support the SQL Server geography data type.");
+								}
 
-                                DatabaseColumns.Add(dbColumn);
-                            }
-                        }
-                    }
-                }
-            }
+								DatabaseColumns.Add(dbColumn);
+							}
+						}
+					}
+				}
+			}
         }
 
         private void OnUserNameChanged(object sender, EventArgs e)
@@ -1938,12 +1977,24 @@ select name
 											var ipAddress = (IPAddress)value;
 											values.Add(columnName, JToken.FromObject(ipAddress.ToString()));
 										}
+										else if (value.GetType() == typeof(IPAddress[]))
+                                        {
+											var theValue = (IPAddress[])value;
+											var json = new JArray();
+
+											foreach (var val in theValue)
+											{
+												var innerobj = new JValue(val.ToString());
+												json.Add(innerobj);
+											}
+											values.Add(columnName, json);
+										}
 										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>))
 										{
 											var ipAddress = ((ValueTuple<IPAddress, int>)value).Item1;
 											int port = ((ValueTuple<IPAddress, int>)value).Item2;
 
-											var ipEndPoint = new IPEndPoint(ipAddress, port);
+											var ipEndPoint = new ValueTuple<IPAddress, int>(ipAddress, port);
 											values.Add(columnName, JToken.FromObject(ipEndPoint.ToString()));
 										}
 										else if (value.GetType() == typeof(PhysicalAddress))
@@ -1961,6 +2012,34 @@ select name
 												answer.Append(strVal);
 											}
 											values.Add(columnName, JToken.FromObject(answer.ToString()));
+										}
+										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>))
+										{
+											var theValue = (ValueTuple<IPAddress, int>)value;
+											var json = new JObject
+											{
+												{ "IPAddress", theValue.Item1.ToString() },
+												{ "intVal", theValue.Item2 }
+											};
+											values.Add(columnName, json);
+
+										}
+										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>[]))
+										{
+											var theValue = (ValueTuple<IPAddress, int>[])value;
+											var json = new JArray();
+
+											foreach (var val in theValue)
+                                            {
+												var innerobj = new JObject
+												{
+													{ "IPAddress", val.Item1.ToString() },
+													{ "intVal", val.Item2 }
+												};
+
+												json.Add(innerobj);
+											}
+											values.Add(columnName, json);
 										}
 										else
 										{

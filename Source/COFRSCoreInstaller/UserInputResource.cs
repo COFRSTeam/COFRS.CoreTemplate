@@ -22,6 +22,7 @@ namespace COFRSCoreInstaller
 		public DBTable DatabaseTable { get; set; }
 		public List<DBColumn> DatabaseColumns { get; set; }
 		public string ConnectionString { get; set; }
+		public List<EntityClassFile> _entityClasses { get; set; }
 		#endregion
 
 		#region Utility functions
@@ -35,11 +36,20 @@ namespace COFRSCoreInstaller
 			_portNumber.Location = new Point(93, 60);
 			DatabaseColumns = new List<DBColumn>();
 			ReadServerList();
-			LoadEntityClassList();
+
+			_entityClassList.Items.Clear();
+
+			_entityClasses = Utilities.LoadEntityClassList(SolutionFolder);
+
+			foreach ( var classFile in _entityClasses)
+            {
+				if (classFile.ElementType == ElementType.Table)
+					_entityClassList.Items.Add(classFile);
+            }
 
 			if (_entityClassList.Items.Count == 0)
 			{
-				MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create the domain model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create the resource model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				DialogResult = DialogResult.Cancel;
 				Close();
 			}
@@ -372,15 +382,16 @@ select s.name, t.name
         {
             DatabaseColumns.Clear();
 
-            if (server.DBType == DBServerType.POSTGRESQL)
-            {
-                ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+			if (server.DBType == DBServerType.POSTGRESQL)
+			{
+				ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+				List<EntityClassFile> _undefinedElements = new List<EntityClassFile>();
 
-                using (var connection = new NpgsqlConnection(ConnectionString))
-                {
-                    connection.Open();
+				using (var connection = new NpgsqlConnection(ConnectionString))
+				{
+					connection.Open();
 
-                    var query = @"
+					var query = @"
 select a.attname as columnname,
 	   t.typname as datatype,
 	   case when t.typname = 'varchar' then a.atttypmod-4
@@ -414,18 +425,16 @@ select a.attname as columnname,
     and c.relname = @tablename
  order by a.attnum
 ";
-					var candidateDataType = string.Empty;
-					var candidateSchema = string.Empty;
 
 					using (var command = new NpgsqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@schema", table.Schema);
-                        command.Parameters.AddWithValue("@tablename", table.Table);
+					{
+						command.Parameters.AddWithValue("@schema", table.Schema);
+						command.Parameters.AddWithValue("@tablename", table.Table);
 
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
 								NpgsqlDbType dataType = NpgsqlDbType.Unknown;
 
 								try
@@ -434,73 +443,72 @@ select a.attname as columnname,
 								}
 								catch (InvalidCastException)
 								{
-									candidateSchema = table.Schema;
-									candidateDataType = reader.GetString(1);
+									var entityFile = _entityClasses.FirstOrDefault(c =>
+										string.Equals(c.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
+										string.Equals(c.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase));
+
+									if (entityFile == null)
+									{
+										entityFile = new EntityClassFile()
+										{
+											SchemaName = table.Schema,
+											TableName = reader.GetString(1),
+											ClassName = Utilities.NormalizeClassName(reader.GetString(1))
+										};
+
+										_undefinedElements.Add(entityFile);
+									}
 								}
 
 								var dbColumn = new DBColumn
-                                {
-                                    ColumnName = reader.GetString(0),
-                                    dbDataType = reader.GetString(1),
-                                    DataType = dataType,
-                                    Length = Convert.ToInt64(reader.GetValue(2)),
-                                    IsNullable = Convert.ToBoolean(reader.GetValue(3)),
-                                    IsComputed = Convert.ToBoolean(reader.GetValue(4)),
-                                    IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
-                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
-                                    IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
-                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-                                    ServerType = DBServerType.POSTGRESQL
-                                };
-
-                                DatabaseColumns.Add(dbColumn);
-                            }
-
-							if (!string.IsNullOrWhiteSpace(candidateDataType))
-							{
-								var etype = DBHelper.GetElementType(table.Schema, candidateDataType, ConnectionString);
-
-								if (etype == ElementType.Enum)
 								{
-									var entityFile = DBHelper.SearchForEnum(table.Schema, candidateDataType, SolutionFolder);
+									ColumnName = reader.GetString(0),
+									dbDataType = reader.GetString(1),
+									DataType = dataType,
+									Length = Convert.ToInt64(reader.GetValue(2)),
+									IsNullable = Convert.ToBoolean(reader.GetValue(3)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(4)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+									ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+									ServerType = DBServerType.POSTGRESQL
+								};
 
-									if (entityFile == null)
-									{
-										var answer = MessageBox.Show($"The composite {table.Table} uses an enum type of {candidateDataType}.\r\n\r\nNo enum class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-										_okButton.Enabled = false;
-									}
-									else
-										_okButton.Enabled = true;
-								}
-								else if (etype == ElementType.Composite)
-								{
-									var entityFile = DBHelper.SearchForComposite(table.Schema, candidateDataType, SolutionFolder);
-
-									if (entityFile == null)
-									{
-										var answer = MessageBox.Show($"The composite {table.Table} uses a composite of {candidateDataType}.\r\n\r\nNo composite class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-										_okButton.Enabled = false;
-									}
-									else
-										_okButton.Enabled = true;
-								}
+								DatabaseColumns.Add(dbColumn);
 							}
-							else
-								_okButton.Enabled = true;
 						}
 					}
-                }
-            }
-            else if (server.DBType == DBServerType.MYSQL)
-            {
-                ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
+				}
 
-                using (var connection = new MySqlConnection(ConnectionString))
-                {
-                    connection.Open();
+				_okButton.Enabled = true;
 
-                    var query = @"
+				foreach (var candidate in _undefinedElements)
+				{
+					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, ConnectionString);
+
+					if (candidate.ElementType == ElementType.Enum)
+					{
+						MessageBox.Show($"The composite {table.Table} uses an enum type of {candidate.TableName}.\r\n\r\nNo enum class corresponding to {candidate.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {candidate.TableName}.\r\n\r\nPlease generate the enum before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						_okButton.Enabled = false;
+					}
+					else if (candidate.ElementType == ElementType.Composite)
+					{
+						MessageBox.Show($"The composite {table.Table} uses a composite of {candidate.TableName}.\r\n\r\nNo composite class corresponding to {candidate.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {candidate.TableName}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						_okButton.Enabled = false;
+					}
+				}
+			}
+			else if (server.DBType == DBServerType.MYSQL)
+			{
+				ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
+
+				using (var connection = new MySqlConnection(ConnectionString))
+				{
+					connection.Open();
+
+					var query = @"
 SELECT c.COLUMN_NAME as 'columnName',
        c.COLUMN_TYPE as 'datatype',
        case when c.CHARACTER_MAXIMUM_LENGTH is null then -1 else c.CHARACTER_MAXIMUM_LENGTH end as 'max_len',
@@ -520,51 +528,51 @@ left outer join information_schema.KEY_COLUMN_USAGE as cu on cu.CONSTRAINT_SCHEM
   AND c.TABLE_NAME=@tablename
 ORDER BY c.ORDINAL_POSITION;
 ";
-                    using (var command = new MySqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@schema", db);
-                        command.Parameters.AddWithValue("@tablename", table.Table);
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                var x = reader.GetValue(8);
+					using (var command = new MySqlCommand(query, connection))
+					{
+						command.Parameters.AddWithValue("@schema", db);
+						command.Parameters.AddWithValue("@tablename", table.Table);
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
+								var x = reader.GetValue(8);
 
-                                var dbColumn = new DBColumn
-                                {
-                                    ColumnName = reader.GetString(0),
-                                    DataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
-                                    dbDataType = reader.GetString(1),
-                                    Length = Convert.ToInt64(reader.GetValue(2)),
-                                    IsComputed = Convert.ToBoolean(reader.GetValue(3)),
-                                    IsIdentity = Convert.ToBoolean(reader.GetValue(4)),
-                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(5)),
-                                    IsIndexed = Convert.ToBoolean(reader.GetValue(6)),
-                                    IsNullable = Convert.ToBoolean(reader.GetValue(7)),
-                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-                                    ServerType = DBServerType.MYSQL
-                                };
+								var dbColumn = new DBColumn
+								{
+									ColumnName = reader.GetString(0),
+									DataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
+									dbDataType = reader.GetString(1),
+									Length = Convert.ToInt64(reader.GetValue(2)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(3)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(4)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(5)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(6)),
+									IsNullable = Convert.ToBoolean(reader.GetValue(7)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+									ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+									ServerType = DBServerType.MYSQL
+								};
 
-                                DatabaseColumns.Add(dbColumn);
+								DatabaseColumns.Add(dbColumn);
 
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-                    ConnectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
-                else
-                    ConnectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
+					ConnectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
+				else
+					ConnectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
 
-                using (var connection = new SqlConnection(ConnectionString))
-                {
-                    connection.Open();
+				using (var connection = new SqlConnection(ConnectionString))
+				{
+					connection.Open();
 
-                    var query = @"
+					var query = @"
 select c.name as column_name, 
        x.name as datatype, 
 	   case when x.name = 'nchar' then c.max_length / 2
@@ -593,37 +601,37 @@ select c.name as column_name,
  order by t.name, c.column_id
 ";
 
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@schema", table.Schema);
-                        command.Parameters.AddWithValue("@tablename", table.Table);
+					using (var command = new SqlCommand(query, connection))
+					{
+						command.Parameters.AddWithValue("@schema", table.Schema);
+						command.Parameters.AddWithValue("@tablename", table.Table);
 
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                var dbColumn = new DBColumn
-                                {
-                                    ColumnName = reader.GetString(0),
-                                    dbDataType = reader.GetString(1),
-                                    DataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
-                                    Length = Convert.ToInt64(reader.GetValue(2)),
-                                    IsNullable = Convert.ToBoolean(reader.GetValue(3)),
-                                    IsComputed = Convert.ToBoolean(reader.GetValue(4)),
-                                    IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
-                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
-                                    IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
-                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-                                    ServerType = DBServerType.SQLSERVER
-                                };
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
+								var dbColumn = new DBColumn
+								{
+									ColumnName = reader.GetString(0),
+									dbDataType = reader.GetString(1),
+									DataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
+									Length = Convert.ToInt64(reader.GetValue(2)),
+									IsNullable = Convert.ToBoolean(reader.GetValue(3)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(4)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+									ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+									ServerType = DBServerType.SQLSERVER
+								};
 
-                                DatabaseColumns.Add(dbColumn);
-                            }
-                        }
-                    }
-                }
-            }
+								DatabaseColumns.Add(dbColumn);
+							}
+						}
+					}
+				}
+			}
         }
 
         private void OnUserNameChanged(object sender, EventArgs e)
@@ -763,90 +771,6 @@ select c.name as column_name,
 					if (TestConnection(server))
 						PopulateDatabases();
 				}
-			}
-		}
-
-		private void LoadEntityClassList()
-		{
-			_entityClassList.Items.Clear();
-
-			foreach (var file in Directory.GetFiles(SolutionFolder, "*.cs"))
-			{
-				LoadEntityClass(file);
-			}
-
-			foreach (var folder in Directory.GetDirectories(SolutionFolder))
-			{
-				LoadClassList(folder);
-			}
-		}
-
-		private void LoadEntityClass(string file)
-		{
-			var content = File.ReadAllText(file);
-
-			if (content.Contains("[Table"))
-			{
-				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-				var className = string.Empty;
-				var namespaceName = string.Empty;
-				var schemaName = string.Empty;
-				var tableName = string.Empty;
-
-				foreach (var line in data)
-				{
-					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-					if (match.Success)
-					{
-						className = match.Groups["className"].Value;
-						break;
-					}
-
-					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-					if (match.Success)
-						namespaceName = match.Groups["namespaceName"].Value;
-
-					// 	[Table("Products", Schema = "dbo")]
-					match = Regex.Match(line, "\\[[ \t]*Table[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
-
-					if (match.Success)
-					{
-						tableName = match.Groups["tableName"].Value;
-						schemaName = match.Groups["schemaName"].Value;
-					}
-				}
-
-				if (!string.IsNullOrWhiteSpace(tableName) &&
-					 !string.IsNullOrWhiteSpace(className) &&
-					 !string.IsNullOrWhiteSpace(namespaceName))
-				{
-					var classfile = new EntityClassFile
-					{
-						ClassName = $"{className}",
-						FileName = file,
-						TableName = tableName,
-						SchemaName = schemaName,
-						ClassNameSpace = namespaceName
-					};
-
-					_entityClassList.Items.Add(classfile);
-				}
-			}
-		}
-
-		private void LoadClassList(string folder)
-		{
-			foreach (var file in Directory.GetFiles(folder, "*.cs"))
-			{
-				LoadEntityClass(file);
-			}
-
-			foreach (var subfolder in Directory.GetDirectories(folder))
-			{
-				LoadClassList(subfolder);
 			}
 		}
 

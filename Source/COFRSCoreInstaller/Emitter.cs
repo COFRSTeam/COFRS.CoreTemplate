@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Windows.Forms;
 
@@ -696,7 +697,7 @@ where t.typname = @dataType
 							builder.AppendLine("\t\t///\t</summary>");
 							builder.AppendLine($"\t\t[PgName(\"{element}\")]");
 
-							var elementName = NormalizeClassName(element);
+							var elementName = Utilities.NormalizeClassName(element);
 							builder.Append($"\t\t{elementName}");
 						}
 					}
@@ -805,7 +806,7 @@ select a.attname as columnname,
 							{
 								var classFile = new EntityClassFile()
 								{
-									ClassName = NormalizeClassName(reader.GetString(1)),
+									ClassName = Utilities.NormalizeClassName(reader.GetString(1)),
 									SchemaName = schema,
 									TableName = reader.GetString(1)
 								};
@@ -1000,7 +1001,7 @@ select a.attname as columnname,
 
 				result.AppendLine(")]");
 
-				var memberName = NormalizeClassName(column.ColumnName);
+				var memberName = Utilities.NormalizeClassName(column.ColumnName);
 				result.AppendLine($"\t\t[PgName(\"{column.ColumnName}\")]");
 
 				//	Insert the column definition
@@ -1010,26 +1011,6 @@ select a.attname as columnname,
 			result.AppendLine("\t}");
 
 			return result.ToString();
-		}
-
-		private static string NormalizeClassName(string className)
-		{
-			className = className.Substring(0, 1).ToUpper() + className.Substring(1);
-			int index = className.IndexOf("_");
-
-			while (index != -1)
-			{
-				//	0----*----1----*----2
-				//	display_name
-
-				var tempString = className.Substring(0, index);
-				tempString += className.Substring(index + 1, 1).ToUpper();
-				tempString += className.Substring(index + 2);
-				className = tempString;
-				index = className.IndexOf("_");
-			}
-
-			return className;
 		}
 
 		public string EmitMappingModel(List<ClassMember> classMembers, string resourceClassName, string entityClassName, string mappingClassName, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary)
@@ -2896,7 +2877,7 @@ select a.attname as columnname,
 								pointlist.Append($"new NpgsqlPoint({x},{y})");
 							}
 
-							return $"new NpgsqlPath(new NpgsqlPoint[] {{{pointlist}}})";
+							return $"new NpgsqlPoint[] {{{pointlist}}}";
 						}
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Path:
@@ -2933,10 +2914,10 @@ select a.attname as columnname,
 								else
 									pathlist.Append(",");
 
-								pathlist.Append($"new NpgsqlPath(new NpgsqlPoint[] {{{pointlist}}})");
+								pathlist.Append($"new NpgsqlPoint[] {{{pointlist}}}");
 							}
 
-							return $"new NpgsqlPath[] {{ {pathlist} }}";
+							return $"new NpgsqlPoint[][] {{ {pathlist} }}";
 						}
 
 					case NpgsqlDbType.Polygon:
@@ -2963,7 +2944,7 @@ select a.attname as columnname,
 								pointlist.Append($"new NpgsqlPoint({x},{y})");
 							}
 
-							return $"new NpgsqlPolygon(new NpgsqlPoint[] {{{pointlist}}})";
+							return $"new NpgsqlPoint[] {{{pointlist}}}";
 						}
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Polygon:
@@ -3001,10 +2982,10 @@ select a.attname as columnname,
 								else
 									polylist.Append(",");
 
-								polylist.Append($"new NpgsqlPolygon(new NpgsqlPoint[] {{{pointlist}}})");
+								polylist.Append($"new NpgsqlPoint[] {{{pointlist}}}");
 							}
 
-							return $"new NpgsqlPolygon[] {{ {polylist} }}";
+							return $"new NpgsqlPoint[][] {{ {polylist} }}";
 						}
 
 					case NpgsqlDbType.Circle:
@@ -3142,6 +3123,46 @@ select a.attname as columnname,
 							}
 
 							return $"new NpgsqlBox[] {{{boxlist}}}";
+						}
+
+					case NpgsqlDbType.Oid:
+					case NpgsqlDbType.Xid:
+					case NpgsqlDbType.Cid:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							return $"{value.Value<uint>()}";
+						}
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Oid:
+					case NpgsqlDbType.Array | NpgsqlDbType.Xid:
+					case NpgsqlDbType.Array | NpgsqlDbType.Cid:
+						{
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+							}
+
+							var result = new StringBuilder();
+							result.Append("new uint[] {");
+							bool first = true;
+							foreach (var charValue in value.Value<JArray>())
+							{
+								if (first)
+									first = false;
+								else
+									result.Append(", ");
+
+								result.Append($"{charValue.Value<uint>()}");
+							}
+
+							result.Append("}");
+							return result.ToString();
 						}
 
 					case NpgsqlDbType.Smallint:
@@ -3447,92 +3468,139 @@ select a.attname as columnname,
 							if (column.IsNullable)
 							{
 								if (value.Type == JTokenType.Null)
+								{
 									return "null";
-								else if (value.Type == JTokenType.Array && value.Value<JArray>() == null)
-									return "null";
-								else if (value.Type == JTokenType.String && value.Value<string>() == null)
-									return "null";
+								}
+								else if (value.Type == JTokenType.Array)
+								{
+									if (value.Value<JArray>() == null)
+										return "null";
+								}
+								else if (value.Type == JTokenType.String)
+								{
+									if (string.IsNullOrWhiteSpace(value.Value<string>()))
+										return "null";
+								}
 							}
 
 							if (value.Type == JTokenType.String)
 							{
-								if (string.IsNullOrWhiteSpace(value.Value<string>()))
-									return "null";
-
 								return $"BitArrayExt.Parse(\"{value.Value<string>()}\")";
+							}
+							else if ( value.Type == JTokenType.Boolean)
+                            {
+								return value.Value<bool>() ? "true" : "false";
+							}
+							else if ( value.Type == JTokenType.Array)
+							{
+								if (column.Length == 1)
+								{
+									return value.Value<JArray>()[0].Value<bool>() ? "true" : "false";
+								}
+								else
+								{
+									var strVal = new StringBuilder();
+									foreach (bool bVal in value.Value<JArray>())
+									{
+										strVal.Append(bVal ? "1" : "0");
+									}
+
+									return $"BitArrayExt.Parse(\"{value.Value<string>()}\")";
+								}
 							}
 							else
-							{
-								var strVal = new StringBuilder();
-								foreach (bool bVal in value.Value<JArray>())
-								{
-									strVal.Append(bVal ? "1" : "0");
-								}
-
-								return $"BitArrayExt.Parse(\"{value.Value<string>()}\")";
-							}
+                            {
+								return "Unknown(Varbit)";
+                            }
 						}
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
+						if (value.Type == JTokenType.Null)
 						{
-							if (column.IsNullable)
+							return null;
+						}
+
+						if (column.IsNullable)
+						{
+							if (value.Type == JTokenType.Null)
+								return "null";
+							else if (value.Type == JTokenType.String)
 							{
-								if (value.Type == JTokenType.Null)
-									return "null";
-								else if (value.Value<JArray>() == null)
+								if (string.IsNullOrWhiteSpace(value.Value<string>()))
+									return null;
+							}
+							else if (value.Type == JTokenType.Array)
+							{
+								if (value.Value<JArray>() == null)
 									return "null";
 							}
+						}
 
+						if (value.Type == JTokenType.String)
+						{
+							return $"BitArrayExt.Parse(\"{value.Value<string>()}\")";
+						}
+						else if (value.Type == JTokenType.Boolean)
+						{
+							return value.Value<bool>() ? "true" : "false";
+						}
+						else if (value.Type == JTokenType.Array)
+						{
 							var array = value.Value<JArray>();
 
 							if (array.Count == 0)
-								return "null";
+								return null;
 
-							var childValue = array[0];
+							var childElement = array[0];
 
-							if (childValue.Type == JTokenType.String)
+							if (childElement.Type == JTokenType.Boolean)
 							{
-								var result = new StringBuilder("new BitArray[] {");
-								bool first = true;
-
-								foreach (string strValue in array)
+								var sresult = new StringBuilder();
+								foreach (bool bVal in array)
 								{
-									if (first)
-										first = false;
-									else
-										result.Append(",");
-
-									result.Append($"BitArrayExt.Parse(\"{value.Value<string>()}\")");
+									sresult.Append(bVal ? "1" : "0");
 								}
 
-								result.Append("}");
-								return result.ToString();
+								return $"BitArrayExt.Parse(\"{sresult.ToString()}\")";
 							}
 							else
 							{
-								var result = new StringBuilder("new BitArray[] {");
-								bool first = true;
+								var result = new StringBuilder();
+								var answer = value.Value<JArray>();
 
-								foreach (JArray avalue in array)
+								result.Append("new BitArray[] {");
+								bool firstGroup = true;
+
+								foreach (var group in answer)
 								{
-									if (first)
-										first = false;
+									if (firstGroup)
+										firstGroup = false;
 									else
-										result.Append(",");
+										result.Append(", ");
 
-									var sValue = new StringBuilder();
-									foreach (bool bVal in avalue)
+									if (group.Type == JTokenType.String)
 									{
-										sValue.Append(bVal ? "1" : "0");
+										result.Append($"BitArrayExt.Parse(\"{group.Value<string>()}\")");
 									}
+									else
+									{
+										var strValue = new StringBuilder();
 
-									result.Append($"BitArrayExt.Parse(\"{sValue}\")");
+										foreach (bool bVal in group)
+										{
+											strValue.Append(bVal ? "1" : "0");
+										}
+
+										result.Append($"BitArrayExt.Parse(\"{strValue.ToString()}\")");
+									}
 								}
 
 								result.Append("}");
 								return result.ToString();
 							}
 						}
+						else
+							return "Unknown";
 
 					case NpgsqlDbType.Bit:
 						{
@@ -3711,7 +3779,11 @@ select a.attname as columnname,
 									return "null";
 							}
 
-							return $"IPEndPointExt.Parse(\"{value.Value<string>()}\")";
+							ValueTuple<IPAddress, int> val = value.Value<ValueTuple<IPAddress, int>>();
+							var ipAddress = val.Item1;
+							var filter = val.Item2;
+
+							return $"ValueTuple<IPAddress,int>(new IPAddress.Parse({ipAddress}), {filter})";
 						}
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
@@ -3722,7 +3794,7 @@ select a.attname as columnname,
 									return "null";
 							}
 
-							var result = new StringBuilder("new IPEndPoint[] {");
+							var result = new StringBuilder("new IEnumerable<ValueTuple<IPAddress,int>>[] {");
 							var array = value.Value<JArray>();
 
 							bool first = true;
@@ -3734,7 +3806,11 @@ select a.attname as columnname,
 								else
 									result.Append(", ");
 
-								result.Append($"IPEndPointExt.Parse(\"{group.Value<string>()}\")");
+								ValueTuple<IPAddress, int> val = group.Value<ValueTuple<IPAddress, int>>();
+								var ipAddress = val.Item1;
+								var filter = val.Item2;
+
+								result.Append($"new ValueTuple<IPAddress,int>(new IPAddress.Parse({ipAddress}), {filter})");
 							}
 
 							result.Append("}");
@@ -4257,7 +4333,7 @@ select a.attname as columnname,
 							{
 								var enumClass = DBHelper.SearchForEnum(schema, column.dbDataType, solutionFolder);
 
-								return $"{enumClass.ClassName}.{NormalizeClassName(value.Value<string>())}";
+								return $"{enumClass.ClassName}.{Utilities.NormalizeClassName(value.Value<string>())}";
 							}
 						}
 						break;

@@ -26,6 +26,8 @@ namespace COFRSCoreInstaller
 		public List<DBColumn> DatabaseColumns { get; set; }
 		public JObject Examples { get; set; }
 		public string DefaultConnectionString { get; set; }
+
+		public List<EntityClassFile> _entityClasses;
 		#endregion
 
 		#region Utility Functions
@@ -44,7 +46,19 @@ namespace COFRSCoreInstaller
 
 			LoadAppSettings();
 			ReadServerList();
-			LoadClassList();
+
+			_entityClasses = Utilities.LoadEntityClassList(SolutionFolder);
+
+			_entityModelList.Items.Clear();
+
+			foreach (var entityClass in _entityClasses)
+				if (entityClass.ElementType == ElementType.Table)
+					_entityModelList.Items.Add(entityClass);
+
+			var resourceClasses = Utilities.LoadResourceClassList(SolutionFolder);
+
+			foreach (var resourceClass in resourceClasses)
+				_resourceModelList.Items.Add(resourceClass);
 
 			if (_entityModelList.Items.Count == 0)
 			{
@@ -56,13 +70,6 @@ namespace COFRSCoreInstaller
 			if (_resourceModelList.Items.Count == 0)
 			{
 				MessageBox.Show("No resource models were found in the project. Please create a corresponding resource model before attempting to create the class.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				DialogResult = DialogResult.Cancel;
-				Close();
-			}
-
-			if (_profileModelList.Items.Count == 0)
-			{
-				MessageBox.Show("No profile models were found in the project. Please create a corresponding profile model before attempting to create the class.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				DialogResult = DialogResult.Cancel;
 				Close();
 			}
@@ -545,20 +552,6 @@ namespace COFRSCoreInstaller
 			}
 		}
 
-		private void OnProfileChanged(object sender, EventArgs e)
-		{
-			try
-			{
-				if (_profileModelList.SelectedIndex != -1 && !Populating)
-				{
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
 		private void OnPortNumberChanged(object sender, EventArgs e)
 		{
 			try
@@ -758,19 +751,8 @@ select s.name, t.name
                             {
                                 _resourceModelList.SelectedIndex = j;
 
-                                for (int r = 0; r < _profileModelList.Items.Count; r++)
-                                {
-                                    var profile = (ProfileClassFile)_profileModelList.Items[r];
-
-                                    if (string.Equals(profile.SourceClass, resource.ClassName, StringComparison.OrdinalIgnoreCase) &&
-                                        string.Equals(profile.DestinationClass, entity.ClassName, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        _profileModelList.SelectedIndex = r;
-										PopulateDatabaseColumns(server, db, table);
-										foundit = true;
-										break;
-                                    }
-                                }
+								PopulateDatabaseColumns(server, db, table);
+								foundit = true;
 								break;
                             }
                         }
@@ -782,9 +764,8 @@ select s.name, t.name
 				{
 					_entityModelList.SelectedIndex = -1;
 					_resourceModelList.SelectedIndex = -1;
-					_profileModelList.SelectedIndex = -1;
 
-					MessageBox.Show("No matching entity/resource/mapping class found. You will not be able to create a validation model without a matching entity, resource, and mapping models.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					MessageBox.Show("No matching entity/resource class found. You will not be able to create a validation model without a matching entity and resource models.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 					_tableList.SelectedIndex = -1;
 				}
 
@@ -800,15 +781,16 @@ select s.name, t.name
         {
             DatabaseColumns.Clear();
 
-            if (server.DBType == DBServerType.POSTGRESQL)
-            {
-                string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+			if (server.DBType == DBServerType.POSTGRESQL)
+			{
+				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+				List<EntityClassFile> _undefinedElements = new List<EntityClassFile>();
 
-                using (var connection = new NpgsqlConnection(connectionString))
-                {
-                    connection.Open();
+				using (var connection = new NpgsqlConnection(connectionString))
+				{
+					connection.Open();
 
-                    var query = @"
+					var query = @"
 select a.attname as columnname,
 	   t.typname as datatype,
 	   case when t.typname = 'varchar' then a.atttypmod-4
@@ -842,17 +824,16 @@ select a.attname as columnname,
     and c.relname = @tablename
  order by a.attnum
 ";
-					var candidateDataType = string.Empty;
-					var candidateSchema = string.Empty;
-					
+
+
 					using (var command = new NpgsqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@schema", table.Schema);
-                        command.Parameters.AddWithValue("@tablename", table.Table);
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
+					{
+						command.Parameters.AddWithValue("@schema", table.Schema);
+						command.Parameters.AddWithValue("@tablename", table.Table);
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
 								NpgsqlDbType dataType = NpgsqlDbType.Unknown;
 
 								try
@@ -861,63 +842,62 @@ select a.attname as columnname,
 								}
 								catch (InvalidCastException)
 								{
-									candidateSchema = table.Schema;
-									candidateDataType = reader.GetString(1);
+									var entityFile = _entityClasses.FirstOrDefault(c =>
+										string.Equals(c.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
+										string.Equals(c.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase));
+
+									if (entityFile == null)
+									{
+										entityFile = new EntityClassFile()
+										{
+											SchemaName = table.Schema,
+											TableName = reader.GetString(1),
+											ClassName = Utilities.NormalizeClassName(reader.GetString(1))
+										};
+
+										_undefinedElements.Add(entityFile);
+									}
 								}
 
 								var dbColumn = new DBColumn
-                                {
-                                    ColumnName = reader.GetString(0),
-                                    DataType = dataType,
-                                    dbDataType = reader.GetString(1),
-                                    Length = Convert.ToInt64(reader.GetValue(2)),
-                                    IsNullable = Convert.ToBoolean(reader.GetValue(3)),
-                                    IsComputed = Convert.ToBoolean(reader.GetValue(4)),
-                                    IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
-                                    IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
-                                    IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
-                                    IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
-                                    ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
-                                    ServerType = DBServerType.POSTGRESQL
-                                };
-
-                                DatabaseColumns.Add(dbColumn);
-
-								if (!string.IsNullOrWhiteSpace(candidateDataType))
 								{
-									var etype = DBHelper.GetElementType(table.Schema, candidateDataType, connectionString);
+									ColumnName = reader.GetString(0),
+									DataType = dataType,
+									dbDataType = reader.GetString(1),
+									Length = Convert.ToInt64(reader.GetValue(2)),
+									IsNullable = Convert.ToBoolean(reader.GetValue(3)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(4)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+									ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+									ServerType = DBServerType.POSTGRESQL
+								};
 
-									if (etype == ElementType.Enum)
-									{
-										var entityFile = DBHelper.SearchForEnum(table.Schema, candidateDataType, SolutionFolder);
-
-										if (entityFile == null)
-										{
-											var answer = MessageBox.Show($"The composite {table.Table} uses an enum type of {candidateDataType}.\r\n\r\nNo enum class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-											_okButton.Enabled = false;
-										}
-										else
-											_okButton.Enabled = true;
-									}
-									else if (etype == ElementType.Composite)
-									{
-										var entityFile = DBHelper.SearchForComposite(table.Schema, candidateDataType, SolutionFolder);
-
-										if (entityFile == null)
-										{
-											var answer = MessageBox.Show($"The composite {table.Table} uses a composite of {candidateDataType}.\r\n\r\nNo composite class corresponding to {candidateDataType} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {candidateDataType}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-											_okButton.Enabled = false;
-										}
-										else
-											_okButton.Enabled = true;
-									}
-								}
-								else
-									_okButton.Enabled = true;
+								DatabaseColumns.Add(dbColumn);
 							}
 						}
-                    }
-                }
+					}
+				}
+
+				_okButton.Enabled = true;
+
+				foreach (var candidate in _undefinedElements)
+				{
+					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, connectionString);
+
+					if (candidate.ElementType == ElementType.Enum)
+					{
+						MessageBox.Show($"The composite {table.Table} uses an enum type of {candidate.TableName}.\r\n\r\nNo enum class corresponding to {candidate.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {candidate.TableName}.\r\n\r\nPlease generate the enum before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						_okButton.Enabled = false;
+					}
+					else if (candidate.ElementType == ElementType.Composite)
+					{
+						MessageBox.Show($"The composite {table.Table} uses a composite of {candidate.TableName}.\r\n\r\nNo composite class corresponding to {candidate.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {candidate.TableName}.\r\n\r\nPlease generate the composite class before generating this class.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						_okButton.Enabled = false;
+					}
+				}
             }
             else if (server.DBType == DBServerType.MYSQL)
             {
@@ -1069,247 +1049,6 @@ select c.name as column_name,
         #endregion
 
         #region Helper Functions
-        private void LoadClassList()
-		{
-			try
-			{
-				_entityModelList.Items.Clear();
-				_resourceModelList.Items.Clear();
-				_profileModelList.Items.Clear();
-
-				foreach (var file in Directory.GetFiles(SolutionFolder, "*.cs"))
-				{
-					LoadEntityClass(file);
-					LoadResourceClass(file);
-					LoadProfileClass(file);
-				}
-
-				foreach (var folder in Directory.GetDirectories(SolutionFolder))
-				{
-					LoadEntityList(folder);
-					LoadResourceList(folder);
-					LoadProfileList(folder);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadEntityClass(string file)
-		{
-			var data = File.ReadAllText(file).Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-			var className = string.Empty;
-			var namespaceName = string.Empty;
-			var schemaName = string.Empty;
-			var tableName = string.Empty;
-
-			foreach (var line in data)
-			{
-				var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-				if (match.Success)
-					className = match.Groups["className"].Value;
-
-				match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-				if (match.Success)
-					namespaceName = match.Groups["namespaceName"].Value;
-
-				// 	[Table("Products", Schema = "dbo")]
-				match = Regex.Match(line, "\\[[ \t]*Table[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
-
-				if (match.Success)
-				{
-					tableName = match.Groups["tableName"].Value;
-					schemaName = match.Groups["schemaName"].Value;
-				}
-			}
-
-			if (!string.IsNullOrWhiteSpace(tableName) &&
-				 !string.IsNullOrWhiteSpace(className) &&
-				 !string.IsNullOrWhiteSpace(namespaceName))
-			{
-				var classfile = new EntityClassFile
-				{
-					ClassName = $"{className}",
-					FileName = file,
-					TableName = tableName,
-					SchemaName = schemaName,
-					ClassNameSpace = namespaceName
-				};
-
-				_entityModelList.Items.Add(classfile);
-			}
-		}
-
-		private void LoadProfileClass(string file)
-		{
-			try
-			{
-				var data = File.ReadAllText(file).Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-				var className = string.Empty;
-				var namespaceName = string.Empty;
-				var sourceClass = string.Empty;
-				var destinationClass = string.Empty;
-				bool mapped = false;
-
-				foreach (var line in data)
-				{
-					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)[\t ]+\\:[\t ]+Profile");
-
-					if (match.Success)
-						className = match.Groups["className"].Value;
-
-					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-					if (match.Success)
-						namespaceName = match.Groups["namespaceName"].Value;
-
-					if (!mapped)
-					{
-						match = Regex.Match(line, "CreateMap[\t ]*\\<[\t ]*(?<sourceClass>[A-Za-z][A-Za-z0-9_]*)[\t ]*\\,[\t ]*(?<destinationClass>[A-Za-z][A-Za-z0-9_]*)[\t ]*\\>[\t ]*\\([\t ]*\\)");
-
-						if (match.Success)
-						{
-							sourceClass = match.Groups["sourceClass"].Value;
-							destinationClass = match.Groups["destinationClass"].Value;
-							mapped = true;
-						}
-					}
-				}
-
-				if (!string.IsNullOrWhiteSpace(className) &&
-					 !string.IsNullOrWhiteSpace(namespaceName) &&
-					 !string.IsNullOrWhiteSpace(sourceClass) &&
-					 !string.IsNullOrWhiteSpace(destinationClass))
-				{
-					var classfile = new ProfileClassFile
-					{
-						ClassName = $"{className}",
-						FileName = file,
-						ClassNamespace = namespaceName,
-						SourceClass = sourceClass,
-						DestinationClass = destinationClass
-					};
-
-					_profileModelList.Items.Add(classfile);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadResourceClass(string file)
-		{
-			try
-			{
-				var data = File.ReadAllText(file).Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries); ;
-				var className = string.Empty;
-				var namespaceName = string.Empty;
-				var entityName = string.Empty;
-
-				foreach (var line in data)
-				{
-					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-					if (match.Success)
-						className = match.Groups["className"].Value;
-
-					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-					if (match.Success)
-						namespaceName = match.Groups["namespaceName"].Value;
-
-					match = Regex.Match(line, "\\[[ \t]*Entity[ \t]*\\([ \t]*typeof\\([ \t]*(?<entityClass>[A-Za-z][A-Za-z0-9_]*)[ \t]*\\)");
-
-					if (match.Success)
-						entityName = match.Groups["entityClass"].Value;
-				}
-
-				if (!string.IsNullOrWhiteSpace(entityName) &&
-					 !string.IsNullOrWhiteSpace(className) &&
-					 !string.IsNullOrWhiteSpace(namespaceName))
-				{
-					var classfile = new ResourceClassFile
-					{
-						ClassName = $"{className}",
-						FileName = file,
-						EntityClass = entityName,
-						ClassNamespace = namespaceName
-					};
-
-					_resourceModelList.Items.Add(classfile);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadProfileList(string folder)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(folder, "*.cs"))
-				{
-					LoadProfileClass(file);
-				}
-
-				foreach (var subfolder in Directory.GetDirectories(folder))
-				{
-					LoadProfileList(subfolder);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadEntityList(string folder)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(folder, "*.cs"))
-				{
-					LoadEntityClass(file);
-				}
-
-				foreach (var subfolder in Directory.GetDirectories(folder))
-				{
-					LoadEntityList(subfolder);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadResourceList(string folder)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(folder, "*.cs"))
-				{
-					LoadResourceClass(file);
-				}
-
-				foreach (var subfolder in Directory.GetDirectories(folder))
-				{
-					LoadResourceList(subfolder);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
 
 		/// <summary>
 		/// Reads the list of SQL Servers from the server configuration list
@@ -1971,14 +1710,8 @@ select name
 				return;
 			}
 
-			if (_profileModelList.SelectedIndex == -1)
-			{
-				MessageBox.Show("You must select a mapping profile model in order to create this item.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				return;
-			}
-
 			DialogResult = DialogResult.OK;
 			Close();
 		}
-	}
+    }
 }
