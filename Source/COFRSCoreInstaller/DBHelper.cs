@@ -3,6 +3,7 @@ using MySql.Data.MySqlClient;
 using Npgsql;
 using NpgsqlTypes;
 using System;
+using System.Collections;
 using System.Data;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -193,10 +194,6 @@ namespace COFRSCoreInstaller
 				return NpgsqlDbType.MacAddr8;
 			else if (string.Equals(dataType, "_macaddr8", StringComparison.OrdinalIgnoreCase))
 				return NpgsqlDbType.Array | NpgsqlDbType.MacAddr8;
-			else if (string.Equals(dataType, "oidvector", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Oidvector;
-			else if (string.Equals(dataType, "_oidvector", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Oidvector;
 
 			throw new InvalidCastException($"Unrecognized data type: {dataType}");
 		}
@@ -404,12 +401,12 @@ namespace COFRSCoreInstaller
 						return "string";
 
 				case SqlDbType.Binary:
-					return $"byte[]";
+					return $"IEnumerable<byte>";
 
 				case SqlDbType.VarBinary:
 				case SqlDbType.Image:
 				case SqlDbType.Timestamp:
-					return "byte[]";
+					return $"IEnumerable<byte>";
 
 				case SqlDbType.Time:
 					return "TimeSpan";
@@ -462,12 +459,12 @@ namespace COFRSCoreInstaller
 						return "string";
 
 				case NpgsqlDbType.Bytea:
-					return $"byte[]";
+					return $"IEnumerable<byte>";
 			}
 
 			return "Unknown";
 		}
-
+		
 		public static string GetNonNullableMySqlDataType(DBColumn column)
 		{
 			switch ((MySqlDbType)column.DataType)
@@ -530,7 +527,7 @@ namespace COFRSCoreInstaller
 
 				case MySqlDbType.Binary:
 				case MySqlDbType.VarBinary:
-					return "byte[]";
+					return $"IEnumerable<byte>";
 
 				case MySqlDbType.Time:
 					return "TimeSpan";
@@ -619,7 +616,7 @@ namespace COFRSCoreInstaller
 				case SqlDbType.Binary:
 				case SqlDbType.VarBinary:
 				case SqlDbType.Timestamp:
-					return "byte[]";
+					return $"IEnumerable<byte>";
 
 				case SqlDbType.Time:
 					if (column.IsNullable)
@@ -666,19 +663,27 @@ namespace COFRSCoreInstaller
 				case NpgsqlDbType.Array | NpgsqlDbType.Boolean:
 					return "BitArray";
 
+				case NpgsqlDbType.Bit:
 				case NpgsqlDbType.Varbit:
-					return "BitArray";
+					if (column.Length == 1)
+					{
+						if (column.IsNullable)
+							return "bool?";
+						else
+							return "bool";
+					}
+					else
+						return "BitArray";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
-					return "BitArray[]";
-
 				case NpgsqlDbType.Array | NpgsqlDbType.Bit:
-					if (string.Equals(column.dbDataType, "_bit", StringComparison.OrdinalIgnoreCase))
+					if (string.Equals(column.dbDataType, "_bit", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(column.dbDataType, "_varbit", StringComparison.OrdinalIgnoreCase))
 					{
 						if (column.Length == 1)
 							return "BitArray";
 						else
-							return "BitArray[]";
+							return "IEnumerable<BitArray>";
 					}
 					else
 					{
@@ -700,7 +705,7 @@ namespace COFRSCoreInstaller
 						return "short";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Smallint:
-					return "short[]";
+					return "IEnumerable<short>";
 
 				case NpgsqlDbType.Integer:
 					if (column.IsNullable)
@@ -709,7 +714,7 @@ namespace COFRSCoreInstaller
 						return "int";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Integer:
-					return "int[]";
+					return "IEnumerable<int>";
 
 				case NpgsqlDbType.Bigint:
 					if (column.IsNullable)
@@ -718,7 +723,7 @@ namespace COFRSCoreInstaller
 						return "long";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bigint:
-					return "long[]";
+					return "IEnumerable<long>";
 
 				case NpgsqlDbType.Oid:
 				case NpgsqlDbType.Xid:
@@ -731,61 +736,70 @@ namespace COFRSCoreInstaller
 				case NpgsqlDbType.Array | NpgsqlDbType.Oid:
 				case NpgsqlDbType.Array | NpgsqlDbType.Xid:
 				case NpgsqlDbType.Array | NpgsqlDbType.Cid:
-						return "uint[]";
+						return "IEnumerable<uint>";
 
 				case NpgsqlDbType.Point:
-					return "NpgsqlPoint";
+					if (column.IsNullable)
+						return "NpgsqlPoint?";
+					else
+						return "NpgsqlPoint";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Point:
-					return "NpgsqlPoint[]";
+					return "IEnumerable<NpgsqlPoint>";
 
 				case NpgsqlDbType.LSeg:
-					return "NpgsqlLSeg";
+					if (column.IsNullable)
+						return "NpgsqlLSeg?";
+					else
+						return "NpgsqlLSeg";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.LSeg:
-					return "NpgsqlLSeg[]";
+					return "IEnumerable<NpgsqlLSeg>";
 
 				case NpgsqlDbType.Line:
-					return "NpgsqlLine";
+					if (column.IsNullable)
+						return "NpgsqlLine?";
+					else
+						return "NpgsqlLine";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Line:
-					return "NpgsqlLine[]";
+					return "IEnumerable<NpgsqlLine>";
 
 				case NpgsqlDbType.Circle:
-					return "NpgsqlCircle";
+					if (column.IsNullable)
+						return "NpgsqlCircle?";
+					else
+						return "NpgsqlCircle";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Circle:
-					return "NpgsqlCircle[]";
+					return "IEnumerable<NpgsqlCircle>";
 
 				case NpgsqlDbType.Box:
-					return "NpgsqlBox";
+					if (column.IsNullable)
+						return "NpgsqlBox?";
+					else
+						return "NpgsqlBox";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Box:
-					return "NpgsqlBox[]";
+					return "IEnumerable<NpgsqlBox>";
 
 				case NpgsqlDbType.Path:
-					return "NpgsqlPath";
+					return "IEnumerable<NpgsqlPoint>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Path:
-					return "NpgsqlPath[]";
+					return "IEnumerable<IEnumerable<NpgsqlPoint>>";
 
 				case NpgsqlDbType.Polygon:
-					return "NpgsqlPolygon";
+					return "IEnumerable<NpgsqlPoint>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Polygon:
-					return "NpgsqlPolygon[]";
+					return "IEnumerable<IEnumerable<NpgsqlPoint>>";
 
-				case NpgsqlDbType.Oidvector:
-					return "uint[]";
-
-				case NpgsqlDbType.Array | NpgsqlDbType.Oidvector:
-					return "uint[][]";
-				 
 				case NpgsqlDbType.Bytea:
-					return "byte[]";
+					return "IEnumerable<byte>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
-					return "byte[][]";
+					return "IEnumerable<IEnumerable<byte>>";
 
 				case NpgsqlDbType.Text:
 				case NpgsqlDbType.Citext:
@@ -795,7 +809,7 @@ namespace COFRSCoreInstaller
 				case NpgsqlDbType.Array | NpgsqlDbType.Text:
 				case NpgsqlDbType.Array | NpgsqlDbType.Name:
 				case NpgsqlDbType.Array | NpgsqlDbType.Citext:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Varchar:
 				case NpgsqlDbType.Json:
@@ -803,7 +817,7 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
 				case NpgsqlDbType.Array | NpgsqlDbType.Json:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Char:
 					if (column.Length == 1)
@@ -816,10 +830,10 @@ namespace COFRSCoreInstaller
 					else if (string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
 						return "string";
 					else
-						return "char[]";
+						return "IEnumerable<char>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Char:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Uuid:
 					if (column.IsNullable)
@@ -828,7 +842,7 @@ namespace COFRSCoreInstaller
 						return "Guid";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Uuid:
-					return "Guid[]";
+					return "IEnumerable<Guid>";
 
 				case NpgsqlDbType.Date:
 					if (column.IsNullable)
@@ -837,7 +851,7 @@ namespace COFRSCoreInstaller
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Date:
-					return "DateTime[]";
+					return "IEnumerable<DateTime>";
 
 				case NpgsqlDbType.TimeTz:
 					if (column.IsNullable)
@@ -846,7 +860,7 @@ namespace COFRSCoreInstaller
 						return "DateTimeOffset";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.TimeTz:
-					return "DateTimeOffset[]";
+					return "IEnumerable<DateTimeOffset>";
 
 				case NpgsqlDbType.Time:
 					if (column.IsNullable)
@@ -855,7 +869,7 @@ namespace COFRSCoreInstaller
 						return "TimeSpan";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Time:
-					return "TimeSpan[]";
+					return "IEnumerable<TimeSpan>";
 
 				case NpgsqlDbType.Interval:
 					if (column.IsNullable)
@@ -864,7 +878,7 @@ namespace COFRSCoreInstaller
 						return "TimeSpan";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Interval:
-					return "TimeSpan[]";
+					return "IEnumerable<TimeSpan>";
 
 				case NpgsqlDbType.Timestamp:
 					if (column.IsNullable)
@@ -873,7 +887,7 @@ namespace COFRSCoreInstaller
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Timestamp:
-					return "DateTime[]";
+					return "IEnumerable<DateTime>";
 
 				case NpgsqlDbType.TimestampTz:
 					if (column.IsNullable)
@@ -882,7 +896,7 @@ namespace COFRSCoreInstaller
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.TimestampTz:
-					return "DateTime[]";
+					return "IEnumerable<DateTime>";
 
 				case NpgsqlDbType.Double:
 					if (column.IsNullable)
@@ -891,7 +905,7 @@ namespace COFRSCoreInstaller
 						return "double";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Double:
-					return "double[]";
+					return "IEnumerable<double>";
 
 				case NpgsqlDbType.Real:
 					if (column.IsNullable)
@@ -900,7 +914,7 @@ namespace COFRSCoreInstaller
 						return "float";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Real:
-					return "float[]";
+					return "IEnumerable<float>";
 
 				case NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Money:
@@ -911,37 +925,37 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Array | NpgsqlDbType.Money:
-					return "decimal[]";
+					return "IEnumerable<decimal>";
 
 				case NpgsqlDbType.Xml:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Xml:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Jsonb:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.JsonPath:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.JsonPath:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Inet:
-					return "ValueTuple<IPAddress, int>";
+					return "IPAddress";
 
 				case NpgsqlDbType.Cidr:
 					return "ValueTuple<IPAddress, int>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
-					return "ValueTuple<IPAddress, int>[]";
+					return "IEnumerable<IPAddress>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
-					return "ValueTuple<IPAddress, int>[]";
+					return "IEnumerable<ValueTuple<IPAddress, int>>";
 
 				case NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.MacAddr8:
@@ -949,7 +963,7 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr8:
-					return "PhysicalAddress[]";
+					return "IEnumerable<PhysicalAddress>";
 
 				case NpgsqlDbType.Unknown:
 					{
@@ -1287,7 +1301,7 @@ select t.typtype
 				case MySqlDbType.Blob:
 				case MySqlDbType.MediumBlob:
 				case MySqlDbType.LongBlob:
-					return "byte[]";
+					return "IEnumerable<byte>";
 
 				case MySqlDbType.Time:
 					if (column.IsNullable)
@@ -1324,6 +1338,7 @@ select t.typtype
 					return "BitArray";
 
 				case NpgsqlDbType.Bit:
+				case NpgsqlDbType.Varbit:
 					if (column.Length == 1)
 					{
 						if (column.IsNullable)
@@ -1332,21 +1347,30 @@ select t.typtype
 							return "bool";
 					}
 					else
-					{
 						return "BitArray";
-					}
-
-				case NpgsqlDbType.Varbit:
-					return "BitArray";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
-					return "BitArray[]";
-
 				case NpgsqlDbType.Array | NpgsqlDbType.Bit:
-					if (column.Length == 1)
-						return "BitArray";
+					if (string.Equals(column.dbDataType, "_bit", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(column.dbDataType, "_varbit", StringComparison.OrdinalIgnoreCase))
+					{
+						if (column.Length == 1)
+							return "BitArray";
+						else
+							return "IEnumerable<BitArray>";
+					}
 					else
-						return "BitArray[]";
+					{
+						if (column.Length == 1)
+						{
+							if (column.IsNullable)
+								return "bool?";
+							else
+								return "bool";
+						}
+						else
+							return "BitArray";
+					}
 
 				case NpgsqlDbType.Smallint:
 					if (column.IsNullable)
@@ -1355,7 +1379,7 @@ select t.typtype
 						return "short";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Smallint:
-					return "short[]";
+					return "IEnumerable<short>";
 
 				case NpgsqlDbType.Integer:
 					if (column.IsNullable)
@@ -1364,7 +1388,7 @@ select t.typtype
 						return "int";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Integer:
-					return "int[]";
+					return "IEnumerable<int>";
 
 				case NpgsqlDbType.Bigint:
 					if (column.IsNullable)
@@ -1373,7 +1397,7 @@ select t.typtype
 						return "long";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bigint:
-					return "long[]";
+					return "IEnumerable<long>";
 
 				case NpgsqlDbType.Oid:
 				case NpgsqlDbType.Xid:
@@ -1386,7 +1410,7 @@ select t.typtype
 				case NpgsqlDbType.Array | NpgsqlDbType.Oid:
 				case NpgsqlDbType.Array | NpgsqlDbType.Xid:
 				case NpgsqlDbType.Array | NpgsqlDbType.Cid:
-					return "uint[]";
+					return "IEnumerable<uint>";
 
 				case NpgsqlDbType.Point:
 					if (column.IsNullable)
@@ -1395,7 +1419,7 @@ select t.typtype
 						return "NpgsqlPoint";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Point:
-					return "NpgsqlPoint[]";
+					return "IEnumerable<NpgsqlPoint>";
 
 				case NpgsqlDbType.LSeg:
 					if (column.IsNullable)
@@ -1404,7 +1428,7 @@ select t.typtype
 						return "NpgsqlLSeg";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.LSeg:
-					return "NpgsqlLSeg[]";
+					return "IEnumerable<NpgsqlLSeg>";
 
 				case NpgsqlDbType.Line:
 					if (column.IsNullable)
@@ -1413,7 +1437,7 @@ select t.typtype
 						return "NpgsqlLine";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Line:
-					return "NpgsqlLine[]";
+					return "IEnumerable<NpgsqlLine>";
 
 				case NpgsqlDbType.Circle:
 					if (column.IsNullable)
@@ -1422,7 +1446,7 @@ select t.typtype
 						return "NpgsqlCircle";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Circle:
-					return "NpgsqlCircle[]";
+					return "IEnumerable<NpgsqlCircle>";
 
 				case NpgsqlDbType.Box:
 					if (column.IsNullable)
@@ -1431,32 +1455,25 @@ select t.typtype
 						return "NpgsqlBox";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Box:
-					return "NpgsqlBox[]";
+					return "IEnumerable<NpgsqlBox>";
 
 				case NpgsqlDbType.Path:
-					if (column.IsNullable)
-						return "NpgsqlPath?";
-					else
-						return "NpgsqlPath";
+					return "IEnumerable<NpgsqlPoint>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Path:
-					return "NpgsqlPath[]";
+					return "IEnumerable<IEnumerable<NpgsqlPoint>>";
 
 				case NpgsqlDbType.Polygon:
-					if (column.IsNullable)
-						return "NpgsqlPolygon?";
-					else
-						return "NpgsqlPolygon";
+					return "IEnumerable<NpgsqlPoint>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Polygon:
-					return "NpgsqlPolygon[]";
-
+					return "IEnumerable<IEnumerable<NpgsqlPoint>>";
 
 				case NpgsqlDbType.Bytea:
-					return "byte[]";
+					return "IEnumerable<byte>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
-					return "byte[][]";
+					return "IEnumerable<IEnumerable<byte>>";
 
 				case NpgsqlDbType.Text:
 				case NpgsqlDbType.Citext:
@@ -1466,7 +1483,7 @@ select t.typtype
 				case NpgsqlDbType.Array | NpgsqlDbType.Text:
 				case NpgsqlDbType.Array | NpgsqlDbType.Name:
 				case NpgsqlDbType.Array | NpgsqlDbType.Citext:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Varchar:
 				case NpgsqlDbType.Json:
@@ -1474,7 +1491,7 @@ select t.typtype
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
 				case NpgsqlDbType.Array | NpgsqlDbType.Json:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Char:
 					if (column.Length == 1)
@@ -1487,11 +1504,11 @@ select t.typtype
 					else if (string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
 						return "string";
 					else
-						return "char[]";
+						return "IEnumerable<char>";
 
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Char:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Uuid:
 					if (column.IsNullable)
@@ -1500,7 +1517,7 @@ select t.typtype
 						return "Guid";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Uuid:
-					return "Guid[]";
+					return "IEnumerable<Guid>";
 
 				case NpgsqlDbType.Date:
 					if (column.IsNullable)
@@ -1509,7 +1526,7 @@ select t.typtype
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Date:
-					return "DateTime[]";
+					return "IEnumerable<DateTime>";
 
 				case NpgsqlDbType.TimeTz:
 					if (column.IsNullable)
@@ -1518,7 +1535,7 @@ select t.typtype
 						return "DateTimeOffset";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.TimeTz:
-					return "DateTimeOffset[]";
+					return "IEnumerable<DateTimeOffset>";
 
 				case NpgsqlDbType.Time:
 					if (column.IsNullable)
@@ -1527,13 +1544,16 @@ select t.typtype
 						return "TimeSpan";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Time:
-					return "TimeSpan[]";
+					return "IEnumerable<TimeSpan>";
 
 				case NpgsqlDbType.Interval:
 					if (column.IsNullable)
 						return "TimeSpan?";
 					else
 						return "TimeSpan";
+
+				case NpgsqlDbType.Array | NpgsqlDbType.Interval:
+					return "IEnumerable<TimeSpan>";
 
 				case NpgsqlDbType.Timestamp:
 					if (column.IsNullable)
@@ -1542,7 +1562,7 @@ select t.typtype
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Timestamp:
-					return "DateTime[]";
+					return "IEnumerable<DateTime>";
 
 				case NpgsqlDbType.TimestampTz:
 					if (column.IsNullable)
@@ -1551,7 +1571,7 @@ select t.typtype
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.TimestampTz:
-					return "DateTime[]";
+					return "IEnumerable<DateTime>";
 
 				case NpgsqlDbType.Double:
 					if (column.IsNullable)
@@ -1560,7 +1580,7 @@ select t.typtype
 						return "double";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Double:
-					return "double[]";
+					return "IEnumerable<double>";
 
 				case NpgsqlDbType.Real:
 					if (column.IsNullable)
@@ -1569,7 +1589,7 @@ select t.typtype
 						return "float";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Real:
-					return "float[]";
+					return "IEnumerable<float>";
 
 				case NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Money:
@@ -1580,37 +1600,37 @@ select t.typtype
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Array | NpgsqlDbType.Money:
-					return "decimal[]";
+					return "IEnumerable<decimal>";
 
 				case NpgsqlDbType.Xml:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Xml:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Jsonb:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.JsonPath:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.JsonPath:
-					return "string[]";
+					return "IEnumerable<string>";
 
 				case NpgsqlDbType.Inet:
-					return "ValueTuple<IPAddress, int>";
+					return "IPAddress";
 
 				case NpgsqlDbType.Cidr:
 					return "ValueTuple<IPAddress, int>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
-					return "ValueTuple<IPAddress, int>[]";
+					return "IEnumerable<IPAddress>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
-					return "ValueTuple<IPAddress, int>[]";
+					return "IEnumerable<ValueTuple<IPAddress, int>>";
 
 				case NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.MacAddr8:
@@ -1618,7 +1638,7 @@ select t.typtype
 
 				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr8:
-					return "PhysicalAddress[]";
+					return "IEnumerable<PhysicalAddress>";
 
 				case NpgsqlDbType.Unknown:
 					{
@@ -1767,7 +1787,7 @@ select t.typtype
 				case MySqlDbType.Blob:
 				case MySqlDbType.MediumBlob:
 				case MySqlDbType.LongBlob:
-					return "byte[]";
+					return "IEnumerable<byte>";
 
 				case MySqlDbType.Time:
 					if (column.IsNullable)
@@ -1867,7 +1887,7 @@ select t.typtype
 				case SqlDbType.Binary:
 				case SqlDbType.VarBinary:
 				case SqlDbType.Timestamp:
-					return "byte[]";
+					return "IEnumerable<byte>";
 
 				case SqlDbType.Time:
 					if (column.IsNullable)

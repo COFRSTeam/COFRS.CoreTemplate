@@ -84,7 +84,6 @@ namespace COFRSCoreInstaller
 
 					var entityClassFile = (EntityClassFile)form._entityModelList.SelectedItem;
 					var resourceClassFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
-					var profileClassFile = (ProfileClassFile)form._profileModelList.SelectedItem;
 
 					Utilities.LoadClassList(SolutionFolder, resourceClassFile.ClassName, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
 
