@@ -803,8 +803,13 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Text:
 				case NpgsqlDbType.Citext:
-				case NpgsqlDbType.Name:
 					return "string";
+
+				case NpgsqlDbType.Name:
+					if (string.Equals(column.dbDataType, "_name", StringComparison.OrdinalIgnoreCase))
+						return "IEnumerable<string>";
+					else
+						return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Text:
 				case NpgsqlDbType.Array | NpgsqlDbType.Name:
@@ -989,195 +994,6 @@ namespace COFRSCoreInstaller
 			}
 
 			return "Unknown";
-		}
-
-		public static ElementType GetElementType(string schema, string datatype, string connectionString)
-		{
-			string query = @"
-select t.typtype
-  from pg_type as t 
- inner join pg_catalog.pg_namespace n on n.oid = t.typnamespace
- WHERE ( t.typrelid = 0 OR ( SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid ) )
-   AND NOT EXISTS ( SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid )
-   and ( t.typcategory = 'C' or t.typcategory = 'E' ) 
-   and n.nspname = @schema
-   and t.typname = @element
-";
-
-			using (var connection = new NpgsqlConnection(connectionString))
-			{  
-				connection.Open();
-				using (var command = new NpgsqlCommand(query, connection))
-				{
-					command.Parameters.AddWithValue("@schema", schema);
-					command.Parameters.AddWithValue("@element", datatype);
-
-					using (var reader = command.ExecuteReader())
-					{
-						if (reader.Read())
-						{
-							var theType = reader.GetChar(0);
-
-							if (theType == 'c')
-								return ElementType.Composite;
-
-							else if (theType == 'e')
-								return ElementType.Enum;
-						}
-					}
-				}
-			}
-
-			return ElementType.Table;
-		}
-
-		public static EntityClassFile SearchForEnum(string schema, string datatype, string folder)
-		{
-			var className = string.Empty;
-			var entityName = string.Empty;
-			var schemaName = string.Empty;
-			var theNamespace = string.Empty;
-			EntityClassFile entityClassFile = null;
-
-			if (_cache.TryGetValue($"{schema}.{datatype}", out entityClassFile))
-				return entityClassFile;
-
-			foreach (var file in Directory.GetFiles(folder))
-			{
-				var content = File.ReadAllText(file);
-
-				if (content.Contains("PgEnum"))
-				{
-					var lines = content.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-
-					foreach (var line in lines)
-					{
-						var match = Regex.Match(line, "enum[ \t]+(?<classname>[a-zA-Z_][a-zA-Z0-9_]+)");
-
-						if (match.Success)
-						{
-							className = match.Groups["classname"].Value;
-
-							if (!string.IsNullOrWhiteSpace(entityName) &&
-								!string.IsNullOrWhiteSpace(schemaName) &&
-								string.Equals(entityName, datatype, StringComparison.OrdinalIgnoreCase))
-							{
-								entityClassFile = new EntityClassFile()
-								{
-									ClassName = className,
-									FileName = file,
-									TableName = entityName,
-									SchemaName = schemaName,
-									ClassNameSpace = theNamespace
-								};
-
-								var entry = _cache.CreateEntry($"{schemaName}.{entityName}");
-								entry.SetValue(entityClassFile);
-								return entityClassFile;
-							}
-						}
-
-						match = Regex.Match(line, "\\[PgEnum[ \t]*\\([ \t]*\"(?<enumName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\)[ \t]*\\]");
-
-						if (match.Success)
-						{
-							entityName = match.Groups["enumName"].Value;
-							schemaName = match.Groups["schemaName"].Value;
-						}
-
-						match = Regex.Match(line, "namespace[ \t]+(?<namespace>[a-zA-Z_][a-zA-Z0-9_\\.]+)");
-
-						if (match.Success)
-						{
-							theNamespace = match.Groups["namespace"].Value;
-						}
-					}
-				}
-			}
-
-			foreach (var subfolder in Directory.GetDirectories(folder))
-			{
-				var theFile = SearchForEnum(schema, datatype, subfolder);
-
-				if (theFile != null)
-					return theFile;
-			}
-
-			return null;
-		}
-		public static EntityClassFile SearchForComposite(string schema, string datatype, string folder)
-		{
-			var className = string.Empty;
-			var entityName = string.Empty;
-			var schemaName = string.Empty;
-			var theNamespace = string.Empty;
-			EntityClassFile entityClassFile = null;
-
-			if (_cache.TryGetValue($"{schema}.{datatype}", out entityClassFile))
-				return entityClassFile;
-
-			foreach (var file in Directory.GetFiles(folder))
-			{
-				var content = File.ReadAllText(file);
-
-				if (content.Contains("PgComposite"))
-				{
-					var lines = content.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-
-					foreach (var line in lines)
-					{
-						var match = Regex.Match(line, "class[ \t]+(?<classname>[a-zA-Z_][a-zA-Z0-9_]+)");
-
-						if (match.Success)
-						{
-							className = match.Groups["classname"].Value;
-
-							if (!string.IsNullOrWhiteSpace(entityName) &&
-								!string.IsNullOrWhiteSpace(schemaName) &&
-								string.Equals(entityName, datatype, StringComparison.OrdinalIgnoreCase))
-							{
-								entityClassFile = new EntityClassFile()
-								{
-									ClassName = className,
-									FileName = file,
-									TableName = entityName,
-									SchemaName = schemaName,
-									ClassNameSpace = theNamespace
-								};
-
-								var entry = _cache.CreateEntry($"{schemaName}.{entityName}");
-								entry.SetValue(entityClassFile);
-								return entityClassFile;
-							}
-						}
-
-						match = Regex.Match(line, "\\[PgComposite[ \t]*\\([ \t]*\"(?<enumName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\)[ \t]*\\]");
-
-						if (match.Success)
-						{
-							entityName = match.Groups["enumName"].Value;
-							schemaName = match.Groups["schemaName"].Value;
-						}
-
-						match = Regex.Match(line, "namespace[ \t]+(?<namespace>[a-zA-Z_][a-zA-Z0-9_\\.]+)");
-
-						if (match.Success)
-						{
-							theNamespace = match.Groups["namespace"].Value;
-						}
-					}
-				}
-			}
-
-			foreach (var subfolder in Directory.GetDirectories(folder))
-			{
-				var theFile = SearchForComposite(schema, datatype, subfolder);
-
-				if (theFile != null)
-					return theFile;
-			}
-
-			return null;
 		}
 
 		public static string GetMySqlDataType(DBColumn column)
@@ -1477,8 +1293,13 @@ select t.typtype
 
 				case NpgsqlDbType.Text:
 				case NpgsqlDbType.Citext:
-				case NpgsqlDbType.Name:
 					return "string";
+
+				case NpgsqlDbType.Name:
+					if (string.Equals(column.dbDataType, "_name", StringComparison.OrdinalIgnoreCase))
+						return "IEnumerable<string>";
+					else
+						return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Text:
 				case NpgsqlDbType.Array | NpgsqlDbType.Name:
@@ -1920,5 +1741,197 @@ select t.typtype
 
 			return "Unknown";
 		}
+
+		#region Postgrsql Helper Functions
+		public static ElementType GetElementType(string schema, string datatype, string connectionString)
+		{
+			string query = @"
+select t.typtype
+  from pg_type as t 
+ inner join pg_catalog.pg_namespace n on n.oid = t.typnamespace
+ WHERE ( t.typrelid = 0 OR ( SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid ) )
+   AND NOT EXISTS ( SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid )
+   and ( t.typcategory = 'C' or t.typcategory = 'E' ) 
+   and n.nspname = @schema
+   and t.typname = @element
+";
+
+			using (var connection = new NpgsqlConnection(connectionString))
+			{
+				connection.Open();
+				using (var command = new NpgsqlCommand(query, connection))
+				{
+					command.Parameters.AddWithValue("@schema", schema);
+					command.Parameters.AddWithValue("@element", datatype);
+
+					using (var reader = command.ExecuteReader())
+					{
+						if (reader.Read())
+						{
+							var theType = reader.GetChar(0);
+
+							if (theType == 'c')
+								return ElementType.Composite;
+
+							else if (theType == 'e')
+								return ElementType.Enum;
+						}
+					}
+				}
+			}
+
+			return ElementType.Table;
+		}
+
+		public static EntityClassFile SearchForEnum(string schema, string datatype, string folder)
+		{
+			var className = string.Empty;
+			var entityName = string.Empty;
+			var schemaName = string.Empty;
+			var theNamespace = string.Empty;
+			EntityClassFile entityClassFile = null;
+
+			if (_cache.TryGetValue($"{schema}.{datatype}", out entityClassFile))
+				return entityClassFile;
+
+			foreach (var file in Directory.GetFiles(folder))
+			{
+				var content = File.ReadAllText(file);
+
+				if (content.Contains("PgEnum"))
+				{
+					var lines = content.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+					foreach (var line in lines)
+					{
+						var match = Regex.Match(line, "enum[ \t]+(?<classname>[a-zA-Z_][a-zA-Z0-9_]+)");
+
+						if (match.Success)
+						{
+							className = match.Groups["classname"].Value;
+
+							if (!string.IsNullOrWhiteSpace(entityName) &&
+								!string.IsNullOrWhiteSpace(schemaName) &&
+								string.Equals(entityName, datatype, StringComparison.OrdinalIgnoreCase))
+							{
+								entityClassFile = new EntityClassFile()
+								{
+									ClassName = className,
+									FileName = file,
+									TableName = entityName,
+									SchemaName = schemaName,
+									ClassNameSpace = theNamespace
+								};
+
+								var entry = _cache.CreateEntry($"{schemaName}.{entityName}");
+								entry.SetValue(entityClassFile);
+								return entityClassFile;
+							}
+						}
+
+						match = Regex.Match(line, "\\[PgEnum[ \t]*\\([ \t]*\"(?<enumName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\)[ \t]*\\]");
+
+						if (match.Success)
+						{
+							entityName = match.Groups["enumName"].Value;
+							schemaName = match.Groups["schemaName"].Value;
+						}
+
+						match = Regex.Match(line, "namespace[ \t]+(?<namespace>[a-zA-Z_][a-zA-Z0-9_\\.]+)");
+
+						if (match.Success)
+						{
+							theNamespace = match.Groups["namespace"].Value;
+						}
+					}
+				}
+			}
+
+			foreach (var subfolder in Directory.GetDirectories(folder))
+			{
+				var theFile = SearchForEnum(schema, datatype, subfolder);
+
+				if (theFile != null)
+					return theFile;
+			}
+
+			return null;
+		}
+
+		public static EntityClassFile SearchForComposite(string schema, string datatype, string folder)
+		{
+			var className = string.Empty;
+			var entityName = string.Empty;
+			var schemaName = string.Empty;
+			var theNamespace = string.Empty;
+			EntityClassFile entityClassFile = null;
+
+			if (_cache.TryGetValue($"{schema}.{datatype}", out entityClassFile))
+				return entityClassFile;
+
+			foreach (var file in Directory.GetFiles(folder))
+			{
+				var content = File.ReadAllText(file);
+
+				if (content.Contains("PgComposite"))
+				{
+					var lines = content.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+					foreach (var line in lines)
+					{
+						var match = Regex.Match(line, "class[ \t]+(?<classname>[a-zA-Z_][a-zA-Z0-9_]+)");
+
+						if (match.Success)
+						{
+							className = match.Groups["classname"].Value;
+
+							if (!string.IsNullOrWhiteSpace(entityName) &&
+								!string.IsNullOrWhiteSpace(schemaName) &&
+								string.Equals(entityName, datatype, StringComparison.OrdinalIgnoreCase))
+							{
+								entityClassFile = new EntityClassFile()
+								{
+									ClassName = className,
+									FileName = file,
+									TableName = entityName,
+									SchemaName = schemaName,
+									ClassNameSpace = theNamespace
+								};
+
+								var entry = _cache.CreateEntry($"{schemaName}.{entityName}");
+								entry.SetValue(entityClassFile);
+								return entityClassFile;
+							}
+						}
+
+						match = Regex.Match(line, "\\[PgComposite[ \t]*\\([ \t]*\"(?<enumName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[a-zA-Z_][a-zA-Z0-0_]+)\"[ \t]*\\)[ \t]*\\]");
+
+						if (match.Success)
+						{
+							entityName = match.Groups["enumName"].Value;
+							schemaName = match.Groups["schemaName"].Value;
+						}
+
+						match = Regex.Match(line, "namespace[ \t]+(?<namespace>[a-zA-Z_][a-zA-Z0-9_\\.]+)");
+
+						if (match.Success)
+						{
+							theNamespace = match.Groups["namespace"].Value;
+						}
+					}
+				}
+			}
+
+			foreach (var subfolder in Directory.GetDirectories(folder))
+			{
+				var theFile = SearchForComposite(schema, datatype, subfolder);
+
+				if (theFile != null)
+					return theFile;
+			}
+
+			return null;
+		}
+		#endregion
 	}
 }
