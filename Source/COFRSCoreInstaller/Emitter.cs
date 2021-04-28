@@ -3135,7 +3135,7 @@ select a.attname as columnname,
 									return "null";
 							}
 
-							return $"{value.Value<uint>()}";
+							return $"{value.Value<uint>()}u";
 						}
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Oid:
@@ -3158,7 +3158,7 @@ select a.attname as columnname,
 								else
 									result.Append(", ");
 
-								result.Append($"{charValue.Value<uint>()}");
+								result.Append($"{charValue.Value<uint>()}u");
 							}
 
 							result.Append("}");
@@ -3245,7 +3245,7 @@ select a.attname as columnname,
 									return "null";
 							}
 
-							return $"{value.Value<long>()}";
+							return $"{value.Value<long>()}L";
 						}
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Bigint:
@@ -3266,7 +3266,7 @@ select a.attname as columnname,
 								else
 									result.Append(", ");
 
-								result.Append($"{charValue.Value<long>()}");
+								result.Append($"{charValue.Value<long>()}L");
 							}
 
 							result.Append("}");
@@ -3421,6 +3421,7 @@ select a.attname as columnname,
 
 					case NpgsqlDbType.Json:
 					case NpgsqlDbType.Jsonb:
+					case NpgsqlDbType.JsonPath:
 						{
 							if (column.IsNullable)
 							{
@@ -3436,6 +3437,7 @@ select a.attname as columnname,
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Json:
 					case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
+					case NpgsqlDbType.Array | NpgsqlDbType.JsonPath:
 						{
 							if (column.IsNullable)
 							{
@@ -3515,92 +3517,94 @@ select a.attname as columnname,
 						}
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
-						if (value.Type == JTokenType.Null)
-						{
-							return null;
-						}
-
-						if (column.IsNullable)
 						{
 							if (value.Type == JTokenType.Null)
-								return "null";
-							else if (value.Type == JTokenType.String)
 							{
-								if (string.IsNullOrWhiteSpace(value.Value<string>()))
-									return null;
+								return null;
+							}
+
+							if (column.IsNullable)
+							{
+								if (value.Type == JTokenType.Null)
+									return "null";
+								else if (value.Type == JTokenType.String)
+								{
+									if (string.IsNullOrWhiteSpace(value.Value<string>()))
+										return null;
+								}
+								else if (value.Type == JTokenType.Array)
+								{
+									if (value.Value<JArray>() == null)
+										return "null";
+								}
+							}
+
+							if (value.Type == JTokenType.String)
+							{
+								return $"BitArrayExt.Parse(\"{value.Value<string>()}\")";
+							}
+							else if (value.Type == JTokenType.Boolean)
+							{
+								return value.Value<bool>() ? "true" : "false";
 							}
 							else if (value.Type == JTokenType.Array)
 							{
-								if (value.Value<JArray>() == null)
-									return "null";
-							}
-						}
+								var array = value.Value<JArray>();
 
-						if (value.Type == JTokenType.String)
-						{
-							return $"BitArrayExt.Parse(\"{value.Value<string>()}\")";
-						}
-						else if (value.Type == JTokenType.Boolean)
-						{
-							return value.Value<bool>() ? "true" : "false";
-						}
-						else if (value.Type == JTokenType.Array)
-						{
-							var array = value.Value<JArray>();
+								if (array.Count == 0)
+									return null;
 
-							if (array.Count == 0)
-								return null;
+								var childElement = array[0];
 
-							var childElement = array[0];
-
-							if (childElement.Type == JTokenType.Boolean)
-							{
-								var sresult = new StringBuilder();
-								foreach (bool bVal in array)
+								if (childElement.Type == JTokenType.Boolean)
 								{
-									sresult.Append(bVal ? "1" : "0");
-								}
+									var sresult = new StringBuilder();
+									foreach (bool bVal in array)
+									{
+										sresult.Append(bVal ? "1" : "0");
+									}
 
-								return $"BitArrayExt.Parse(\"{sresult.ToString()}\")";
+									return $"BitArrayExt.Parse(\"{sresult.ToString()}\")";
+								}
+								else
+								{
+									var result = new StringBuilder();
+									var answer = value.Value<JArray>();
+
+									result.Append("new BitArray[] {");
+									bool firstGroup = true;
+
+									foreach (var group in answer)
+									{
+										if (firstGroup)
+											firstGroup = false;
+										else
+											result.Append(", ");
+
+										if (group.Type == JTokenType.String)
+										{
+											result.Append($"BitArrayExt.Parse(\"{group.Value<string>()}\")");
+										}
+										else
+										{
+											var strValue = new StringBuilder();
+
+											foreach (bool bVal in group)
+											{
+												strValue.Append(bVal ? "1" : "0");
+											}
+
+											result.Append($"BitArrayExt.Parse(\"{strValue.ToString()}\")");
+										}
+									}
+
+									result.Append("}");
+									return result.ToString();
+								}
 							}
 							else
-							{
-								var result = new StringBuilder();
-								var answer = value.Value<JArray>();
-
-								result.Append("new BitArray[] {");
-								bool firstGroup = true;
-
-								foreach (var group in answer)
-								{
-									if (firstGroup)
-										firstGroup = false;
-									else
-										result.Append(", ");
-
-									if (group.Type == JTokenType.String)
-									{
-										result.Append($"BitArrayExt.Parse(\"{group.Value<string>()}\")");
-									}
-									else
-									{
-										var strValue = new StringBuilder();
-
-										foreach (bool bVal in group)
-										{
-											strValue.Append(bVal ? "1" : "0");
-										}
-
-										result.Append($"BitArrayExt.Parse(\"{strValue.ToString()}\")");
-									}
-								}
-
-								result.Append("}");
-								return result.ToString();
-							}
+								return "Unknown";
 						}
-						else
-							return "Unknown";
 
 					case NpgsqlDbType.Bit:
 						{
@@ -3775,15 +3779,14 @@ select a.attname as columnname,
 						{
 							if (column.IsNullable)
 							{
-								if (string.IsNullOrWhiteSpace(value.Value<string>()))
+								if (value.Type == JTokenType.Null)
 									return "null";
 							}
 
-							ValueTuple<IPAddress, int> val = value.Value<ValueTuple<IPAddress, int>>();
-							var ipAddress = val.Item1;
-							var filter = val.Item2;
+							var ipAddress = value["IPAddress"].Value<string>();
+							var filter = Convert.ToInt32(value["Filter"].Value<string>());
 
-							return $"ValueTuple<IPAddress,int>(new IPAddress.Parse({ipAddress}), {filter})";
+							return $"new ValueTuple<IPAddress,int>(IPAddress.Parse(\"{ipAddress}\"), {filter})";
 						}
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
@@ -3794,7 +3797,7 @@ select a.attname as columnname,
 									return "null";
 							}
 
-							var result = new StringBuilder("new IEnumerable<ValueTuple<IPAddress,int>>[] {");
+							var result = new StringBuilder("new ValueTuple<IPAddress,int>[] {");
 							var array = value.Value<JArray>();
 
 							bool first = true;
@@ -3806,11 +3809,10 @@ select a.attname as columnname,
 								else
 									result.Append(", ");
 
-								ValueTuple<IPAddress, int> val = group.Value<ValueTuple<IPAddress, int>>();
-								var ipAddress = val.Item1;
-								var filter = val.Item2;
+								var ipAddress = group["IPAddress"].Value<string>();
+								var filter = Convert.ToInt32(group["Filter"].Value<string>());
 
-								result.Append($"new ValueTuple<IPAddress,int>(new IPAddress.Parse({ipAddress}), {filter})");
+								result.Append($"new ValueTuple<IPAddress,int>(IPAddress.Parse(\"{ipAddress}\"), {filter})");
 							}
 
 							result.Append("}");
@@ -3837,7 +3839,7 @@ select a.attname as columnname,
 									return "null";
 							}
 
-							var result = new StringBuilder("new string[] {");
+							var result = new StringBuilder("new PhysicalAddress[] {");
 							var array = value.Value<JArray>();
 
 							bool first = true;
@@ -3876,7 +3878,7 @@ select a.attname as columnname,
 									return "null";
 							}
 
-							var result = new StringBuilder("new string[] {");
+							var result = new StringBuilder("new PhysicalAddress[] {");
 							var array = value.Value<JArray>();
 
 							bool first = true;
@@ -3965,11 +3967,46 @@ select a.attname as columnname,
 									return "null";
 							}
 
-							return $"\"{value.Value<string>()}\"";
+							var str = value.Value<string>();
+							str = str.Replace("\"", "\\\"");
+
+							return $"\"{str}\"";
+						}
+
+					case NpgsqlDbType.Array | NpgsqlDbType.Xml:
+						{
+							{
+								if (column.IsNullable)
+								{
+									if (value.Value<JArray>() == null)
+										return "null";
+								}
+
+								var answer = new StringBuilder("new string[] {");
+								bool first = true;
+
+								foreach (var str in value.Value<JArray>())
+								{
+									if (first)
+										first = false;
+									else
+										answer.Append(", ");
+
+									var xmlstring = str.Value<string>();
+									xmlstring = xmlstring.Replace("\"", "\\\"");
+
+									answer.Append($"\"{xmlstring}\"");
+								}
+
+								answer.Append("}");
+								return answer.ToString();
+							}
 						}
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Text:
 					case NpgsqlDbType.Array | NpgsqlDbType.Char:
+					case NpgsqlDbType.Array | NpgsqlDbType.Name:
+					case NpgsqlDbType.Array | NpgsqlDbType.Citext:
 					case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
 						{
 							if (column.IsNullable)
@@ -4010,6 +4047,7 @@ select a.attname as columnname,
 						}
 
 					case NpgsqlDbType.Text:
+					case NpgsqlDbType.Citext:
 					case NpgsqlDbType.Varchar:
 						{
 							if (column.IsNullable)
@@ -4019,6 +4057,44 @@ select a.attname as columnname,
 							}
 
 							return $"\"{value.Value<string>()}\"";
+						}
+
+					case NpgsqlDbType.Name:
+						{
+							if (string.Equals(column.dbDataType, "_name", StringComparison.OrdinalIgnoreCase))
+							{
+								if (column.IsNullable)
+								{
+									if (value.Value<JArray>() == null)
+										return "null";
+								}
+
+								var answer = new StringBuilder("new string[] {");
+								bool first = true;
+
+								foreach (var str in value.Value<JArray>())
+								{
+									if (first)
+										first = false;
+									else
+										answer.Append(", ");
+
+									answer.Append($"\"{str.Value<string>()}\"");
+								}
+
+								answer.Append("}");
+								return answer.ToString();
+							}
+							else
+							{
+								if (column.IsNullable)
+								{
+									if (value.Type == JTokenType.Null)
+										return "null";
+								}
+
+								return $"\"{value.Value<string>()}\"";
+							}
 						}
 
 					case NpgsqlDbType.Date:

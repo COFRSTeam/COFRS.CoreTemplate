@@ -1971,11 +1971,10 @@ select name
 									{
 										var value = reader.GetValue(reader.GetOrdinal(columnName));
 
-
 										if (value.GetType() == typeof(IPAddress))
 										{
 											var ipAddress = (IPAddress)value;
-											values.Add(columnName, JToken.FromObject(ipAddress.ToString()));
+											values.Add(columnName, ipAddress.ToString());
 										}
 										else if (value.GetType() == typeof(IPAddress[]))
                                         {
@@ -1984,23 +1983,60 @@ select name
 
 											foreach (var val in theValue)
 											{
-												var innerobj = new JValue(val.ToString());
-												json.Add(innerobj);
+												json.Add(val.ToString());
 											}
 											values.Add(columnName, json);
 										}
 										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>))
 										{
 											var ipAddress = ((ValueTuple<IPAddress, int>)value).Item1;
-											int port = ((ValueTuple<IPAddress, int>)value).Item2;
+											int filter = ((ValueTuple<IPAddress, int>)value).Item2;
 
-											var ipEndPoint = new ValueTuple<IPAddress, int>(ipAddress, port);
-											values.Add(columnName, JToken.FromObject(ipEndPoint.ToString()));
+                                            var theValue = new JObject
+                                            {
+                                                { "IPAddress", ipAddress.ToString() },
+                                                { "Filter", filter }
+                                            };
+
+                                            values.Add(columnName, theValue);
+										}
+										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>[]))
+										{
+											var theValue = (ValueTuple<IPAddress, int>[])value;
+											var json = new JArray();
+
+											foreach (var val in theValue)
+                                            {
+												var ipAddress = val.Item1;
+												int filter = val.Item2;
+
+												var aValue = new JObject
+												{
+													{ "IPAddress", ipAddress.ToString() },
+													{ "Filter", filter }
+												};
+
+												json.Add(aValue);
+											}
+
+											values.Add(columnName, json);
 										}
 										else if (value.GetType() == typeof(PhysicalAddress))
 										{
 											var physicalAddress = (PhysicalAddress)value;
-											values.Add(columnName, JToken.FromObject(physicalAddress.ToString()));
+											values.Add(columnName, physicalAddress.ToString());
+										}
+										else if (value.GetType() == typeof(PhysicalAddress[]))
+										{
+											var result = new JArray();
+											var theValue = (PhysicalAddress[])value;
+
+											foreach ( var addr in theValue )
+                                            {
+												result.Add(addr.ToString());
+                                            }
+
+											values.Add(columnName, result);
 										}
 										else if (value.GetType() == typeof(BitArray))
 										{
@@ -2012,34 +2048,6 @@ select name
 												answer.Append(strVal);
 											}
 											values.Add(columnName, JToken.FromObject(answer.ToString()));
-										}
-										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>))
-										{
-											var theValue = (ValueTuple<IPAddress, int>)value;
-											var json = new JObject
-											{
-												{ "IPAddress", theValue.Item1.ToString() },
-												{ "intVal", theValue.Item2 }
-											};
-											values.Add(columnName, json);
-
-										}
-										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>[]))
-										{
-											var theValue = (ValueTuple<IPAddress, int>[])value;
-											var json = new JArray();
-
-											foreach (var val in theValue)
-                                            {
-												var innerobj = new JObject
-												{
-													{ "IPAddress", val.Item1.ToString() },
-													{ "intVal", val.Item2 }
-												};
-
-												json.Add(innerobj);
-											}
-											values.Add(columnName, json);
 										}
 										else
 										{

@@ -95,7 +95,7 @@ namespace COFRSCoreInstaller
 
 					var whitespace = "[ \\t]*";
 					var space = "[ \\t]+";
-					var variableName = "[a-zA-Z_][a-zA-Z0-9_]*";
+					var variableName = "[a-zA-Z_][a-zA-Z0-9_]*[\\?]?(\\[\\])?";
 					var singletype = $"\\<{whitespace}{variableName}({whitespace}\\,{whitespace}{variableName})*{whitespace}\\>";
 					var multitype = $"<{whitespace}{variableName}{whitespace}{singletype}{whitespace}\\>";
 					var typedecl = $"{variableName}(({singletype})|({multitype}))*";
@@ -282,23 +282,40 @@ namespace COFRSCoreInstaller
 
 			foreach (var line in resourceContent)
 			{
-				var match = Regex.Match(line, "[ \\t]*public[ \\t]+(?<datatype>[^ \\t]+)[ \\t]+(?<column>[a-zA-Z0-9_\\<\\>]+)[ \\t]*\\{[ \\t]*get\\;[ \\t]*set\\;[ \\t]*\\}");
-				if (match.Success)
+				if (line.Trim().StartsWith("public", StringComparison.OrdinalIgnoreCase))
 				{
-					var memberName = match.Groups["column"].Value;
-					var dataType = match.Groups["datatype"].Value;
+					//	The following will recoginze these types of data types:
+					//	
+					//	Simple data types:  int, long, string, Guid, Datetime, etc.
+					//	Typed data types:  List<T>, IEnumerable<int>
+					//	Embedded Typed Data types: IEnumerable<ValueTuple<string, int>>
 
-					var member = new ClassMember()
+					var whitespace = "[ \\t]*";
+					var space = "[ \\t]+";
+					var variableName = "[a-zA-Z_][a-zA-Z0-9_]*[\\?]?(\\[\\])?";
+					var singletype = $"\\<{whitespace}{variableName}({whitespace}\\,{whitespace}{variableName})*{whitespace}\\>";
+					var multitype = $"<{whitespace}{variableName}{whitespace}{singletype}{whitespace}\\>";
+					var typedecl = $"{variableName}(({singletype})|({multitype}))*";
+					var pattern = $"{whitespace}public{space}(?<datatype>{typedecl})[ \\t]+(?<columnname>{variableName})[ \\t]+{{{whitespace}get{whitespace}\\;{whitespace}set{whitespace}\\;{whitespace}\\}}";
+					var match = Regex.Match(line, pattern);
+
+					if (match.Success)
 					{
-						ResourceMemberName = memberName,
-						ResourceMemberType = dataType,
-						EntityNames = new List<DBColumn>(),
-						ChildMembers = new List<ClassMember>()
-					};
+						var memberName = match.Groups["columnname"].Value;
+						var dataType = match.Groups["datatype"].Value;
 
-					LoadChildMembers(Path.GetDirectoryName(resourceFileName), member);
+						var member = new ClassMember()
+						{
+							ResourceMemberName = memberName,
+							ResourceMemberType = dataType,
+							EntityNames = new List<DBColumn>(),
+							ChildMembers = new List<ClassMember>()
+						};
 
-					members.Add(member);
+						LoadChildMembers(Path.GetDirectoryName(resourceFileName), member);
+
+						members.Add(member);
+					}
 				}
 			}
 
@@ -317,7 +334,7 @@ namespace COFRSCoreInstaller
 						tableName = matcht.Groups["tableName"].Value;
 				}
 
-				if (line.Trim().StartsWith("[member", StringComparison.OrdinalIgnoreCase))
+				else if (line.Trim().StartsWith("[member", StringComparison.OrdinalIgnoreCase))
 				{
 					var match = Regex.Match(line, "ColumnName[ \\t]*\\=[ \\t]*\\\"(?<columnName>[a-zA-Z0-9_]+)\\\"");
 
@@ -326,161 +343,168 @@ namespace COFRSCoreInstaller
 					else
 						columnName = string.Empty;
 				}
-
-				var match2 = Regex.Match(line, "[ \\t]*public[ \\t]+(?<datatype>[^ \\t]+)[ \\t]+(?<column>[a-zA-Z0-9_]+)[ \\t]*\\{[ \\t]*get\\;[ \\t]*set\\;[ \\t]*\\}");
-
-				if (match2.Success)
+				else if (line.Trim().StartsWith("public", StringComparison.OrdinalIgnoreCase))
 				{
-					entityName = match2.Groups["column"].Value;
+					var whitespace = "[ \\t]*";
+					var space = "[ \\t]+";
+					var variableName = "[a-zA-Z_][a-zA-Z0-9_]*[\\?]?(\\[\\])?";
+					var singletype = $"\\<{whitespace}{variableName}({whitespace}\\,{whitespace}{variableName})*{whitespace}\\>";
+					var multitype = $"<{whitespace}{variableName}{whitespace}{singletype}{whitespace}\\>";
+					var typedecl = $"{variableName}(({singletype})|({multitype}))*";
+					var pattern = $"{whitespace}public{space}(?<datatype>{typedecl})[ \\t]+(?<columnname>{variableName})[ \\t]+{{{whitespace}get{whitespace}\\;{whitespace}set{whitespace}\\;{whitespace}\\}}";
+					var match2 = Regex.Match(line, pattern);
 
-					var matchName = string.IsNullOrWhiteSpace(columnName) ? entityName : columnName;
-
-					var column = columns.FirstOrDefault(c => string.Equals(c.ColumnName, matchName, StringComparison.OrdinalIgnoreCase));
-
-					if (column != null)
+					if (match2.Success)
 					{
-						column.EntityName = entityName;
+						entityName = match2.Groups["columnname"].Value;
+						var matchName = string.IsNullOrWhiteSpace(columnName) ? entityName : columnName;
+						var column = columns.FirstOrDefault(c => string.Equals(c.ColumnName, matchName, StringComparison.OrdinalIgnoreCase));
 
-						if (column.IsPrimaryKey)
+						if (column != null)
 						{
-							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, "href", StringComparison.OrdinalIgnoreCase));
+							column.EntityName = entityName;
 
-							if (member == null)
+							if (column.IsPrimaryKey)
 							{
-								member = new ClassMember()
+								var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, "href", StringComparison.OrdinalIgnoreCase));
+
+								if (member == null)
 								{
-									ResourceMemberName = string.Empty,
-									ResourceMemberType = string.Empty,
-									EntityNames = new List<DBColumn>(),
-									ChildMembers = new List<ClassMember>()
+									member = new ClassMember()
+									{
+										ResourceMemberName = string.Empty,
+										ResourceMemberType = string.Empty,
+										EntityNames = new List<DBColumn>(),
+										ChildMembers = new List<ClassMember>()
+									};
+
+									members.Add(member);
+								}
+
+								var entityColumn = new DBColumn()
+								{
+									EntityName = column.EntityName,
+									EntityType = match2.Groups["datatype"].Value,
+									ServerType = column.ServerType,
+									ColumnName = column.ColumnName,
+									DataType = column.DataType,
+									dbDataType = column.dbDataType,
+									ForeignTableName = column.ForeignTableName,
+									IsComputed = column.IsComputed,
+									IsForeignKey = column.IsForeignKey,
+									IsIdentity = column.IsIdentity,
+									IsIndexed = column.IsIndexed,
+									IsNullable = column.IsNullable,
+									IsPrimaryKey = column.IsPrimaryKey,
+									Length = column.Length
 								};
 
-								members.Add(member);
+								SetFixed(column, entityColumn);
+								member.EntityNames.Add(entityColumn);
 							}
-
-							var entityColumn = new DBColumn()
+							else if (column.IsForeignKey)
 							{
-								EntityName = column.EntityName,
-								EntityType = match2.Groups["datatype"].Value,
-								ServerType = column.ServerType,
-								ColumnName = column.ColumnName,
-								DataType = column.DataType,
-								dbDataType = column.dbDataType,
-								ForeignTableName = column.ForeignTableName,
-								IsComputed = column.IsComputed,
-								IsForeignKey = column.IsForeignKey,
-								IsIdentity = column.IsIdentity,
-								IsIndexed = column.IsIndexed,
-								IsNullable = column.IsNullable,
-								IsPrimaryKey = column.IsPrimaryKey,
-								Length = column.Length
-							};
+								string shortColumnName;
 
-							SetFixed(column, entityColumn);
-							member.EntityNames.Add(entityColumn);
-						}
-						else if (column.IsForeignKey)
-						{
-							string shortColumnName;
+								if (string.Equals(column.ForeignTableName, tableName, StringComparison.OrdinalIgnoreCase))
+								{
+									shortColumnName = column.ColumnName;
+									if (column.ColumnName.EndsWith("ID", StringComparison.OrdinalIgnoreCase))
+										shortColumnName = column.ColumnName.Substring(0, column.ColumnName.Length - 2);
+								}
+								else
+									shortColumnName = column.ForeignTableName;
 
-							if (string.Equals(column.ForeignTableName, tableName, StringComparison.OrdinalIgnoreCase))
-							{
-								shortColumnName = column.ColumnName;
-								if (column.ColumnName.EndsWith("ID", StringComparison.OrdinalIgnoreCase))
-									shortColumnName = column.ColumnName.Substring(0, column.ColumnName.Length - 2);
+								var normalizer = new NameNormalizer(shortColumnName);
+								var domainName = normalizer.SingleForm;
+
+								var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, domainName, StringComparison.OrdinalIgnoreCase));
+
+								if (member == null)
+								{
+									member = new ClassMember()
+									{
+										ResourceMemberName = string.Empty,
+										ResourceMemberType = string.Empty,
+										EntityNames = new List<DBColumn>(),
+										ChildMembers = new List<ClassMember>()
+									};
+
+									members.Add(member);
+								}
+
+								var entityColumn = new DBColumn()
+								{
+									EntityName = column.EntityName,
+									EntityType = match2.Groups["datatype"].Value,
+									ServerType = column.ServerType,
+									ColumnName = column.ColumnName,
+									DataType = column.DataType,
+									dbDataType = column.dbDataType,
+									ForeignTableName = column.ForeignTableName,
+									IsComputed = column.IsComputed,
+									IsForeignKey = column.IsForeignKey,
+									IsIdentity = column.IsIdentity,
+									IsIndexed = column.IsIndexed,
+									IsNullable = column.IsNullable,
+									IsPrimaryKey = column.IsPrimaryKey,
+									Length = column.Length
+								};
+
+								SetFixed(column, entityColumn);
+								member.EntityNames.Add(entityColumn);
 							}
 							else
-								shortColumnName = column.ForeignTableName;
-
-							var normalizer = new NameNormalizer(shortColumnName);
-							var domainName = normalizer.SingleForm;
-
-							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, domainName, StringComparison.OrdinalIgnoreCase));
-
-							if (member == null)
 							{
-								member = new ClassMember()
+								var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, column.EntityName, StringComparison.OrdinalIgnoreCase));
+
+								if (member == null)
 								{
-									ResourceMemberName = string.Empty,
-									ResourceMemberType = string.Empty,
-									EntityNames = new List<DBColumn>(),
-									ChildMembers = new List<ClassMember>()
-								};
+									var potentialMember = members.FirstOrDefault(m => column.EntityName.Length > m.ResourceMemberName.Length ? string.Equals(m.ResourceMemberName, column.EntityName.Substring(0, m.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase) : false);
 
-								members.Add(member);
-							}
+									if (potentialMember != null)
+									{
+										var childMember = potentialMember.ChildMembers.FirstOrDefault(c => string.Equals(c.ResourceMemberName, column.EntityName.Substring(potentialMember.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase));
 
-							var entityColumn = new DBColumn()
-							{
-								EntityName = column.EntityName,
-								EntityType = match2.Groups["datatype"].Value,
-								ServerType = column.ServerType,
-								ColumnName = column.ColumnName,
-								DataType = column.DataType,
-								dbDataType = column.dbDataType,
-								ForeignTableName = column.ForeignTableName,
-								IsComputed = column.IsComputed,
-								IsForeignKey = column.IsForeignKey,
-								IsIdentity = column.IsIdentity,
-								IsIndexed = column.IsIndexed,
-								IsNullable = column.IsNullable,
-								IsPrimaryKey = column.IsPrimaryKey,
-								Length = column.Length
-							};
-
-							SetFixed(column, entityColumn);
-							member.EntityNames.Add(entityColumn);
-						}
-						else
-						{
-							var member = members.FirstOrDefault(m => string.Equals(m.ResourceMemberName, column.EntityName, StringComparison.OrdinalIgnoreCase));
-
-							if (member == null)
-							{
-								var potentialMember = members.FirstOrDefault(m => column.EntityName.Length > m.ResourceMemberName.Length ? string.Equals(m.ResourceMemberName, column.EntityName.Substring(0, m.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase) : false);
-
-								if (potentialMember != null)
-								{
-									var childMember = potentialMember.ChildMembers.FirstOrDefault(c => string.Equals(c.ResourceMemberName, column.EntityName.Substring(potentialMember.ResourceMemberName.Length), StringComparison.OrdinalIgnoreCase));
-
-									if (childMember != null)
-										member = childMember;
+										if (childMember != null)
+											member = childMember;
+									}
 								}
-							}
 
-							if (member == null)
-							{
-								member = new ClassMember()
+								if (member == null)
 								{
-									ResourceMemberName = string.Empty,
-									ResourceMemberType = string.Empty,
-									EntityNames = new List<DBColumn>(),
-									ChildMembers = new List<ClassMember>()
+									member = new ClassMember()
+									{
+										ResourceMemberName = string.Empty,
+										ResourceMemberType = string.Empty,
+										EntityNames = new List<DBColumn>(),
+										ChildMembers = new List<ClassMember>()
+									};
+
+									members.Add(member);
+								}
+
+								var entityColumn = new DBColumn()
+								{
+									EntityName = column.EntityName,
+									EntityType = match2.Groups["datatype"].Value,
+									ServerType = column.ServerType,
+									ColumnName = column.ColumnName,
+									DataType = column.DataType,
+									dbDataType = column.dbDataType,
+									ForeignTableName = column.ForeignTableName,
+									IsComputed = column.IsComputed,
+									IsForeignKey = column.IsForeignKey,
+									IsIdentity = column.IsIdentity,
+									IsIndexed = column.IsIndexed,
+									IsNullable = column.IsNullable,
+									IsPrimaryKey = column.IsPrimaryKey,
+									Length = column.Length
 								};
 
-								members.Add(member);
+								SetFixed(column, entityColumn);
+								member.EntityNames.Add(entityColumn);
 							}
-
-							var entityColumn = new DBColumn()
-							{
-								EntityName = column.EntityName,
-								EntityType = match2.Groups["datatype"].Value,
-								ServerType = column.ServerType,
-								ColumnName = column.ColumnName,
-								DataType = column.DataType,
-								dbDataType = column.dbDataType,
-								ForeignTableName = column.ForeignTableName,
-								IsComputed = column.IsComputed,
-								IsForeignKey = column.IsForeignKey,
-								IsIdentity = column.IsIdentity,
-								IsIndexed = column.IsIndexed,
-								IsNullable = column.IsNullable,
-								IsPrimaryKey = column.IsPrimaryKey,
-								Length = column.Length
-							};
-
-							SetFixed(column, entityColumn);
-							member.EntityNames.Add(entityColumn);
 						}
 					}
 				}
@@ -573,10 +597,17 @@ namespace COFRSCoreInstaller
 
 				foreach (var line in childContent)
 				{
-					var match = Regex.Match(line, "[ \\t]*public[ \\t]+(?<datatype>[^ \\t]+)[ \\t]+(?<column>[a-zA-Z0-9_]+)[ \\t]*\\{[ \\t]*get\\;[ \\t]*set\\;[ \\t]*\\}");
+					var whitespace = "[ \\t]*";
+					var space = "[ \\t]+";
+					var variableName = "[a-zA-Z_][a-zA-Z0-9_]*[\\?]?(\\[\\])?";
+					var singletype = $"\\<{whitespace}{variableName}({whitespace}\\,{whitespace}{variableName})*{whitespace}\\>";
+					var multitype = $"<{whitespace}{variableName}{whitespace}{singletype}{whitespace}\\>";
+					var typedecl = $"{variableName}(({singletype})|({multitype}))*";
+					var pattern = $"{whitespace}public{space}(?<datatype>{typedecl})[ \\t]+(?<columnname>{variableName})[ \\t]+{{{whitespace}get{whitespace}\\;{whitespace}set{whitespace}\\;{whitespace}\\}}";
+					var match = Regex.Match(line, pattern);
 					if (match.Success)
 					{
-						var memberName = match.Groups["column"].Value;
+						var memberName = match.Groups["columnname"].Value;
 						var dataType = match.Groups["datatype"].Value;
 
 						var childMember = new ClassMember()
