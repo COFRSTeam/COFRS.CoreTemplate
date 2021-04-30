@@ -1,6 +1,7 @@
 ﻿using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Npgsql;
 using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
@@ -585,7 +586,7 @@ namespace COFRSCoreInstaller
 				return;
 
 			if (member.ResourceMemberType.EndsWith("?"))
-				memberProperName = member.ResourceMemberType.Substring(0, member.ResourceMemberType.Length-1);
+				memberProperName = member.ResourceMemberType.Substring(0, member.ResourceMemberType.Length - 1);
 			else
 				memberProperName = member.ResourceMemberType;
 
@@ -644,8 +645,8 @@ namespace COFRSCoreInstaller
 			return string.Empty;
 		}
 
-		public static void LoadClassList(string SolutionFolder, string resourceClass, 
-											ref ResourceClassFile Orchestrator, 
+		public static void LoadClassList(string SolutionFolder, string resourceClass,
+											ref ResourceClassFile Orchestrator,
 											ref ResourceClassFile ValidatorClass,
 											ref ResourceClassFile ExampleClass,
 											ref ResourceClassFile CollectionExampleClass)
@@ -882,11 +883,11 @@ namespace COFRSCoreInstaller
 
 							writer.WriteLine(line);
 
-							if ( insertLines )
-                            {
+							if (insertLines)
+							{
 								writer.WriteLine($"\t\t\tNpgsqlConnection.GlobalTypeMapper.MapEnum<{classFile.ClassName}>(\"{classFile.TableName}\");");
 								insertLines = false;
-                            }
+							}
 						}
 					}
 				}
@@ -935,7 +936,7 @@ namespace COFRSCoreInstaller
 		}
 
 		public static List<ResourceClassFile> LoadResourceClassList(string folder)
-        {
+		{
 			var theList = new List<ResourceClassFile>();
 
 			foreach (var file in Directory.GetFiles(folder, "*.cs"))
@@ -955,7 +956,7 @@ namespace COFRSCoreInstaller
 		}
 
 		public static ResourceClassFile LoadResourceClass(string file)
-        {
+		{
 			var content = File.ReadAllText(file);
 			var namespaceName = string.Empty;
 			var entityClass = string.Empty;
@@ -996,7 +997,7 @@ namespace COFRSCoreInstaller
 								ClassName = match.Groups["className"].Value,
 								FileName = file,
 								EntityClass = entityClass,
-  							    ClassNamespace = namespaceName
+								ClassNamespace = namespaceName
 							};
 
 							return classfile;
@@ -1009,14 +1010,14 @@ namespace COFRSCoreInstaller
 		}
 
 		public static List<EntityClassFile> LoadEntityClassList(string folder)
-        {
+		{
 			var theList = new List<EntityClassFile>();
 
 			foreach (var file in Directory.GetFiles(folder, "*.cs"))
 			{
 				var classFile = LoadEntityClass(file);
 
-				if ( classFile != null )
+				if (classFile != null)
 					theList.Add(classFile);
 			}
 
@@ -1027,9 +1028,28 @@ namespace COFRSCoreInstaller
 
 			return theList;
 		}
+		public static List<EntityDetailClassFile> LoadDetailEntityClassList(string folder, string connectionString)
+		{
+			var theList = new List<EntityDetailClassFile>();
+
+			foreach (var file in Directory.GetFiles(folder, "*.cs"))
+			{
+				var classFile = LoadDetailEntityClass(file, connectionString);
+
+				if (classFile != null)
+					theList.Add(classFile);
+			}
+
+			foreach (var childFolder in Directory.GetDirectories(folder))
+			{
+				theList.AddRange(LoadDetailEntityClassList(childFolder, connectionString));
+			}
+
+			return theList;
+		}
 
 		private static EntityClassFile LoadEntityClass(string file)
-		{ 
+		{
 			var content = File.ReadAllText(file);
 			var namespaceName = string.Empty;
 			var schemaName = string.Empty;
@@ -1180,6 +1200,164 @@ namespace COFRSCoreInstaller
 			return null;
 		}
 
+		private static EntityDetailClassFile LoadDetailEntityClass(string file, string ConnectionString)
+		{
+			var content = File.ReadAllText(file);
+			var namespaceName = string.Empty;
+			var schemaName = string.Empty;
+			var tableName = string.Empty;
+
+			if (content.Contains("[Table"))
+			{
+				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+				foreach (var line in data)
+				{
+					if (line.Contains("namespace"))
+					{
+						var match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*)");
+
+						if (match.Success)
+						{
+							namespaceName = match.Groups["namespaceName"].Value;
+						}
+					}
+					else if (line.Contains("[Table"))
+					{
+						// 	[Table("Products", Schema = "dbo")]
+						var match = Regex.Match(line, "\\[Table[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
+
+						if (match.Success)
+						{
+							tableName = match.Groups["tableName"].Value;
+							schemaName = match.Groups["schemaName"].Value;
+						}
+					}
+					else if (line.Contains("class"))
+					{
+						var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
+
+						if (match.Success)
+						{
+							var classfile = new EntityDetailClassFile
+							{
+								ClassName = match.Groups["className"].Value,
+								FileName = file,
+								TableName = tableName,
+								SchemaName = schemaName,
+								ClassNameSpace = namespaceName,
+								ElementType = ElementType.Table,
+							};
+
+							LoadColumns(ConnectionString, classfile);
+
+							return classfile;
+						}
+					}
+				}
+			}
+			else if (content.Contains("[PgEnum"))
+			{
+				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+				foreach (var line in data)
+				{
+					if (line.Contains("namespace"))
+					{
+						var match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*)");
+
+						if (match.Success)
+						{
+							namespaceName = match.Groups["namespaceName"].Value;
+						}
+					}
+					else if (line.Contains("[PgEnum"))
+					{
+						// 	[Table("Products", Schema = "dbo")]
+						var match = Regex.Match(line, "\\[PgEnum[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
+
+						if (match.Success)
+						{
+							tableName = match.Groups["tableName"].Value;
+							schemaName = match.Groups["schemaName"].Value;
+						}
+					}
+					else if (line.Contains("enum"))
+					{
+						var match = Regex.Match(line, "enum[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
+
+						if (match.Success)
+						{
+							var classfile = new EntityDetailClassFile
+							{
+								ClassName = match.Groups["className"].Value,
+								FileName = file,
+								TableName = tableName,
+								SchemaName = schemaName,
+								ClassNameSpace = namespaceName,
+								ElementType = ElementType.Enum
+							};
+
+							LoadEnumColumns(ConnectionString, classfile);
+
+							return classfile;
+						}
+					}
+				}
+			}
+			else if (content.Contains("[PgComposite"))
+			{
+				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+				foreach (var line in data)
+				{
+					if (line.Contains("namespace"))
+					{
+						var match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*)");
+
+						if (match.Success)
+						{
+							namespaceName = match.Groups["namespaceName"].Value;
+						}
+					}
+					else if (line.Contains("[PgComposite"))
+					{
+						// 	[Table("Products", Schema = "dbo")]
+						var match = Regex.Match(line, "\\[PgComposite[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
+
+						if (match.Success)
+						{
+							tableName = match.Groups["tableName"].Value;
+							schemaName = match.Groups["schemaName"].Value;
+						}
+					}
+					else if (line.Contains("class"))
+					{
+						var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
+
+						if (match.Success)
+						{
+							var classfile = new EntityDetailClassFile
+							{
+								ClassName = match.Groups["className"].Value,
+								FileName = file,
+								TableName = tableName,
+								SchemaName = schemaName,
+								ClassNameSpace = namespaceName,
+								ElementType = ElementType.Composite,
+							};
+
+							LoadColumns(ConnectionString, classfile);
+
+							return classfile;
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
 		public static string NormalizeClassName(string className)
 		{
 			var normalizedName = new StringBuilder();
@@ -1201,17 +1379,203 @@ namespace COFRSCoreInstaller
 			while (index != -1)
 			{
 				//	0----*----1----*----2
-				//	display_name
+				//	street_address_1
 
 				normalizedName.Append(className.Substring(indexStart, index - indexStart));
-				normalizedName.Append(className.Substring(index - indexStart + 1, 1).ToUpper());
-				indexStart = index - indexStart + 3;
+				normalizedName.Append(className.Substring(index + 1, 1).ToUpper());
+				indexStart = index + 2;
 
-				index = className.IndexOf("_", indexStart);
+				if (indexStart >= className.Length)
+					index = -1;
+				else
+					index = className.IndexOf("_", indexStart);
 			}
 
-			normalizedName.Append(className.Substring(indexStart));
+			if (indexStart < className.Length)
+				normalizedName.Append(className.Substring(indexStart));
+
 			return normalizedName.ToString();
+		}
+
+		private static void LoadEnumColumns(string connectionString, EntityDetailClassFile classFile)
+		{
+			var contents = File.ReadAllText(classFile.FileName);
+			classFile.Columns = new List<DBColumn>();
+			string entityName = string.Empty;
+			bool foundPgName = false;
+
+			var lines = contents.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+
+			foreach (var line in lines)
+			{
+				if (line.Trim().StartsWith("[PgName", StringComparison.OrdinalIgnoreCase))
+				{
+					var match = Regex.Match(line, "\\[PgName[ \\t]*\\([ \\t]*\\\"(?<columnName>[a-zA-Z_][a-zA-Z0-9_]*)\\\"\\)\\]");
+
+					//	If the entity specified a different column name than the member name, remember it.
+					if (match.Success)
+					{
+						entityName = match.Groups["columnName"].Value;
+						foundPgName = true;
+					}
+				}
+				else if (foundPgName)
+				{
+					var match = Regex.Match(line, "[ \\t]*(?<classname>[a-zA-Z_][a-zA-Z0-9_]*)");
+
+					if (match.Success)
+					{
+						var dbColumn = new DBColumn()
+						{
+							ColumnName = match.Groups["classname"].Value,
+							EntityName = entityName,
+							ServerType = DBServerType.POSTGRESQL
+						};
+
+						classFile.Columns.Add(dbColumn);
+
+						foundPgName = false;
+					}
+				}
+			}
+		}
+
+		private static void LoadColumns(string connectionString, EntityDetailClassFile classFile)
+		{
+			var contents = File.ReadAllText(classFile.FileName);
+			classFile.Columns = new List<DBColumn>();
+
+			var lines = contents.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+			var tableName = classFile.TableName;
+			var schema = classFile.SchemaName;
+			var entityName = string.Empty;
+
+			foreach ( var line in lines )
+			{ 
+				//	Is this a member annotation?
+				if (line.Trim().StartsWith("[PgName", StringComparison.OrdinalIgnoreCase))
+				{
+					var match = Regex.Match(line, "\\[PgName[ \\t]*\\([ \\t]*\\\"(?<columnName>[a-zA-Z_][a-zA-Z0-9_]*)\\\"\\)\\]");
+
+					//	If the entity specified a different column name than the member name, remember it.
+					if (match.Success)
+						entityName = match.Groups["columnName"].Value;
+				}
+
+				//	Is this a member?
+				else if (line.Trim().StartsWith("public", StringComparison.OrdinalIgnoreCase))
+				{
+					//	The following will recoginze these types of data types:
+					//	
+					//	Simple data types:  int, long, string, Guid, Datetime, etc.
+					//	Typed data types:  List<T>, IEnumerable<int>
+					//	Embedded Typed Data types: IEnumerable<ValueTuple<string, int>>
+
+					var whitespace = "[ \\t]*";
+					var space = "[ \\t]+";
+					var variableName = "[a-zA-Z_][a-zA-Z0-9_]*[\\?]?(\\[\\])?";
+					var singletype = $"\\<{whitespace}{variableName}({whitespace}\\,{whitespace}{variableName})*{whitespace}\\>";
+					var multitype = $"<{whitespace}{variableName}{whitespace}{singletype}{whitespace}\\>";
+					var typedecl = $"{variableName}(({singletype})|({multitype}))*";
+					var pattern = $"{whitespace}public{space}(?<datatype>{typedecl})[ \\t]+(?<columnname>{variableName})[ \\t]+{{{whitespace}get{whitespace}\\;{whitespace}set{whitespace}\\;{whitespace}\\}}";
+					var match2 = Regex.Match(line, pattern);
+
+					if (match2.Success)
+					{
+						//	Okay, we got a column. Get the member name can call it the entityName.
+						var className = match2.Groups["columnname"].Value;
+
+						if (string.IsNullOrWhiteSpace(entityName))
+							entityName = className;
+
+						var entityColumn = new DBColumn()
+						{
+							ColumnName = className,
+							EntityName = entityName,
+							EntityType = match2.Groups["datatype"].Value,
+							ServerType = DBServerType.POSTGRESQL
+						};
+
+						classFile.Columns.Add(entityColumn);
+
+						entityName = string.Empty;
+					}
+				}
+			}
+
+			using (var connection = new NpgsqlConnection(connectionString))
+			{
+				connection.Open();
+
+				var query = @"
+select a.attname as columnname,
+	   t.typname as datatype,
+	   case when t.typname = 'varchar' then a.atttypmod-4
+	        when t.typname = 'bpchar' then a.atttypmod-4
+			when t.typname = '_varchar' then a.atttypmod-4
+			when t.typname = '_bpchar' then a.atttypmod-4
+	        when a.atttypmod > -1 then a.atttypmod
+	        else a.attlen end as max_len,
+	   not a.attnotnull as is_nullable,
+
+	   case when ( a.attgenerated = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
+                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
+                 || '''::regclass)')
+	        then true else false end as is_computed,
+
+	   case when ( a.attidentity = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
+                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
+                 || '''::regclass)')
+	        then true else false end as is_identity,
+
+	   case when (select indrelid from pg_index as px where px.indisprimary = true and px.indrelid = c.oid and a.attnum = ANY(px.indkey)) = c.oid then true else false end as is_primary,
+	   case when (select indrelid from pg_index as ix where ix.indrelid = c.oid and a.attnum = ANY(ix.indkey)) = c.oid then true else false end as is_indexed,
+	   case when (select conrelid from pg_constraint as cx where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) = c.oid then true else false end as is_foreignkey,
+       (  select cc.relname from pg_constraint as cx inner join pg_class as cc on cc.oid = cx.confrelid where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) as foeigntablename
+  from pg_class as c
+  inner join pg_namespace as ns on ns.oid = c.relnamespace
+  inner join pg_attribute as a on a.attrelid = c.oid and not a.attisdropped and attnum > 0
+  inner join pg_type as t on t.oid = a.atttypid
+  left outer join pg_attrdef as ad on ad.adrelid = a.attrelid and ad.adnum = a.attnum 
+  where ns.nspname = @schema
+    and c.relname = @tablename
+ order by a.attnum
+";
+
+				using (var command = new NpgsqlCommand(query, connection))
+				{
+					command.Parameters.AddWithValue("@schema", classFile.SchemaName);
+					command.Parameters.AddWithValue("@tablename", classFile.TableName);
+					using (var reader = command.ExecuteReader())
+					{
+						while (reader.Read())
+						{
+							NpgsqlDbType dataType = NpgsqlDbType.Unknown;
+
+							try
+							{
+								dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
+							}
+							catch (InvalidCastException)
+							{
+							}
+
+							var dbColumn = classFile.Columns.FirstOrDefault(c => string.Equals(c.EntityName, reader.GetString(0), StringComparison.OrdinalIgnoreCase));
+							dbColumn.DataType = dataType;
+							dbColumn.dbDataType = reader.GetString(1);
+							dbColumn.Length = Convert.ToInt64(reader.GetValue(2));
+							dbColumn.IsNullable = Convert.ToBoolean(reader.GetValue(3));
+							dbColumn.IsComputed = Convert.ToBoolean(reader.GetValue(4));
+							dbColumn.IsIdentity = Convert.ToBoolean(reader.GetValue(5));
+							dbColumn.IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6));
+							dbColumn.IsIndexed = Convert.ToBoolean(reader.GetValue(7));
+							dbColumn.IsForeignKey = Convert.ToBoolean(reader.GetValue(8));
+							dbColumn.ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9);
+						}
+					}
+				}
+			}
 		}
 	}
 }

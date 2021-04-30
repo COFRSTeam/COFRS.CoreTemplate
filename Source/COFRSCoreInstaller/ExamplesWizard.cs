@@ -82,23 +82,25 @@ namespace COFRSCoreInstaller
 
 					var emitter = new Emitter();
 
-					var model = emitter.EmitExampleModel(replacementsDictionary["$targetframeworkversion$"],
+					var model = emitter.EmitExampleModel(
 						classFile.SchemaName,
 						connectionString,
 						Utilities.LoadClassColumns(domainFile.FileName, classFile.FileName, form.DatabaseColumns),
 						classFile.ClassName,
 						domainFile.ClassName,
 						replacementsDictionary["$safeitemname$"],
-						form.DatabaseColumns, form.Examples, replacementsDictionary);
+						form.DatabaseColumns, form.Examples, replacementsDictionary,
+						form.classList);
 
-					var collectionmodel = emitter.EmitExampleCollectionModel(replacementsDictionary["$targetframeworkversion$"],
+					var collectionmodel = emitter.EmitExampleCollectionModel(
 						classFile.SchemaName,
 						connectionString,
 						Utilities.LoadClassColumns(domainFile.FileName, classFile.FileName, form.DatabaseColumns),
 						classFile.ClassName,
 						domainFile.ClassName,
 						"Collection" + replacementsDictionary["$safeitemname$"],
-						form.DatabaseColumns, form.Examples, replacementsDictionary);
+						form.DatabaseColumns, form.Examples, replacementsDictionary,
+						form.classList);
 
 					replacementsDictionary.Add("$model$", model);
 					replacementsDictionary.Add("$collectionmodel$", collectionmodel);

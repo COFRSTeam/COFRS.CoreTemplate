@@ -32,6 +32,7 @@ namespace COFRSCoreInstaller
 		public string DefaultConnectionString { get; set; }
 		public string ConnectionString { get; set; }
 		public List<EntityClassFile> _entityClasses { get; set; }
+		public List<EntityDetailClassFile> classList { get; set; }
 
 		#endregion
 
@@ -1890,6 +1891,124 @@ select name
 			Populating = false;
 		}
 
+		private int ReadComposite(NpgsqlDataReader reader, DBColumn column, int ordinal, List<EntityDetailClassFile> classList, JObject values)
+        {
+			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
+
+			foreach ( var member in cl.Columns)
+            {
+				if ((NpgsqlDbType)member.DataType == NpgsqlDbType.Unknown)
+				{
+					var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, member.dbDataType, StringComparison.OrdinalIgnoreCase));
+
+					if (ch.ElementType == ElementType.Enum)
+					{
+						var value = reader.GetValue(ordinal);
+						values.Add(member.ColumnName, JToken.FromObject(value));
+						ordinal++;
+					}
+					else
+					{
+						var jObject = new JObject();
+
+						ordinal = ReadComposite(reader, member, ordinal, classList, jObject);
+
+						values.Add(member.ColumnName, jObject);
+					}
+				}
+				else
+				{
+					var value = reader.GetValue(ordinal);
+
+					if (value.GetType() == typeof(IPAddress))
+					{
+						var ipAddress = (IPAddress)value;
+						values.Add(member.ColumnName, ipAddress.ToString());
+					}
+					else if (value.GetType() == typeof(IPAddress[]))
+					{
+						var theValue = (IPAddress[])value;
+						var json = new JArray();
+
+						foreach (var val in theValue)
+						{
+							json.Add(val.ToString());
+						}
+						values.Add(member.ColumnName, json);
+					}
+					else if (value.GetType() == typeof(ValueTuple<IPAddress, int>))
+					{
+						var ipAddress = ((ValueTuple<IPAddress, int>)value).Item1;
+						int filter = ((ValueTuple<IPAddress, int>)value).Item2;
+
+						var theValue = new JObject
+											{
+												{ "IPAddress", ipAddress.ToString() },
+												{ "Filter", filter }
+											};
+
+						values.Add(member.ColumnName, theValue);
+					}
+					else if (value.GetType() == typeof(ValueTuple<IPAddress, int>[]))
+					{
+						var theValue = (ValueTuple<IPAddress, int>[])value;
+						var json = new JArray();
+
+						foreach (var val in theValue)
+						{
+							var ipAddress = val.Item1;
+							int filter = val.Item2;
+
+							var aValue = new JObject
+												{
+													{ "IPAddress", ipAddress.ToString() },
+													{ "Filter", filter }
+												};
+
+							json.Add(aValue);
+						}
+
+						values.Add(member.ColumnName, json);
+					}
+					else if (value.GetType() == typeof(PhysicalAddress))
+					{
+						var physicalAddress = (PhysicalAddress)value;
+						values.Add(member.ColumnName, physicalAddress.ToString());
+					}
+					else if (value.GetType() == typeof(PhysicalAddress[]))
+					{
+						var result = new JArray();
+						var theValue = (PhysicalAddress[])value;
+
+						foreach (var addr in theValue)
+						{
+							result.Add(addr.ToString());
+						}
+
+						values.Add(member.ColumnName, result);
+					}
+					else if (value.GetType() == typeof(BitArray))
+					{
+						var answer = new StringBuilder();
+
+						foreach (bool val in (BitArray)value)
+						{
+							var strVal = val ? "1" : "0";
+							answer.Append(strVal);
+						}
+						values.Add(member.ColumnName, JToken.FromObject(answer.ToString()));
+					}
+					else
+					{
+						values.Add(member.ColumnName, JToken.FromObject(value));
+					}
+					ordinal++;
+				}
+            }
+
+			return ordinal;
+        }
+
 		private JObject ConstructExample()
 		{
 			var server = (DBServer)_serverList.SelectedItem;
@@ -1946,12 +2065,13 @@ select name
 			else if (server.DBType == DBServerType.POSTGRESQL)
 			{
 				ConnectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+				classList = Utilities.LoadDetailEntityClassList(SolutionFolder, ConnectionString);
 
 				using (var connection = new NpgsqlConnection(ConnectionString))
 				{
 					connection.Open();
 
-					var query = GeneratePostgresqlQuery(table);
+					var query = GeneratePostgresqlQuery(table, classList);
 
 					using (var command = new NpgsqlCommand(query, connection))
 					{
@@ -1959,17 +2079,45 @@ select name
 						{
 							if (reader.Read())
 							{
+								var ordinal = 0;
+
 								foreach (var column in DatabaseColumns)
 								{
 									var columnName = column.ColumnName;
 
-									if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+									if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Unknown)
+									{
+										var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
+
+										if (cl.ElementType == ElementType.Enum)
+										{
+											if (reader.IsDBNull(ordinal))
+											{
+												values.Add(columnName, null);
+												ordinal++;
+											}
+											else
+											{
+												var value = reader.GetValue(ordinal);
+												values.Add(columnName, JToken.FromObject(value));
+												ordinal++;
+											}
+										}
+										else
+										{
+											var jObject = new JObject();
+											ordinal = ReadComposite(reader, column, ordinal, classList, jObject);
+											values.Add(columnName, jObject);
+										}
+									}
+									else if (reader.IsDBNull(ordinal))
 									{
 										values.Add(columnName, null);
+										ordinal++;
 									}
 									else
 									{
-										var value = reader.GetValue(reader.GetOrdinal(columnName));
+										var value = reader.GetValue(ordinal);
 
 										if (value.GetType() == typeof(IPAddress))
 										{
@@ -1977,7 +2125,7 @@ select name
 											values.Add(columnName, ipAddress.ToString());
 										}
 										else if (value.GetType() == typeof(IPAddress[]))
-                                        {
+										{
 											var theValue = (IPAddress[])value;
 											var json = new JArray();
 
@@ -1992,13 +2140,13 @@ select name
 											var ipAddress = ((ValueTuple<IPAddress, int>)value).Item1;
 											int filter = ((ValueTuple<IPAddress, int>)value).Item2;
 
-                                            var theValue = new JObject
-                                            {
-                                                { "IPAddress", ipAddress.ToString() },
-                                                { "Filter", filter }
-                                            };
+											var theValue = new JObject
+											{
+												{ "IPAddress", ipAddress.ToString() },
+												{ "Filter", filter }
+											};
 
-                                            values.Add(columnName, theValue);
+											values.Add(columnName, theValue);
 										}
 										else if (value.GetType() == typeof(ValueTuple<IPAddress, int>[]))
 										{
@@ -2006,7 +2154,7 @@ select name
 											var json = new JArray();
 
 											foreach (var val in theValue)
-                                            {
+											{
 												var ipAddress = val.Item1;
 												int filter = val.Item2;
 
@@ -2031,10 +2179,10 @@ select name
 											var result = new JArray();
 											var theValue = (PhysicalAddress[])value;
 
-											foreach ( var addr in theValue )
-                                            {
+											foreach (var addr in theValue)
+											{
 												result.Add(addr.ToString());
-                                            }
+											}
 
 											values.Add(columnName, result);
 										}
@@ -2053,6 +2201,7 @@ select name
 										{
 											values.Add(columnName, JToken.FromObject(value));
 										}
+										ordinal++;
 									}
 								}
 
@@ -2864,7 +3013,41 @@ select name
 			return query.ToString();
 		}
 
-		private string GeneratePostgresqlQuery(DBTable table)
+		private bool DeconstructComposite(string parent, DBColumn column, List<EntityDetailClassFile> classList, StringBuilder query, bool firstColumn )
+        {
+			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
+
+			if (cl != null)
+			{
+				foreach (var childmember in cl.Columns)
+				{
+					if ((NpgsqlDbType)childmember.DataType == NpgsqlDbType.Unknown)
+					{
+						var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, childmember.dbDataType, StringComparison.OrdinalIgnoreCase));
+
+						if (ch.ElementType == ElementType.Enum)
+						{
+							firstColumn = AppendComma(query, firstColumn);
+							query.Append($"({parent}).\"{childmember.EntityName}\"");
+						}
+						else
+						{
+							var newparent = $"({parent}).\"{childmember.EntityName}\"";
+							firstColumn = DeconstructComposite(newparent, childmember, classList, query, firstColumn);
+						}
+					}
+					else
+					{
+						firstColumn = AppendComma(query, firstColumn);
+						query.Append($"({parent}).\"{childmember.EntityName}\"");
+					}
+				}
+			}
+
+			return firstColumn;
+		}
+
+		private string GeneratePostgresqlQuery(DBTable table, List<EntityDetailClassFile> classList)
 		{
 			var query = new StringBuilder("SELECT ");
 
@@ -2872,19 +3055,43 @@ select name
 
 			foreach (var column in DatabaseColumns)
 			{
-				if (firstColumn)
-					firstColumn = false;
-				else
-					query.Append(", ");
+				if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Unknown)
+				{
+					var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
 
-				query.Append($"\"{column.ColumnName}\"");
-			}
+					if (cl == null || cl.ElementType == ElementType.Enum)
+					{
+						firstColumn = AppendComma(query, firstColumn);
+						query.Append($"\"{column.ColumnName}\"");
+					}
+					else
+					{
+						var parent = $"\"{column.ColumnName}\"";
+						firstColumn = DeconstructComposite(parent, column, classList, query, firstColumn);
+					}
+				}
+				else
+                {
+                    firstColumn = AppendComma(query, firstColumn);
+                    query.Append($"\"{column.ColumnName}\"");
+                }
+            }
 
 			query.Append($" FROM \"{table.Schema}\".\"{table.Table}\" LIMIT 1");
 			return query.ToString();
 		}
 
-		private string GenerateMySQLQuery(DBTable table)
+        private static bool AppendComma(StringBuilder query, bool firstColumn)
+        {
+            if (firstColumn)
+                firstColumn = false;
+            else
+                query.Append(", ");
+
+            return firstColumn;
+        }
+
+        private string GenerateMySQLQuery(DBTable table)
 		{
 			var query = new StringBuilder("SELECT ");
 

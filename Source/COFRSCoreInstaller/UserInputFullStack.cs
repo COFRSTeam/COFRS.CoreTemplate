@@ -35,6 +35,8 @@ namespace COFRSCoreInstaller
         public string ConnectionString { get; set; }
         public string DefaultConnectionString { get; set; }
 		public JObject Examples { get; set; }
+		public List<EntityDetailClassFile> classList { get; set; }
+
 		public string Policy
 		{
 			get
@@ -719,7 +721,7 @@ select typtype
 
 		private void GenerateEnumFromDatabase(string schema, string dataType, NpgsqlConnection connection)
 		{
-			var className = NormalizeClassName(dataType);
+			var className = Utilities.NormalizeClassName(dataType);
 
 			var nn = new NameNormalizer(className);
 
@@ -779,7 +781,7 @@ where t.typname = @dataType
 						builder.AppendLine("\t\t///\t</summary>");
 						builder.AppendLine($"\t\t[PgName(\"{element}\")]");
 
-						var elementName = NormalizeClassName(element);
+						var elementName = Utilities.NormalizeClassName(element);
 						builder.Append($"\t\t{elementName}");
 					}
 				}
@@ -797,26 +799,6 @@ where t.typname = @dataType
 
 			OnTableChanged(this, new EventArgs());
 		}
-
-		private static string NormalizeClassName(string className)
-        {
-			className = className.Substring(0, 1).ToUpper() + className.Substring(1);
-            int index = className.IndexOf("_");
-
-            while (index != -1)
-            {
-                //	0----*----1----*----2
-                //	display_name
-
-                var tempString = className.Substring(0, index);
-                tempString += className.Substring(index + 1, 1).ToUpper();
-                tempString += className.Substring(index + 2);
-                className = tempString;
-                index = className.IndexOf("_");
-            }
-
-            return className;
-        }
 
         private void OnTableChanged(object sender, EventArgs e)
         {

@@ -145,24 +145,26 @@ namespace COFRSCoreInstaller
 					replacementsDictionary.Add("$mappingModel$", mappingModel);
 
 					//	Emit Example Model
-					var exampleModel = emitter.EmitExampleModel(replacementsDictionary["$targetframeworkversion$"],
+					var exampleModel = emitter.EmitExampleModel(
 											form.DatabaseTable.Schema,
 											connectionString,
 											classMembers,
 											entityClassName,
 											resourceClassName,
 											exampleClassName,
-											form.DatabaseColumns, form.Examples, replacementsDictionary);
+											form.DatabaseColumns, form.Examples, replacementsDictionary,
+											form.classList);
 					replacementsDictionary.Add("$exampleModel$", exampleModel);
 
-					var exampleCollectionModel = emitter.EmitExampleCollectionModel(replacementsDictionary["$targetframeworkversion$"],
+					var exampleCollectionModel = emitter.EmitExampleCollectionModel(
 						form.DatabaseTable.Schema,
 						connectionString,
 						classMembers,
 						entityClassName,
 						resourceClassName,
 						exampleCollectionClassName,
-						form.DatabaseColumns, form.Examples, replacementsDictionary);
+						form.DatabaseColumns, form.Examples, replacementsDictionary,
+						form.classList);
 					replacementsDictionary.Add("$exampleCollectionModel$", exampleCollectionModel);
 
 					//	Emit Validation Model
