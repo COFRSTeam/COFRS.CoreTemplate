@@ -61,6 +61,7 @@
     <Compile Include="ClassMember.cs" />
     <Compile Include="ControllerWizard.cs" />
     <Compile Include="Emitter.cs" />
+    <Compile Include="EntityDetailClassFile.cs" />
     <Compile Include="EntityMember.cs" />
     <Compile Include="FullStackControllerWizard.cs" />
     <Compile Include="ElementType.cs" />
