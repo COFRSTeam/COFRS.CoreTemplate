@@ -839,15 +839,15 @@ select a.attname as columnname,
 				}
 			}
 
-			foreach ( var candidate in candidates )
-            {
+			foreach (var candidate in candidates)
+			{
 				if (definedElements.FirstOrDefault(c => string.Equals(c.SchemaName, candidate.SchemaName, StringComparison.OrdinalIgnoreCase) &&
 														string.Equals(c.TableName, candidate.TableName, StringComparison.OrdinalIgnoreCase)) == null)
-                {
+				{
 					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, connectionString);
 					undefinedElements.Add(candidate);
 				}
-            }
+			}
 
 			if (undefinedElements.Count > 0)
 				return string.Empty;
@@ -1302,7 +1302,7 @@ select a.attname as columnname,
 						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Circle ||
 						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Polygon ||
 						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Line ||
-						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Box	)
+						member.EntityNames[0].ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Box)
 						replacementsDictionary["$usenpgtypes$"] = "true";
 
 					if (member.EntityNames[0].ServerType == DBServerType.POSTGRESQL)
@@ -1563,7 +1563,7 @@ select a.attname as columnname,
 			AppendComma(result, ref first);
 			result.Append("IsPrimaryKey = true");
 		}
-		
+
 		private void AppendComma(StringBuilder result, ref bool first)
 		{
 			if (first)
@@ -1571,19 +1571,19 @@ select a.attname as columnname,
 			else
 				result.Append(", ");
 		}
-		
+
 		private void AppendIdentity(StringBuilder result, ref bool first)
 		{
 			AppendComma(result, ref first);
 			result.Append("IsIdentity = true, AutoField = true");
 		}
-		
+
 		private void AppendIndexed(StringBuilder result, ref bool first)
 		{
 			AppendComma(result, ref first);
 			result.Append("IsIndexed = true");
 		}
-		
+
 		private void AppendForeignKey(StringBuilder result, ref bool first)
 		{
 			AppendComma(result, ref first);
@@ -1599,7 +1599,7 @@ select a.attname as columnname,
 			else
 				result.Append("IsNullable = false");
 		}
-		
+
 		private void CorrectForReservedNames(StringBuilder result, DBColumn column, ref bool first)
 		{
 			if (string.Equals(column.ColumnName, "abstract", StringComparison.OrdinalIgnoreCase) ||
@@ -1714,7 +1714,7 @@ select a.attname as columnname,
 				column.ColumnName += "_Value";
 			}
 		}
-		
+
 		private void AppendDatabaseType(StringBuilder result, DBColumn column, ref bool first)
 		{
 			AppendComma(result, ref first);
@@ -1750,20 +1750,20 @@ select a.attname as columnname,
 					result.Append($"Length = {length}, IsFixed = false");
 			}
 		}
-		
+
 		private void AppendAutofield(StringBuilder result, ref bool first)
 		{
 			AppendComma(result, ref first);
 			result.Append("AutoField = true");
 		}
-		
+
 		private void AppendPrecision(StringBuilder result, int NumericPrecision, int NumericScale, ref bool first)
 		{
 			AppendComma(result, ref first);
 
 			result.Append($"Precision={NumericPrecision}, Scale={NumericScale}");
 		}
-		
+
 		private bool CheckMapping(ClassMember member)
 		{
 			if (member.EntityNames.Count > 0)
@@ -2219,7 +2219,7 @@ select a.attname as columnname,
 				}
 			}
 		}
-		
+
 		private void GetSqlServerValue(DBColumn column, JObject ExampleValue, StringBuilder results)
 		{
 
@@ -2590,8 +2590,8 @@ select a.attname as columnname,
 					break;
 			}
 		}
-		
-		private void GetMySqlValue(DBColumn column,  JObject ExampleValue, StringBuilder results)
+
+		private void GetMySqlValue(DBColumn column, JObject ExampleValue, StringBuilder results)
 		{
 
 			switch ((MySqlDbType)column.DataType)
@@ -3028,6 +3028,7 @@ select a.attname as columnname,
 			}
 		}
 
+		#region Emit Postgresql example values
 		private void EmitPostgresValue(DBColumn column, EntityDetailClassFile parentclass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles, int indents)
 		{
 			for (var i = 0; i < indents; i++)
@@ -3156,1401 +3157,134 @@ select a.attname as columnname,
 						break;
 
 					case NpgsqlDbType.Uuid:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							results.Append($"\t\t\t\t{column.EntityName} = Guid.Parse(\"{value.Value<Guid>()}\")");
-							break;
-						}
+						EmitPostgresGuidValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Uuid:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder();
-							builder.Append("new Guid[] {");
-							bool first = true;
-							foreach (var charValue in value.Value<JArray>())
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								builder.Append($"Guid.Parse(\"{charValue.Value<Guid>()}\")");
-							}
-
-							builder.Append("}");
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							break;
-						}
+						EmitPostgresGuidArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Json:
 					case NpgsqlDbType.Jsonb:
 					case NpgsqlDbType.JsonPath:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var str = value.Value<string>();
-							str = str.Replace("\"", "\\\"");
-
-							results.Append($"\t\t\t\t{column.EntityName} = \"{str}\"");
-							break;
-						}
+						EmitPostgresJsonValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Json:
 					case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
 					case NpgsqlDbType.Array | NpgsqlDbType.JsonPath:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder();
-							builder.Append("new string[] {");
-							bool first = true;
-							foreach (var charValue in value.Value<JArray>())
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								var str = charValue.Value<string>();
-								str = str.Replace("\"", "\\\"");
-
-								builder.Append($"\"{str}\"");
-							}
-
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							break;
-						}
+						EmitPostgresJsonArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Varbit:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Array)
-								{
-									if (value.Value<JArray>() == null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-								else if (value.Type == JTokenType.String)
-								{
-									if (string.IsNullOrWhiteSpace(value.Value<string>()))
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-							}
-
-							if (value.Type == JTokenType.String)
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
-								break;
-							}
-							else if ( value.Type == JTokenType.Boolean)
-                            {
-								var strval = value.Value<bool>() ? "true" : "false";
-								results.Append($"\t\t\t\t{column.EntityName} = {strval}");
-								break;
-							}
-							else if ( value.Type == JTokenType.Array)
-							{
-								if (column.Length == 1)
-								{
-									var strval = value.Value<JArray>()[0].Value<bool>() ? "true" : "false";
-									results.Append($"\t\t\t\t{column.EntityName} = {strval}");
-									break;
-								}
-								else
-								{
-									var strVal = new StringBuilder();
-									foreach (bool bVal in value.Value<JArray>())
-									{
-										strVal.Append(bVal ? "1" : "0");
-									}
-
-									results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
-									break;
-								}
-							}
-							else
-                            {
-								results.Append($"\t\t\t\t{column.EntityName} = Unknown(Varbit)");
-								break;
-							}
-						}
+						EmitPostgresVarbitValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.String)
-								{
-									if (string.IsNullOrWhiteSpace(value.Value<string>()))
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-								else if (value.Type == JTokenType.Array)
-								{
-									if (value.Value<JArray>() == null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-							}
-
-							if (value.Type == JTokenType.String)
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
-								return;
-							}
-							else if (value.Type == JTokenType.Boolean)
-							{
-								var strval = value.Value<bool>() ? "true" : "false";
-								results.Append($"\t\t\t\t{column.EntityName} = {strval}");
-								return;
-							}
-							else if (value.Type == JTokenType.Array)
-							{
-								var array = value.Value<JArray>();
-
-								if (array.Count == 0)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-
-								var childElement = array[0];
-
-								if (childElement.Type == JTokenType.Boolean)
-								{
-									var sresult = new StringBuilder();
-									foreach (bool bVal in array)
-									{
-										sresult.Append(bVal ? "1" : "0");
-									}
-
-									results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{sresult.ToString()}\")");
-									return;
-								}
-								else
-								{
-									var builder = new StringBuilder();
-									var answer = value.Value<JArray>();
-
-									builder.Append("new BitArray[] {");
-									bool firstGroup = true;
-
-									foreach (var group in answer)
-									{
-										if (firstGroup)
-											firstGroup = false;
-										else
-											builder.Append(", ");
-
-										if (group.Type == JTokenType.String)
-										{
-											builder.Append($"BitArrayExt.Parse(\"{group.Value<string>()}\")");
-										}
-										else
-										{
-											var strValue = new StringBuilder();
-
-											foreach (bool bVal in group)
-											{
-												strValue.Append(bVal ? "1" : "0");
-											}
-
-											builder.Append($"BitArrayExt.Parse(\"{strValue.ToString()}\")");
-										}
-									}
-
-									builder.Append("}");
-									results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-									return;
-								}
-							}
-							else
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = Unknown");
-								return;
-							}
-						}
+						EmitPostgresVarbitArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Bit:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (column.Length == 1)
-								{
-									if (value.Value<bool?>() == null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-								else if (value.Type == JTokenType.String && value.Value<string>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Array && value.Value<JArray>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							if (column.Length == 1)
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = {value.Value<bool>().ToString().ToLower()}");
-								return;
-							}
-							else
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
-								return;
-							}
-						}
+						EmitPostgresBitValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Bit:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (value.Type == JTokenType.Null)
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = null");
-								return;
-							}
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.String)
-								{
-									if (string.IsNullOrWhiteSpace(value.Value<string>()))
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-								else if (value.Type == JTokenType.Array)
-								{
-									if (value.Value<JArray>() == null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-							}
-
-							if (value.Type == JTokenType.String)
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
-								return;
-							}
-							else if (value.Type == JTokenType.Boolean)
-							{
-								var strval = value.Value<bool>() ? "true" : "false";
-								results.Append($"\t\t\t\t{column.EntityName} = {strval}");
-								return;
-							}
-							else if (value.Type == JTokenType.Array)
-							{
-								var array = value.Value<JArray>();
-
-								if (array.Count == 0)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-
-								var childElement = array[0];
-
-								if (childElement.Type == JTokenType.Boolean)
-								{
-									var sresult = new StringBuilder();
-									foreach (bool bVal in array)
-									{
-										sresult.Append(bVal ? "1" : "0");
-									}
-
-									results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{sresult.ToString()}\")");
-									return;
-								}
-								else
-								{
-									var builder = new StringBuilder();
-									var answer = value.Value<JArray>();
-
-									builder.Append("new BitArray[] {");
-									bool firstGroup = true;
-
-									foreach (var group in answer)
-									{
-										if (firstGroup)
-											firstGroup = false;
-										else
-											builder.Append(", ");
-
-										if (group.Type == JTokenType.String)
-										{
-											builder.Append($"BitArrayExt.Parse(\"{group.Value<string>()}\")");
-										}
-										else
-										{
-											var strValue = new StringBuilder();
-
-											foreach (bool bVal in group)
-											{
-												strValue.Append(bVal ? "1" : "0");
-											}
-
-											builder.Append($"BitArrayExt.Parse(\"{strValue.ToString()}\")");
-										}
-									}
-
-									builder.Append("}");
-									results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-									return;
-								}
-							}
-							else
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = Unknown");
-								return;
-							}
-						}
+						EmitPostgresBitArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Bytea:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<byte[]>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							results.Append($"\t\t\t\t{column.EntityName} = Convert.FromBase64String(\"{Convert.ToBase64String(value.Value<byte[]>())}\")");
-							return;
-						}
-
-					case NpgsqlDbType.Inet:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (string.IsNullOrWhiteSpace(value.Value<string>()))
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							results.Append($"\t\t\t\t{column.EntityName} = IPAddress.Parse(\"{value.Value<string>()}\")");
-							return;
-						}
-
-					case NpgsqlDbType.Array | NpgsqlDbType.Inet:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<JArray>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder("new IPAddress[] {");
-							var array = value.Value<JArray>();
-
-							bool first = true;
-
-							foreach (var group in array)
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								builder.Append($"IPAddress.Parse(\"{group.Value<string>()}\")");
-							}
-
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							return;
-						}
-
-					case NpgsqlDbType.Cidr:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var ipAddress = value["IPAddress"].Value<string>();
-							var filter = Convert.ToInt32(value["Filter"].Value<string>());
-
-							results.Append($"\t\t\t\t{column.EntityName} = new ValueTuple<IPAddress,int>(IPAddress.Parse(\"{ipAddress}\"), {filter})");
-							return;
-						}
-
-					case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<JArray>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder("new ValueTuple<IPAddress,int>[] {");
-							var array = value.Value<JArray>();
-
-							bool first = true;
-
-							foreach (var group in array)
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								var ipAddress = group["IPAddress"].Value<string>();
-								var filter = Convert.ToInt32(group["Filter"].Value<string>());
-
-								builder.Append($"new ValueTuple<IPAddress,int>(IPAddress.Parse(\"{ipAddress}\"), {filter})");
-							}
-
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							return;
-						}
-
-					case NpgsqlDbType.MacAddr:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (string.IsNullOrWhiteSpace(value.Value<string>()))
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							results.Append($"\t\t\t\t{column.EntityName} = PhysicalAddress.Parse(\"{value.Value<string>()}\")");
-							return;
-						}
-
-					case NpgsqlDbType.Array | NpgsqlDbType.MacAddr:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<JArray>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder("new PhysicalAddress[] {");
-							var array = value.Value<JArray>();
-
-							bool first = true;
-
-							foreach (var group in array)
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								builder.Append($"PhysicalAddress.Parse(\"{group.Value<string>()}\")");
-							}
-
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							return;
-						}
-
-					case NpgsqlDbType.MacAddr8:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (string.IsNullOrWhiteSpace(value.Value<string>()))
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							results.Append($"\t\t\t\t{column.EntityName} = PhysicalAddress.Parse(\"{value.Value<string>()}\")");
-							return;
-						}
-
-					case NpgsqlDbType.Array | NpgsqlDbType.MacAddr8:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<JArray>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder("new PhysicalAddress[] {");
-							var array = value.Value<JArray>();
-
-							bool first = true;
-
-							foreach (var group in array)
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								builder.Append($"PhysicalAddress.Parse(\"{group.Value<string>()}\")");
-							}
-
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							return;
-						}
+						EmitPostgresByteaValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
-						{
-							var value = ExampleValue[column.ColumnName];
+						EmitPostgresByteaArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<JArray>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
+					case NpgsqlDbType.Inet:
+						EmitPostgresInetValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
-							var builder = new StringBuilder("new byte[][] {");
-							var array = value.Value<JArray>();
+					case NpgsqlDbType.Array | NpgsqlDbType.Inet:
+						EmitPostgresInetArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
-							bool first = true;
+					case NpgsqlDbType.Cidr:
+						EmitPostgresCidrValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
-							foreach (var group in array)
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
+					case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
+						EmitPostgresCidrArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
-								builder.Append($"Convert.FromBase64String(\"{Convert.ToBase64String(group.Value<byte[]>())}\")");
-							}
+					case NpgsqlDbType.MacAddr:
+					case NpgsqlDbType.MacAddr8:
+						EmitPostgresMacAddrValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							return;
-						}
+					case NpgsqlDbType.Array | NpgsqlDbType.MacAddr:
+					case NpgsqlDbType.Array | NpgsqlDbType.MacAddr8:
+						EmitPostgresMacAddrArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Boolean:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<bool?>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var strval = value.Value<bool>() ? "true" : "false";
-							results.Append($"\t\t\t\t{column.EntityName} = {strval}");
-							break;
-						}
+						EmitPostgresBoolValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Boolean:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							if (value.Type == JTokenType.String)
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
-							}
-							else
-							{
-								var strValue = new StringBuilder();
-
-								foreach (bool bVal in value.Value<JArray>())
-								{
-									strValue.Append(bVal ? "1" : "0");
-								}
-
-								results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{strValue.ToString()}\")");
-							}
-							break;
-						}
+						EmitPostgresBoolArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Xml:
-						{
-							var value = ExampleValue[column.ColumnName];
+					case NpgsqlDbType.Text:
+					case NpgsqlDbType.Citext:
+					case NpgsqlDbType.Varchar:
+						EmitPostgresTextValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<string>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
+					case NpgsqlDbType.Name:
+						EmitPostgresNameValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
-							var str = value.Value<string>();
-							str = str.Replace("\"", "\\\"");
-
-							results.Append($"\t\t\t\t{column.EntityName} = \"{str}\"");
-							break;
-						}
+					case NpgsqlDbType.Char:
+						EmitPostgresCharValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Xml:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							{
-								if (column.IsNullable)
-								{
-									if (value == null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-									else if (value.Value<JArray>() == null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-
-								var builder = new StringBuilder("new string[] {");
-								bool first = true;
-
-								foreach (var str in value.Value<JArray>())
-								{
-									if (first)
-										first = false;
-									else
-										builder.Append(", ");
-
-									var xmlstring = str.Value<string>();
-									xmlstring = xmlstring.Replace("\"", "\\\"");
-
-									builder.Append($"\"{xmlstring}\"");
-								}
-
-								builder.Append("}");
-								results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-								return;
-							}
-						}
-
 					case NpgsqlDbType.Array | NpgsqlDbType.Text:
 					case NpgsqlDbType.Array | NpgsqlDbType.Char:
 					case NpgsqlDbType.Array | NpgsqlDbType.Name:
 					case NpgsqlDbType.Array | NpgsqlDbType.Citext:
 					case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<JArray>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder("new string[] {");
-							bool first = true;
-
-							foreach (var str in value.Value<JArray>())
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								builder.Append($"\"{str.Value<string>()}\"");
-							}
-
-							builder.Append("}");
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							return;
-						}
-
-					case NpgsqlDbType.Char:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Value<string>() == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							if (column.Length == 1)
-								results.Append($"\t\t\t\t{column.EntityName} = '{value.Value<string>()}'");
-							else
-								results.Append($"\t\t\t\t{column.EntityName} = \"{value.Value<string>()}\"");
-							break;
-						}
-
-					case NpgsqlDbType.Text:
-					case NpgsqlDbType.Citext:
-					case NpgsqlDbType.Varchar:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if ( value == null )
-                                {
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.String)
-								{
-									if (string.IsNullOrWhiteSpace(value.Value<string>()))
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-							}
-
-							results.Append($"\t\t\t\t{column.EntityName} = \"{value.Value<string>()}\"");
-							break;
-						}
-
-					case NpgsqlDbType.Name:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (string.Equals(column.dbDataType, "_name", StringComparison.OrdinalIgnoreCase))
-							{
-								if (column.IsNullable)
-								{
-									if (value == null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-									else if (value.Value<JArray>() == null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-
-								var builder = new StringBuilder("new string[] {");
-								bool first = true;
-
-								foreach (var str in value.Value<JArray>())
-								{
-									if (first)
-										first = false;
-									else
-										builder.Append(", ");
-
-									builder.Append($"\"{str.Value<string>()}\"");
-								}
-
-								builder.Append("}");
-								results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-								break;
-							}
-							else
-							{
-								if (column.IsNullable)
-								{
-									if (value == null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-									else if (value.Type == JTokenType.Null)
-									{
-										results.Append($"\t\t\t\t{column.EntityName} = null");
-										return;
-									}
-								}
-
-								results.Append($"\t\t\t\t{column.EntityName} = \"{value.Value<string>()}\"");
-								break;
-							}
-						}
+						EmitPostgresTextArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Date:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							if (value.Type == JTokenType.Date)
-							{
-								var x = value.Value<DateTime>().ToString("yyyy'-'MM'-'dd");
-								results.Append($"\t\t\t\t{column.EntityName} = DateTime.Parse(\"{x}\")");
-							}
-							else if (value.Type == JTokenType.String)
-							{
-								var dt = DateTime.Parse(value.Value<string>());
-								var x = dt.ToString("yyyy'-'MM'-'dd");
-								results.Append($"\t\t\t\t{column.EntityName} = DateTime.Parse(\"{x}\")");
-							}
-							else
-								results.Append($"\t\t\t\t{column.EntityName} = Unknown cast");
-
-							break;
-						}
+						EmitPostgresDateValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Date:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder("new DateTime[] {");
-							bool first = true;
-
-							foreach (var dt in value.Value<JArray>())
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								if (dt.Type == JTokenType.Date)
-								{
-									var x = dt.Value<DateTime>().ToString("yyyy'-'MM'-'dd");
-									builder.Append($"DateTime.Parse(\"{x}\")");
-								}
-								else if (dt.Type == JTokenType.String)
-								{
-									var dt2 = DateTime.Parse(dt.Value<string>());
-									var x = dt2.ToString("yyyy'-'MM'-'dd");
-									builder.Append($"DateTime.Parse(\"{x}\")");
-								}
-								else
-									throw new Exception($"Unrecognized type {value.Type}");
-							}
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							break;
-						}
-
-					case NpgsqlDbType.Time:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							if (value.Type == JTokenType.TimeSpan)
-							{
-								var x = value.Value<TimeSpan>().ToString("hh':'mm':'ss");
-								results.Append($"\t\t\t\t{column.EntityName} = TimeSpan.Parse(\"{x}\")");
-
-							}
-							else if (value.Type == JTokenType.String)
-							{
-								var dt = TimeSpan.Parse(value.Value<string>());
-								var x = dt.ToString("hh':'mm':'ss");
-								results.Append($"\t\t\t\t{column.EntityName} = TimeSpan.Parse(\"{x}\")");
-							}
-							else
-								results.Append($"\t\t\t\t{column.EntityName} = Unknown cast");
-							break;
-						}
+						EmitPostgresDateArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Interval:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							if (value.Type == JTokenType.TimeSpan)
-							{
-								var x = value.Value<TimeSpan>().ToString("hh':'mm':'ss");
-								results.Append($"\t\t\t\t{column.EntityName} = TimeSpan.Parse(\"{x}\")");
-							}
-							else if (value.Type == JTokenType.String)
-							{
-								var dt = TimeSpan.Parse(value.Value<string>());
-								var x = dt.ToString("hh':'mm':'ss");
-								results.Append($"\t\t\t\t{column.EntityName} = TimeSpan.Parse(\"{x}\")");
-							}
-							else
-								results.Append($"\t\t\t\t{column.EntityName} = Unknown cast");
-
-							break;
-						}
+					case NpgsqlDbType.Time:
+						EmitPostgresIntervalValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Time:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder("new TimeSpan[] {");
-							bool first = true;
-
-							foreach (var dt in value.Value<JArray>())
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								if (dt.Type == JTokenType.TimeSpan)
-								{
-									var x = dt.Value<TimeSpan>().ToString("hh':'mm':'ss");
-									builder.Append($"TimeSpan.Parse(\"{x}\")");
-								}
-								else if (dt.Type == JTokenType.String)
-								{
-									var dt2 = TimeSpan.Parse(dt.Value<string>());
-									var x = dt2.ToString("hh':'mm':'ss");
-									builder.Append($"TimeSpan.Parse(\"{x}\")");
-								}
-								else
-									builder.Append("Unknown cast");
-							}
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							return;
-						}
-
 					case NpgsqlDbType.Array | NpgsqlDbType.Interval:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder("new TimeSpan[] {");
-							bool first = true;
-
-							foreach (var dt in value.Value<JArray>())
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								if (dt.Type == JTokenType.TimeSpan)
-								{
-									var x = dt.Value<TimeSpan>().ToString("hh':'mm':'ss");
-									builder.Append($"TimeSpan.Parse(\"{x}\")");
-								}
-								else if (dt.Type == JTokenType.String)
-								{
-									var dt2 = TimeSpan.Parse(dt.Value<string>());
-									var x = dt2.ToString("hh':'mm':'ss");
-									builder.Append($"TimeSpan.Parse(\"{x}\")");
-								}
-								else
-									throw new Exception($"Unrecognized type {value.Type}");
-							}
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							return;
-						}
+						EmitPostgresIntervalArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Timestamp:
 					case NpgsqlDbType.TimestampTz:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							if (value.Type == JTokenType.Date)
-							{
-								var x = value.Value<DateTime>().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK");
-								results.Append($"\t\t\t\t{column.EntityName} = DateTime.Parse(\"{x}\")");
-							}
-							else if (value.Type == JTokenType.String)
-							{
-								var dt = DateTime.Parse(value.Value<string>());
-								var x = dt.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK");
-								results.Append($"\t\t\t\t{column.EntityName} = DateTime.Parse(\"{x}\")");
-							}
-							else
-								results.Append($"\t\t\t\t{column.EntityName} = Unknown cast");
-
-							break;
-						}
+						EmitPostgresTimestampValue(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Timestamp:
 					case NpgsqlDbType.Array | NpgsqlDbType.TimestampTz:
-						{
-							var value = ExampleValue[column.ColumnName];
-
-							if (column.IsNullable)
-							{
-								if (value == null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-								else if (value.Type == JTokenType.Null)
-								{
-									results.Append($"\t\t\t\t{column.EntityName} = null");
-									return;
-								}
-							}
-
-							var builder = new StringBuilder("new DateTime[] {");
-							bool first = true;
-
-							foreach (var dt in value.Value<JArray>())
-							{
-								if (first)
-									first = false;
-								else
-									builder.Append(", ");
-
-								if (dt.Type == JTokenType.Date)
-								{
-									var x = dt.Value<DateTime>().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK");
-									builder.Append($"DateTime.Parse(\"{x}\")");
-								}
-								else if (dt.Type == JTokenType.String)
-								{
-									var dt2 = DateTime.Parse(dt.Value<string>());
-									var x = dt2.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK");
-									builder.Append($"DateTime.Parse(\"{x}\")");
-								}
-								else
-									throw new Exception($"Unrecognized type {value.Type}");
-							}
-							builder.Append("}");
-
-							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
-							return;
-						}
+						EmitPostgresTimestampArray(column, parentclass, ExampleValue, results, classfiles);
+						break;
 
 					case NpgsqlDbType.TimeTz:
 						EmitPostgresTimeTzValue(column, parentclass, ExampleValue, results, classfiles);
@@ -4565,7 +3299,7 @@ select a.attname as columnname,
 						break;
 
 					default:
-						if ( parentclass.ElementType == ElementType.Table)	
+						if (parentclass.ElementType == ElementType.Table)
 							results.Append($"\t\t\t\t{column.EntityName} = Unknown");
 						else
 							results.Append($"\t\t\t\t{column.ColumnName} = Unknown");
@@ -4575,6 +3309,1105 @@ select a.attname as columnname,
 			catch (Exception error)
 			{
 				throw error;
+			}
+		}
+
+		private void EmitPostgresTimestampValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()))))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else if (value.Type == JTokenType.Date)
+			{
+				var x = value.Value<DateTime>().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = DateTime.Parse(\"{x}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} DateTime.Parse(\"{x}\")");
+			}
+			else if (value.Type == JTokenType.String)
+			{
+				var dt = DateTime.Parse(value.Value<string>());
+				var x = dt.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = DateTime.Parse(\"{x}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = DateTime.Parse(\"{x}\")");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = Unknown cast");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = Unknown cast");
+			}
+		}
+
+		private void EmitPostgresTimestampArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder("new DateTime[] {");
+				bool first = true;
+
+				foreach (var dt in value.Value<JArray>())
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					if (dt.Type == JTokenType.Date)
+					{
+						var x = dt.Value<DateTime>().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK");
+						builder.Append($"DateTime.Parse(\"{x}\")");
+					}
+					else if (dt.Type == JTokenType.String)
+					{
+						var dt2 = DateTime.Parse(dt.Value<string>());
+						var x = dt2.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK");
+						builder.Append($"DateTime.Parse(\"{x}\")");
+					}
+					else
+						throw new Exception($"Unrecognized type {value.Type}");
+				}
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+		}
+
+		private void EmitPostgresIntervalValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()))))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else if (value.Type == JTokenType.TimeSpan)
+			{
+				var x = value.Value<TimeSpan>().ToString();
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = TimeSpan.Parse(\"{x}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = TimeSpan.Parse(\"{x}\")");
+			}
+			else if (value.Type == JTokenType.String)
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = TimeSpan.Parse(\"{value.Value<string>()}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = TimeSpan.Parse(\"{value.Value<string>()}\")");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = Unknown cast");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = Unknown cast");
+			}
+		}
+
+		private void EmitPostgresIntervalArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder("new TimeSpan[] {");
+				bool first = true;
+
+				foreach (var dt in value.Value<JArray>())
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					if (dt.Type == JTokenType.TimeSpan)
+					{
+						var x = dt.Value<TimeSpan>().ToString("hh':'mm':'ss");
+						builder.Append($"TimeSpan.Parse(\"{x}\")");
+					}
+					else if (dt.Type == JTokenType.String)
+					{
+						var dt2 = TimeSpan.Parse(dt.Value<string>());
+						var x = dt2.ToString("hh':'mm':'ss");
+						builder.Append($"TimeSpan.Parse(\"{x}\")");
+					}
+					else
+						builder.Append("Unknown cast");
+				}
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+		}
+
+		private void EmitPostgresDateValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()))))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else if (value.Type == JTokenType.Date)
+			{
+				var x = value.Value<DateTime>().ToString("yyyy'-'MM'-'dd");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = DateTime.Parse(\"{x}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = DateTime.Parse(\"{x}\")");
+			}
+			else if (value.Type == JTokenType.String)
+			{
+				var dt = DateTime.Parse(value.Value<string>());
+				var x = dt.ToString("yyyy'-'MM'-'dd");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = DateTime.Parse(\"{x}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = DateTime.Parse(\"{x}\")");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = Unknown cast");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = Unknown cast");
+			}
+		}
+
+		private void EmitPostgresDateArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder("new DateTime[] {");
+				bool first = true;
+
+				foreach (var dt in value.Value<JArray>())
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					if (dt.Type == JTokenType.Date)
+					{
+						var x = dt.Value<DateTime>().ToString("yyyy'-'MM'-'dd");
+						builder.Append($"DateTime.Parse(\"{x}\")");
+					}
+					else if (dt.Type == JTokenType.String)
+					{
+						var dt2 = DateTime.Parse(dt.Value<string>());
+						var x = dt2.ToString("yyyy'-'MM'-'dd");
+						builder.Append($"DateTime.Parse(\"{x}\")");
+					}
+					else
+						throw new Exception($"Unrecognized type {value.Type}");
+				}
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+		}
+
+		private void EmitPostgresCharValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()))))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else if (column.Length == 1)
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = '{value.Value<string>()}'");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = '{value.Value<string>()}'");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = \"{value.Value<string>()}\"");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = \"{value.Value<string>()}\"");
+			}
+		}
+
+		private void EmitPostgresNameValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()))))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else if (string.Equals(column.dbDataType, "_name", StringComparison.OrdinalIgnoreCase))
+			{
+				var builder = new StringBuilder("new string[] {");
+				bool first = true;
+
+				foreach (var str in value.Value<JArray>())
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					builder.Append($"\"{str.Value<string>()}\"");
+				}
+
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = \"{value.Value<string>()}\"");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = \"{value.Value<string>()}\"");
+			}
+		}
+
+		private void EmitPostgresTextValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || 
+				                      value.Type == JTokenType.Null || 
+									  ( value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()) ) 
+			   ))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				if (value.Type == JTokenType.String)
+				{
+					var str = value.Value<string>().Replace("\"", "\\\"");
+
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = \"{str}\"");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = \"{str}\"");
+				}
+				else
+                {
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = Unknown cast");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = Unknown cast");
+				}
+			}
+		}
+
+		private void EmitPostgresTextArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder("new string[] {");
+				bool first = true;
+
+				foreach (var str in value.Value<JArray>())
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					var xmlstring = str.Value<string>();
+					xmlstring = xmlstring.Replace("\"", "\\\"");
+
+					builder.Append($"\"{xmlstring}\"");
+				}
+
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+		}
+
+		private void EmitPostgresBoolValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()))))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var strval = value.Value<bool>() ? "true" : "false";
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {strval}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {strval}");
+			}
+		}
+
+		private void EmitPostgresBoolArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				if (value.Type == JTokenType.String)
+				{
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+				}
+				else
+				{
+					var strValue = new StringBuilder();
+
+					foreach (bool bVal in value.Value<JArray>())
+					{
+						strValue.Append(bVal ? "1" : "0");
+					}
+
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{strValue.ToString()}\")");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = BitArrayExt.Parse(\"{strValue.ToString()}\")");
+				}
+			}
+		}
+
+		private void EmitPostgresMacAddrValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()))))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = PhysicalAddress.Parse(\"{value.Value<string>()}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = PhysicalAddress.Parse(\"{value.Value<string>()}\")");
+			}
+		}
+
+		private void EmitPostgresMacAddrArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder("new PhysicalAddress[] {");
+				var array = value.Value<JArray>();
+
+				bool first = true;
+
+				foreach (var group in array)
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					builder.Append($"PhysicalAddress.Parse(\"{group.Value<string>()}\")");
+				}
+
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+		}
+
+		private void EmitPostgresCidrValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()))))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var ipAddress = value["IPAddress"].Value<string>();
+				var filter = Convert.ToInt32(value["Filter"].Value<string>());
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = new ValueTuple<IPAddress,int>(IPAddress.Parse(\"{ipAddress}\"), {filter})");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = new ValueTuple<IPAddress,int>(IPAddress.Parse(\"{ipAddress}\"), {filter})");
+			}
+		}
+
+		private void EmitPostgresCidrArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder("new ValueTuple<IPAddress,int>[] {");
+				var array = value.Value<JArray>();
+
+				bool first = true;
+
+				foreach (var group in array)
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					var ipAddress = group["IPAddress"].Value<string>();
+					var filter = Convert.ToInt32(group["Filter"].Value<string>());
+
+					builder.Append($"new ValueTuple<IPAddress,int>(IPAddress.Parse(\"{ipAddress}\"), {filter})");
+				}
+
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+		}
+
+		private void EmitPostgresInetValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()))))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = IPAddress.Parse(\"{value.Value<string>()}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = IPAddress.Parse(\"{value.Value<string>()}\")");
+			}
+		}
+
+		private void EmitPostgresInetArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder("new IPAddress[] {");
+				var array = value.Value<JArray>();
+
+				bool first = true;
+
+				foreach (var group in array)
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					builder.Append($"IPAddress.Parse(\"{group.Value<string>()}\")");
+				}
+
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+		}
+
+		private void EmitPostgresByteaValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Object && value.Value<JObject>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = Convert.FromBase64String(\"{Convert.ToBase64String(value.Value<byte[]>())}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = Convert.FromBase64String(\"{Convert.ToBase64String(value.Value<byte[]>())}\")");
+			}
+		}
+
+		private void EmitPostgresByteaArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder("new byte[][] {");
+				var array = value.Value<JArray>();
+
+				bool first = true;
+
+				foreach (var group in array)
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					builder.Append($"Convert.FromBase64String(\"{Convert.ToBase64String(group.Value<byte[]>())}\")");
+				}
+
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+		}
+
+		private void EmitPostgresBitValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Object && value.Value<JObject>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else if (column.Length == 1)
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {value.Value<bool>().ToString().ToLower()}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {value.Value<bool>().ToString().ToLower()}");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+			}
+		}
+
+		private void EmitPostgresBitArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else if (value.Type == JTokenType.String)
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+			}
+			else if (value.Type == JTokenType.Boolean)
+			{
+				var strval = value.Value<bool>() ? "true" : "false";
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {strval}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {strval}");
+			}
+			else if (value.Type == JTokenType.Array)
+			{
+				var array = value.Value<JArray>();
+
+				if (array.Count == 0)
+				{
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = null");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = null");
+				}
+				else
+				{
+
+					var childElement = array[0];
+
+					if (childElement.Type == JTokenType.Boolean)
+					{
+						var sresult = new StringBuilder();
+						foreach (bool bVal in array)
+						{
+							sresult.Append(bVal ? "1" : "0");
+						}
+
+						if (parentClass.ElementType == ElementType.Table)
+							results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{sresult.ToString()}\")");
+						else
+							results.Append($"\t\t\t\t{column.ColumnName} = BitArrayExt.Parse(\"{sresult.ToString()}\")");
+					}
+					else
+					{
+						var builder = new StringBuilder();
+						var answer = value.Value<JArray>();
+
+						builder.Append("new BitArray[] {");
+						bool firstGroup = true;
+
+						foreach (var group in answer)
+						{
+							if (firstGroup)
+								firstGroup = false;
+							else
+								builder.Append(", ");
+
+							if (group.Type == JTokenType.String)
+							{
+								builder.Append($"BitArrayExt.Parse(\"{group.Value<string>()}\")");
+							}
+							else
+							{
+								var strValue = new StringBuilder();
+
+								foreach (bool bVal in group)
+								{
+									strValue.Append(bVal ? "1" : "0");
+								}
+
+								builder.Append($"BitArrayExt.Parse(\"{strValue.ToString()}\")");
+							}
+						}
+
+						builder.Append("}");
+
+						if (parentClass.ElementType == ElementType.Table)
+							results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+						else
+							results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+					}
+				}
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = Unknown");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = Unknown");
+			}
+		}
+
+		private void EmitPostgresVarbitValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Object && value.Value<JObject>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else if (value.Type == JTokenType.String)
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+			}
+			else if (value.Type == JTokenType.Boolean)
+			{
+				var strval = value.Value<bool>() ? "true" : "false";
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {strval}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {strval}");
+			}
+			else if (value.Type == JTokenType.Array)
+			{
+				if (column.Length == 1)
+				{
+					var strval = value.Value<JArray>()[0].Value<bool>() ? "true" : "false";
+
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = {strval}");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = {strval}");
+				}
+				else
+				{
+					var strVal = new StringBuilder();
+					foreach (bool bVal in value.Value<JArray>())
+					{
+						strVal.Append(bVal ? "1" : "0");
+					}
+
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+				}
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = Unknown(Varbit)");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = Unknown(Varbit)");
+			}
+		}
+
+		private void EmitPostgresVarbitArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else if (value.Type == JTokenType.String)
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = BitArrayExt.Parse(\"{value.Value<string>()}\")");
+			}
+			else if (value.Type == JTokenType.Boolean)
+			{
+				var strval = value.Value<bool>() ? "true" : "false";
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {strval}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {strval}");
+			}
+			else if (value.Type == JTokenType.Array)
+			{
+				var array = value.Value<JArray>();
+
+				if (array.Count == 0)
+				{
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = null");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = null");
+				}
+
+				var childElement = array[0];
+
+				if (childElement.Type == JTokenType.Boolean)
+				{
+					var sresult = new StringBuilder();
+					foreach (bool bVal in array)
+					{
+						sresult.Append(bVal ? "1" : "0");
+					}
+
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = BitArrayExt.Parse(\"{sresult.ToString()}\")");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = BitArrayExt.Parse(\"{sresult.ToString()}\")");
+				}
+				else
+				{
+					var builder = new StringBuilder();
+					var answer = value.Value<JArray>();
+
+					builder.Append("new BitArray[] {");
+					bool firstGroup = true;
+
+					foreach (var group in answer)
+					{
+						if (firstGroup)
+							firstGroup = false;
+						else
+							builder.Append(", ");
+
+						if (group.Type == JTokenType.String)
+						{
+							builder.Append($"BitArrayExt.Parse(\"{group.Value<string>()}\")");
+						}
+						else
+						{
+							var strValue = new StringBuilder();
+
+							foreach (bool bVal in group)
+							{
+								strValue.Append(bVal ? "1" : "0");
+							}
+
+							builder.Append($"BitArrayExt.Parse(\"{strValue.ToString()}\")");
+						}
+					}
+
+					builder.Append("}");
+					if (parentClass.ElementType == ElementType.Table)
+						results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+					else
+						results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+				}
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = Unknown");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = Unknown");
+			}
+		}
+
+		private void EmitPostgresJsonValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Object && value.Value<JObject>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var str = value.Value<string>();
+				str = str.Replace("\"", "\\\"");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = \"{str}\"");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = \"{str}\"");
+			}
+		}
+
+		private void EmitPostgresJsonArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder();
+				builder.Append("new string[] {");
+				bool first = true;
+				foreach (var charValue in value.Value<JArray>())
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					var str = charValue.Value<string>();
+					str = str.Replace("\"", "\\\"");
+
+					builder.Append($"\"{str}\"");
+				}
+
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
+			}
+		}
+
+		private void EmitPostgresGuidValue(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Object && value.Value<JObject>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = Guid.Parse(\"{value.Value<Guid>()}\")");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = Guid.Parse(\"{value.Value<Guid>()}\")");
+			}
+		}
+
+		private void EmitPostgresGuidArray(DBColumn column, EntityDetailClassFile parentClass, JObject ExampleValue, StringBuilder results, List<EntityDetailClassFile> classfiles)
+		{
+			var value = ExampleValue[column.ColumnName];
+
+			if (column.IsNullable && (value == null || value.Type == JTokenType.Null || (value.Type == JTokenType.Array && value.Value<JArray>() == null)))
+			{
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = null");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = null");
+			}
+			else
+			{
+				var builder = new StringBuilder();
+				builder.Append("new Guid[] {");
+				bool first = true;
+				foreach (var charValue in value.Value<JArray>())
+				{
+					if (first)
+						first = false;
+					else
+						builder.Append(", ");
+
+					builder.Append($"Guid.Parse(\"{charValue.Value<Guid>()}\")");
+				}
+
+				builder.Append("}");
+
+				if (parentClass.ElementType == ElementType.Table)
+					results.Append($"\t\t\t\t{column.EntityName} = {builder}");
+				else
+					results.Append($"\t\t\t\t{column.ColumnName} = {builder}");
 			}
 		}
 
@@ -5612,6 +5445,7 @@ select a.attname as columnname,
 				results.Append($"\t\t\t\t}}");
 			}
 		}
+		#endregion
 
 		private bool EmitEntiyMemeberSetting(List<DBColumn> Columns, EntityDetailClassFile parentClass, string schema, string connectionString, string solutionFolder, JObject Example, StringBuilder results, bool first, ClassMember member, List<EntityDetailClassFile> classFiles)
 		{
