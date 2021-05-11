@@ -1,4 +1,6 @@
 ﻿using EnvDTE;
+using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TemplateWizard;
 using Newtonsoft.Json.Linq;
 using System;
@@ -10,13 +12,13 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using VSLangProj;
 
 namespace COFRSCoreInstaller
 {
 	public class FullStackControllerWizard : IWizard
 	{
 		private bool Proceed = false;
-		private string SolutionFolder { get; set; }
 
 		// This method is called before opening any item that
 		// has the OpenInEditor attribute.
@@ -44,44 +46,40 @@ namespace COFRSCoreInstaller
 			Dictionary<string, string> replacementsDictionary,
 			WizardRunKind runKind, object[] customParams)
 		{
-			try
-			{
-				var solutionDirectory = replacementsDictionary["$solutiondirectory$"];
-				var rootNamespace = replacementsDictionary["$rootnamespace$"];
-				var computedRootNamespace = Utilities.GetRootNamespace(solutionDirectory);
+            ThreadHelper.ThrowIfNotOnUIThread();
+			ProgressDialog progressDialog = null;
 
-				if (!string.Equals(rootNamespace, computedRootNamespace, StringComparison.OrdinalIgnoreCase))
+            try
+			{
+				DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
+
+				//	Full stack must start at the root namespace. Insure that we do...
+				if (!Utilities.IsRootNamespace(_appObject.Solution, replacementsDictionary["$rootnamespace$"]))
 				{
 					MessageBox.Show("The COFRS Controller Full Stack should be placed at the project root. It will add the appropriate components in the appropriate folders.", "Placement Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 					Proceed = false;
 					return;
 				}
 
-				var namespaceParts = rootNamespace.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+				//	Show the user that we are busy doing things...
+				var parent = new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd);
+
+				progressDialog = new ProgressDialog("Loading classes and preparing project...");
+				progressDialog.Show(parent);
+
+				HandleMessages();
+
+				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+
+				//	Get folders and namespaces
 				var candidateName = replacementsDictionary["$safeitemname$"];
 
 				if (candidateName.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
 					candidateName = candidateName.Substring(0, candidateName.Length - 10);
 
 				var resourceName = new NameNormalizer(candidateName);
-				var filePath = solutionDirectory;
 
-				for (int i = 0; i < namespaceParts.Length; i++)
-				{
-					if (i == 0)
-					{
-						var candidate = Path.Combine(filePath, namespaceParts[i]);
-
-						if (Directory.Exists(candidate))
-							filePath = candidate;
-					}
-					else
-						filePath = Path.Combine(filePath, namespaceParts[i]);
-				}
-
-				if (!Directory.Exists(filePath))
-					Directory.CreateDirectory(filePath);
-
+				var rootNamespace = replacementsDictionary["$rootnamespace$"];
 				replacementsDictionary["$entitynamespace$"] = $"{rootNamespace}.Models.EntityModels";
 				replacementsDictionary["$resourcenamespace$"] = $"{rootNamespace}.Models.ResourceModels";
 				replacementsDictionary["$orchestrationnamespace$"] = $"{rootNamespace}.Orchestration";
@@ -89,21 +87,41 @@ namespace COFRSCoreInstaller
 				replacementsDictionary["$validationnamespace$"] = $"{rootNamespace}.Validation";
 				replacementsDictionary["$singleexamplenamespace$"] = $"{rootNamespace}.Models.SwaggerExamples";
 
-				SolutionFolder = replacementsDictionary["$solutiondirectory$"];
+				//	Load class list
+
+				HandleMessages();
 
 				var form = new UserInputFullStack
 				{
-					SolutionFolder = replacementsDictionary["$solutiondirectory$"],
 					SingularResourceName = resourceName.SingleForm,
 					PluralResourceName = resourceName.PluralForm,
-					RootNamespace = rootNamespace
+					RootNamespace = rootNamespace,
+					ReplacementsDictionary = replacementsDictionary,
+					ClassList = Utilities.LoadEntityDetailClassList(_appObject.Solution),
+					EntityModelsFolder = Utilities.FindEntityModelsFolder(_appObject.Solution),
+					Policies = Utilities.LoadPolicies(_appObject.Solution),
+					DefaultConnectionString = Utilities.GetConnectionString(_appObject.Solution)
 				};
+
+				HandleMessages();
+
+				progressDialog.Close();
+				progressDialog = null;
+				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
+					//	Show the user that we are busy...
+					progressDialog = new ProgressDialog("Building classes...");
+					progressDialog.Show(parent);
+					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+
+					HandleMessages();
+
 					//	Replace the ConnectionString
 					var connectionString = form.ConnectionString;
-					ReplaceConnectionString(connectionString, replacementsDictionary);
+					Utilities.ReplaceConnectionString(_appObject.Solution, connectionString);
+					HandleMessages();
 
 					var entityClassName = $"E{form.SingularResourceName}";
 					var resourceClassName = form.SingularResourceName;
@@ -121,28 +139,54 @@ namespace COFRSCoreInstaller
 					replacementsDictionary["$validatorClass$"] = validationClassName;
 					replacementsDictionary["$controllerClass$"] = controllerClassName;
 
-					var moniker = LoadMoniker(SolutionFolder);
+					var moniker = Utilities.LoadMoniker(_appObject.Solution);
 					var policy = form.Policy;
+					HandleMessages();
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
 					replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
 
+					List<EntityDetailClassFile> composits = form.UndefinedClassList;
+					List<EntityDetailClassFile> ClassList = null;
 					var emitter = new Emitter();
+
+					if (form.IsPostgresql)
+					{
+						emitter.GenerateComposites(composits, connectionString, replacementsDictionary, form.ClassList);
+						HandleMessages();
+
+						foreach (var composite in composits)
+						{
+							var pj = (VSProject)_appObject.Solution.Projects.Item(1).Object;
+							pj.Project.ProjectItems.AddFromFile(composite.FileName);
+
+							Utilities.RegisterComposite(_appObject.Solution, composite);
+						}
+					}
 
 					//	Emit Entity Model
 					var entityModel = emitter.EmitEntityModel(form.DatabaseTable, entityClassName, form.DatabaseColumns, replacementsDictionary, connectionString);
 					replacementsDictionary.Add("$entityModel$", entityModel);
+					HandleMessages();
 
-					List<ClassMember> classMembers = LoadClassMembers(form.DatabaseTable, form.DatabaseColumns, connectionString);
+					List<ClassMember> classMembers = LoadClassMembers(form.DatabaseTable, form.DatabaseColumns, replacementsDictionary["$solutiondirectory$"], connectionString);
+
+					if (form.IsPostgresql)
+					{
+						ClassList = Utilities.LoadDetailEntityClassList(replacementsDictionary["$solutiondirectory$"], connectionString);
+						HandleMessages();
+					}
 
 					//	Emit Resource Model
 					var resourceModel = emitter.EmitResourceModel(classMembers, resourceClassName, entityClassName, form.DatabaseTable, form.DatabaseColumns, replacementsDictionary, connectionString);
 					replacementsDictionary.Add("$resourceModel$", resourceModel);
+					HandleMessages();
 
 					//	Emit Mapping Model
 					var mappingModel = emitter.EmitMappingModel(classMembers, resourceClassName, entityClassName, mappingClassName, form.DatabaseColumns, replacementsDictionary);
 					replacementsDictionary.Add("$mappingModel$", mappingModel);
+					HandleMessages();
 
 					//	Emit Example Model
 					var exampleModel = emitter.EmitExampleModel(
@@ -153,8 +197,9 @@ namespace COFRSCoreInstaller
 											resourceClassName,
 											exampleClassName,
 											form.DatabaseColumns, form.Examples, replacementsDictionary,
-											form.classList);
+											ClassList);
 					replacementsDictionary.Add("$exampleModel$", exampleModel);
+					HandleMessages();
 
 					var exampleCollectionModel = emitter.EmitExampleCollectionModel(
 						form.DatabaseTable.Schema,
@@ -164,17 +209,20 @@ namespace COFRSCoreInstaller
 						resourceClassName,
 						exampleCollectionClassName,
 						form.DatabaseColumns, form.Examples, replacementsDictionary,
-						form.classList);
+						ClassList);
 					replacementsDictionary.Add("$exampleCollectionModel$", exampleCollectionModel);
+					HandleMessages();
 
 					//	Emit Validation Model
 					var validationModel = emitter.EmitValidationModel(resourceClassName, validationClassName);
 					replacementsDictionary.Add("$validationModel$", validationModel);
+					HandleMessages();
 
 					//	Register the validation model
-					Proceed = emitter.UpdateServices(solutionDirectory, validationClassName,
-									replacementsDictionary["$entitynamespace$"], replacementsDictionary["$resourcenamespace$"],
-									replacementsDictionary["$validatornamespace$"]);
+
+					Utilities.RegisterValidationModel(_appObject.Solution,
+													  validationClassName,
+													  replacementsDictionary["$validatornamespace$"]);
 
 					//	Emit Controller
 					var controllerModel = emitter.EmitController(classMembers,
@@ -187,7 +235,11 @@ namespace COFRSCoreInstaller
 								   exampleCollectionClassName,
 								   policy);
 					replacementsDictionary.Add("$controllerModel$", controllerModel);
+					HandleMessages();
 
+					progressDialog.Close();
+					progressDialog = null;
+					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
 					Proceed = true;
 				}
@@ -196,6 +248,9 @@ namespace COFRSCoreInstaller
 			}
 			catch (Exception ex)
 			{
+				if (progressDialog != null)
+					progressDialog.Close();
+
 				MessageBox.Show(ex.ToString());
 				Proceed = false;
 			}
@@ -208,7 +263,7 @@ namespace COFRSCoreInstaller
 			return Proceed;
 		}
 
-		private List<ClassMember> LoadClassMembers(DBTable table, List<DBColumn> columns, string connectionString)
+		private List<ClassMember> LoadClassMembers(DBTable table, List<DBColumn> columns, string solutionFolder, string connectionString)
 		{
 			var members = new List<ClassMember>();
 
@@ -345,7 +400,7 @@ namespace COFRSCoreInstaller
 				}
 
 				if (column.ServerType == DBServerType.POSTGRESQL)
-					column.EntityType = DBHelper.GetPostgresDataType(table.Schema, column, connectionString, SolutionFolder);
+					column.EntityType = DBHelper.GetPostgresDataType(table.Schema, column, connectionString, solutionFolder);
 				else if (column.ServerType == DBServerType.MYSQL)
 					column.EntityType = DBHelper.GetMySqlDataType(column);
 				else if (column.ServerType == DBServerType.SQLSERVER)
@@ -533,5 +588,13 @@ namespace COFRSCoreInstaller
 
 			return string.Empty;
 		}
+
+		private void HandleMessages()
+		{
+            while (WinNative.PeekMessage(out WinNative.NativeMessage msg, IntPtr.Zero, 0, (uint)0xFFFFFFFF, 1) != 0)
+            {
+                WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
+            }
+        }
 	}
 }

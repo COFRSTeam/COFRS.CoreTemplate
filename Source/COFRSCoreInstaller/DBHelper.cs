@@ -4,8 +4,10 @@ using Npgsql;
 using NpgsqlTypes;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace COFRSCoreInstaller
@@ -972,7 +974,7 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Unknown:
 					{
-						var etype = GetElementType(schema, column.dbDataType, connectionString);
+						var etype = DBHelper.GetElementType(schema, column.dbDataType, null, connectionString);
 
 						if (etype == ElementType.Enum)
 						{
@@ -1463,7 +1465,7 @@ namespace COFRSCoreInstaller
 
 				case NpgsqlDbType.Unknown:
 					{
-						var etype = GetElementType(schema, column.dbDataType, connectionString);
+						var etype = GetElementType(schema, column.dbDataType, null, connectionString);
 
 						if (etype == ElementType.Enum)
 						{
@@ -1743,8 +1745,16 @@ namespace COFRSCoreInstaller
 		}
 
 		#region Postgrsql Helper Functions
-		public static ElementType GetElementType(string schema, string datatype, string connectionString)
+		public static ElementType GetElementType(string schema, string datatype, List<EntityDetailClassFile> ClassList, string connectionString)
 		{
+			if (ClassList != null)
+			{
+				var classFile = ClassList.FirstOrDefault(c => string.Equals(c.SchemaName, schema, StringComparison.OrdinalIgnoreCase) && string.Equals(c.TableName, datatype, StringComparison.OrdinalIgnoreCase));
+
+				if (classFile != null)
+					return classFile.ElementType;
+			}
+
 			string query = @"
 select t.typtype
   from pg_type as t 

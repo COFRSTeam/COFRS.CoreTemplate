@@ -57,7 +57,7 @@
     <None Include="Repository\IServiceRepository.cs" />
     <None Include="Repository\ServiceRepository.cs" />
     <None Include="Program.cs" />
-    <None Include="App_Start\ServiceConfig.cs" />
+    <None Include="App_Start\ServicesConfig.cs" />
     <None Include="App_Start\SwaggerConfig.cs" />
     <None Include="Controllers\HeartbeatController.cs" />
     <None Include="Orchestration\IServiceOrchestrator.cs" />
@@ -83,10 +83,11 @@
     <Content Include="COFRS.Common.xml" />
     <Content Include="COFRS.ico" />
     <Content Include="COFRS.xml" />
+    <Content Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.VSSDK.BuildTools">
-      <Version>16.8.3038</Version>
+      <Version>16.9.1050</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

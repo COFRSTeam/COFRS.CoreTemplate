@@ -5,6 +5,7 @@
         <DisplayName>COFRS (.NET Core)</DisplayName>
         <Description xml:space="preserve">Installs the various tools for creating COFRS REST Services using .NET Core</Description>
         <License>LICENSE.txt</License>
+        <GettingStartedGuide>StartupGuide.html</GettingStartedGuide>
         <Icon>COFRS.ico</Icon>
         <PreviewImage>preview.png</PreviewImage>
         <Tags>REST Service Web API COFRS </Tags>

@@ -22,12 +22,13 @@ namespace COFRSCoreInstaller
 		private bool Populating = false;
 		public DBTable DatabaseTable { get; set; }
 		public List<DBColumn> DatabaseColumns { get; set; }
-		public string SolutionFolder { get; set; }
-		public string RootNamespace { get; set; }
 		public string ConnectionString { get; set; }
+		public ProjectFolder EntityModelsFolder { get; set; }
 		public string DefaultConnectionString { get; set; }
-		public List<EntityClassFile> _entityClassList { get; set; }
-		public Dictionary<string, string> replacementsDictionary { get; set; }
+		public List<EntityDetailClassFile> ClassList { get; set; }
+		public Dictionary<string, string> ReplacementsDictionary { get; set; }
+		public List<EntityDetailClassFile> UndefinedClassList { get; set; }
+
 		#endregion
 
 		#region Utility functions
@@ -48,183 +49,9 @@ namespace COFRSCoreInstaller
 		{
 			_portNumber.Location = new Point(93, 60);
 			DatabaseColumns = new List<DBColumn>();
-			LoadAppSettings();
+			UndefinedClassList = new List<EntityDetailClassFile>();
 			ReadServerList();
-			_entityClassList = Utilities.LoadEntityClassList(SolutionFolder);
 		}
-
-		private void LoadEntityClassList(string folder)
-		{
-			foreach (var file in Directory.GetFiles(folder, "*.cs"))
-			{
-				LoadEntityClass(file);
-			}
-
-			foreach (var childFolder in Directory.GetDirectories(folder))
-			{
-				LoadEntityClassList(childFolder);
-			}
-		}
-
-		private void LoadEntityClass(string file)
-		{
-			var content = File.ReadAllText(file);
-
-			if (content.Contains("[Table"))
-			{
-				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-				var className = string.Empty;
-				var namespaceName = string.Empty;
-				var schemaName = string.Empty;
-				var tableName = string.Empty;
-
-				foreach (var line in data)
-				{
-					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-					if (match.Success)
-					{
-						className = match.Groups["className"].Value;
-						break;
-					}
-
-					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-					if (match.Success)
-						namespaceName = match.Groups["namespaceName"].Value;
-
-					// 	[Table("Products", Schema = "dbo")]
-					match = Regex.Match(line, "\\[[ \t]*Table[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
-
-					if (match.Success)
-					{
-						tableName = match.Groups["tableName"].Value;
-						schemaName = match.Groups["schemaName"].Value;
-					}
-				}
-
-				if (!string.IsNullOrWhiteSpace(tableName) &&
-					 !string.IsNullOrWhiteSpace(className) &&
-					 !string.IsNullOrWhiteSpace(namespaceName))
-				{
-					var classfile = new EntityClassFile
-					{
-						ClassName = $"{className}",
-						FileName = file,
-						TableName = tableName,
-						SchemaName = schemaName,
-						ClassNameSpace = namespaceName,
-						ElementType = ElementType.Table
-					};
-
-					_entityClassList.Add(classfile);
-				}
-			}
-			else if (content.Contains("[PgEnum"))
-			{
-				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-				var className = string.Empty;
-				var namespaceName = string.Empty;
-				var schemaName = string.Empty;
-				var tableName = string.Empty;
-
-				foreach (var line in data)
-				{
-					var match = Regex.Match(line, "enum[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-					if (match.Success)
-					{
-						className = match.Groups["className"].Value;
-						break;
-					}
-
-					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-					if (match.Success)
-						namespaceName = match.Groups["namespaceName"].Value;
-
-					// 	[Table("Products", Schema = "dbo")]
-					match = Regex.Match(line, "\\[[ \t]*PgEnum[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
-
-					if (match.Success)
-					{
-						tableName = match.Groups["tableName"].Value;
-						schemaName = match.Groups["schemaName"].Value;
-					}
-				}
-
-				if (!string.IsNullOrWhiteSpace(tableName) &&
-					 !string.IsNullOrWhiteSpace(className) &&
-					 !string.IsNullOrWhiteSpace(namespaceName))
-				{
-					var classfile = new EntityClassFile
-					{
-						ClassName = $"{className}",
-						FileName = file,
-						TableName = tableName,
-						SchemaName = schemaName,
-						ClassNameSpace = namespaceName,
-						ElementType = ElementType.Enum
-					};
-
-					_entityClassList.Add(classfile);
-				}
-			}
-			else if (content.Contains("[PgComposite"))
-			{
-				var data = content.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-				var className = string.Empty;
-				var namespaceName = string.Empty;
-				var schemaName = string.Empty;
-				var tableName = string.Empty;
-
-				foreach (var line in data)
-				{
-					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-					if (match.Success)
-					{
-						className = match.Groups["className"].Value;
-						break;
-					}
-
-					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-					if (match.Success)
-						namespaceName = match.Groups["namespaceName"].Value;
-
-					// 	[Table("Products", Schema = "dbo")]
-					match = Regex.Match(line, "\\[[ \t]*PgComposite[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
-
-					if (match.Success)
-					{
-						tableName = match.Groups["tableName"].Value;
-						schemaName = match.Groups["schemaName"].Value;
-					}
-				}
-
-				if (!string.IsNullOrWhiteSpace(tableName) &&
-					 !string.IsNullOrWhiteSpace(className) &&
-					 !string.IsNullOrWhiteSpace(namespaceName))
-				{
-					var classfile = new EntityClassFile
-					{
-						ClassName = $"{className}",
-						FileName = file,
-						TableName = tableName,
-						SchemaName = schemaName,
-						ClassNameSpace = namespaceName,
-						ElementType = ElementType.Composite
-					};
-
-					_entityClassList.Add(classfile);
-				}
-			}
-		}
-
 		#endregion
 
 		#region User interactions
@@ -519,113 +346,6 @@ select s.name, t.name
 			}
 		}
 
-		private string FindEntityModelsFolder(string folder)
-        {
-			if (string.Equals(Path.GetFileName(folder), "EntityModels", StringComparison.OrdinalIgnoreCase))
-				return folder;
-
-			foreach ( var childfolder in Directory.GetDirectories(folder) )
-            {
-				var result = FindEntityModelsFolder(childfolder);
-
-				if (!string.IsNullOrWhiteSpace(result))
-					return result;
-            }
-
-			return string.Empty;
-        }
-
-		private void GenerateEnumFromDatabase(string schema, string dataType, NpgsqlConnection connection)
-		{
-			var className = Utilities.NormalizeClassName(dataType);
-
-			var nn = new NameNormalizer(className);
-
-			var builder = new StringBuilder();
-			var destinationPath = FindEntityModelsFolder(SolutionFolder);
-			var fileName = Path.Combine(destinationPath, $"E{className}.cs");
-
-			builder.Clear();
-			builder.AppendLine("using COFRS;");
-			builder.AppendLine("using NpgsqlTypes;");
-			builder.AppendLine();
-			builder.AppendLine($"namespace {RootNamespace}");
-			builder.AppendLine("{");
-			builder.AppendLine("\t///\t<summary>");
-			builder.AppendLine($"\t///\tEnumerates a list of {nn.PluralForm}");
-			builder.AppendLine("\t///\t</summary>");
-
-			if (string.IsNullOrWhiteSpace(schema))
-				builder.AppendLine($"\t[PgEnum(\"{dataType}\")]");
-			else
-				builder.AppendLine($"\t[PgEnum(\"{dataType}\", Schema = \"{schema}\")]");
-
-			builder.AppendLine($"\tpublic enum E{className}");
-			builder.AppendLine("\t{");
-
-			string query = @"
-select e.enumlabel as enum_value
-from pg_type t 
-   join pg_enum e on t.oid = e.enumtypid  
-   join pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-where t.typname = @dataType
-  and n.nspname = @schema";
-
-			using (var command = new NpgsqlCommand(query, connection))
-			{
-				command.Parameters.AddWithValue("@dataType", dataType);
-				command.Parameters.AddWithValue("@schema", schema);
-
-				bool firstUse = true;
-
-				using (var reader = command.ExecuteReader())
-				{
-					while (reader.Read())
-					{
-						if (firstUse)
-							firstUse = false;
-						else
-						{
-							builder.AppendLine(",");
-							builder.AppendLine();
-						}
-
-						var element = reader.GetString(0);
-
-						builder.AppendLine("\t\t///\t<summary>");
-						builder.AppendLine($"\t\t///\t{element}");
-						builder.AppendLine("\t\t///\t</summary>");
-						builder.AppendLine($"\t\t[PgName(\"{element}\")]");
-
-						var elementName = Utilities.NormalizeClassName(element);
-						builder.Append($"\t\t{elementName}");
-					}
-				}
-			}
-
-			builder.AppendLine();
-			builder.AppendLine("\t}");
-			builder.AppendLine("}");
-
-			using (var stream = new FileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
-			{
-				var buffer = Encoding.UTF8.GetBytes(builder.ToString());
-				stream.Write(buffer, 0, buffer.Length);
-			}
-
-			OnSelectedTableChanged(this, new EventArgs());
-		}
-
-		private ElementType GetElementType(string Schema, string elementName, string connectionString)
-        {
-			var classFile = _entityClassList.FirstOrDefault(c => string.Equals(c.SchemaName, Schema, StringComparison.OrdinalIgnoreCase) && string.Equals(c.TableName, elementName, StringComparison.OrdinalIgnoreCase));
-
-			if (classFile != null)
-				return classFile.ElementType;
-
-			return DBHelper.GetElementType(Schema, elementName, connectionString);
-        }
-
 		private void OnSelectedTableChanged(object sender, EventArgs e)
 		{
 			_okButton.Enabled = true;
@@ -650,7 +370,8 @@ where t.typname = @dataType
 				{
 					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
 
-					var elementType = GetElementType(table.Schema, table.Table, connectionString);
+					UndefinedClassList.Clear();
+					var elementType = DBHelper.GetElementType(table.Schema, table.Table, ClassList, connectionString);
 
 					switch (elementType)
 					{
@@ -659,7 +380,6 @@ where t.typname = @dataType
 
 						case ElementType.Composite:
 							{
-								List<EntityClassFile> UnknownElementsList = new List<EntityClassFile>();
 								using (var connection = new NpgsqlConnection(connectionString))
 								{
 									connection.Open();
@@ -735,20 +455,22 @@ select a.attname as columnname,
 												}
 												catch (InvalidCastException)
 												{
-													var unknownClass = _entityClassList.FirstOrDefault(c =>
+													var unknownClass = ClassList.FirstOrDefault(c =>
 														string.Equals(c.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
 														string.Equals(c.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase));
 
 													if (unknownClass == null)
 													{
-														unknownClass = new EntityClassFile()
+														unknownClass = new EntityDetailClassFile()
 														{
 															SchemaName = table.Schema,
 															ClassName = Utilities.NormalizeClassName(reader.GetString(1)),
 															TableName = reader.GetString(1),
+															FileName = Path.Combine(EntityModelsFolder.Folder, Utilities.NormalizeClassName(reader.GetString(1))),
+															ClassNameSpace = EntityModelsFolder.Namespace
 														};
 
-														UnknownElementsList.Add(unknownClass);
+														UndefinedClassList.Add(unknownClass);
 													}
 												}
 
@@ -776,37 +498,98 @@ select a.attname as columnname,
 									}
 								}
 
-								foreach (var unknownClass in UnknownElementsList)
+								if (UndefinedClassList.Count > 0)
 								{
-									unknownClass.ElementType = GetElementType(unknownClass.SchemaName, unknownClass.TableName, connectionString);
+									var message = new StringBuilder();
+									message.Append($"The composite {table.Table} uses ");
 
-									if (unknownClass.ElementType == ElementType.Enum)
+									var unknownEnums = new List<string>();
+									var unknownComposits = new List<string>();
+									var unknownTables = new List<string>();
+
+									foreach (var unknownClass in UndefinedClassList)
 									{
-										var answer = MessageBox.Show($"The composite {table.Table} uses an enum type of {unknownClass.TableName}.\r\n\r\nNo enum class corresponding to {unknownClass.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {unknownClass.TableName}.\r\n\r\nWould you like to generate the {unknownClass.TableName} enum as part of generating this class?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-										if (answer == DialogResult.No)
-											_okButton.Enabled = false;
+										if (unknownClass.ElementType == ElementType.Enum)
+											unknownEnums.Add(unknownClass.TableName);
+										if (unknownClass.ElementType == ElementType.Composite)
+											unknownComposits.Add(unknownClass.TableName);
+										if (unknownClass.ElementType == ElementType.Table)
+											unknownTables.Add(unknownClass.TableName);
 									}
-									else if (unknownClass.ElementType == ElementType.Composite)
+
+									if (unknownEnums.Count > 0)
 									{
-										var answer = MessageBox.Show($"The composite {table.Table} uses a composite type of {unknownClass.TableName}.\r\n\r\nNo composite class corresponding to {unknownClass.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {unknownClass.TableName}.\r\n\r\nWould you like to generate the {unknownClass.TableName} composite as part of generating this class?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+										if (unknownEnums.Count > 1)
+											message.Append("enum types of ");
+										else
+											message.Append("an enum type of ");
 
-										if (answer == DialogResult.No)
-											_okButton.Enabled = false;
+										for (int index = 0; index < unknownEnums.Count(); index++)
+										{
+											if (index == unknownEnums.Count() - 1 && unknownEnums.Count > 1)
+												message.Append($" and {unknownEnums[index]}");
+											else if (index > 0)
+												message.Append($", {unknownEnums[index]}");
+											else if (index == 0)
+												message.Append(unknownEnums[index]);
+										}
 									}
-								}
 
-								if (_okButton.Enabled)
-								{
-									var emitter = new Emitter();
-									emitter.GenerateComposites(UnknownElementsList, connectionString, replacementsDictionary["$rootnamespace$"], replacementsDictionary, _entityClassList);
+									if (unknownComposits.Count > 0)
+									{
+										if (unknownEnums.Count > 0)
+											message.Append("and ");
+
+										if (unknownComposits.Count > 1)
+											message.Append("composite types of ");
+										else
+											message.Append("a composite type of ");
+
+										for (int index = 0; index < unknownComposits.Count(); index++)
+										{
+											if (index == unknownComposits.Count() - 1 && unknownComposits.Count > 1)
+												message.Append($" and {unknownComposits[index]}");
+											else if (index > 0)
+												message.Append($", {unknownComposits[index]}");
+											else if (index == 0)
+												message.Append(unknownComposits[index]);
+										}
+									}
+
+									if (unknownTables.Count > 0)
+									{
+										if (unknownEnums.Count > 0 || unknownComposits.Count > 0)
+											message.Append("and ");
+
+										if (unknownTables.Count > 1)
+											message.Append("table types of ");
+										else
+											message.Append("a table type of ");
+
+										for (int index = 0; index < unknownTables.Count(); index++)
+										{
+											if (index == unknownTables.Count() - 1 && unknownTables.Count > 1)
+												message.Append($" and {unknownTables[index]}");
+											else if (index > 0)
+												message.Append($", {unknownTables[index]}");
+											else if (index == 0)
+												message.Append(unknownTables[index]);
+										}
+									}
+
+									message.Append(".\r\n\r\n:You cannot generate this class until all the dependencies have been generated. Would you like to generate the undefined entities as part of generating this class?");
+
+									var answer = MessageBox.Show(message.ToString(), "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+									if (answer == DialogResult.No)
+										_okButton.Enabled = false;
 								}
 							}
 							break;
 
 						case ElementType.Table:
 							{
-								List<EntityClassFile> UnknownElementsList = new List<EntityClassFile>();
+								List<EntityDetailClassFile> UnknownElementsList = new List<EntityDetailClassFile>();
 								using (var connection = new NpgsqlConnection(connectionString))
 								{
 									connection.Open();
@@ -882,17 +665,19 @@ select a.attname as columnname,
 												}
 												catch (InvalidCastException)
 												{
-													var unknownClass = _entityClassList.FirstOrDefault(c =>
+													var unknownClass = ClassList.FirstOrDefault(c =>
 														string.Equals(c.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
 														string.Equals(c.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase));
 
 													if (unknownClass == null)
 													{
-														unknownClass = new EntityClassFile()
+														unknownClass = new EntityDetailClassFile()
 														{
 															SchemaName = table.Schema,
 															ClassName = Utilities.NormalizeClassName(reader.GetString(1)),
 															TableName = reader.GetString(1),
+															FileName = Path.Combine(EntityModelsFolder.Folder, Utilities.NormalizeClassName(reader.GetString(1))),
+															ClassNameSpace = EntityModelsFolder.Namespace
 														};
 
 														UnknownElementsList.Add(unknownClass);
@@ -922,35 +707,96 @@ select a.attname as columnname,
 										}
 									}
 
-									foreach (var unknownClass in UnknownElementsList)
+									if (UnknownElementsList.Count > 0)
 									{
-										unknownClass.ElementType = GetElementType(unknownClass.SchemaName, unknownClass.TableName, connectionString);
+										var message = new StringBuilder();
+										message.Append($"The composite {table.Table} uses ");
 
-										if (unknownClass.ElementType == ElementType.Enum)
+										var unknownEnums = new List<string>();
+										var unknownComposits = new List<string>();
+										var unknownTables = new List<string>();
+
+										foreach (var unknownClass in UnknownElementsList)
 										{
-											var answer = MessageBox.Show($"The composite {table.Table} uses an enum type of {unknownClass.TableName}.\r\n\r\nNo enum class corresponding to {unknownClass.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding enum definition for {unknownClass.TableName}.\r\n\r\nWould you like to generate the {unknownClass.TableName} enum as part of generating this class?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-											if (answer == DialogResult.No)
-												_okButton.Enabled = false;
+											if (unknownClass.ElementType == ElementType.Enum)
+												unknownEnums.Add(unknownClass.TableName);
+											if (unknownClass.ElementType == ElementType.Composite)
+												unknownComposits.Add(unknownClass.TableName);
+											if (unknownClass.ElementType == ElementType.Table)
+												unknownTables.Add(unknownClass.TableName);
 										}
-										else if (unknownClass.ElementType == ElementType.Composite)
+
+										if (unknownEnums.Count > 0)
 										{
-											var answer = MessageBox.Show($"The composite {table.Table} uses a composite type of {unknownClass.TableName}.\r\n\r\nNo composite class corresponding to {unknownClass.TableName} was found in your solution. An entity class for {table.Table} cannot be generated without a corresponding composite definition for {unknownClass.TableName}.\r\n\r\nWould you like to generate the {unknownClass.TableName} composite as part of generating this class?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+											if (unknownEnums.Count > 1)
+												message.Append("enum types of ");
+											else
+												message.Append("an enum type of ");
 
-											if (answer == DialogResult.No)
-												_okButton.Enabled = false;
+											for (int index = 0; index < unknownEnums.Count(); index++)
+											{
+												if (index == unknownEnums.Count() - 1 && unknownEnums.Count > 1)
+													message.Append($" and {unknownEnums[index]}");
+												else if (index > 0)
+													message.Append($", {unknownEnums[index]}");
+												else if (index == 0)
+													message.Append(unknownEnums[index]);
+											}
 										}
+
+										if (unknownComposits.Count > 0)
+										{
+											if (unknownEnums.Count > 0)
+												message.Append("and ");
+
+											if (unknownComposits.Count > 1)
+												message.Append("composite types of ");
+											else
+												message.Append("a composite type of ");
+
+											for (int index = 0; index < unknownComposits.Count(); index++)
+											{
+												if (index == unknownComposits.Count() - 1 && unknownComposits.Count > 1)
+													message.Append($" and {unknownComposits[index]}");
+												else if (index > 0)
+													message.Append($", {unknownComposits[index]}");
+												else if (index == 0)
+													message.Append(unknownComposits[index]);
+											}
+										}
+
+										if (unknownTables.Count > 0)
+										{
+											if (unknownEnums.Count > 0 || unknownComposits.Count > 0)
+												message.Append("and ");
+
+											if (unknownTables.Count > 1)
+												message.Append("table types of ");
+											else
+												message.Append("a table type of ");
+
+											for (int index = 0; index < unknownTables.Count(); index++)
+											{
+												if (index == unknownTables.Count() - 1 && unknownTables.Count > 1)
+													message.Append($" and {unknownTables[index]}");
+												else if (index > 0)
+													message.Append($", {unknownTables[index]}");
+												else if (index == 0)
+													message.Append(unknownTables[index]);
+											}
+										}
+
+										message.Append(".\r\n\r\n:You cannot generate this class until all the dependencies have been generated. Would you like to generate the undefined entities as part of generating this class?");
+
+										var answer = MessageBox.Show(message.ToString(), "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+										if (answer == DialogResult.No)
+											_okButton.Enabled = false;
 									}
-								}
-
-								if (_okButton.Enabled)
-								{
-									var emitter = new Emitter();
-									emitter.GenerateComposites(UnknownElementsList, connectionString, replacementsDictionary["$rootnamespace$"], replacementsDictionary, _entityClassList);
 								}
 							}
 							break;
-                    }
+					}
 				}
 				else if (server.DBType == DBServerType.MYSQL)
 				{
@@ -1367,14 +1213,23 @@ select c.name as column_name,
 
 		private void OnOK(object sender, EventArgs e)
 		{
-			if ( _tableList.SelectedIndex == -1 )
+			if (_tableList.SelectedIndex == -1)
 			{
 				MessageBox.Show("You must select a database table in order to create an entity model", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				return;
 			}
 
 			Save();
-			DatabaseTable = (DBTable) _tableList.SelectedItem;
+			DatabaseTable = (DBTable)_tableList.SelectedItem;
+
+			var server = (DBServer)_serverList.SelectedItem;
+			var db = (string)_dbList.SelectedItem;
+
+			if (server.DBType == DBServerType.POSTGRESQL)
+			{
+				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
+				UndefinedClassList = Utilities.LoadDetailEntityClassList(UndefinedClassList, ClassList, ReplacementsDictionary["$solutionDirectory$"], connectionString);
+			}
 
 			DialogResult = DialogResult.OK;
 			Close();
@@ -1485,7 +1340,7 @@ select c.name as column_name,
 		private void Save()
 		{
 			int index = 0;
-			var server = (DBServer) _serverList.SelectedItem;
+			var server = (DBServer)_serverList.SelectedItem;
 
 			if (server != null)
 			{
@@ -1984,40 +1839,6 @@ select name
 
 			//	We're done. Turn off the populating flag.
 			Populating = false;
-		}
-		private void LoadAppSettings()
-		{
-			LoadAppSettings(SolutionFolder);
-		}
-
-		private bool LoadAppSettings(string folder)
-		{
-			var files = Directory.GetFiles(folder, "appSettings.Local.json");
-
-			foreach (var file in files)
-			{
-				using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
-				{
-					using (var reader = new StreamReader(stream))
-					{
-						string content = reader.ReadToEnd();
-						var settings = JObject.Parse(content);
-						var connectionStrings = settings["ConnectionStrings"].Value<JObject>();
-						DefaultConnectionString = connectionStrings["DefaultConnection"].Value<string>();
-						return true;
-					}
-				}
-			}
-
-			var childFolders = Directory.GetDirectories(folder);
-
-			foreach (var childFolder in childFolders)
-			{
-				if (LoadAppSettings(childFolder))
-					return true;
-			}
-
-			return false;
 		}
 		#endregion
 	}

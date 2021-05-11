@@ -20,6 +20,7 @@
     <Project File="ProjectTemplate.csproj" TargetFileName="$safeprojectname$.csproj" ReplaceParameters="true">
       <ProjectItem>COFRS.xml</ProjectItem>
       <ProjectItem>COFRS.Common.xml</ProjectItem>
+      <ProjectItem ReplaceParameters="true" OpenInEditor="true">ReadMe.txt</ProjectItem>
       <ProjectItem ReplaceParameters="true">Startup.cs</ProjectItem>
       <ProjectItem ReplaceParameters="true">Program.cs</ProjectItem>
       <ProjectItem ReplaceParameters="true">appSettings.json</ProjectItem>
@@ -29,7 +30,7 @@
       <ProjectItem ReplaceParameters="true">appSettings.Staging.json</ProjectItem>
       <ProjectItem ReplaceParameters="true">appSettings.Production.json</ProjectItem>
       <Folder Name="App_Start">
-        <ProjectItem ReplaceParameters="true">ServiceConfig.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true">ServicesConfig.cs</ProjectItem>
         <ProjectItem ReplaceParameters="true">SwaggerConfig.cs</ProjectItem>
       </Folder>
       <Folder Name="Controllers">

@@ -324,7 +324,7 @@
             this._okButton.TabIndex = 21;
             this._okButton.Text = "OK";
             this._okButton.UseVisualStyleBackColor = true;
-            this._okButton.Click += new System.EventHandler(this.OnFInishDialog);
+            this._okButton.Click += new System.EventHandler(this.OnOK);
             // 
             // UserInputResource
             // 
