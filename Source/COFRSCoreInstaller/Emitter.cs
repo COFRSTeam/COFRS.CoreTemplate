@@ -514,7 +514,31 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t\t\t{");
 			var first = true;
 
-			var parentClass = classFiles.FirstOrDefault(c => string.Equals(c.ClassName, entityClassName, StringComparison.OrdinalIgnoreCase));
+			EntityDetailClassFile parentClass;
+
+			if (classFiles == null)
+			{
+				parentClass = new EntityDetailClassFile()
+				{
+					ClassName = resourceClassName,
+					SchemaName = schema,
+					TableName = entityClassName,
+					ElementType = ElementType.Table
+				};
+			}
+			else
+			{
+				parentClass = classFiles.FirstOrDefault(c => string.Equals(c.ClassName, entityClassName, StringComparison.OrdinalIgnoreCase));
+
+				if (parentClass == null)
+					parentClass = new EntityDetailClassFile()
+					{
+						ClassName = resourceClassName,
+						SchemaName = schema,
+						TableName = entityClassName,
+						ElementType = ElementType.Table
+					};
+			}
 
 			foreach (var member in classMembers)
 			{
@@ -614,7 +638,31 @@ namespace COFRSCoreInstaller
 			results.AppendLine("\t\t\t{");
 			var first = true;
 
-			var parentClass = classFiles.FirstOrDefault(c => string.Equals(c.ClassName, entityClassName, StringComparison.OrdinalIgnoreCase));
+			EntityDetailClassFile parentClass = null;
+
+			if (classFiles == null)
+			{
+				parentClass = new EntityDetailClassFile()
+				{
+					ClassName = resourceClassName,
+					SchemaName = schema,
+					TableName = entityClassName,
+					ElementType = ElementType.Table
+				};
+			}
+			else
+			{
+				parentClass = classFiles.FirstOrDefault(c => string.Equals(c.ClassName, entityClassName, StringComparison.OrdinalIgnoreCase));
+
+				if (parentClass == null)
+					parentClass = new EntityDetailClassFile()
+					{
+						ClassName = resourceClassName,
+						SchemaName = schema,
+						TableName = entityClassName,
+						ElementType = ElementType.Table
+					};
+			}
 
 			foreach (var member in classMembers)
 			{
@@ -711,7 +759,7 @@ where t.typname = @dataType
 			return builder.ToString();
 		}
 
-		public string EmitComposite(string schema, string dataType, string className, string connectionString, Dictionary<string, string> replacementsDictionary, List<EntityClassFile> definedElements, List<EntityClassFile> undefinedElements)
+		public string EmitComposite(string schema, string dataType, string className, string connectionString, Dictionary<string, string> replacementsDictionary, List<EntityDetailClassFile> definedElements, List<EntityDetailClassFile> undefinedElements)
 		{
 			var nn = new NameNormalizer(className);
 			var result = new StringBuilder();
@@ -783,7 +831,7 @@ select a.attname as columnname,
  order by a.attnum";
 
 			var columns = new List<DBColumn>();
-			var candidates = new List<EntityClassFile>();
+			var candidates = new List<EntityDetailClassFile>();
 
 			using (var connection = new NpgsqlConnection(connectionString))
 			{
@@ -805,11 +853,13 @@ select a.attname as columnname,
 							}
 							catch (InvalidCastException)
 							{
-								var classFile = new EntityClassFile()
+								var classFile = new EntityDetailClassFile()
 								{
 									ClassName = Utilities.NormalizeClassName(reader.GetString(1)),
 									SchemaName = schema,
-									TableName = reader.GetString(1)
+									TableName = reader.GetString(1),
+									ClassNameSpace = replacementsDictionary["$rootnamespace$"] + ".Models.EntityModels",
+									FileName = Path.Combine(Utilities.LoadBaseFolder(replacementsDictionary["$solutiondirectory$"]), $"Models\\EntityModels\\{Utilities.NormalizeClassName(reader.GetString(1))}.cs")
 								};
 
 								candidates.Add(classFile);
@@ -844,7 +894,7 @@ select a.attname as columnname,
 				if (definedElements.FirstOrDefault(c => string.Equals(c.SchemaName, candidate.SchemaName, StringComparison.OrdinalIgnoreCase) &&
 														string.Equals(c.TableName, candidate.TableName, StringComparison.OrdinalIgnoreCase)) == null)
 				{
-					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, connectionString);
+					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, definedElements, connectionString);
 					undefinedElements.Add(candidate);
 				}
 			}
@@ -2486,13 +2536,10 @@ select a.attname as columnname,
 					{
 						var value = ExampleValue[column.ColumnName];
 
-						if (column.IsNullable)
+						if ( value == null || string.IsNullOrWhiteSpace(value.Value<string>()))
 						{
-							if (value.Value<string>() == null)
-							{
-								results.Append($"\t\t\t\t{column.EntityName} = null");
-								return;
-							}
+							results.Append($"\t\t\t\t{column.EntityName} = null");
+							return;
 						}
 
 						results.Append($"\t\t\t\t{column.EntityName} = \"{value.Value<string>()}\"");
@@ -3067,7 +3114,7 @@ select a.attname as columnname,
 						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Polygon:
-						EmitPostgresPolygonValue(column, parentclass, ExampleValue, results, classfiles);
+						EmitPostgresPolygonArray(column, parentclass, ExampleValue, results, classfiles);
 						break;
 
 					case NpgsqlDbType.Circle:
@@ -5704,6 +5751,24 @@ select a.attname as columnname,
 			return string.Empty;
 		}
 
+		private string FindProjectFolder(string projectfile, string folder)
+        {
+			var files = Directory.GetFiles(folder, "*.csproj");
+
+			if (files.Contains<string>(Path.Combine(folder, projectfile)))
+				return folder;
+
+			foreach (var childfolder in Directory.GetDirectories(folder))
+			{
+				var result = FindProjectFolder(projectfile, childfolder);
+
+				if (!string.IsNullOrWhiteSpace(result))
+					return result;
+			}
+
+			return string.Empty;
+		}
+
 
 		/// <summary>
 		/// Generate undefined elements
@@ -5713,10 +5778,10 @@ select a.attname as columnname,
 		/// <param name="rootnamespace">The root namespace for the newly defined elements</param>
 		/// <param name="replacementsDictionary">The replacements dictionary</param>
 		/// <param name="definedElements">The lise of elements that are defined</param>
-		public void GenerateComposites(List<EntityClassFile> composites, string connectionString, string rootnamespace, Dictionary<string, string> replacementsDictionary, List<EntityClassFile> definedElements)
-        {
-			foreach ( var composite in composites )
-            {
+		public void GenerateComposites(List<EntityDetailClassFile> composites, string connectionString, Dictionary<string, string> replacementsDictionary, List<EntityDetailClassFile> definedElements)
+		{
+			foreach (var composite in composites)
+			{
 				if (composite.ElementType == ElementType.Enum)
 				{
 					var result = new StringBuilder();
@@ -5724,15 +5789,12 @@ select a.attname as columnname,
 					result.AppendLine("using COFRS;");
 					result.AppendLine("using NpgsqlTypes;");
 					result.AppendLine();
-					result.AppendLine($"namespace {rootnamespace}");
+					result.AppendLine($"namespace {composite.ClassNameSpace}");
 					result.AppendLine("{");
 					result.Append(EmitEnum(composite.SchemaName, composite.TableName, composite.ClassName, connectionString));
 					result.AppendLine("}");
 
-					var destinationFolder = FindEntityModelsFolder(replacementsDictionary["$solutiondirectory$"]);
-
-					var fileName = Path.Combine(destinationFolder, $"{composite.ClassName}.cs");
-					File.WriteAllText(fileName, result.ToString());
+					File.WriteAllText(composite.FileName, result.ToString());
 				}
 				else if (composite.ElementType == ElementType.Composite)
 				{
@@ -5742,12 +5804,12 @@ select a.attname as columnname,
 
 					while (!allElementsDefined)
 					{
-						var undefinedElements = new List<EntityClassFile>();
+						var undefinedElements = new List<EntityDetailClassFile>();
 						body = EmitComposite(composite.SchemaName, composite.TableName, composite.ClassName, connectionString, replacementsDictionary, definedElements, undefinedElements);
 
 						if (undefinedElements.Count > 0)
 						{
-							GenerateComposites(undefinedElements, connectionString, rootnamespace, replacementsDictionary, definedElements);
+							GenerateComposites(undefinedElements, connectionString, replacementsDictionary, definedElements);
 							definedElements.AddRange(undefinedElements);
 						}
 						else
@@ -5782,15 +5844,12 @@ select a.attname as columnname,
 					}
 
 					result.AppendLine();
-					result.AppendLine($"namespace {rootnamespace}");
+					result.AppendLine($"namespace {composite.ClassNameSpace}");
 					result.AppendLine("{");
 					result.Append(body);
 					result.AppendLine("}");
 
-					var destinationFolder = FindEntityModelsFolder(replacementsDictionary["$solutiondirectory$"]);
-
-					var fileName = Path.Combine(destinationFolder, $"{composite.ClassName}.cs");
-					File.WriteAllText(fileName, result.ToString());
+					File.WriteAllText(composite.FileName, result.ToString());
 				}
 			}
 		}

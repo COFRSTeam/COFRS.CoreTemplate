@@ -22,7 +22,7 @@ namespace COFRSCoreInstaller
 		public DBTable DatabaseTable { get; set; }
 		public List<DBColumn> DatabaseColumns { get; set; }
 		public string ConnectionString { get; set; }
-		public List<EntityClassFile> _entityClasses { get; set; }
+		public List<EntityDetailClassFile> _entityClasses { get; set; }
 		#endregion
 
 		#region Utility functions
@@ -41,11 +41,11 @@ namespace COFRSCoreInstaller
 
 			_entityClasses = Utilities.LoadEntityClassList(SolutionFolder);
 
-			foreach ( var classFile in _entityClasses)
-            {
+			foreach (var classFile in _entityClasses)
+			{
 				if (classFile.ElementType == ElementType.Table)
 					_entityClassList.Items.Add(classFile);
-            }
+			}
 
 			if (_entityClassList.Items.Count == 0)
 			{
@@ -352,7 +352,7 @@ select s.name, t.name
 
 				for (int i = 0; i < _entityClassList.Items.Count; i++)
 				{
-					var entity = (EntityClassFile) _entityClassList.Items[i];
+					var entity = (EntityClassFile)_entityClassList.Items[i];
 
 					if (string.Equals(entity.TableName, table.Table, StringComparison.OrdinalIgnoreCase))
 					{
@@ -363,7 +363,7 @@ select s.name, t.name
 					}
 				}
 
-				if ( !foundit )
+				if (!foundit)
 				{
 					_entityClassList.SelectedIndex = -1;
 					MessageBox.Show("No matching entity class found. You will not be able to create a resource model without a matching entity model.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -378,9 +378,9 @@ select s.name, t.name
 			}
 		}
 
-        private void PopulateColumnList(DBServer server, string db, DBTable table)
-        {
-            DatabaseColumns.Clear();
+		private void PopulateColumnList(DBServer server, string db, DBTable table)
+		{
+			DatabaseColumns.Clear();
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
@@ -449,11 +449,12 @@ select a.attname as columnname,
 
 									if (entityFile == null)
 									{
-										entityFile = new EntityClassFile()
+										entityFile = new EntityDetailClassFile()
 										{
 											SchemaName = table.Schema,
 											TableName = reader.GetString(1),
-											ClassName = Utilities.NormalizeClassName(reader.GetString(1))
+											ClassName = Utilities.NormalizeClassName(reader.GetString(1)),
+											FileName = Path.Combine(Utilities.LoadBaseFolder(SolutionFolder), $"Models\\EntityModels\\{Utilities.NormalizeClassName(reader.GetString(1))}.cs"),
 										};
 
 										_undefinedElements.Add(entityFile);
@@ -486,7 +487,7 @@ select a.attname as columnname,
 
 				foreach (var candidate in _undefinedElements)
 				{
-					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, ConnectionString);
+					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, null, ConnectionString);
 
 					if (candidate.ElementType == ElementType.Enum)
 					{
@@ -632,9 +633,9 @@ select c.name as column_name,
 					}
 				}
 			}
-        }
+		}
 
-        private void OnUserNameChanged(object sender, EventArgs e)
+		private void OnUserNameChanged(object sender, EventArgs e)
 		{
 			try
 			{
@@ -905,6 +906,22 @@ select c.name as column_name,
 			}
 		}
 
+		private void OnOK(object sender, EventArgs e)
+		{
+			Save();
+			DatabaseTable = (DBTable)_tableList.SelectedItem;
+			OnSelectedTableChanged(this, new EventArgs());
+
+			if (_entityClassList.SelectedIndex == -1)
+			{
+				MessageBox.Show("No corresponding entity class found.\r\n\r\nYou must first create an entity class that represents\r\nthe entity as it exists in the database, before you\r\ncan create a resource class.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			else
+			{
+				DialogResult = DialogResult.OK;
+				Close();
+			}
+		}
 		#endregion
 
 		#region Helper Functions
@@ -1397,22 +1414,5 @@ select name
 			}
 		}
 		#endregion
-
-		private void OnFInishDialog(object sender, EventArgs e)
-		{
-			Save();
-			DatabaseTable = (DBTable)_tableList.SelectedItem;
-			OnSelectedTableChanged(this, new EventArgs());
-
-			if (_entityClassList.SelectedIndex == -1)
-			{
-				MessageBox.Show("No corresponding entity class found.\r\n\r\nYou must first create an entity class that represents\r\nthe entity as it exists in the database, before you\r\ncan create a resource class.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-			else
-			{
-				DialogResult = DialogResult.OK;
-				Close();
-			}
-		}
 	}
 }

@@ -31,7 +31,7 @@ namespace COFRSCoreInstaller
 		public JObject Examples { get; set; }
 		public string DefaultConnectionString { get; set; }
 		public string ConnectionString { get; set; }
-		public List<EntityClassFile> _entityClasses { get; set; }
+		public List<EntityDetailClassFile> _entityClasses { get; set; }
 		public List<EntityDetailClassFile> classList { get; set; }
 
 		#endregion
@@ -388,56 +388,56 @@ select s.name, t.name
 		private void OnSelectedTableChanged(object sender, EventArgs e)
 		{
 			try
-            {
-                var server = (DBServer)_serverList.SelectedItem;
+			{
+				var server = (DBServer)_serverList.SelectedItem;
 
-                if (server == null)
-                {
-                    MessageBox.Show("You must select a Database server to create a new resource model. Please select a database server and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+				if (server == null)
+				{
+					MessageBox.Show("You must select a Database server to create a new resource model. Please select a database server and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					return;
+				}
 
-                var db = (string)_dbList.SelectedItem;
-                if (string.IsNullOrWhiteSpace(db))
-                {
-                    MessageBox.Show("You must select a Database to create a new resource model. Please select a database and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+				var db = (string)_dbList.SelectedItem;
+				if (string.IsNullOrWhiteSpace(db))
+				{
+					MessageBox.Show("You must select a Database to create a new resource model. Please select a database and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					return;
+				}
 
-                var table = (DBTable)_tableList.SelectedItem;
+				var table = (DBTable)_tableList.SelectedItem;
 
-                if (table == null)
-                {
-                    MessageBox.Show("You must select a Database table to create a new resource model. Please select a database table and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+				if (table == null)
+				{
+					MessageBox.Show("You must select a Database table to create a new resource model. Please select a database table and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					return;
+				}
 
-                Populating = true;
+				Populating = true;
 				bool foundit = false;
 
-                for (int i = 0; i < _entityModelList.Items.Count; i++)
-                {
-                    var entity = (EntityClassFile)_entityModelList.Items[i];
+				for (int i = 0; i < _entityModelList.Items.Count; i++)
+				{
+					var entity = (EntityClassFile)_entityModelList.Items[i];
 
-                    if (entity.TableName == table.Table)
-                    {
-                        _entityModelList.SelectedIndex = i;
+					if (entity.TableName == table.Table)
+					{
+						_entityModelList.SelectedIndex = i;
 
-                        for (int j = 0; j < _resourceModelList.Items.Count; j++)
-                        {
-                            var resource = (ResourceClassFile)_resourceModelList.Items[j];
+						for (int j = 0; j < _resourceModelList.Items.Count; j++)
+						{
+							var resource = (ResourceClassFile)_resourceModelList.Items[j];
 
-                            if (string.Equals(resource.EntityClass, entity.ClassName, StringComparison.OrdinalIgnoreCase))
-                            {
-                                _resourceModelList.SelectedIndex = j;
+							if (string.Equals(resource.EntityClass, entity.ClassName, StringComparison.OrdinalIgnoreCase))
+							{
+								_resourceModelList.SelectedIndex = j;
 								PopulateDatabaseColumns(server, db, table);
 								foundit = true;
 								break;
-                            }
-                        }
+							}
+						}
 						break;
-                    }
-                }
+					}
+				}
 
 				if (!foundit)
 				{
@@ -459,17 +459,17 @@ select s.name, t.name
 					}
 				}
 
-                Populating = false;
-            }
-            catch (Exception error)
+				Populating = false;
+			}
+			catch (Exception error)
 			{
 				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
-        private void PopulateDatabaseColumns(DBServer server, string db, DBTable table)
-        {
-            DatabaseColumns.Clear();
+		private void PopulateDatabaseColumns(DBServer server, string db, DBTable table)
+		{
+			DatabaseColumns.Clear();
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
@@ -538,7 +538,7 @@ select a.attname as columnname,
 
 									if (entityFile == null)
 									{
-										entityFile = new EntityClassFile()
+										entityFile = new EntityDetailClassFile()
 										{
 											SchemaName = table.Schema,
 											TableName = reader.GetString(1),
@@ -576,7 +576,7 @@ select a.attname as columnname,
 
 				foreach (var candidate in _undefinedElements)
 				{
-					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, ConnectionString);
+					candidate.ElementType = DBHelper.GetElementType(candidate.SchemaName, candidate.TableName, null, ConnectionString);
 
 					if (candidate.ElementType == ElementType.Enum)
 					{
@@ -734,9 +734,9 @@ select c.name as column_name,
 					}
 				}
 			}
-        }
+		}
 
-        private void OnUserNameChanged(object sender, EventArgs e)
+		private void OnUserNameChanged(object sender, EventArgs e)
 		{
 			try
 			{
@@ -1892,11 +1892,11 @@ select name
 		}
 
 		private int ReadComposite(NpgsqlDataReader reader, DBColumn column, int ordinal, List<EntityDetailClassFile> classList, JObject values)
-        {
+		{
 			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
 
-			foreach ( var member in cl.Columns)
-            {
+			foreach (var member in cl.Columns)
+			{
 				if ((NpgsqlDbType)member.DataType == NpgsqlDbType.Unknown)
 				{
 					var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, member.dbDataType, StringComparison.OrdinalIgnoreCase));
@@ -2004,10 +2004,10 @@ select name
 					}
 					ordinal++;
 				}
-            }
+			}
 
 			return ordinal;
-        }
+		}
 
 		private JObject ConstructExample()
 		{
@@ -2266,23 +2266,23 @@ select name
 			{
 				var columnName = column.ColumnName;
 
-				switch ((SqlDbType) column.DataType)
+				switch ((SqlDbType)column.DataType)
 				{
 					#region tinyint, smallint, int, bigint
 					case SqlDbType.TinyInt:
-							values.Add(columnName, JToken.FromObject((byte)1));
+						values.Add(columnName, JToken.FromObject((byte)1));
 						break;
 
 					case SqlDbType.SmallInt:
-							values.Add(columnName, JToken.FromObject((short)1));
+						values.Add(columnName, JToken.FromObject((short)1));
 						break;
 
 					case SqlDbType.Int:
-							values.Add(columnName, JToken.FromObject((int)1));
+						values.Add(columnName, JToken.FromObject((int)1));
 						break;
 
 					case SqlDbType.BigInt:
-							values.Add(columnName, JToken.FromObject((long)1));
+						values.Add(columnName, JToken.FromObject((long)1));
 						break;
 					#endregion
 
@@ -2294,7 +2294,7 @@ select name
 
 							if (column.Length > -1)
 								if (column.Length < answer.Length)
-									answer = answer.Substring(0, (int) column.Length);
+									answer = answer.Substring(0, (int)column.Length);
 
 							values.Add(columnName, JToken.FromObject(answer));
 						}
@@ -2332,7 +2332,7 @@ select name
 						break;
 
 					case SqlDbType.VarBinary:
-							values.Add(columnName, JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
+						values.Add(columnName, JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
 						break;
 					#endregion
 
@@ -2400,7 +2400,8 @@ select name
 					case SqlDbType.Timestamp: values.Add(columnName, JToken.FromObject(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 })); break;
 					case SqlDbType.UniqueIdentifier: values.Add(columnName, JToken.FromObject(Guid.NewGuid())); break;
 
-					default: values.Add(columnName, JToken.FromObject("Unrecognized")); 
+					default:
+						values.Add(columnName, JToken.FromObject("Unrecognized"));
 						break;
 				}
 			}
@@ -2414,7 +2415,7 @@ select name
 			{
 				var columnName = column.ColumnName;
 
-				switch ((MySqlDbType) column.DataType)
+				switch ((MySqlDbType)column.DataType)
 				{
 					#region tinyint, smallint, int, bigint
 					case MySqlDbType.Byte:
@@ -2478,7 +2479,7 @@ select name
 
 							if (column.Length > -1)
 								if (column.Length < answer.Length)
-									answer = answer.Substring(0, (int) column.Length);
+									answer = answer.Substring(0, (int)column.Length);
 
 							values.Add(columnName, JToken.FromObject(answer));
 						}
@@ -2549,7 +2550,7 @@ select name
 						if (column.Length == 1)
 							values.Add(columnName, JToken.FromObject(true));
 						else
-							values.Add(columnName, JToken.FromObject((ulong) 1));
+							values.Add(columnName, JToken.FromObject((ulong)1));
 						break;
 					#endregion
 
@@ -2585,7 +2586,8 @@ select name
 						break;
 					#endregion
 
-					default: values.Add(columnName, JToken.FromObject("Unrecognized")); 
+					default:
+						values.Add(columnName, JToken.FromObject("Unrecognized"));
 						break;
 				}
 			}
@@ -2700,7 +2702,7 @@ select name
 
 							if (column.Length > -1)
 								if (column.Length < answer.Length)
-									answer = answer.Substring(0, (int) column.Length);
+									answer = answer.Substring(0, (int)column.Length);
 
 							values.Add(columnName, JToken.FromObject(answer));
 						}
@@ -2713,7 +2715,7 @@ select name
 
 							if (column.Length > -1)
 								if (column.Length < answer.Length)
-									answer = answer.Substring(0, (int) column.Length);
+									answer = answer.Substring(0, (int)column.Length);
 
 							array.Add(new JValue(answer));
 
@@ -2721,7 +2723,7 @@ select name
 
 							if (column.Length > -1)
 								if (column.Length < answer.Length)
-									answer = answer.Substring(0, (int) column.Length);
+									answer = answer.Substring(0, (int)column.Length);
 
 							array.Add(new JValue(answer));
 
@@ -2729,7 +2731,7 @@ select name
 
 							if (column.Length > -1)
 								if (column.Length < answer.Length)
-									answer = answer.Substring(0, (int) column.Length);
+									answer = answer.Substring(0, (int)column.Length);
 
 							array.Add(new JValue(answer));
 
@@ -2892,7 +2894,7 @@ select name
 
 							if (column.Length > -1)
 								if (column.Length < answer.Length)
-									answer = answer.Substring(0, (int) column.Length);
+									answer = answer.Substring(0, (int)column.Length);
 
 							array.Add(new JValue(answer));
 
@@ -2900,7 +2902,7 @@ select name
 
 							if (column.Length > -1)
 								if (column.Length < answer.Length)
-									answer = answer.Substring(0, (int) column.Length);
+									answer = answer.Substring(0, (int)column.Length);
 
 							array.Add(new JValue(answer));
 
@@ -2908,7 +2910,7 @@ select name
 
 							if (column.Length > -1)
 								if (column.Length < answer.Length)
-									answer = answer.Substring(0, (int) column.Length);
+									answer = answer.Substring(0, (int)column.Length);
 
 							array.Add(new JValue(answer));
 
@@ -2941,7 +2943,7 @@ select name
 						break;
 
 					case NpgsqlDbType.Array | NpgsqlDbType.Timestamp:
-						values.Add(columnName, JToken.FromObject(new DateTime[] { DateTime.Now, DateTime.Now.AddDays(1), DateTime.Now.AddDays(2) } ));
+						values.Add(columnName, JToken.FromObject(new DateTime[] { DateTime.Now, DateTime.Now.AddDays(1), DateTime.Now.AddDays(2) }));
 						break;
 
 					case NpgsqlDbType.Time:
@@ -2977,7 +2979,7 @@ select name
 						break;
 					#endregion
 
-					default: 
+					default:
 						values.Add(columnName, JToken.FromObject("Unrecognized"));
 						break;
 				}
@@ -3013,8 +3015,8 @@ select name
 			return query.ToString();
 		}
 
-		private bool DeconstructComposite(string parent, DBColumn column, List<EntityDetailClassFile> classList, StringBuilder query, bool firstColumn )
-        {
+		private bool DeconstructComposite(string parent, DBColumn column, List<EntityDetailClassFile> classList, StringBuilder query, bool firstColumn)
+		{
 			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
 
 			if (cl != null)
@@ -3071,27 +3073,27 @@ select name
 					}
 				}
 				else
-                {
-                    firstColumn = AppendComma(query, firstColumn);
-                    query.Append($"\"{column.ColumnName}\"");
-                }
-            }
+				{
+					firstColumn = AppendComma(query, firstColumn);
+					query.Append($"\"{column.ColumnName}\"");
+				}
+			}
 
 			query.Append($" FROM \"{table.Schema}\".\"{table.Table}\" LIMIT 1");
 			return query.ToString();
 		}
 
-        private static bool AppendComma(StringBuilder query, bool firstColumn)
-        {
-            if (firstColumn)
-                firstColumn = false;
-            else
-                query.Append(", ");
+		private static bool AppendComma(StringBuilder query, bool firstColumn)
+		{
+			if (firstColumn)
+				firstColumn = false;
+			else
+				query.Append(", ");
 
-            return firstColumn;
-        }
+			return firstColumn;
+		}
 
-        private string GenerateMySQLQuery(DBTable table)
+		private string GenerateMySQLQuery(DBTable table)
 		{
 			var query = new StringBuilder("SELECT ");
 
