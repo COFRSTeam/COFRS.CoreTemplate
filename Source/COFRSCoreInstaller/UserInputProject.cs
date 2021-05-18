@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace COFRSCoreInstaller
+namespace COFRS.Template
 {
 	public partial class UserInputProject : Form
 	{

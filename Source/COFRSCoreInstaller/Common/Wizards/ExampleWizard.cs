@@ -1,19 +1,25 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.Models;
+using COFRS.Template.Common.ServiceUtilities;
 using EnvDTE;
+using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TemplateWizard;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json.Linq;
 using NpgsqlTypes;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Windows.Forms;
 
-namespace COFRS.Template
+namespace COFRS.Template.Common.Wizards
 {
 	public class ExamplesWizard : IWizard
 	{
@@ -43,42 +49,40 @@ namespace COFRS.Template
 
 		public void RunStarted(object automationObject,
 			Dictionary<string, string> replacementsDictionary,
-			WizardRunKind runKind, object[] customParams)
+			WizardRunKind runKind, 
+			object[] customParams)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
+
+			//	Show the user that we are busy doing things...
+			ProgressDialog progressDialog = new ProgressDialog("Loading classes and preparing project...");
+			progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
+			_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+
+			HandleMessages();
+
 			try
 			{
-				var solutionDirectory = replacementsDictionary["$solutiondirectory$"];
-				var rootNamespace = replacementsDictionary["$rootnamespace$"];
+				var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
+				HandleMessages();
 
-				var namespaceParts = rootNamespace.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-
-				var filePath = solutionDirectory;
-
-				for (int i = 0; i < namespaceParts.Length; i++)
-				{
-					if (i == 0)
-					{
-						var candidate = Path.Combine(filePath, namespaceParts[i]);
-
-						if (Directory.Exists(candidate))
-							filePath = candidate;
-					}
-					else
-						filePath = Path.Combine(filePath, namespaceParts[i]);
-				}
-
-				if (!Directory.Exists(filePath))
-					Directory.CreateDirectory(filePath);
+				var classList = StandardUtils.LoadClassList(programfiles);
+				HandleMessages();
 
 				var form = new UserInputGeneral()
 				{
-					SolutionFolder = replacementsDictionary["$solutiondirectory$"],
+					ClassList = classList,
 					InstallType = 4
 				};
 
+				HandleMessages();
+
+				progressDialog.Close();
+				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+
 				if (form.ShowDialog() == DialogResult.OK)
 				{
-					string connectionString = form.ConnectionString;
 					var entityClassFile = (EntityClassFile)form._entityModelList.SelectedItem;
 					var resourceClassFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
 
@@ -88,7 +92,7 @@ namespace COFRS.Template
 						entityClassFile,
 						resourceClassFile,
 						replacementsDictionary["$safeitemname$"],
-						form.Examples, 
+						form.Examples,
 						replacementsDictionary,
 						form.ClassList);
 
@@ -122,6 +126,14 @@ namespace COFRS.Template
 		public bool ShouldAddProjectItem(string filePath)
 		{
 			return Proceed;
+		}
+
+		private void HandleMessages()
+		{
+			while (WinNative.PeekMessage(out WinNative.NativeMessage msg, IntPtr.Zero, 0, (uint)0xFFFFFFFF, 1) != 0)
+			{
+				WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
+			}
 		}
 	}
 }

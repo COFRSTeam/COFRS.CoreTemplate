@@ -20,7 +20,7 @@
     <ProjectGuid>{3285505D-D23D-4F6D-A758-2C2C46019172}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>COFRSCoreInstaller</RootNamespace>
+    <RootNamespace>COFRS.Template</RootNamespace>
     <AssemblyName>COFRSCoreInstaller</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
@@ -52,35 +52,79 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AddConnection.cs">
+    <Compile Include="Common\Forms\AddConnection.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="AddConnection.Designer.cs">
+    <Compile Include="Common\Forms\AddConnection.Designer.cs">
       <DependentUpon>AddConnection.cs</DependentUpon>
     </Compile>
-    <Compile Include="ClassMember.cs" />
-    <Compile Include="ControllerWizard.cs" />
-    <Compile Include="Emitter.cs" />
-    <Compile Include="EntityDetailClassFile.cs" />
-    <Compile Include="EntityMember.cs" />
-    <Compile Include="FullStackControllerWizard.cs" />
-    <Compile Include="ElementType.cs" />
-    <Compile Include="ProfileClassFile.cs" />
-    <Compile Include="ProgressDialog.cs">
+    <Compile Include="Common\Forms\ProgressDialog.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="ProgressDialog.Designer.cs">
+    <Compile Include="Common\Forms\ProgressDialog.Designer.cs">
       <DependentUpon>ProgressDialog.cs</DependentUpon>
     </Compile>
-    <Compile Include="ProjectFolder.cs" />
-    <Compile Include="ProviderOptions.cs" />
-    <Compile Include="StringExtensions.cs" />
-    <Compile Include="UserInputFullStack.cs">
+    <Compile Include="Common\Forms\UserInputEntity.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="UserInputFullStack.Designer.cs">
+    <Compile Include="Common\Forms\UserInputEntity.Designer.cs">
+      <DependentUpon>UserInputEntity.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Common\Forms\UserInputFullStack.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Common\Forms\UserInputFullStack.Designer.cs">
       <DependentUpon>UserInputFullStack.cs</DependentUpon>
     </Compile>
+    <Compile Include="Common\Forms\UserInputGeneral.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Common\Forms\UserInputGeneral.Designer.cs">
+      <DependentUpon>UserInputGeneral.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Common\Forms\UserInputResource.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Common\Forms\UserInputResource.Designer.cs">
+      <DependentUpon>UserInputResource.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Common\Forms\UserInputValidation.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Common\Forms\UserInputValidation.Designer.cs">
+      <DependentUpon>UserInputValidation.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Common\Models\ClassFile.cs" />
+    <Compile Include="Common\Models\ClassMember.cs" />
+    <Compile Include="Common\Models\DBAuthentication.cs" />
+    <Compile Include="Common\Models\DBColumn.cs" />
+    <Compile Include="Common\Models\DBServer.cs" />
+    <Compile Include="Common\Models\DBServerType.cs" />
+    <Compile Include="Common\Models\DBTable.cs" />
+    <Compile Include="Common\Models\ElementType.cs" />
+    <Compile Include="Common\Models\EntityClassFile.cs" />
+    <Compile Include="Common\Models\MemberInfo.cs" />
+    <Compile Include="Common\Models\ProjectFolder.cs" />
+    <Compile Include="Common\Models\ResourceClassFile.cs" />
+    <Compile Include="Common\Models\ServerConfig.cs" />
+    <Compile Include="Common\Models\Snipit.cs" />
+    <Compile Include="Common\Models\SnipitType.cs" />
+    <Compile Include="Common\ServiceUtilities\DBHelper.cs" />
+    <Compile Include="Common\ServiceUtilities\NameNormalizer.cs" />
+    <Compile Include="Common\ServiceUtilities\StandardUtils.cs" />
+    <Compile Include="Common\ServiceUtilities\StandardEmitter.cs" />
+    <Compile Include="Common\ServiceUtilities\StringExtensions.cs" />
+    <Compile Include="Common\ServiceUtilities\WindowClass.cs" />
+    <Compile Include="Common\ServiceUtilities\WinNative.cs" />
+    <Compile Include="Common\Wizards\ControllerWizard.cs" />
+    <Compile Include="Common\Wizards\EntityWizard.cs" />
+    <Compile Include="Common\Wizards\ExampleWizard.cs" />
+    <Compile Include="Common\Wizards\FullStackControllerWizard.cs" />
+    <Compile Include="Common\Wizards\MapperWizard.cs" />
+    <Compile Include="Common\Wizards\ResourceWizard.cs" />
+    <Compile Include="Common\Wizards\ValidationWizard.cs" />
+    <Compile Include="Emitter.cs" />
+    <Compile Include="ProviderOptions.cs" />
     <Compile Include="UserInputProject.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -88,31 +132,7 @@
       <DependentUpon>UserInputProject.cs</DependentUpon>
     </Compile>
     <Compile Include="CoreProjectWizard.cs" />
-    <Compile Include="DBAuthentication.cs" />
-    <Compile Include="DBColumn.cs" />
-    <Compile Include="DBHelper.cs" />
-    <Compile Include="DBServer.cs" />
-    <Compile Include="DBServerType.cs" />
-    <Compile Include="DBTable.cs" />
-    <Compile Include="ResourceClassFile.cs" />
-    <Compile Include="ResourceWizard.cs" />
-    <Compile Include="EntityClassFile.cs" />
-    <Compile Include="EntityWizard.cs" />
     <Compile Include="ExamplesWizard.cs" />
-    <Compile Include="MapperWizard.cs" />
-    <Compile Include="UserInputResource.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UserInputResource.Designer.cs">
-      <DependentUpon>UserInputResource.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserInputEntity.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UserInputEntity.Designer.cs">
-      <DependentUpon>UserInputEntity.cs</DependentUpon>
-    </Compile>
-    <Compile Include="NameNormalizer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="COFRSCoresInstallerPackage.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -120,23 +140,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="ServerConfig.cs" />
-    <Compile Include="UserInputGeneral.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UserInputGeneral.Designer.cs">
-      <DependentUpon>UserInputGeneral.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserInputValidation.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UserInputValidation.Designer.cs">
-      <DependentUpon>UserInputValidation.cs</DependentUpon>
-    </Compile>
     <Compile Include="Utilities.cs" />
-    <Compile Include="ValidationWizard.cs" />
-    <Compile Include="WindowClass.cs" />
-    <Compile Include="WinNative.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="key.snk" />
@@ -175,7 +179,7 @@
       <Version>12.0.3</Version>
     </PackageReference>
     <PackageReference Include="Npgsql">
-      <Version>5.0.4</Version>
+      <Version>5.0.5</Version>
     </PackageReference>
     <PackageReference Include="System.Core">
       <Version>3.5.21022.801</Version>
@@ -222,14 +226,26 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="AddConnection.resx">
+    <EmbeddedResource Include="Common\Forms\AddConnection.resx">
       <DependentUpon>AddConnection.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="ProgressDialog.resx">
+    <EmbeddedResource Include="Common\Forms\ProgressDialog.resx">
       <DependentUpon>ProgressDialog.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="UserInputFullStack.resx">
+    <EmbeddedResource Include="Common\Forms\UserInputEntity.resx">
+      <DependentUpon>UserInputEntity.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Common\Forms\UserInputFullStack.resx">
       <DependentUpon>UserInputFullStack.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Common\Forms\UserInputGeneral.resx">
+      <DependentUpon>UserInputGeneral.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Common\Forms\UserInputResource.resx">
+      <DependentUpon>UserInputResource.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Common\Forms\UserInputValidation.resx">
+      <DependentUpon>UserInputValidation.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UserInputProject.resx">
       <DependentUpon>UserInputProject.cs</DependentUpon>
@@ -237,18 +253,6 @@
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserInputResource.resx">
-      <DependentUpon>UserInputResource.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserInputEntity.resx">
-      <DependentUpon>UserInputEntity.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserInputGeneral.resx">
-      <DependentUpon>UserInputGeneral.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserInputValidation.resx">
-      <DependentUpon>UserInputValidation.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
