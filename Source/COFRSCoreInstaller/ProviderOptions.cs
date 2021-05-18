@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
-namespace COFRSCoreInstaller
+namespace COFRS.Template
 {
 	public class ProviderOptions : IProviderOptions
 	{

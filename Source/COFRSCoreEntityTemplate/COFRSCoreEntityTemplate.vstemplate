@@ -21,6 +21,6 @@
   </TemplateContent>
   <WizardExtension>
     <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
-    <FullClassName>COFRSCoreInstaller.EntityWizard</FullClassName>
+    <FullClassName>COFRS.Template.Common.Wizards.EntityWizard</FullClassName>
   </WizardExtension>
 </VSTemplate>

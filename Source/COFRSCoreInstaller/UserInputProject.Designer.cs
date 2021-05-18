@@ -1,33 +1,33 @@
-﻿namespace COFRSCoreInstaller
+﻿namespace COFRS.Template
 {
-	partial class UserInputProject
-	{
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		private System.ComponentModel.IContainer components = null;
+    partial class UserInputProject 
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
 
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
 
-		#region Windows Form Designer generated code
+        #region Windows Form Designer generated code
 
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
-		private void InitializeComponent()
-		{
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
             this.components = new System.ComponentModel.Container();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -53,7 +53,7 @@
             // 
             // pictureBox1
             // 
-            this.pictureBox1.Image = global::COFRSCoreInstaller.Properties.Resources.ico128;
+            this.pictureBox1.Image = global::COFRS.Template.Properties.Resources.ico128;
             this.pictureBox1.Location = new System.Drawing.Point(18, 54);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(128, 128);
@@ -245,26 +245,26 @@
             this.ResumeLayout(false);
             this.PerformLayout();
 
-		}
+        }
 
-		#endregion
+        #endregion
 
-		private System.Windows.Forms.PictureBox pictureBox1;
-		private System.Windows.Forms.Label label1;
-		private System.Windows.Forms.Label label2;
-		private System.Windows.Forms.Label label3;
-		private System.Windows.Forms.Label label4;
-		private System.Windows.Forms.ComboBox framework;
-		private System.Windows.Forms.Label label5;
-		private System.Windows.Forms.ComboBox securityModel;
-		private System.Windows.Forms.PictureBox pictureBox2;
-		private System.Windows.Forms.Button _okButton;
-		private System.Windows.Forms.Label label6;
-		private System.Windows.Forms.ToolTip companyMonikerTooltip;
-		private System.Windows.Forms.Button _cancelButton;
-		private System.Windows.Forms.ComboBox databaseList;
-		private System.Windows.Forms.Label label7;
-		private System.Windows.Forms.Panel panel1;
-		public System.Windows.Forms.TextBox companyMoniker;
-	}
+        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.ComboBox framework;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.ComboBox securityModel;
+        private System.Windows.Forms.PictureBox pictureBox2;
+        private System.Windows.Forms.Button _okButton;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.ToolTip companyMonikerTooltip;
+        private System.Windows.Forms.Button _cancelButton;
+        private System.Windows.Forms.ComboBox databaseList;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.Panel panel1;
+        public System.Windows.Forms.TextBox companyMoniker;
+    }
 }

@@ -41,6 +41,6 @@
   </TemplateContent>
   <WizardExtension>
     <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
-    <FullClassName>COFRSCoreInstaller.FullStackControllerWizard</FullClassName>
+    <FullClassName>COFRS.Template.Common.Wizards.FullStackControllerWizard</FullClassName>
   </WizardExtension>
 </VSTemplate>
