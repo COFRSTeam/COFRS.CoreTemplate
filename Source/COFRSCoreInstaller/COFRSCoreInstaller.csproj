@@ -52,6 +52,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Common\Extensions\CodeElementsExtensions.cs" />
     <Compile Include="Common\Forms\AddConnection.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -118,7 +119,6 @@
     <Compile Include="Common\ServiceUtilities\WinNative.cs" />
     <Compile Include="Common\Wizards\ControllerWizard.cs" />
     <Compile Include="Common\Wizards\EntityWizard.cs" />
-    <Compile Include="Common\Wizards\ExampleWizard.cs" />
     <Compile Include="Common\Wizards\FullStackControllerWizard.cs" />
     <Compile Include="Common\Wizards\MapperWizard.cs" />
     <Compile Include="Common\Wizards\ResourceWizard.cs" />
@@ -132,7 +132,6 @@
       <DependentUpon>UserInputProject.cs</DependentUpon>
     </Compile>
     <Compile Include="CoreProjectWizard.cs" />
-    <Compile Include="ExamplesWizard.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="COFRSCoresInstallerPackage.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -140,7 +139,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="key.snk" />
@@ -280,13 +278,6 @@
     <ProjectReference Include="..\COFRSCoreEntityTemplate\COFRSCoreEntityTemplate.csproj">
       <Project>{05F5219C-14AA-4621-8741-1417A78A4E59}</Project>
       <Name>COFRSCoreEntityTemplate</Name>
-      <VSIXSubPath>ItemTemplates</VSIXSubPath>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-    </ProjectReference>
-    <ProjectReference Include="..\COFRSCoreExamplesTemplate\COFRSCoreExamplesTemplate.csproj">
-      <Project>{8478F31A-003F-4D0D-99F9-A0FF0DAE28C0}</Project>
-      <Name>COFRSCoreExamplesTemplate</Name>
       <VSIXSubPath>ItemTemplates</VSIXSubPath>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>

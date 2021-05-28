@@ -67,7 +67,12 @@ namespace COFRS.Template.Common.Wizards
 					var classMembers = StandardUtils.LoadEntityClassMembers(entityClassFile);
 
 					var standardEmitter = new StandardEmitter();
-					var model = standardEmitter.EmitResourceModel(entityClassFile, form.ClassList, classMembers, replacementsDictionary["$safeitemname$"], replacementsDictionary);
+					var model = standardEmitter.EmitResourceModel(entityClassFile, 
+						                                          form.ClassList, 
+																  classMembers, 
+																  replacementsDictionary["$safeitemname$"], 
+																  replacementsDictionary,
+																  out ResourceClassFile resourceClass);
 
 					replacementsDictionary.Add("$model$", model);
 					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);

@@ -30,6 +30,7 @@ namespace COFRS.Template.Common.Forms
 		public List<ClassFile> UndefinedClassList { get; set; }
 		public Dictionary<string, MemberInfo> Members { get; set; }
 		public DBServerType ServerType { get; set; }
+		public ElementType eType { get; set; }
 
 		#endregion
 
@@ -375,9 +376,9 @@ select s.name, t.name
 					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
 
 					UndefinedClassList.Clear();
-					var elementType = DBHelper.GetElementType(table.Schema, table.Table, ClassList, connectionString);
+					eType = DBHelper.GetElementType(table.Schema, table.Table, ClassList, connectionString);
 
-					switch (elementType)
+					switch (eType)
 					{
 						case ElementType.Enum:
 							break;
@@ -1157,7 +1158,11 @@ select c.name as column_name,
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
-				UndefinedClassList = StandardUtils.GenerateEntityClassList(UndefinedClassList, ClassList, Members, EntityModelsFolder.Folder, ConnectionString);
+				UndefinedClassList = StandardUtils.GenerateEntityClassList(UndefinedClassList, 
+					                                                       ClassList, 
+																		   Members, 
+																		   EntityModelsFolder.Folder, 
+																		   ConnectionString);
 			}
 
 			DialogResult = DialogResult.OK;

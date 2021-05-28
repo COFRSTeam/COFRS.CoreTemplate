@@ -13,6 +13,837 @@ namespace COFRS.Template.Common.ServiceUtilities
 {
     public class StandardEmitter
     {
+		public string EmitValidationModel(string resourceClassName, string validatorClassName, out string validatorInterface)
+		{
+			var results = new StringBuilder();
+
+			validatorInterface = $"I{validatorClassName}";
+
+			//	IValidator interface
+			results.AppendLine("\t///\t<summary>");
+			results.AppendLine($"\t///\tInterface for the {resourceClassName} Validator");
+			results.AppendLine("\t///\t</summary>");
+			results.AppendLine($"\tpublic interface {validatorInterface} : IValidator<{resourceClassName}>");
+			results.AppendLine("\t{");
+			results.AppendLine("\t}");
+			results.AppendLine();
+
+			//	Validator Class with constructor
+			results.AppendLine("\t///\t<summary>");
+			results.AppendLine($"\t///\t{validatorClassName}");
+			results.AppendLine("\t///\t</summary>");
+			results.AppendLine($"\tpublic class {validatorClassName} : Validator<{resourceClassName}>, {validatorInterface}");
+			results.AppendLine("\t{");
+			results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine($"\t\t///\tInitializes the {validatorClassName}");
+			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine($"\t\tpublic {validatorClassName}() : base()");
+			results.AppendLine("\t\t{");
+			results.AppendLine("\t\t}");
+			results.AppendLine();
+
+			//	Validator Class with constructor with user
+			results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine($"\t\t///\tInitializes the {validatorClassName}");
+			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine($"\t\tpublic {validatorClassName}(ClaimsPrincipal user) : base(user)");
+			results.AppendLine("\t\t{");
+			results.AppendLine("\t\t}");
+			results.AppendLine();
+
+			//------------------------------------------------------------------------------------------
+			//	Validation for GET
+			//------------------------------------------------------------------------------------------
+
+			results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine($"\t\t///\tValidation for Queries");
+			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the query</param>");
+			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
+			results.AppendLine($"\t\tpublic override async Task ValidateForGetAsync(RqlNode node, object[] parms)");
+			results.AppendLine("\t\t{");
+			results.AppendLine("\t\t\t//\tUn-comment out the line below if this table is large, and you want to prevent users from requesting a full table scan");
+			results.AppendLine("\t\t\t//\tRequireIndexedQuery(node, \"The query is too broad. Please specify a more refined query that will produce fewer records.\");");
+			results.AppendLine();
+			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
+			results.AppendLine("\t\t}");
+			results.AppendLine();
+
+			//------------------------------------------------------------------------------------------
+			//	Validation for PUT and POST
+			//------------------------------------------------------------------------------------------
+
+			results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine($"\t\t///\tValidations common to adding and updating items");
+			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added or updated</param>");
+			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
+			results.AppendLine($"\t\tpublic async Task ValidateForAddAndUpdateAsync({resourceClassName} item, object[] parms)");
+			results.AppendLine("\t\t{");
+
+			results.AppendLine();
+			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to");
+			results.AppendLine("\t\t\t//\t       adding or updating an item.");
+			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
+			results.AppendLine("\t\t}");
+			results.AppendLine();
+
+			//------------------------------------------------------------------------------------------
+			//	Validation for PUT
+			//------------------------------------------------------------------------------------------
+
+			results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine("\t\t///\tValidation for updating existing items");
+			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being updated</param>");
+			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the update</param>");
+			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
+			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceClassName} item, RqlNode node, object[] parms)");
+			results.AppendLine("\t\t{");
+			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms).ConfigureAwait(false);");
+			results.AppendLine();
+			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to updating an item.");
+			results.AppendLine("\t\t}");
+			results.AppendLine();
+
+			//------------------------------------------------------------------------------------------
+			//	Validation for POST
+			//------------------------------------------------------------------------------------------
+
+			results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine($"\t\t///\tValidation for adding new items");
+			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added</param>");
+			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
+			results.AppendLine($"\t\tpublic override async Task ValidateForAddAsync({resourceClassName} item, object[] parms)");
+			results.AppendLine("\t\t{");
+			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms).ConfigureAwait(false);");
+			results.AppendLine();
+			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to adding an item.");
+			results.AppendLine("\t\t}");
+			results.AppendLine();
+
+			//------------------------------------------------------------------------------------------
+			//	Validation for PATCH
+			//------------------------------------------------------------------------------------------
+
+			results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine("\t\t///\tValidates a set of patch commands on an item");
+			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine("\t\t///\t<param name=\"patchCommands\">The set of patch commands to validate</param>");
+			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the update</param>");
+			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
+			results.AppendLine("\t\tpublic override async Task ValidateForPatchAsync(IEnumerable<PatchCommand> patchCommands, RqlNode node, object[] parms)");
+			results.AppendLine("\t\t{");
+
+			results.AppendLine("\t\t\tforeach (var command in patchCommands)");
+			results.AppendLine("\t\t\t{");
+			results.AppendLine("\t\t\t\tif (string.Equals(command.Op, \"replace\", StringComparison.OrdinalIgnoreCase))");
+			results.AppendLine("\t\t\t\t{");
+
+			results.AppendLine("\t\t\t\t}");
+			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"add\", StringComparison.OrdinalIgnoreCase))");
+			results.AppendLine("\t\t\t\t{");
+
+			results.AppendLine("\t\t\t\t}");
+			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"delete\", StringComparison.OrdinalIgnoreCase))");
+			results.AppendLine("\t\t\t\t{");
+
+			results.AppendLine("\t\t\t\t}");
+			results.AppendLine("\t\t\t}");
+			results.AppendLine();
+
+			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to patching an item.");
+			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
+			results.AppendLine("\t\t}");
+			results.AppendLine();
+
+			//------------------------------------------------------------------------------------------
+			//	Validation for DELETE
+			//------------------------------------------------------------------------------------------
+
+			results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine($"\t\t///\tValidation for deleting an item");
+			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the delete</param>");
+			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
+			results.AppendLine($"\t\tpublic override async Task ValidateForDeleteAsync(RqlNode node, object[] parms)");
+			results.AppendLine("\t\t{");
+			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to deleting an item.");
+			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
+			results.AppendLine("\t\t}");
+			results.AppendLine("\t}");
+
+			return results.ToString();
+		}
+
+		/// <summary>
+		/// Emits the mapping model
+		/// </summary>
+		/// <param name="serverType"></param>
+		/// <param name="resourceClassFile"></param>
+		/// <param name="entityClassFile"></param>
+		/// <param name="mappingClassName"></param>
+		/// <param name="replacementsDictionary"></param>
+		/// <returns></returns>
+		public string EmitMappingModel(EntityClassFile entityClassFile, ResourceClassFile resourceClassFile,  string mappingClassName, Dictionary<string, string> replacementsDictionary)
+		{
+			var ImageConversionRequired = false;
+			var results = new StringBuilder();
+			var nn = new NameNormalizer(resourceClassFile.ClassName);
+
+			results.AppendLine("\t///\t<summary>");
+			results.AppendLine($"\t///\t{nn.SingleForm} Profile for AutoMapper");
+			results.AppendLine("\t///\t</summary>");
+
+			results.AppendLine($"\tpublic class {mappingClassName} : Profile");
+			results.AppendLine("\t{");
+
+			results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine($"\t\t///\tInitializes the {nn.SingleForm} Profile");
+			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine($"\t\tpublic {mappingClassName}()");
+			results.AppendLine("\t\t{");
+			results.AppendLine("\t\t\tvar rootUrl = Startup.AppConfig.GetSection(\"ApiSettings\").GetValue<string>(\"RootUrl\");");
+			results.AppendLine("\t\t\twhile (rootUrl.EndsWith(\"/\") || rootUrl.EndsWith(\"\\\\\"))");
+			results.AppendLine("\t\t\t\trootUrl = rootUrl.Substring(0, rootUrl.Length - 1);");
+
+			#region Create the Resource to Entity Mapping
+			results.AppendLine();
+			results.AppendLine($"\t\t\tCreateMap<{resourceClassFile.ClassName}, {entityClassFile.ClassName}>()");
+
+			bool first = true;
+
+			//	Emit known mappings
+			foreach (var member in resourceClassFile.Members)
+			{
+				if (string.IsNullOrWhiteSpace(member.ResourceMemberName))
+				{
+				}
+				else if (member.ChildMembers.Count == 0 && member.EntityNames.Count == 0)
+				{
+				}
+				else if (string.Equals(member.ResourceMemberName, "Href", StringComparison.OrdinalIgnoreCase))
+				{
+					int ix = 0 - member.EntityNames.Count + 1;
+					foreach (var entityColumn in member.EntityNames)
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						string dataType = "Unknown";
+
+						if (entityClassFile.ServerType == DBServerType.MYSQL)
+							dataType = DBHelper.GetNonNullableMySqlDataType(entityColumn);
+						else if (entityClassFile.ServerType == DBServerType.POSTGRESQL)
+							dataType = DBHelper.GetNonNullablePostgresqlDataType(entityColumn);
+						else if (entityClassFile.ServerType == DBServerType.SQLSERVER)
+							dataType = DBHelper.GetNonNullableSqlServerDataType(entityColumn);
+
+						if (ix == 0)
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.GetId<{dataType}>()))");
+						else
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.GetId<{dataType}>({ix})))");
+						ix++;
+					}
+				}
+				else if (member.EntityNames.Count > 0 && member.EntityNames[0].IsForeignKey)
+				{
+					int ix = 0 - member.EntityNames.Count + 1;
+					foreach (var entityColumn in member.EntityNames)
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						string dataType = "Unknown";
+
+						if (entityClassFile.ServerType == DBServerType.MYSQL)
+							dataType = DBHelper.GetNonNullableMySqlDataType(entityColumn);
+						else if (entityClassFile.ServerType == DBServerType.POSTGRESQL)
+							dataType = DBHelper.GetNonNullablePostgresqlDataType(entityColumn);
+						else if (entityClassFile.ServerType == DBServerType.SQLSERVER)
+							dataType = DBHelper.GetNonNullableSqlServerDataType(entityColumn);
+
+						if (entityColumn.IsNullable)
+						{
+							if (ix == 0)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? ({dataType}?) null : src.{member.ResourceMemberName}.GetId<{dataType}>()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? ({dataType}?) null : src.{member.ResourceMemberName}.GetId<{dataType}>({ix})))");
+						}
+						else
+						{
+							if (ix == 0)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.GetId<{dataType}>()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.GetId<{dataType}>({ix})))");
+						}
+						ix++;
+					}
+				}
+				else
+				{
+					EmitResourceToEntityMapping(results, member, "", ref first, ref ImageConversionRequired);
+				}
+			}
+			results.AppendLine(";");
+
+			//	Emit To Do for unknown mappings
+			foreach (var member in resourceClassFile.Members)
+			{
+				if (string.IsNullOrWhiteSpace(member.ResourceMemberName))
+				{
+					foreach (var entityMember in member.EntityNames)
+					{
+						results.AppendLine($"\t\t\t\t//\tTo do: Write mapping for {entityMember.EntityName}");
+					}
+				}
+			}
+			results.AppendLine();
+			#endregion
+
+			#region Create Entity to Resource Mapping
+			results.AppendLine($"\t\t\tCreateMap<{entityClassFile.ClassName}, {resourceClassFile.ClassName}>()");
+
+			//	Emit known mappings
+			first = true;
+			var activeDomainMembers = resourceClassFile.Members.Where(m => !string.IsNullOrWhiteSpace(m.ResourceMemberName) && CheckMapping(m));
+
+			foreach (var member in activeDomainMembers)
+			{
+				if (member.EntityNames.Count > 0 && member.EntityNames[0].IsPrimaryKey)
+				{
+					if (first)
+						first = false;
+					else
+						results.AppendLine();
+
+					results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}/id");
+					foreach (var entityColumn in member.EntityNames)
+					{
+						results.Append($"/{{src.{entityColumn.ColumnName}}}");
+					}
+					results.Append("\")))");
+				}
+				else if (member.EntityNames.Count > 0 && member.EntityNames[0].IsForeignKey)
+				{
+					var nf = new NameNormalizer(member.EntityNames[0].ForeignTableName);
+					var isNullable = member.EntityNames.Where(c => c.IsNullable).Count() > 0;
+
+					if (first)
+						first = false;
+					else
+						results.AppendLine();
+
+					if (isNullable)
+					{
+						results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => src.{member.EntityNames[0].EntityName} == null ? (Uri) null : new Uri($\"{{rootUrl}}/{nf.PluralCamelCase}/id");
+						foreach (var entityColumn in member.EntityNames)
+						{
+							results.Append($"/{{src.{entityColumn.ColumnName}}}");
+						}
+						results.Append("\")))");
+					}
+					else
+					{
+						results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => new Uri($\"{{rootUrl}}/{nf.PluralCamelCase}/id");
+						foreach (var entityColumn in member.EntityNames)
+						{
+							results.Append($"/{{src.{entityColumn.EntityName}}}");
+						}
+						results.Append("\")))");
+					}
+				}
+				else
+				{
+					EmitEntityToResourceMapping(results, member, ref first, ref ImageConversionRequired);
+				}
+			}
+			results.AppendLine(";");
+
+			var inactiveDomainMembers = resourceClassFile.Members.Where(m => !string.IsNullOrWhiteSpace(m.ResourceMemberName) && !CheckMapping(m));
+
+			//	Emit To Do for unknown Mappings
+			foreach (var member in inactiveDomainMembers)
+			{
+				results.AppendLine($"\t\t\t\t//\tTo do: Write mapping for {member.ResourceMemberName}");
+			}
+			results.AppendLine();
+			#endregion
+
+			results.AppendLine($"\t\t\tCreateMap<RqlCollection<{entityClassFile.ClassName}>, RqlCollection<{resourceClassFile.ClassName}>>()");
+			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Href, opts => opts.MapFrom(src => new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Href.Query}}\")))");
+			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.First, opts => opts.MapFrom(src => src.First == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.First.Query}}\")))");
+			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Next, opts => opts.MapFrom(src => src.Next == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Next.Query}}\")))");
+			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Previous, opts => opts.MapFrom(src => src.Previous == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Previous.Query}}\")));");
+			results.AppendLine("\t\t}");
+			results.AppendLine("\t}");
+
+			return results.ToString();
+		}
+
+		private bool CheckMapping(ClassMember member)
+		{
+			if (member.EntityNames.Count > 0)
+				return true;
+
+			bool HasMapping = false;
+
+			foreach (var childMember in member.ChildMembers)
+			{
+				HasMapping |= CheckMapping(childMember);
+			}
+
+			return HasMapping;
+		}
+
+		private void EmitEntityToResourceMapping(StringBuilder results, ClassMember member, ref bool first, ref bool ImageConversionRequired)
+		{
+			if (member.ChildMembers.Count > 0)
+			{
+				bool isNullable = IsNullable(member);
+
+				if (isNullable)
+				{
+					if (first)
+						first = false;
+					else
+						results.AppendLine();
+
+					results.AppendLine($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src =>");
+					results.Append("\t\t\t\t\t(");
+					bool subFirst = true;
+
+					foreach (var childMember in member.ChildMembers)
+					{
+						EmitNullTest(results, childMember, ref subFirst);
+					}
+
+					results.Append($") ? null : new {member.ResourceMemberType}() {{");
+
+					subFirst = true;
+					foreach (var childMember in member.ChildMembers)
+					{
+						EmitChildSet(results, childMember, ref subFirst);
+					}
+
+					results.Append("}))");
+				}
+				else
+				{
+					bool doThis = true;
+
+					foreach (var childMember in member.ChildMembers)
+					{
+						if (childMember.ChildMembers.Count == 0 &&
+							 childMember.EntityNames.Count == 0)
+						{
+							doThis = false;
+						}
+					}
+
+					if (doThis)
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						results.AppendLine($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src =>");
+						results.AppendLine($"\t\t\t\t\tnew {member.ResourceMemberType}() {{");
+
+						bool subFirst = true;
+						foreach (var childMember in member.ChildMembers)
+						{
+							EmitChildSet(results, childMember, ref subFirst);
+						}
+
+						results.Append($"}}))");
+					}
+				}
+			}
+			else
+			{
+				var entityColumn = member.EntityNames[0];
+
+				if (!string.Equals(entityColumn.EntityType, member.ResourceMemberType, StringComparison.OrdinalIgnoreCase))
+				{
+					if (string.Equals(entityColumn.EntityType, "char[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "string", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (entityColumn.IsNullable)
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName} == null ? null : new string(src.{entityColumn.EntityName})))");
+						else
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => new string(src.{entityColumn.EntityName})))");
+					}
+					else if (string.Equals(entityColumn.EntityType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "char[]", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (entityColumn.IsNullable)
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName} == null ? null : src.{entityColumn.EntityName}.ToArray()))");
+						else
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName}.ToArray()))");
+					}
+					else if (string.Equals(entityColumn.EntityType, "Image", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "byte[]", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						ImageConversionRequired = true;
+
+						if (entityColumn.IsNullable)
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName} == null ? null : src.{entityColumn.EntityName}.GetBytes()))");
+						else
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName}.GetBytes()))");
+					}
+					else if (string.Equals(entityColumn.EntityType, "byte[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Image", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						ImageConversionRequired = true;
+
+						if (entityColumn.IsNullable)
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName} == null ? null : ImageEx.Parse(src.{entityColumn.EntityName})))");
+						else
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => ImageEx.Parse(src.{entityColumn.EntityName})))");
+					}
+					else if (string.Equals(entityColumn.EntityType, "DateTime", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTimeOFfset", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (entityColumn.IsNullable)
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.HasValue ? new DateTimeOffset(src.{member.ResourceMemberName}.Value) : (DateTimeOffset?) null))");
+						else
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new DateTimeOffset(src.{member.ResourceMemberName})))");
+					}
+					else if (string.Equals(entityColumn.EntityType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTime", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (entityColumn.IsNullable)
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.HasValue ? src.{member.ResourceMemberName}.Value.DateTime : (DateTime?) null))");
+						else
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.DateTime))");
+					}
+				}
+				else if (!string.Equals(member.ResourceMemberName, member.EntityNames[0].EntityName, StringComparison.OrdinalIgnoreCase))
+				{
+					if (first)
+						first = false;
+					else
+						results.AppendLine();
+
+					results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => src.{entityColumn.EntityName}))");
+				}
+			}
+		}
+
+		private void EmitResourceToEntityMapping(StringBuilder results, ClassMember member, string prefix, ref bool first, ref bool ImageConversionRequired)
+		{
+			if (member.ChildMembers.Count > 0)
+			{
+				foreach (var childMember in member.ChildMembers)
+				{
+					EmitResourceToEntityMapping(results, childMember, $"{prefix}{member.ResourceMemberName}", ref first, ref ImageConversionRequired);
+				}
+			}
+			else if (member.EntityNames.Count > 0)
+			{
+				var entityColumn = member.EntityNames[0];
+
+				if (!string.Equals(entityColumn.EntityType, member.ResourceMemberType, StringComparison.OrdinalIgnoreCase))
+				{
+					if (string.Equals(entityColumn.EntityType, "char[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "string", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (string.IsNullOrWhiteSpace(prefix))
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName} == null ? null : src.{prefix}.{member.ResourceMemberName}.ToArray()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.ToArray()))");
+						}
+						else
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName} == null ? null : src.{prefix}{member.ResourceMemberName}.ToArray()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.ToArray()))");
+						}
+					}
+					else if (string.Equals(entityColumn.EntityType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "char[]", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (string.IsNullOrWhiteSpace(prefix))
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName} == null ? null : new string(src.{prefix}.{member.ResourceMemberName})))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new string(src.{prefix}.{member.ResourceMemberName})))");
+						}
+						else
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName} == null ? null : new string(src.{prefix}{member.ResourceMemberName})))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new string(src.{prefix}.{member.ResourceMemberName})))");
+						}
+					}
+					else if (string.Equals(entityColumn.EntityType, "Image", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "byte[]", StringComparison.OrdinalIgnoreCase))
+					{
+						ImageConversionRequired = true;
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (string.IsNullOrWhiteSpace(prefix))
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName} == null ? null : ImageEx.Parse(src.{member.ResourceMemberName})))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => ImageEx.Parse(src.{member.ResourceMemberName})))");
+						}
+						else
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName} == null ? null : ImageEx.Parse(src.{prefix}{member.ResourceMemberName})))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => ImageEx.Parse(src.{prefix}.{member.ResourceMemberName})))");
+						}
+					}
+					else if (string.Equals(entityColumn.EntityType, "byte[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Image", StringComparison.OrdinalIgnoreCase))
+					{
+						ImageConversionRequired = true;
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (string.IsNullOrWhiteSpace(prefix))
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName} == null ? null : src.{member.ResourceMemberName}.GetBytes()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.GetBytes()))");
+						}
+						else
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName} == null ? null : src.{prefix}{member.ResourceMemberName}.GetBytes()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.GetBytes()))");
+						}
+					}
+					else if (string.Equals(entityColumn.EntityType, "DateTime", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (string.IsNullOrWhiteSpace(prefix))
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.HasValue ? src.{member.ResourceMemberName}.Value.DateTime : (DateTime?) null))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.DateTime))");
+						}
+						else
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName}.HasValue ? src.{prefix}.{member.ResourceMemberName}.Value.DateTime : (DateTime?) null))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.DateTime))");
+						}
+					}
+					else if (string.Equals(entityColumn.EntityType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTime", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (string.IsNullOrWhiteSpace(prefix))
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.HasValue ? new DateTimeOffset(src.{member.ResourceMemberName}.Value) : (DateTimeOffset?) null))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new DateTimeOffset(src.{member.ResourceMemberName})))");
+						}
+						else
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName}.HasValue ? new DateTimeOffset(src.{prefix}.{member.ResourceMemberName}.Value) : (DateTimeOffset?) null))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new DateTimeOffset(src.{prefix}.{member.ResourceMemberName})))");
+						}
+					}
+					else if (string.Equals(entityColumn.EntityType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Uri", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (string.IsNullOrWhiteSpace(prefix))
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? (string) null : src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())).ToString()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())).ToString()))");
+						}
+						else
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (string) null : {prefix}.{member.ResourceMemberName} == null ? (string) null : src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
+						}
+					}
+				}
+				else if (string.Equals(entityColumn.EntityType, "Uri", StringComparison.OrdinalIgnoreCase))
+				{
+					if (first)
+						first = false;
+					else
+						results.AppendLine();
+
+					if (string.IsNullOrWhiteSpace(prefix))
+					{
+						if (entityColumn.IsNullable)
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? (Uri) null : src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())))");
+						else
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())))");
+					}
+					else
+					{
+						if (entityColumn.IsNullable)
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (Uri) null : {prefix}.{member.ResourceMemberName} == null ? (Uri) null : src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())))");
+						else
+							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (Uri) null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())))");
+					}
+				}
+				else if (!string.Equals(member.ResourceMemberName, member.EntityNames[0].EntityName, StringComparison.OrdinalIgnoreCase))
+				{
+					if (first)
+						first = false;
+					else
+						results.AppendLine();
+
+					if (string.IsNullOrWhiteSpace(prefix))
+					{
+						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix}.{member.ResourceMemberName}))");
+					}
+					else
+					{
+						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName}))");
+					}
+				}
+			}
+		}
+
+		private void EmitChildSet(StringBuilder results, ClassMember member, ref bool subFirst)
+		{
+			if (member.EntityNames.Count > 0)
+			{
+				if (subFirst)
+					subFirst = false;
+				else
+					results.AppendLine(",");
+
+				results.Append($"\t\t\t\t{member.ResourceMemberName} = src.{member.EntityNames[0].EntityName}");
+			}
+		}
+
+		private bool IsNullable(ClassMember member)
+		{
+			bool isNullable = false;
+
+			if (member.ChildMembers.Count > 0)
+			{
+				foreach (var childMember in member.ChildMembers)
+				{
+					isNullable |= IsNullable(childMember);
+				}
+			}
+			else
+			{
+				foreach (var entity in member.EntityNames)
+				{
+					isNullable |= entity.IsNullable;
+				}
+			}
+
+			return isNullable;
+		}
+
+
+		private void EmitNullTest(StringBuilder results, ClassMember member, ref bool first)
+		{
+			if (member.ChildMembers.Count > 0)
+			{
+				foreach (var childMember in member.ChildMembers)
+				{
+					EmitNullTest(results, childMember, ref first);
+				}
+			}
+			else
+			{
+				foreach (var entityMember in member.EntityNames)
+				{
+					if (first)
+						first = false;
+					else
+					{
+						results.AppendLine(" &&");
+						results.Append("\t\t\t\t\t ");
+					}
+
+					if (string.Equals(entityMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+					{
+						results.Append($"string.IsNullOrWhiteSpace(src.{entityMember.EntityName})");
+					}
+					else
+					{
+						results.Append($"src.{entityMember.EntityName} == null");
+					}
+				}
+			}
+		}
+
+
 		/// <summary>
 		/// Emits an entity data model based upon the fields contained within the database table
 		/// </summary>
@@ -23,7 +854,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="replacementsDictionary">List of replacements key/value pairs for the solution</param>
 		/// <param name="connectionString">The connection string to connect to the database, if necessary</param>
 		/// <returns>A model of the entity data table</returns>
-		public string EmitEntityModel(DBServerType serverType, DBTable table, string entityClassName, List<ClassFile> classList, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary, string connectionString)
+		public string EmitEntityModel(DBServerType serverType, DBTable table, string entityClassName, List<ClassFile> classList, List<DBColumn> columns, Dictionary<string, string> replacementsDictionary, out EntityClassFile entityClass)
 		{
 			var result = new StringBuilder();
 			replacementsDictionary.Add("$image$", "false");
@@ -31,7 +862,22 @@ namespace COFRS.Template.Common.ServiceUtilities
 			replacementsDictionary.Add("$netinfo$", "false");
 			replacementsDictionary.Add("$barray$", "false");
 
-			result.AppendLine("\t///\t<summary>");
+			var entityNamespace = replacementsDictionary["$rootnamespace$"];
+			if (replacementsDictionary.ContainsKey("$entitynamespace$"))
+				entityNamespace = replacementsDictionary["$entitynamespace$"];
+
+			entityClass = new EntityClassFile
+            {
+                ClassName = entityClassName,
+                ClassNameSpace = entityNamespace,
+				TableName = table.Table,
+				SchemaName = table.Schema,
+                ElementType = ElementType.Table,
+                ServerType = serverType,
+                Columns = columns
+            };
+
+            result.AppendLine("\t///\t<summary>");
 			result.AppendLine($"\t///\t{entityClassName}");
 			result.AppendLine("\t///\t</summary>");
 
@@ -261,13 +1107,26 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return result.ToString();
 		}
 
-		public string EmitResourceModel(EntityClassFile entityClassFile, List<ClassFile> classList, List<ClassMember> entityClassMembers, string resourceClassName, Dictionary<string, string> replacementsDictionary)
+		public string EmitResourceModel(EntityClassFile entityClassFile, List<ClassFile> classList, List<ClassMember> entityClassMembers, string resourceClassName, Dictionary<string, string> replacementsDictionary, out ResourceClassFile resourceClass)
 		{
 			replacementsDictionary.Add("$resourceimage$", "false");
 			replacementsDictionary.Add("$resourcenet$", "false");
 			replacementsDictionary.Add("$resourcenetinfo$", "false");
 			replacementsDictionary.Add("$resourcebarray$", "false");
 			replacementsDictionary.Add("$usenpgtypes$", "false");
+
+			var resourceNamespace = replacementsDictionary["$rootnamespace$"];
+			if (replacementsDictionary.ContainsKey("$resourcenamespace$"))
+				resourceNamespace = replacementsDictionary["$resourcenamespace$"];
+
+			resourceClass = new ResourceClassFile
+			{
+				ClassName = resourceClassName,
+				ClassNameSpace = resourceNamespace,
+				ElementType = ElementType.Resource,
+				EntityClass = entityClassFile.ClassName,
+				Members = entityClassMembers
+			};
 
 			var results = new StringBuilder();
 			bool hasPrimary = false;
@@ -432,7 +1291,7 @@ where t.typname = @dataType
 			return builder.ToString();
 		}
 
-		public string EmitComposite(string schema, string dataType, string className, string connectionString, Dictionary<string, string> replacementsDictionary, List<ClassFile> definedElements, List<ClassFile> undefinedElements)
+		public string EmitComposite(string schema, string dataType, string className, string connectionString, Dictionary<string, string> replacementsDictionary, List<ClassFile> definedElements, List<ClassFile> undefinedElements, string entityModelsFolder)
 		{
 			var nn = new NameNormalizer(className);
 			var result = new StringBuilder();
@@ -530,7 +1389,7 @@ select a.attname as columnname,
 									SchemaName = schema,
 									TableName = reader.GetString(1),
 									ClassNameSpace = replacementsDictionary["$rootnamespace$"] + ".Models.EntityModels",
-									FileName = Path.Combine(Utilities.LoadBaseFolder(replacementsDictionary["$solutiondirectory$"]), $"Models\\EntityModels\\{cname}.cs")
+									FileName = Path.Combine(entityModelsFolder, $"{cname}.cs")
 								};
 
 								candidates.Add(classFile);
@@ -740,10 +1599,15 @@ select a.attname as columnname,
 		/// <param name="rootnamespace">The root namespace for the newly defined elements</param>
 		/// <param name="replacementsDictionary">The replacements dictionary</param>
 		/// <param name="definedElements">The lise of elements that are defined</param>
-		public void GenerateComposites(List<ClassFile> composites, string connectionString, Dictionary<string, string> replacementsDictionary, List<ClassFile> definedElements)
+		public void GenerateComposites(List<ClassFile> composites, string connectionString, Dictionary<string, string> replacementsDictionary, List<ClassFile> definedElements, string entityModelsFolder)
 		{
 			foreach (var composite in composites)
 			{
+				composite.ElementType = DBHelper.GetElementType(((EntityClassFile)composite).SchemaName,
+																((EntityClassFile)composite).TableName,
+																definedElements,
+																connectionString);
+					
 				if (composite.ElementType == ElementType.Enum)
 				{
 					var result = new StringBuilder();
@@ -776,11 +1640,16 @@ select a.attname as columnname,
 											 connectionString, 
 											 replacementsDictionary, 
 											 definedElements, 
-											 undefinedElements);
+											 undefinedElements,
+											 entityModelsFolder);
 
 						if (undefinedElements.Count > 0)
 						{
-							GenerateComposites(undefinedElements, connectionString, replacementsDictionary, definedElements);
+							GenerateComposites(undefinedElements, 
+								               connectionString, 
+											   replacementsDictionary, 
+											   definedElements, 
+											   entityModelsFolder);
 							definedElements.AddRange(undefinedElements);
 						}
 						else
@@ -914,8 +1783,11 @@ select a.attname as columnname,
         {
 			if (!string.IsNullOrWhiteSpace(column.EntityName) && !string.Equals(column.ColumnName, column.EntityName, StringComparison.Ordinal))
 			{
-				AppendComma(result, ref first);
-				result.Append($"ColumnName = \"{column.EntityName}\"");
+				if (!string.Equals(column.EntityName, column.dbDataType, StringComparison.Ordinal))
+				{
+					AppendComma(result, ref first);
+					result.Append($"ColumnName = \"{column.EntityName}\"");
+				}
 			}
 		}
 

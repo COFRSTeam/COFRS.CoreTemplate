@@ -3,9 +3,7 @@ using COFRS;
 $if$ ( $securitymodel$ == OAuth )using Microsoft.AspNetCore.Authorization;
 $endif$using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Swashbuckle.AspNetCore.Filters;
 using $safeprojectname$.Models.ResourceModels; 
-using $safeprojectname$.Models.SwaggerExamples;
 
 namespace $safeprojectname$.Controllers
 {
@@ -14,15 +12,15 @@ namespace $safeprojectname$.Controllers
 	///	</summary>
 	[ApiVersion("1.0")]
 	[Produces("application/json")]
-	public class HeartbeatController : COFRSController
+	public class HealthCheckController : COFRSController
 	{
-		private readonly ILogger<HeartbeatController> Logger;
+		private readonly ILogger<HealthCheckController> Logger;
 
 		/// <summary>
 		/// Constructor
 		/// </summary>
 		/// <param name="logger"></param>
-		public HeartbeatController(ILogger<HeartbeatController> logger)
+		public HealthCheckController(ILogger<HealthCheckController> logger)
 		{
 			Logger = logger;
 		}
@@ -33,16 +31,15 @@ namespace $safeprojectname$.Controllers
 		///	<remarks>This method is used to supply "I am alive" messages to monitoring systems.</remarks>
 		[HttpGet]
 		[MapToApiVersion("1.0")]
-		[Route("heartbeat")]
+		[Route("health_check")]
 		$if$ ( $securitymodel$ == OAuth )[AllowAnonymous]
-		$endif$[ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(Heartbeat))]
-		[SwaggerResponseExample((int)HttpStatusCode.OK, typeof(HeartbeatExample))]
+		$endif$[ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(HealthCheck))]
 		[ProducesResponseType((int)HttpStatusCode.UnsupportedMediaType)]
 		[Produces("application/vnd.$companymoniker$.v1+json", "application/json", "text/json")]
 		public IActionResult Get()
 		{
-			Logger.LogInformation("Heartbeat invoked");
-			return Ok(new Heartbeat() { Message = "$safeprojectname$ is running" });
+			Logger.LogInformation("HealthCheck invoked");
+			return Ok(new HealthCheck() { Message = "$safeprojectname$ is running" });
 		}
 	}
 }

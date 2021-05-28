@@ -1,6 +1,9 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.Models;
+using COFRS.Template.Common.ServiceUtilities;
 using EnvDTE;
+using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TemplateWizard;
 using MySql.Data.MySqlClient;
 using NpgsqlTypes;
@@ -19,11 +22,6 @@ namespace COFRS.Template.Common.Wizards
 	public class ControllerWizard : IWizard
 	{
 		private bool Proceed = false;
-		private string SolutionFolder { get; set; }
-		private ResourceClassFile Orchestrator;
-		private ResourceClassFile ExampleClass;
-		private ResourceClassFile ValidatorClass;
-		private ResourceClassFile CollectionExampleClass;
 
 		// This method is called before opening any item that
 		// has the OpenInEditor attribute.
@@ -51,90 +49,76 @@ namespace COFRS.Template.Common.Wizards
 			Dictionary<string, string> replacementsDictionary,
 			WizardRunKind runKind, object[] customParams)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
+			ProgressDialog progressDialog = new ProgressDialog("Loading classes and preparing project...");
+
 			try
 			{
-				var solutionDirectory = replacementsDictionary["$solutiondirectory$"];
-				var rootNamespace = replacementsDictionary["$rootnamespace$"];
+				//	Show the user that we are busy doing things...
+				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
+				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-				var namespaceParts = rootNamespace.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+				HandleMessages();
 
-				var filePath = solutionDirectory;
+				var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
+				HandleMessages();
 
-				for (int i = 0; i < namespaceParts.Length; i++)
+				var classList = StandardUtils.LoadClassList(programfiles);
+				HandleMessages();
+
+				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
+				HandleMessages();
+
+				var policies = StandardUtils.LoadPolicies(_appObject.Solution);
+				HandleMessages();
+
+				var form = new UserInputGeneral()
 				{
-					if (i == 0)
-					{
-						var candidate = Path.Combine(filePath, namespaceParts[i]);
-
-						if (Directory.Exists(candidate))
-							filePath = candidate;
-					}
-					else
-						filePath = Path.Combine(filePath, namespaceParts[i]);
-				}
-
-				if (!Directory.Exists(filePath))
-					Directory.CreateDirectory(filePath);
-
-				SolutionFolder = replacementsDictionary["$solutiondirectory$"];
-
-				var form = new UserInputGeneral
-				{
-					SolutionFolder = replacementsDictionary["$solutiondirectory$"],
+					DefaultConnectionString = connectionString,
+					ClassList = classList,
+					Policies = policies,
 					InstallType = 5
 				};
 
+				HandleMessages();
+
+				progressDialog.Close();
+				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				progressDialog = null;
+
 				if (form.ShowDialog() == DialogResult.OK)
 				{
-					bool hasValidator = false;
 					var entityClassFile = (EntityClassFile)form._entityModelList.SelectedItem;
 					var resourceClassFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
-					var moniker = LoadMoniker(SolutionFolder);
-					
-					Orchestrator = null;
-					ExampleClass = null;
-					CollectionExampleClass = null;
-					ValidatorClass = null;
+					var moniker = StandardUtils.LoadMoniker(_appObject.Solution);
+					string policy = string.Empty;
 
-					Utilities.LoadClassList(SolutionFolder, resourceClassFile.ClassName, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
-					var policy = LoadPolicy(SolutionFolder);
+					if ( form.policyCombo.Items.Count > 0 )
+						policy = form.policyCombo.SelectedItem.ToString();
+					
+					var orchestrationNamespace = StandardUtils.FindOrchestrationNamespace(_appObject.Solution);
+					var validatorNamespace = StandardUtils.FindValidatorNamespace(_appObject.Solution, resourceClassFile, entityClassFile, out string validatorInterface);
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
 					replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
 					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceClassFile.ClassNameSpace);
-					replacementsDictionary.Add("$orchestrationnamespace$", Orchestrator.ClassNameSpace);
+					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
+					replacementsDictionary.Add("$validationnamespace$", validatorNamespace);
 
-					if (ValidatorClass != null)
-					{
-						hasValidator = true;
-						replacementsDictionary.Add("$validationnamespace$", ValidatorClass.ClassNameSpace);
-					}
-					else
-					{
-						hasValidator = false;
-						replacementsDictionary.Add("$validationnamespace$", "none");
-					}
-
-					if (ExampleClass != null)
-						replacementsDictionary.Add("$singleexamplenamespace$", ExampleClass.ClassNameSpace);
-					else
-						replacementsDictionary.Add("$singleexamplenamespace$", "none");
-					
 					var columns = new List<ClassMember>();
 
 					var emitter = new Emitter();
-					var model = emitter.EmitController(form.ServerType, 
-						                               columns,
-													   hasValidator,
-													   moniker,
-													   resourceClassFile.ClassName,
-													   replacementsDictionary["$safeitemname$"],
-													   hasValidator ? ValidatorClass.ClassName : null,
-													   ExampleClass != null ? ExampleClass.ClassName : null,
-													   CollectionExampleClass != null ? CollectionExampleClass.ClassName : null,
-													   policy);
+					var model = emitter.EmitController(
+						entityClassFile,
+						resourceClassFile,
+						moniker,
+						replacementsDictionary["$safeitemname$"],
+						validatorInterface,
+						policy);
+						
 
 					replacementsDictionary.Add("$model$", model);
 					Proceed = true;
@@ -142,9 +126,14 @@ namespace COFRS.Template.Common.Wizards
 				else
 					Proceed = false;
 			}
-			catch (Exception ex)
+			catch (Exception error)
 			{
-				MessageBox.Show(ex.ToString());
+				if (progressDialog != null)
+					if (progressDialog.IsHandleCreated)
+						progressDialog.Close();
+
+				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				Proceed = false;
 			}
 		}
@@ -156,85 +145,11 @@ namespace COFRS.Template.Common.Wizards
 			return Proceed;
 		}
 
-		private string LoadPolicy(string folder)
+		private void HandleMessages()
 		{
-			try
+			while (WinNative.PeekMessage(out WinNative.NativeMessage msg, IntPtr.Zero, 0, (uint)0xFFFFFFFF, 1) != 0)
 			{
-				foreach (var file in Directory.GetFiles(folder, "appSettings.json"))
-				{
-					using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None))
-					{
-						using (var reader = new StreamReader(stream))
-						{
-							while (!reader.EndOfStream)
-							{
-								var line = reader.ReadLine();
-
-								var match = Regex.Match(line, "[ \t]*\\\"Policy\\\"\\:[ \t]\\\"(?<policy>[^\\\"]+)\\\"");
-								if (match.Success)
-									return match.Groups["policy"].Value;
-							}
-						}
-					}
-
-					return string.Empty;
-				}
-
-				foreach (var subfolder in Directory.GetDirectories(folder))
-				{
-					string policy = LoadPolicy(subfolder);
-
-					if (!string.IsNullOrWhiteSpace(policy))
-						return policy;
-				}
-
-				return string.Empty;
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				return string.Empty;
-			}
-		}
-
-		private string LoadMoniker(string folder)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(folder, "appSettings.json"))
-				{
-					using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None))
-					{
-						using (var reader = new StreamReader(stream))
-						{
-							while (!reader.EndOfStream)
-							{
-								var line = reader.ReadLine();
-
-								var match = Regex.Match(line, "[ \t]*\\\"CompanyName\\\"\\:[ \t]\\\"(?<moniker>[^\\\"]+)\\\"");
-								if (match.Success)
-									return match.Groups["moniker"].Value;
-							}
-						}
-					}
-
-					return string.Empty;
-				}
-
-				foreach (var subfolder in Directory.GetDirectories(folder))
-				{
-					string moniker = LoadMoniker(subfolder);
-
-					if (!string.IsNullOrWhiteSpace(moniker))
-						return moniker;
-				}
-
-				return string.Empty;
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				return string.Empty;
+				WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
 			}
 		}
 	}

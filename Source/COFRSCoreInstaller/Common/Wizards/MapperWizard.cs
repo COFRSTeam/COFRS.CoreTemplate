@@ -7,15 +7,11 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
 {
-	public class MapperWizard : IWizard
+    public class MapperWizard : IWizard
 	{
 		private bool Proceed = false;
 
@@ -39,51 +35,67 @@ namespace COFRS.Template.Common.Wizards
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
-
-			//	Show the user that we are busy doing things...
 			ProgressDialog progressDialog = new ProgressDialog("Loading classes and preparing project...");
-			progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
-			_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-			HandleMessages();
-
-			var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
-			HandleMessages();
-
-			var classList = StandardUtils.LoadClassList(programfiles);
-			HandleMessages();
-
-
-			var form = new UserInputGeneral()
+			try
 			{
-				ClassList = classList,
-				InstallType = 1
-			};
+				//	Show the user that we are busy doing things...
+				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
+				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-			HandleMessages();
+				HandleMessages();
 
-			progressDialog.Close();
-			_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
+				HandleMessages();
 
-			if (form.ShowDialog() == DialogResult.OK)
-			{
-				var entityClassFile = (EntityClassFile)form._entityModelList.SelectedItem;
-				var resourceClassFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
+				var classList = StandardUtils.LoadClassList(programfiles);
+				HandleMessages();
 
-				var emitter = new Emitter();
-				var model = emitter.EmitMappingModel(form.ServerType, 
-													 resourceClassFile, 
-													 entityClassFile,
-													 replacementsDictionary["$safeitemname$"],
-													 replacementsDictionary);
+				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
+				HandleMessages();
 
-				replacementsDictionary.Add("$model$", model);
-				replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
-				replacementsDictionary.Add("$resourcenamespace$", resourceClassFile.ClassNameSpace);
-				Proceed = true;
+				var form = new UserInputGeneral()
+				{
+					DefaultConnectionString = connectionString,
+					ClassList = classList,
+					InstallType = 1
+				};
+
+				HandleMessages();
+
+				progressDialog.Close();
+				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				progressDialog = null;
+
+				if (form.ShowDialog() == DialogResult.OK)
+				{
+					var entityClassFile = (EntityClassFile)form._entityModelList.SelectedItem;
+					var resourceClassFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
+
+					var emitter = new StandardEmitter();
+					var model = emitter.EmitMappingModel(entityClassFile,
+														 resourceClassFile,
+														 replacementsDictionary["$safeitemname$"],
+														 replacementsDictionary);
+
+					replacementsDictionary.Add("$model$", model);
+					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
+					replacementsDictionary.Add("$resourcenamespace$", resourceClassFile.ClassNameSpace);
+					Proceed = true;
+				}
+				else
+					Proceed = false;
 			}
-			else
+			catch ( Exception error )
+            {
+				if (progressDialog != null)
+					if (progressDialog.IsHandleCreated)
+						progressDialog.Close();
+
+				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				Proceed = false;
+			}
 		}
 
 		public bool ShouldAddProjectItem(string filePath)

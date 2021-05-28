@@ -16,6 +16,212 @@ namespace COFRS.Template.Common.ServiceUtilities
 	{
 		public static MemoryCache _cache = new MemoryCache("ClassCache");
 
+		public static string GetPostgresqlExampleValue(DBColumn column)
+        {
+			if ( string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
+            {
+				if (column.Length == 1)
+					return "a";
+				else
+					return "string";
+            }
+			else if (string.Equals(column.dbDataType, "char", StringComparison.OrdinalIgnoreCase))
+			{
+				if (column.Length == 1)
+					return "a";
+				else
+					return "string";
+			}
+			else if (string.Equals(column.dbDataType, "int2", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "int4", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "int8", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "oid", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "xid", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "cid", StringComparison.OrdinalIgnoreCase))
+			{
+				return "123";
+			}
+			else if (string.Equals(column.dbDataType, "text", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "varchar", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "name", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "citext", StringComparison.OrdinalIgnoreCase))
+			{
+				return "string";
+			}
+			else if (string.Equals(column.dbDataType, "bool", StringComparison.OrdinalIgnoreCase))
+			{
+				return "true";
+			}
+			else if (string.Equals(column.dbDataType, "date", StringComparison.OrdinalIgnoreCase))
+			{
+				return DateTime.Now.ToString("yyyy-MM-dd");
+			}
+			else if (string.Equals(column.dbDataType, "timestamp", StringComparison.OrdinalIgnoreCase))
+			{
+				return DateTime.Now.ToString("s");
+			}
+			else if (string.Equals(column.dbDataType, "timestamptz", StringComparison.OrdinalIgnoreCase))
+			{
+				return DateTimeOffset.Now.ToString("yyyy-MM-ddThh:mm:ss.fffffzzz");
+			}
+			else if (string.Equals(column.dbDataType, "float4", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "float8", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "numeric", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "money", StringComparison.OrdinalIgnoreCase))
+			{
+				return "123.45";
+			}
+			else if (string.Equals(column.dbDataType, "bytea", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "varbit", StringComparison.OrdinalIgnoreCase))
+			{
+				return "VGhpcyBpcyBhbiBleGFtcGxlIHZhbHVl";
+			}
+			else if (string.Equals(column.dbDataType, "uuid", StringComparison.OrdinalIgnoreCase))
+			{
+				return Guid.NewGuid().ToString();
+			}
+			else if (string.Equals(column.dbDataType, "inet", StringComparison.OrdinalIgnoreCase))
+			{
+				return "184.241.2.54";
+			}
+
+			return "example";
+		}
+
+		public static string GetMySqlExampleValue(DBColumn column)
+		{
+			if (string.Equals(column.dbDataType, "text", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.dbDataType, "varchar", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.dbDataType, "sysname", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.dbDataType, "nvarchar", StringComparison.OrdinalIgnoreCase))
+			{
+				return "string";
+			}
+			if (string.Equals(column.dbDataType, "year", StringComparison.OrdinalIgnoreCase))
+			{
+				return DateTime.Now.ToString("yyyy");
+			}
+			else if (string.Equals(column.dbDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+			         string.Equals(column.dbDataType, "nchar", StringComparison.OrdinalIgnoreCase))
+					{
+						if (column.Length == 1)
+					return "a";
+				else
+					return "string";
+			}
+			else if (string.Equals(column.dbDataType, "tinyint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "tinyint(1)", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "tinyint unsigned", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "int unsigned", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "smallint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "smallint unsigned", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "mediumint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "mediumint unsigned", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "bigint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "bigint unsigned", StringComparison.OrdinalIgnoreCase))
+			{
+				return "123";
+			}
+			else if (string.Equals(column.dbDataType, "bit", StringComparison.OrdinalIgnoreCase))
+			{
+				return "true";
+			}
+			else if (string.Equals(column.dbDataType, "date", StringComparison.OrdinalIgnoreCase))
+			{
+				return DateTime.Now.ToString("yyyy-MM-dd");
+			}
+			else if (string.Equals(column.dbDataType, "datetime", StringComparison.OrdinalIgnoreCase))
+			{
+				return DateTimeOffset.Now.ToString("yyyy-MM-ddThh:mm:ss.fffffzzz");
+			}
+			else if (string.Equals(column.dbDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "float", StringComparison.OrdinalIgnoreCase))
+			{
+				return "123.45";
+			}
+			else if (string.Equals(column.dbDataType, "binary", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "varbinary", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "blob", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "tinyblob", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "mediumblob", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "longblob", StringComparison.OrdinalIgnoreCase))
+			{
+				return "VGhpcyBpcyBhbiBleGFtcGxlIHZhbHVl";
+			}
+			else if (string.Equals(column.dbDataType, "uuid", StringComparison.OrdinalIgnoreCase))
+			{
+				return Guid.NewGuid().ToString();
+			}
+			else if (string.Equals(column.dbDataType, "inet", StringComparison.OrdinalIgnoreCase))
+			{
+				return "184.241.2.54";
+			}
+
+			return "example";
+		}
+		public static string GetSqlServerExampleValue(DBColumn column)
+		{
+			if (string.Equals(column.dbDataType, "text", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.dbDataType, "ntext", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.dbDataType, "varchar", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.dbDataType, "nvarchar", StringComparison.OrdinalIgnoreCase) )
+			{
+				return "string";
+			}
+			else if (string.Equals(column.dbDataType, "char", StringComparison.OrdinalIgnoreCase))
+			{
+				if (column.Length == 1)
+					return "a";
+				else
+					return "string";
+			}
+			else if (string.Equals(column.dbDataType, "tinyint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "smallint)", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "int)", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "bigint", StringComparison.OrdinalIgnoreCase))
+			{
+				return "123";
+			}
+			else if (string.Equals(column.dbDataType, "bit", StringComparison.OrdinalIgnoreCase))
+			{
+				return "true";
+			}
+			else if (string.Equals(column.dbDataType, "date", StringComparison.OrdinalIgnoreCase))
+			{
+				return DateTime.Now.ToString("yyyy-MM-dd");
+			}
+			else if (string.Equals(column.dbDataType, "datetime", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "datetime2", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "smalldatetime", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "datetimeoffset", StringComparison.OrdinalIgnoreCase))
+			{
+				return DateTimeOffset.Now.ToString("yyyy-MM-ddThh:mm:ss.fffffzzz");
+			}
+			else if (string.Equals(column.dbDataType, "real", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "money", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "numeric", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "smallmoney", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "float", StringComparison.OrdinalIgnoreCase))
+			{
+				return "123.45";
+			}
+			else if (string.Equals(column.dbDataType, "binary", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.dbDataType, "varbinary", StringComparison.OrdinalIgnoreCase))
+			{
+				return "VGhpcyBpcyBhbiBleGFtcGxlIHZhbHVl";
+			}
+			else if (string.Equals(column.dbDataType, "uniqueidentifier", StringComparison.OrdinalIgnoreCase))
+			{
+				return Guid.NewGuid().ToString();
+			}
+
+			return "example";
+		}
+
 
 		/// <summary>
 		/// Convers a Postgresql data type into its corresponding standard SQL data type
