@@ -46,7 +46,6 @@ namespace COFRS.Template.Common.Forms
 		public List<ClassFile> ClassList { get; set; }
 		public List<ClassFile> UndefinedClassList = new List<ClassFile>();
 		public DBServerType ServerType { get; set; }
-		public EntityClassFile EntityClassFile { get; set; }
 		public Dictionary<string, MemberInfo> Members { get; set; }
 
 		public string Policy
@@ -612,32 +611,6 @@ select s.name, t.name
 			}
 		}
 
-		private bool CheckEnumType(string datatype, NpgsqlConnection connection)
-		{
-			string query = @"
-select typtype
-  from pg_type
- where ""typname"" = @typname";
-
-			using (var command = new NpgsqlCommand(query, connection))
-			{
-				command.Parameters.AddWithValue("@typname", datatype);
-
-				using (var reader = command.ExecuteReader())
-				{
-					if (reader.Read())
-					{
-						var theType = reader.GetChar(0);
-
-						if (theType == 'e' || theType == 'E')
-							return true;
-					}
-				}
-			}
-
-			return false;
-		}
-
 		private void OnTableChanged(object sender, EventArgs e)
 		{
 			try
@@ -646,10 +619,6 @@ select typtype
 				var db = (string)_dbList.SelectedItem;
 				var table = (DBTable)_tableList.SelectedItem;
 				DatabaseColumns.Clear();
-				List<EntityClassFile> entityList = (List<EntityClassFile>)(from ClassFile in ClassList
-																		   where ClassFile as EntityClassFile != null
-																		   select ClassFile);
-
 
 				if (server == null)
 					return;
@@ -733,38 +702,42 @@ select a.attname as columnname,
 							{
 								while (reader.Read())
 								{
-									NpgsqlDbType dataType = NpgsqlDbType.Unknown;
+									var entityName = reader.GetString(0);
+									var columnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0)));
 
-									try
-									{
-										dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
-									}
-									catch (InvalidCastException)
-									{
-										EntityClassFile unknownClass = entityList.FirstOrDefault(c =>
-											string.Equals(c.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
-											string.Equals(c.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase));
+									NpgsqlDbType dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
 
-										if (unknownClass == null)
+									if (dataType == NpgsqlDbType.Unknown)
+									{
+										var entity = ClassList.FirstOrDefault(ent =>
+											ent.GetType() == typeof(EntityClassFile) &&
+											string.Equals(((EntityClassFile)ent).SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
+											string.Equals(((EntityClassFile)ent).TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase));
+
+										if (entity == null)
 										{
-											unknownClass = new EntityClassFile()
+											entityName = reader.GetString(1);
+											var className = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(entityName));
+
+											entity = new EntityClassFile()
 											{
 												SchemaName = table.Schema,
-												TableName = reader.GetString(1),
-												ClassName = StandardUtils.NormalizeClassName(reader.GetString(1)),
-												ClassNameSpace = EntityModelsFolder.Namespace,
-												FileName = Path.Combine(EntityModelsFolder.Folder, $"{StandardUtils.NormalizeClassName(reader.GetString(1))}.cs")
+												ClassName = className,
+												TableName = entityName,
+												FileName = Path.Combine(EntityModelsFolder.Folder, $"{className}.cs"),
+												ClassNameSpace = EntityModelsFolder.Namespace
 											};
 
-											UndefinedClassList.Add(unknownClass);
+											UndefinedClassList.Add(entity);
 										}
 									}
 
 									var dbColumn = new DBColumn
 									{
-										ColumnName = reader.GetString(0),
-										dbDataType = reader.GetString(1),
+										ColumnName = columnName,
+										EntityName = entityName,
 										DataType = dataType,
+										dbDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
 										NumericScale = Convert.ToInt32(reader.GetValue(4)),
@@ -780,6 +753,11 @@ select a.attname as columnname,
 									DatabaseColumns.Add(dbColumn);
 								}
 							}
+						}
+
+						foreach (var unknownClass in UndefinedClassList)
+						{
+							unknownClass.ElementType = DBHelper.GetElementType(((EntityClassFile)unknownClass).SchemaName, ((EntityClassFile)unknownClass).TableName, ClassList, connectionString);
 						}
 					}
 				}
@@ -966,19 +944,16 @@ select c.name as column_name,
 			Save();
 
 			var server = (DBServer)_serverList.SelectedItem;
-			var db = (string)_dbList.SelectedItem;
 			DatabaseTable = (DBTable)_tableList.SelectedItem;
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
-				UndefinedClassList = StandardUtils.GenerateEntityClassList(UndefinedClassList, ClassList, Members, ReplacementsDictionary["$solutionDirectory$"], ConnectionString);
+				UndefinedClassList = StandardUtils.GenerateEntityClassList(UndefinedClassList, 
+					                                                       ClassList, 
+																		   Members, 
+																		   EntityModelsFolder.Folder, 
+																		   ConnectionString);
 			}
-
-			List<ClassFile> theClassList = new List<ClassFile>();
-			theClassList.AddRange(ClassList);
-			theClassList.AddRange(UndefinedClassList);
-
-			Examples = StandardUtils.ConstructExample(server.DBType, EntityClassFile);
 
 			DialogResult = DialogResult.OK;
 			Close();
@@ -1131,6 +1106,7 @@ select c.name as column_name,
 		private void PopulateDatabases()
 		{
 			var server = (DBServer)_serverList.SelectedItem;
+			ServerType = server.DBType;
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
@@ -1462,6 +1438,7 @@ select name
 
 				var dbServer = _serverConfig.Servers.ToList()[LastServerUsed];
 				DBServerType selectedType = dbServer.DBType;
+				ServerType = dbServer.DBType;
 
 				switch (dbServer.DBType)
 				{
@@ -1487,6 +1464,7 @@ select name
 				if (_serverList.Items.Count > 0)
 				{
 					_serverList.SelectedIndex = selectedIndex;
+					ServerType = dbServer.DBType;
 
 					if (dbServer.DBType == DBServerType.SQLSERVER)
 					{

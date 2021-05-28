@@ -22,20 +22,17 @@
       <ProjectItem ReplaceParameters="true" TargetFileName="$controllerClass$.cs" OpenInEditor="true">Controller.cs</ProjectItem>
     </Folder>
     <Folder Name="Validation">
-      <ProjectItem ReplaceParameters="true" TargetFileName="$validatorClass$.cs" OpenInEditor="true">Validator.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="$validatorClass$.cs">Validator.cs</ProjectItem>
+    </Folder>
+    <Folder Name="Mapping">
+      <ProjectItem ReplaceParameters="true" TargetFileName="$mapClass$.cs">Map.cs</ProjectItem>
     </Folder>
     <Folder Name="Models">
       <Folder Name="EntityModels">
-        <ProjectItem ReplaceParameters="true" TargetFileName="$entityClass$.cs" OpenInEditor="true">Emodel.cs</ProjectItem>
-      </Folder>
-      <Folder Name="Mapping">
-        <ProjectItem ReplaceParameters="true" TargetFileName="$mapClass$.cs" OpenInEditor="true">Map.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true" TargetFileName="$entityClass$.cs">Emodel.cs</ProjectItem>
       </Folder>
       <Folder Name="ResourceModels">
-        <ProjectItem ReplaceParameters="true" TargetFileName="$resourceClass$.cs" OpenInEditor="true">Model.cs</ProjectItem>
-      </Folder>
-      <Folder Name="SwaggerExamples">
-        <ProjectItem ReplaceParameters="true" TargetFileName="$swaggerClass$.cs" OpenInEditor="true">Swagger.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true" TargetFileName="$resourceClass$.cs">Model.cs</ProjectItem>
       </Folder>
     </Folder>
   </TemplateContent>

@@ -26,7 +26,6 @@ namespace COFRS.Template.Common.Forms
 		#region variables
 		private ServerConfig _serverConfig;
 		public int InstallType { get; set; }
-		public string SolutionFolder { get; set; }
 		private bool Populating = false;
 		public DBTable DatabaseTable { get; set; }
 		public JObject Examples { get; set; }
@@ -34,6 +33,7 @@ namespace COFRS.Template.Common.Forms
 		public string ConnectionString { get; set; }
 		public List<ClassFile> ClassList { get; set; }
 		public DBServerType ServerType { get; set; }
+		public List<string> Policies { get; set; }
 		#endregion
 
 		#region Utility functions
@@ -50,19 +50,35 @@ namespace COFRS.Template.Common.Forms
 			{
 				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to translate between. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate the AutoMapper Profile. Then press OK to generate the AutoMapper Profile class.";
 				_titleLabel.Text = "COFRS AutoMapper Profile Generator";
+				PolicyLabel.Hide();
+				policyCombo.Hide();
 			}
-			else if (InstallType == 4)
+			else if (InstallType == 3)
 			{
-				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to create examples for. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate the example classes. Then press OK to generate the example classes.";
-				_titleLabel.Text = "COFRS Examples Class Generator";
+				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to create a validator for. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate the validator class. Then press OK to generate the validator class.";
+				_titleLabel.Text = "COFRS Validator Class Generator";
+				PolicyLabel.Hide();
+				policyCombo.Hide();
 			}
 			else if (InstallType == 5)
 			{
 				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to create a controller for. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate a controller. Then press OK to generate the controller.";
 				_titleLabel.Text = "COFRS Controller Class Generator";
+
+				if (Policies == null || Policies.Count == 0)
+				{
+					PolicyLabel.Hide();
+					policyCombo.Hide();
+				}
+				else
+				{
+					policyCombo.Items.AddRange(Policies.ToArray());
+					policyCombo.SelectedIndex = 0;
+					PolicyLabel.Show();
+					policyCombo.Show();
+				}
 			}
 
-			LoadAppSettings();
 			ReadServerList();
 
 			_entityModelList.Items.Clear();
@@ -82,7 +98,7 @@ namespace COFRS.Template.Common.Forms
 				{
 					MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create a mapping model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				}
-				else if (InstallType == 4)
+				else if (InstallType == 3)
 				{
 					MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create an example model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				}
@@ -813,13 +829,6 @@ select s.name, t.name
 				return;
 			}
 
-			if (InstallType == 4)
-			{
-				var server = (DBServer) _serverList.SelectedItem;
-				var entity = (EntityClassFile) _entityModelList.SelectedItem;
-				Examples = StandardUtils.ConstructExample(server.DBType, entity);
-			}
-
 			DialogResult = DialogResult.OK;
 			Close();
 		}
@@ -856,141 +865,6 @@ select s.name, t.name
 		#endregion
 
 		#region Helper Functions
-		private void LoadEntityClass(string file)
-		{
-			var data = File.ReadAllText(file).Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-			var className = string.Empty;
-			var namespaceName = string.Empty;
-			var schemaName = string.Empty;
-			var tableName = string.Empty;
-
-			foreach (var line in data)
-			{
-				var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-				if (match.Success)
-					className = match.Groups["className"].Value;
-
-				match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-				if (match.Success)
-					namespaceName = match.Groups["namespaceName"].Value;
-
-				// 	[Table("Products", Schema = "dbo")]
-				match = Regex.Match(line, "\\[[ \t]*Table[ \t]*\\([ \t]*\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}\\)\\]");
-
-				if (match.Success)
-				{
-					tableName = match.Groups["tableName"].Value;
-					schemaName = match.Groups["schemaName"].Value;
-				}
-			}
-
-			if (!string.IsNullOrWhiteSpace(tableName) &&
-				 !string.IsNullOrWhiteSpace(className) &&
-				 !string.IsNullOrWhiteSpace(namespaceName))
-			{
-				var classfile = new EntityClassFile
-				{
-					ClassName = $"{className}",
-					FileName = file,
-					TableName = tableName,
-					SchemaName = schemaName,
-					ClassNameSpace = namespaceName
-				};
-
-				_entityModelList.Items.Add(classfile);
-			}
-		}
-
-		private void LoadResourceClass(string file)
-		{
-			try
-			{
-				var data = File.ReadAllText(file).Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries); ;
-				var className = string.Empty;
-				var namespaceName = string.Empty;
-				var entityName = string.Empty;
-
-				foreach (var line in data)
-				{
-					var match = Regex.Match(line, "class[ \t]+(?<className>[A-Za-z][A-Za-z0-9_]*)");
-
-					if (match.Success)
-						className = match.Groups["className"].Value;
-
-					match = Regex.Match(line, "namespace[ \t]+(?<namespaceName>[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*)");
-
-					if (match.Success)
-						namespaceName = match.Groups["namespaceName"].Value;
-
-					match = Regex.Match(line, "\\[[ \t]*Entity[ \t]*\\([ \t]*typeof\\([ \t]*(?<entityClass>[A-Za-z][A-Za-z0-9_]*)[ \t]*\\)");
-
-					if (match.Success)
-						entityName = match.Groups["entityClass"].Value;
-				}
-
-				if (!string.IsNullOrWhiteSpace(entityName) &&
-					 !string.IsNullOrWhiteSpace(className) &&
-					 !string.IsNullOrWhiteSpace(namespaceName))
-				{
-					var classfile = new ResourceClassFile
-					{
-						ClassName = $"{className}",
-						FileName = file,
-						EntityClass = entityName,
-						ClassNameSpace = namespaceName
-					};
-
-					_resourceModelList.Items.Add(classfile);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadEntityList(string folder)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(folder, "*.cs"))
-				{
-					LoadEntityClass(file);
-				}
-
-				foreach (var subfolder in Directory.GetDirectories(folder))
-				{
-					LoadEntityList(subfolder);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void LoadResourceList(string folder)
-		{
-			try
-			{
-				foreach (var file in Directory.GetFiles(folder, "*.cs"))
-				{
-					LoadResourceClass(file);
-				}
-
-				foreach (var subfolder in Directory.GetDirectories(folder))
-				{
-					LoadResourceList(subfolder);
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
 		/// <summary>
 		/// Reads the list of SQL Servers from the server configuration list
 		/// </summary>
@@ -1758,40 +1632,6 @@ select name
 			return firstColumn;
 		}
 
-		private void LoadAppSettings()
-		{
-			LoadAppSettings(SolutionFolder);
-		}
-
-		private bool LoadAppSettings(string folder)
-		{
-			var files = Directory.GetFiles(folder, "appSettings.Local.json");
-
-			foreach (var file in files)
-			{
-				using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
-				{
-					using (var reader = new StreamReader(stream))
-					{
-						string content = reader.ReadToEnd();
-						var settings = JObject.Parse(content);
-						var connectionStrings = settings["ConnectionStrings"].Value<JObject>();
-						DefaultConnectionString = connectionStrings["DefaultConnection"].Value<string>();
-						return true;
-					}
-				}
-			}
-
-			var childFolders = Directory.GetDirectories(folder);
-
-			foreach (var childFolder in childFolders)
-			{
-				if (LoadAppSettings(childFolder))
-					return true;
-			}
-
-			return false;
-		}
 		#endregion
 	}
 }

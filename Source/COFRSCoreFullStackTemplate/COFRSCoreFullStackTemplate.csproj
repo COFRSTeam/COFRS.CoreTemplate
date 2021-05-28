@@ -60,8 +60,7 @@
     <Content Include="Validation\Validator.cs" />
     <Content Include="Models\EntityModels\Emodel.cs" />
     <Content Include="Models\ResourceModels\Model.cs" />
-    <Content Include="Models\Mapping\Map.cs" />
-    <Content Include="Models\SwaggerExamples\Swagger.cs" />
+    <Content Include="Mapping\Map.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

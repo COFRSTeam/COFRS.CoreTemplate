@@ -104,7 +104,6 @@ namespace COFRS.Template.Common.Wizards
 
 					var emitter = new Emitter();
 					var standardEmitter = new StandardEmitter();
-					ElementType etype = ElementType.Table;
 
 					if (form.ServerType == DBServerType.POSTGRESQL)
 					{
@@ -115,7 +114,11 @@ namespace COFRS.Template.Common.Wizards
 						definedList.AddRange(classList);
 						definedList.AddRange(composits);
 
-						standardEmitter.GenerateComposites(composits, form.ConnectionString, replacementsDictionary, definedList);
+						standardEmitter.GenerateComposites(composits, 
+							                               form.ConnectionString, 
+														   replacementsDictionary, 
+														   definedList,
+														   entityModelsFolder.Folder);
 						HandleMessages();
 
 						foreach (var composite in composits)
@@ -128,14 +131,11 @@ namespace COFRS.Template.Common.Wizards
 						}
 
 						classList.AddRange(composits);
-
-						//	Shouldn't this already have been done?
-						etype = DBHelper.GetElementType(form.DatabaseTable.Schema, form.DatabaseTable.Table, classList, form.ConnectionString);
 					}
 
 					string entityModel = string.Empty;
 
-					if (etype == ElementType.Enum)
+					if (form.eType == ElementType.Enum)
 					{
 						entityModel = standardEmitter.EmitEnum(form.DatabaseTable.Schema, form.DatabaseTable.Table, replacementsDictionary["$safeitemname$"], form.ConnectionString);
 						replacementsDictionary["$npgsqltypes$"] = "true";
@@ -151,10 +151,17 @@ namespace COFRS.Template.Common.Wizards
 
 						StandardUtils.RegisterComposite(_appObject.Solution, entityclassFile);
 					}
-					else if (etype == ElementType.Composite)
+					else if (form.eType == ElementType.Composite)
 					{
 						var undefinedElements = new List<ClassFile>();
-						entityModel = standardEmitter.EmitComposite(form.DatabaseTable.Schema, form.DatabaseTable.Table, replacementsDictionary["$safeitemname$"], form.ConnectionString, replacementsDictionary, classList, undefinedElements);
+						entityModel = standardEmitter.EmitComposite(form.DatabaseTable.Schema, 
+							                                        form.DatabaseTable.Table, 
+																	replacementsDictionary["$safeitemname$"], 
+																	form.ConnectionString, 
+																	replacementsDictionary, 
+																	classList, 
+																	undefinedElements,
+																	entityModelsFolder.Folder);
 						replacementsDictionary["$npgsqltypes$"] = "true";
 
 						var classFile = new EntityClassFile()
@@ -176,7 +183,7 @@ namespace COFRS.Template.Common.Wizards
 																	  classList,
 																	  form.DatabaseColumns, 
 																	  replacementsDictionary, 
-																	  form.ConnectionString);
+																	  out EntityClassFile entityClass);
 					}
 
 					replacementsDictionary.Add("$entityModel$", entityModel);

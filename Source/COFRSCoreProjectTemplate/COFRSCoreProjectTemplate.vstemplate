@@ -34,16 +34,13 @@
         <ProjectItem ReplaceParameters="true">SwaggerConfig.cs</ProjectItem>
       </Folder>
       <Folder Name="Controllers">
-        <ProjectItem ReplaceParameters="true">HeartbeatController.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true">HealthCheckController.cs</ProjectItem>
       </Folder>
       <Folder Name="Models">
         <Folder Name="ResourceModels">
-          <ProjectItem ReplaceParameters="true">Heartbeat.cs</ProjectItem>
+          <ProjectItem ReplaceParameters="true">HealthCheck.cs</ProjectItem>
         </Folder>
-        <Folder Name="SwaggerExamples">
-          <ProjectItem ReplaceParameters="true">HeartbeatExample.cs</ProjectItem>
-          <ProjectItem ReplaceParameters="true">PatchExample.cs</ProjectItem>
-        </Folder>
+        <Folder Name="EntityModels"></Folder>
       </Folder>
       <Folder Name="Orchestration">
         <ProjectItem ReplaceParameters="true">IServiceOrchestrator.cs</ProjectItem>
@@ -56,6 +53,8 @@
       <Folder Name="Properties">
         <ProjectItem ReplaceParameters="true" >launchSettings.json</ProjectItem>
       </Folder>
+      <Folder Name ="Mapping"></Folder>
+      <Folder Name ="Validation"></Folder>
     </Project>
   </TemplateContent>
   <WizardExtension>

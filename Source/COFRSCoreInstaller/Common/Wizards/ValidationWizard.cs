@@ -15,11 +15,6 @@ namespace COFRS.Template.Common.Wizards
     public class ValidationWizard : IWizard
 	{
 		private bool Proceed = false;
-		private string SolutionFolder { get; set; }
-		private ResourceClassFile Orchestrator;
-		private ResourceClassFile ExampleClass;
-		private ResourceClassFile CollectionExampleClass;
-		private ResourceClassFile ValidatorClass;
 
 		// This method is called before opening any item that
 		// has the OpenInEditor attribute.
@@ -47,64 +42,58 @@ namespace COFRS.Template.Common.Wizards
 			WizardRunKind runKind, object[] customParams)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
+			ProgressDialog progressDialog = new ProgressDialog("Loading classes and preparing project...");
 
 			try
 			{
-				DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
-				var solutionDirectory = replacementsDictionary["$solutiondirectory$"];
-				var rootNamespace = replacementsDictionary["$rootnamespace$"];
+				//	Show the user that we are busy doing things...
+				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
+				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-				var namespaceParts = rootNamespace.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+				HandleMessages();
 
-				var filePath = solutionDirectory;
+				var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
+				HandleMessages();
 
-				for (int i = 0; i < namespaceParts.Length; i++)
+				var classList = StandardUtils.LoadClassList(programfiles);
+				HandleMessages();
+
+				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
+				HandleMessages();
+
+				var form = new UserInputGeneral()
 				{
-					if (i == 0)
-					{
-						var candidate = Path.Combine(filePath, namespaceParts[i]);
-
-						if (Directory.Exists(candidate))
-							filePath = candidate;
-					}
-					else
-						filePath = Path.Combine(filePath, namespaceParts[i]);
-				}
-
-				if (!Directory.Exists(filePath))
-					Directory.CreateDirectory(filePath);
-
-				SolutionFolder = replacementsDictionary["$solutiondirectory$"];
-
-				var form = new UserInputValidation()
-				{
-					SolutionFolder = replacementsDictionary["$solutiondirectory$"],
+					DefaultConnectionString = connectionString,
+					ClassList = classList,
 					InstallType = 3
 				};
 
+				HandleMessages();
+
+				progressDialog.Close();
+				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+					progressDialog = null;
+
 				if (form.ShowDialog() == DialogResult.OK)
 				{
-					Orchestrator = null;
-					ExampleClass = null;
-					CollectionExampleClass = null;
-					ValidatorClass = null;
-
 					var entityClassFile = (EntityClassFile)form._entityModelList.SelectedItem;
 					var resourceClassFile = (ResourceClassFile)form._resourceModelList.SelectedItem;
 
-					Utilities.LoadClassList(SolutionFolder, resourceClassFile.ClassName, ref Orchestrator, ref ValidatorClass, ref ExampleClass, ref CollectionExampleClass);
+					var emitter = new StandardEmitter();
+					var model = emitter.EmitValidationModel(resourceClassFile.ClassName, replacementsDictionary["$safeitemname$"], out string validatorInterface);
 
-					var emitter = new Emitter();
-					var model = emitter.EmitValidationModel(resourceClassFile.ClassName, replacementsDictionary["$safeitemname$"]);
+					var orchestrationNamespace = StandardUtils.FindOrchestrationNamespace(_appObject.Solution);
 
-					replacementsDictionary.Add("$orchestrationnamespace$", Orchestrator.ClassNameSpace);
+					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
 					replacementsDictionary.Add("$model$", model);
 					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceClassFile.ClassNameSpace);
 
 					StandardUtils.RegisterValidationModel(_appObject.Solution,
 													  replacementsDictionary["$safeitemname$"],
-													  rootNamespace);
+													  replacementsDictionary["$rootnamespace$"]);
+					Proceed = true;
 				}
 				else
 					Proceed = false;
@@ -123,149 +112,12 @@ namespace COFRS.Template.Common.Wizards
 			return Proceed;
 		}
 
-		private bool UpdateServices(ResourceClassFile domainClassFile, Dictionary<string, string> replacementsDictionary)
+		private void HandleMessages()
 		{
-			var servicesFile = FindServices(replacementsDictionary["$solutiondirectory$"]);
-
-			if (!string.IsNullOrWhiteSpace(servicesFile))
+			while (WinNative.PeekMessage(out WinNative.NativeMessage msg, IntPtr.Zero, 0, (uint)0xFFFFFFFF, 1) != 0)
 			{
-				var serviceFolder = Path.GetDirectoryName(servicesFile);
-				var tempFile = Path.Combine(serviceFolder, "Services.old.cs");
-
-				try
-				{
-					File.Delete(tempFile);
-					File.Move(servicesFile, tempFile);
-
-					using (var stream = new FileStream(tempFile, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
-					{
-						using (var reader = new StreamReader(stream))
-						{
-							using (var outStream = new FileStream(servicesFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
-							{
-								using (var writer = new StreamWriter(outStream))
-								{
-									var state = 1;
-									bool hasDomainNamespace = false;
-									bool hasValidationNamespace = false;
-									bool hasEntityNamespace = false;
-									bool validatorRegistered = false;
-
-									while (!reader.EndOfStream)
-									{
-										var line = reader.ReadLine();
-
-										if (state == 1)
-										{
-											if (line.ToLower().Contains(replacementsDictionary["$resourcenamespace$"].ToLower()))
-											{
-												hasDomainNamespace = true;
-											}
-
-											if (line.ToLower().Contains(replacementsDictionary["$rootnamespace$"].ToLower()))
-											{
-												hasValidationNamespace = true;
-											}
-
-											if (line.ToLower().Contains(replacementsDictionary["$entitynamespace$"].ToLower()))
-											{
-												hasEntityNamespace = true;
-											}
-
-											if (string.IsNullOrWhiteSpace(line))
-											{
-												if (!hasDomainNamespace)
-												{
-													writer.WriteLine($"using {replacementsDictionary["$resourcenamespace$"]};");
-												}
-
-												if (!hasValidationNamespace)
-												{
-													writer.WriteLine($"using {replacementsDictionary["$rootnamespace$"]};");
-												}
-
-												if (!hasEntityNamespace)
-												{
-													writer.WriteLine($"using {replacementsDictionary["$entitynamespace$"]};");
-												}
-
-												state = 2;
-											}
-
-										}
-										else if (state == 2)
-										{
-											if (line.ToLower().Contains("public static iapioptions configureservices"))
-											{
-												state = 3;
-											}
-										}
-										else if (state == 3)
-										{
-											if (line.Contains("{"))
-												state++;
-										}
-										else if (state == 4)
-										{
-											if (line.ToLower().Contains(($"services.AddTransientWithParameters<I{replacementsDictionary["$safeitemname$"]}, {replacementsDictionary["$safeitemname$"]}>()").ToLower()))
-												validatorRegistered = true;
-
-											state += line.CountOf('{') - line.CountOf('}');
-
-											if (line.Contains("return ApiOptions;"))
-												state--;
-
-											if (state == 3)
-											{
-												if (!validatorRegistered)
-												{
-													writer.WriteLine($"\t\t\tservices.AddTransientWithParameters<I{replacementsDictionary["$safeitemname$"]}, {replacementsDictionary["$safeitemname$"]}>();");
-												}
-												state = 1000000;
-											}
-										}
-										else
-										{
-											state += line.CountOf('{') - line.CountOf('}');
-										}
-
-										writer.WriteLine(line);
-									}
-								}
-							}
-						}
-					}
-
-					File.Delete(tempFile);
-				}
-				catch (Exception error)
-				{
-					MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					File.Delete(servicesFile);
-					File.Move(tempFile, servicesFile);
-					return false;
-				}
+				WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
 			}
-
-			return true;
-		}
-
-		private string FindServices(string folder)
-		{
-			string filePath = Path.Combine(folder, "ServiceConfig.cs");
-
-			if (File.Exists(filePath))
-				return filePath;
-
-			foreach (var childFolder in Directory.GetDirectories(folder))
-			{
-				filePath = FindServices(childFolder);
-
-				if (!string.IsNullOrWhiteSpace(filePath))
-					return filePath;
-			}
-
-			return string.Empty;
 		}
 
 	}

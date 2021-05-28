@@ -8,14 +8,13 @@ using System;
 using System.Reflection;
 using $safeprojectname$.Orchestration;
 using $safeprojectname$.Repository;
-using Swashbuckle.AspNetCore.Filters;
 
 namespace $safeprojectname$.App_Start
 {
 	///	<summary>
 	///	Services Helper Class
 	///	</summary>
-	public static class IServiceCollectionExtension
+	public static class ServiceCollectionExtension
 	{
 		private static TranslationOptions TranslationOptions { get; set; }
 		private static RepositoryOptions RepositoryOptions { get; set; }
@@ -51,8 +50,6 @@ namespace $safeprojectname$.App_Start
 			var myAssembly = Assembly.GetExecutingAssembly();
 			AutoMapperFactory.MapperConfiguration = new MapperConfiguration(cfg => cfg.AddMaps(myAssembly));
 			AutoMapperFactory.CreateMapper();
-
-			services.AddSwaggerExamplesFromAssemblyOf<Startup>();
 
 			RepositoryOptions = new RepositoryOptions(Configuration.GetConnectionString("DefaultConnection"),
 													  Configuration.GetSection("ApiSettings").GetValue<int>("QueryLimit"),
