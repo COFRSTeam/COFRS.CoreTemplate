@@ -983,7 +983,7 @@ SELECT datname
 
 									string cs = $"Server={server.ServerName};Port={server.PortNumber};Database={databaseName};User ID={server.Username};Password={_password.Text};";
 
-									if (string.Equals(cs, DefaultConnectionString, StringComparison.OrdinalIgnoreCase))
+									if(cs.StartsWith(DefaultConnectionString, StringComparison.OrdinalIgnoreCase))
 										selectedItem = itemindex;
 
 									itemindex++;
@@ -1035,7 +1035,7 @@ select SCHEMA_NAME from information_schema.SCHEMATA
 
 									string cs = $"Server={server.ServerName};Port={server.PortNumber};Database={databaseName};UID={server.Username};PWD={_password.Text};";
 
-									if (string.Equals(cs, DefaultConnectionString, StringComparison.OrdinalIgnoreCase))
+									if (cs.StartsWith(DefaultConnectionString, StringComparison.OrdinalIgnoreCase))
 										selectedItem = itemindex;
 
 									itemindex++;
@@ -1098,7 +1098,7 @@ select name
 									else
 										cs = $"Server={server.ServerName};Database={databaseName};uid={server.Username};pwd={_password.Text};";
 
-									if (string.Equals(cs, DefaultConnectionString, StringComparison.OrdinalIgnoreCase))
+									if (cs.StartsWith(DefaultConnectionString, StringComparison.OrdinalIgnoreCase))
 										selectedItem = itemindex;
 
 									itemindex++;

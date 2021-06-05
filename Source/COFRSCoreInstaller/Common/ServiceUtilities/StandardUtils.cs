@@ -23,6 +23,18 @@ namespace COFRS.Template.Common.ServiceUtilities
 {
     public static class StandardUtils
     {
+		public static string GetProjectName(Solution solution)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+			foreach ( Project project in solution.Projects )
+            {
+				return project.Name;
+            }
+
+			return string.Empty;
+        }
+
 		public static string FindValidatorNamespace(Solution solution, ResourceClassFile resourceClass, EntityClassFile entityClass, out string validatorInterface)
 		{
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -1584,10 +1596,10 @@ select a.attname as columnname,
 
 			sel.StartOfDocument();
 
-			if (sel.FindText("Server=developmentdb;Database=master;Trusted_Connection=True;"))
+			if (sel.FindText("Server=localdb;Database=master;Trusted_Connection=True;"))
 			{
 				sel.SelectLine();
-				sel.Text = $"\t\t\"DefaultConnection\": \"{connectionString}\"";
+				sel.Text = $"\t\t\"DefaultConnection\": \"{connectionString}\"\r\n";
 				doc.Save();
 			}
 
@@ -1625,7 +1637,7 @@ select a.attname as columnname,
 				sel.Insert($"using {validationNamespace};");
 			}
 
-			if (!sel.FindText($"services.AddTransientWithParameters<I{validationClass}, {validationClass}>();", (int)vsFindOptions.vsFindOptionsFromStart))
+			if (!sel.FindText($"services.AddScopedWithParameters<I{validationClass}, {validationClass}>();", (int)vsFindOptions.vsFindOptionsFromStart))
 			{
 				sel.StartOfDocument();
 				sel.FindText("services.AddSingleton<IApiOptions>(ApiOptions)");
@@ -1639,13 +1651,13 @@ select a.attname as columnname,
 					sel.EndOfLine();
 					sel.Insert($"\r\n\t\t\t//\tRegister Validators");
 					sel.NewLine();
-					sel.Insert($"services.AddTransientWithParameters<I{validationClass}, {validationClass}>();");
+					sel.Insert($"services.AddScopedWithParameters<I{validationClass}, {validationClass}>();");
 					sel.NewLine();
 				}
 				else
 				{
 					sel.EndOfLine();
-					sel.Insert($"\r\n\t\t\tservices.AddTransientWithParameters<I{validationClass}, {validationClass}>();");
+					sel.Insert($"\r\n\t\t\tservices.AddScopedWithParameters<I{validationClass}, {validationClass}>();");
 				}
 			}
 

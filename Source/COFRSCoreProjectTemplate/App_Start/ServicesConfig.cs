@@ -56,8 +56,8 @@ namespace $safeprojectname$.App_Start
 													  Configuration.GetSection("ApiSettings").GetValue<TimeSpan>("Timeout"));
 
 			services.AddSingleton<IRepositoryOptions>(RepositoryOptions);
-			services.AddTransient<IServiceRepository>(sp => new ServiceRepository(sp.GetService<ILogger<ServiceRepository>>(), sp, RepositoryOptions));
-			services.AddTransientWithParameters<IServiceOrchestrator, ServiceOrchestrator<IServiceRepository>>();
+			services.AddTransient<IServiceRepository, ServiceRepository>();
+			services.AddScopedWithParameters<IServiceOrchestrator, ServiceOrchestrator<IServiceRepository>>();
 
 			return ApiOptions;
 		}

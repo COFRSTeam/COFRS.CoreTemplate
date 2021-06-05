@@ -1,22 +1,25 @@
 ﻿using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
-using MySql.Data.MySqlClient;
-using Newtonsoft.Json.Linq;
-using Npgsql;
-using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text;
-using System.Windows.Forms;
 
 namespace COFRS.Template
 {
-	public class Emitter
+    public class Emitter
 	{
+		/// <summary>
+		/// Emits the code for a standard controller.
+		/// </summary>
+		/// <param name="entityClass">The <see cref="EntityClassFile"/> associated with the controller.</param>
+		/// <param name="resourceClass">The <see cref="ResourceClassFile"/> associated with the controller.</param>
+		/// <param name="moniker">The company monier used in various headers</param>
+		/// <param name="controllerClassName">The class name for the controller</param>
+		/// <param name="ValidatorInterface">The validiator interface used for validations</param>
+		/// <param name="policy">The authentication policy used by the controller</param>
+		/// <returns></returns>
 		public string EmitController(EntityClassFile entityClass, ResourceClassFile resourceClass, string moniker, string controllerClassName, string ValidatorInterface, string policy)
 		{
 			var results = new StringBuilder();
@@ -78,12 +81,12 @@ namespace COFRS.Template
 			if (!string.Equals(ValidatorInterface, "none", StringComparison.OrdinalIgnoreCase))
 			{				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<{ValidatorInterface}>(User);");
 
-				results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(node).ConfigureAwait(false);");
+				results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(node);");
 				results.AppendLine();
 			}
 
 			results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-			results.AppendLine($"\t\t\tvar collection = await service.GetCollectionAsync<{resourceClass.ClassName}>(Request.QueryString.Value, node).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\tvar collection = await service.GetCollectionAsync<{resourceClass.ClassName}>(Request.QueryString.Value, node);");
 			results.AppendLine($"\t\t\treturn Ok(collection);");
 			results.AppendLine("\t\t}");
 
@@ -126,12 +129,12 @@ namespace COFRS.Template
 				if (!string.Equals(ValidatorInterface, "none", StringComparison.OrdinalIgnoreCase))
 				{
 					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<{ValidatorInterface}>(User);");
-					results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(node).ConfigureAwait(false);");
+					results.AppendLine("\t\t\tawait validator.ValidateForGetAsync(node);");
 					results.AppendLine();
 				}
 
 				results.AppendLine($"\t\t\tusing var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User);");
-				results.AppendLine($"\t\t\tvar item = await service.GetSingleAsync<{resourceClass.ClassName}>(node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\tvar item = await service.GetSingleAsync<{resourceClass.ClassName}>(node);");
 				results.AppendLine();
 				results.AppendLine("\t\t\tif (item == null)");
 				results.AppendLine("\t\t\t\treturn NotFound();");
@@ -168,13 +171,13 @@ namespace COFRS.Template
 			if (!string.Equals(ValidatorInterface, "none", StringComparison.OrdinalIgnoreCase))
 			{
 				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<{ValidatorInterface}>(User);");
-				results.AppendLine("\t\t\tawait validator.ValidateForAddAsync(item).ConfigureAwait(false);");
+				results.AppendLine("\t\t\tawait validator.ValidateForAddAsync(item);");
 				results.AppendLine();
 			}
 
 			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
 			results.AppendLine("\t\t\t{");
-			results.AppendLine($"\t\t\t\titem = await service.AddAsync(item).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\t\titem = await service.AddAsync(item);");
 			results.AppendLine($"\t\t\t\treturn Created(item.Href.AbsoluteUri, item);");
 
 			results.AppendLine("\t\t\t}");
@@ -210,13 +213,13 @@ namespace COFRS.Template
 			if (!string.Equals(ValidatorInterface, "none", StringComparison.OrdinalIgnoreCase))
 			{
 				results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<{ValidatorInterface}>(User);");
-				results.AppendLine("\t\t\tawait validator.ValidateForUpdateAsync(item, node).ConfigureAwait(false);");
+				results.AppendLine("\t\t\tawait validator.ValidateForUpdateAsync(item, node);");
 				results.AppendLine();
 			}
 
 			results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
 			results.AppendLine("\t\t\t{");
-			results.AppendLine($"\t\t\t\tawait service.UpdateAsync(item, node).ConfigureAwait(false);");
+			results.AppendLine($"\t\t\t\tawait service.UpdateAsync(item, node);");
 			results.AppendLine($"\t\t\t\treturn NoContent();");
 			results.AppendLine("\t\t\t}");
 
@@ -257,13 +260,13 @@ namespace COFRS.Template
 				if (!string.Equals(ValidatorInterface, "none", StringComparison.OrdinalIgnoreCase))
 				{
 					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<{ValidatorInterface}>(User);");
-					results.AppendLine("\t\t\tawait validator.ValidateForPatchAsync(commands, node).ConfigureAwait(false);");
+					results.AppendLine("\t\t\tawait validator.ValidateForPatchAsync(commands, node);");
 					results.AppendLine();
 				}
 
 				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
 				results.AppendLine("\t\t\t{");
-				results.AppendLine($"\t\t\t\tawait service.PatchAsync<{resourceClass.ClassName}>(commands, node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\t\tawait service.PatchAsync<{resourceClass.ClassName}>(commands, node);");
 				results.AppendLine($"\t\t\t\treturn NoContent();");
 				results.AppendLine("\t\t\t}");
 				results.AppendLine("\t\t}");
@@ -298,13 +301,13 @@ namespace COFRS.Template
 				if (!string.Equals(ValidatorInterface, "none", StringComparison.OrdinalIgnoreCase))
 				{
 					results.AppendLine($"\t\t\tvar validator = HttpContext.RequestServices.Get<{ValidatorInterface}>(User);");
-					results.AppendLine("\t\t\tawait validator.ValidateForDeleteAsync(node).ConfigureAwait(false);");
+					results.AppendLine("\t\t\tawait validator.ValidateForDeleteAsync(node);");
 					results.AppendLine();
 				}
 
 				results.AppendLine($"\t\t\tusing (var service = HttpContext.RequestServices.Get<IServiceOrchestrator>(User))");
 				results.AppendLine("\t\t\t{");
-				results.AppendLine($"\t\t\t\tawait service.DeleteAsync<{resourceClass.ClassName}>(node).ConfigureAwait(false);");
+				results.AppendLine($"\t\t\t\tawait service.DeleteAsync<{resourceClass.ClassName}>(node);");
 				results.AppendLine($"\t\t\t\treturn NoContent();");
 				results.AppendLine("\t\t\t}");
 
@@ -321,7 +324,7 @@ namespace COFRS.Template
 
 			foreach (var resourceMember in pkcolumns)
 			{
-				foreach (var column in resourceMember.EntityNames)
+				foreach (var entityColumn in resourceMember.EntityNames)
 				{
 					if (first)
 						first = false;
@@ -331,13 +334,13 @@ namespace COFRS.Template
 					string exampleValue = "example";
 
 					if (serverType == DBServerType.POSTGRESQL)
-						exampleValue = DBHelper.GetPostgresqlExampleValue(column);
+						exampleValue = DBHelper.GetPostgresqlExampleValue(entityColumn);
 					else if (serverType == DBServerType.MYSQL)
-						exampleValue = DBHelper.GetMySqlExampleValue(column);
+						exampleValue = DBHelper.GetMySqlExampleValue(entityColumn);
 					else if (serverType == DBServerType.SQLSERVER)
-						exampleValue = DBHelper.GetSqlServerExampleValue(column);
+						exampleValue = DBHelper.GetSqlServerExampleValue(entityColumn);
 
-					results.AppendLine($"\t\t///\t<param name=\"{column.EntityName}\" example=\"{exampleValue}\">The {column.EntityName} of the {resourceClassName}.</param>");
+					results.AppendLine($"\t\t///\t<param name=\"{entityColumn.EntityName}\" example=\"{exampleValue}\">The {entityColumn.EntityName} of the {resourceClassName}.</param>");
 				}
 			}
 		}
@@ -347,9 +350,9 @@ namespace COFRS.Template
 			results.Append($"\t\tpublic async Task<IActionResult> {action}{resourceClassName}Async(");
 			bool first = true;
 
-			foreach (var domainColumn in pkcolumns)
+			foreach (var resourceColumn in pkcolumns)
 			{
-				foreach (var column in domainColumn.EntityNames)
+				foreach (var entityColumn in resourceColumn.EntityNames)
 				{
 					if (first)
 						first = false;
@@ -359,13 +362,13 @@ namespace COFRS.Template
 					string dataType = "Unrecognized";
 
 					if (serverType == DBServerType.POSTGRESQL)
-						dataType = DBHelper.GetNonNullablePostgresqlDataType(column);
+						dataType = DBHelper.GetNonNullablePostgresqlDataType(entityColumn);
 					else if (serverType == DBServerType.MYSQL)
-						dataType = DBHelper.GetNonNullableMySqlDataType(column);
+						dataType = DBHelper.GetNonNullableMySqlDataType(entityColumn);
 					else if (serverType == DBServerType.SQLSERVER)
-						dataType = DBHelper.GetNonNullableSqlServerDataType(column);
+						dataType = DBHelper.GetNonNullableSqlServerDataType(entityColumn);
 
-					results.Append($"{dataType} {column.EntityName}");
+					results.Append($"{dataType} {entityColumn.EntityName}");
 				}
 			}
 
@@ -379,11 +382,11 @@ namespace COFRS.Template
 		{
 			results.Append($"\t\t[Route(\"{routeName}/id");
 
-			foreach (var domainColumn in pkcolumns)
+			foreach (var resourceColumn in pkcolumns)
 			{
-				foreach (var column in domainColumn.EntityNames)
+				foreach (var entityColumn in resourceColumn.EntityNames)
 				{
-					results.Append($"/{{{column.EntityName}}}");
+					results.Append($"/{{{entityColumn.EntityName}}}");
 				}
 			}
 
@@ -397,11 +400,11 @@ namespace COFRS.Template
 			route.Append(routeName);
 			route.Append("/id");
 
-			foreach (var domainColumn in pkcolumns)
+			foreach (var resourceColumn in pkcolumns)
 			{
-				foreach (var column in domainColumn.EntityNames)
+				foreach (var entityColumn in resourceColumn.EntityNames)
 				{
-					route.Append($"/{{{column.EntityName}}}");
+					route.Append($"/{{{entityColumn.EntityName}}}");
 				}
 			}
 
