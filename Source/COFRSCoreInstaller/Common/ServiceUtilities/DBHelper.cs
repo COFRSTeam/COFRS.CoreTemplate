@@ -887,7 +887,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						if (column.Length == 1)
 							return "BitArray";
 						else
-							return "IEnumerable<BitArray>";
+							return "BitArray[]";
 					}
 					else
 					{
@@ -909,7 +909,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "short";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Smallint:
-					return "IEnumerable<short>";
+					return "short[]";
 
 				case NpgsqlDbType.Integer:
 					if (column.IsNullable)
@@ -918,7 +918,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "int";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Integer:
-					return "IEnumerable<int>";
+					return "int[]";
 
 				case NpgsqlDbType.Bigint:
 					if (column.IsNullable)
@@ -927,7 +927,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "long";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bigint:
-					return "IEnumerable<long>";
+					return "long[]";
 
 				case NpgsqlDbType.Oid:
 				case NpgsqlDbType.Xid:
@@ -940,7 +940,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 				case NpgsqlDbType.Array | NpgsqlDbType.Oid:
 				case NpgsqlDbType.Array | NpgsqlDbType.Xid:
 				case NpgsqlDbType.Array | NpgsqlDbType.Cid:
-					return "IEnumerable<uint>";
+					return "uint[]";
 
 				case NpgsqlDbType.Point:
 					if (column.IsNullable)
@@ -949,7 +949,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlPoint";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Point:
-					return "IEnumerable<NpgsqlPoint>";
+					return "NpgsqlPoint[]";
 
 				case NpgsqlDbType.LSeg:
 					if (column.IsNullable)
@@ -958,7 +958,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlLSeg";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.LSeg:
-					return "IEnumerable<NpgsqlLSeg>";
+					return "NpgsqlLSeg[]";
 
 				case NpgsqlDbType.Line:
 					if (column.IsNullable)
@@ -967,7 +967,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlLine";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Line:
-					return "IEnumerable<NpgsqlLine>";
+					return "NpgsqlLine[]";
 
 				case NpgsqlDbType.Circle:
 					if (column.IsNullable)
@@ -976,7 +976,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlCircle";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Circle:
-					return "IEnumerable<NpgsqlCircle>";
+					return "NpgsqlCircle[]";
 
 				case NpgsqlDbType.Box:
 					if (column.IsNullable)
@@ -985,25 +985,25 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlBox";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Box:
-					return "IEnumerable<NpgsqlBox>";
+					return "NpgsqlBox[]";
 
 				case NpgsqlDbType.Path:
-					return "IEnumerable<NpgsqlPoint>";
+					return "NpgsqlPoint[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Path:
-					return "IEnumerable<IEnumerable<NpgsqlPoint>>";
+					return "NpgsqlPoint[][]";
 
 				case NpgsqlDbType.Polygon:
-					return "IEnumerable<NpgsqlPoint>";
+					return "NpgsqlPoint[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Polygon:
-					return "IEnumerable<IEnumerable<NpgsqlPoint>>";
+					return "NpgsqlPoint[][]";
 
 				case NpgsqlDbType.Bytea:
-					return "IEnumerable<byte>";
+					return "byte[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
-					return "IEnumerable<IEnumerable<byte>>";
+					return "byte[][]";
 
 				case NpgsqlDbType.Text:
 				case NpgsqlDbType.Citext:
@@ -1011,14 +1011,14 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Name:
 					if (string.Equals(column.dbDataType, "_name", StringComparison.OrdinalIgnoreCase))
-						return "IEnumerable<string>";
+						return "string[]";
 					else
 						return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Text:
 				case NpgsqlDbType.Array | NpgsqlDbType.Name:
 				case NpgsqlDbType.Array | NpgsqlDbType.Citext:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Varchar:
 				case NpgsqlDbType.Json:
@@ -1026,7 +1026,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
 				case NpgsqlDbType.Array | NpgsqlDbType.Json:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Char:
 					if (column.Length == 1)
@@ -1039,10 +1039,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 					else if (string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
 						return "string";
 					else
-						return "IEnumerable<char>";
+						return "char[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Char:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Uuid:
 					if (column.IsNullable)
@@ -1051,7 +1051,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "Guid";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Uuid:
-					return "IEnumerable<Guid>";
+					return "Guid[]";
 
 				case NpgsqlDbType.Date:
 					if (column.IsNullable)
@@ -1060,7 +1060,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Date:
-					return "IEnumerable<DateTime>";
+					return "DateTime[]";
 
 				case NpgsqlDbType.TimeTz:
 					if (column.IsNullable)
@@ -1069,7 +1069,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "DateTimeOffset";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.TimeTz:
-					return "IEnumerable<DateTimeOffset>";
+					return "DateTimeOffset[]";
 
 				case NpgsqlDbType.Time:
 					if (column.IsNullable)
@@ -1078,7 +1078,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "TimeSpan";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Time:
-					return "IEnumerable<TimeSpan>";
+					return "TimeSpan[]";
 
 				case NpgsqlDbType.Interval:
 					if (column.IsNullable)
@@ -1087,7 +1087,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "TimeSpan";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Interval:
-					return "IEnumerable<TimeSpan>";
+					return "TimeSpan[]";
 
 				case NpgsqlDbType.Timestamp:
 					if (column.IsNullable)
@@ -1096,7 +1096,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Timestamp:
-					return "IEnumerable<DateTime>";
+					return "DateTime[]";
 
 				case NpgsqlDbType.TimestampTz:
 					if (column.IsNullable)
@@ -1105,7 +1105,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.TimestampTz:
-					return "IEnumerable<DateTime>";
+					return "DateTime[]";
 
 				case NpgsqlDbType.Double:
 					if (column.IsNullable)
@@ -1114,7 +1114,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "double";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Double:
-					return "IEnumerable<double>";
+					return "double[]";
 
 				case NpgsqlDbType.Real:
 					if (column.IsNullable)
@@ -1123,7 +1123,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "float";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Real:
-					return "IEnumerable<float>";
+					return "float[]";
 
 				case NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Money:
@@ -1134,25 +1134,25 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Array | NpgsqlDbType.Money:
-					return "IEnumerable<decimal>";
+					return "decimal[]";
 
 				case NpgsqlDbType.Xml:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Xml:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Jsonb:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.JsonPath:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.JsonPath:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Inet:
 					return "IPAddress";
@@ -1161,10 +1161,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 					return "ValueTuple<IPAddress, int>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
-					return "IEnumerable<IPAddress>";
+					return "IPAddress[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
-					return "IEnumerable<ValueTuple<IPAddress, int>>";
+					return "ValueTuple<IPAddress, int>[]";
 
 				case NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.MacAddr8:
@@ -1172,7 +1172,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr8:
-					return "IEnumerable<PhysicalAddress>";
+					return "PhysicalAddress[]";
 
 				case NpgsqlDbType.Unknown:
                     {
@@ -1366,7 +1366,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						if (column.Length == 1)
 							return "BitArray";
 						else
-							return "IEnumerable<BitArray>";
+							return "BitArray[]";
 					}
 					else
 					{
@@ -1388,7 +1388,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "short";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Smallint:
-					return "IEnumerable<short>";
+					return "short[]";
 
 				case NpgsqlDbType.Integer:
 					if (column.IsNullable)
@@ -1397,7 +1397,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "int";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Integer:
-					return "IEnumerable<int>";
+					return "int[]";
 
 				case NpgsqlDbType.Bigint:
 					if (column.IsNullable)
@@ -1406,7 +1406,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "long";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bigint:
-					return "IEnumerable<long>";
+					return "long[]";
 
 				case NpgsqlDbType.Oid:
 				case NpgsqlDbType.Xid:
@@ -1419,7 +1419,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 				case NpgsqlDbType.Array | NpgsqlDbType.Oid:
 				case NpgsqlDbType.Array | NpgsqlDbType.Xid:
 				case NpgsqlDbType.Array | NpgsqlDbType.Cid:
-					return "IEnumerable<uint>";
+					return "uint[]";
 
 				case NpgsqlDbType.Point:
 					if (column.IsNullable)
@@ -1428,7 +1428,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlPoint";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Point:
-					return "IEnumerable<NpgsqlPoint>";
+					return "NpgsqlPoint[]";
 
 				case NpgsqlDbType.LSeg:
 					if (column.IsNullable)
@@ -1437,7 +1437,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlLSeg";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.LSeg:
-					return "IEnumerable<NpgsqlLSeg>";
+					return "NpgsqlLSeg[]";
 
 				case NpgsqlDbType.Line:
 					if (column.IsNullable)
@@ -1446,7 +1446,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlLine";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Line:
-					return "IEnumerable<NpgsqlLine>";
+					return "NpgsqlLine[]";
 
 				case NpgsqlDbType.Circle:
 					if (column.IsNullable)
@@ -1455,7 +1455,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlCircle";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Circle:
-					return "IEnumerable<NpgsqlCircle>";
+					return "NpgsqlCircle[]";
 
 				case NpgsqlDbType.Box:
 					if (column.IsNullable)
@@ -1464,25 +1464,25 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "NpgsqlBox";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Box:
-					return "IEnumerable<NpgsqlBox>";
+					return "NpgsqlBox[]";
 
 				case NpgsqlDbType.Path:
-					return "IEnumerable<NpgsqlPoint>";
+					return "NpgsqlPoint[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Path:
-					return "IEnumerable<IEnumerable<NpgsqlPoint>>";
+					return "NpgsqlPoint[][]";
 
 				case NpgsqlDbType.Polygon:
-					return "IEnumerable<NpgsqlPoint>";
+					return "NpgsqlPoint[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Polygon:
-					return "IEnumerable<IEnumerable<NpgsqlPoint>>";
+					return "NpgsqlPoint[][]";
 
 				case NpgsqlDbType.Bytea:
-					return "IEnumerable<byte>";
+					return "byte[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
-					return "IEnumerable<IEnumerable<byte>>";
+					return "byte[][]";
 
 				case NpgsqlDbType.Text:
 				case NpgsqlDbType.Citext:
@@ -1490,14 +1490,14 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Name:
 					if (string.Equals(column.dbDataType, "_name", StringComparison.OrdinalIgnoreCase))
-						return "IEnumerable<string>";
+						return "string[]";
 					else
 						return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Text:
 				case NpgsqlDbType.Array | NpgsqlDbType.Name:
 				case NpgsqlDbType.Array | NpgsqlDbType.Citext:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Varchar:
 				case NpgsqlDbType.Json:
@@ -1505,7 +1505,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
 				case NpgsqlDbType.Array | NpgsqlDbType.Json:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Char:
 					if (column.Length == 1)
@@ -1518,11 +1518,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 					else if (string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
 						return "string";
 					else
-						return "IEnumerable<char>";
+						return "char[]";
 
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Char:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Uuid:
 					if (column.IsNullable)
@@ -1531,7 +1531,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "Guid";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Uuid:
-					return "IEnumerable<Guid>";
+					return "Guid[]";
 
 				case NpgsqlDbType.Date:
 					if (column.IsNullable)
@@ -1540,7 +1540,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Date:
-					return "IEnumerable<DateTime>";
+					return "DateTime[]";
 
 				case NpgsqlDbType.TimeTz:
 					if (column.IsNullable)
@@ -1549,7 +1549,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "DateTimeOffset";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.TimeTz:
-					return "IEnumerable<DateTimeOffset>";
+					return "DateTimeOffset[]";
 
 				case NpgsqlDbType.Time:
 					if (column.IsNullable)
@@ -1558,7 +1558,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "TimeSpan";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Time:
-					return "IEnumerable<TimeSpan>";
+					return "TimeSpan[]";
 
 				case NpgsqlDbType.Interval:
 					if (column.IsNullable)
@@ -1567,7 +1567,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "TimeSpan";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Interval:
-					return "IEnumerable<TimeSpan>";
+					return "TimeSpan[]";
 
 				case NpgsqlDbType.Timestamp:
 					if (column.IsNullable)
@@ -1576,7 +1576,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Timestamp:
-					return "IEnumerable<DateTime>";
+					return "DateTime[]";
 
 				case NpgsqlDbType.TimestampTz:
 					if (column.IsNullable)
@@ -1585,7 +1585,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "DateTime";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.TimestampTz:
-					return "IEnumerable<DateTime>";
+					return "DateTime[]";
 
 				case NpgsqlDbType.Double:
 					if (column.IsNullable)
@@ -1594,7 +1594,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "double";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Double:
-					return "IEnumerable<double>";
+					return "double[]";
 
 				case NpgsqlDbType.Real:
 					if (column.IsNullable)
@@ -1603,7 +1603,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "float";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Real:
-					return "IEnumerable<float>";
+					return "float[]";
 
 				case NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Money:
@@ -1614,25 +1614,25 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Array | NpgsqlDbType.Money:
-					return "IEnumerable<decimal>";
+					return "decimal[]";
 
 				case NpgsqlDbType.Xml:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Xml:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Jsonb:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.JsonPath:
 					return "string";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.JsonPath:
-					return "IEnumerable<string>";
+					return "string[]";
 
 				case NpgsqlDbType.Inet:
 					return "IPAddress";
@@ -1641,10 +1641,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 					return "ValueTuple<IPAddress, int>";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
-					return "IEnumerable<IPAddress>";
+					return "IPAddress[]";
 
 				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
-					return "IEnumerable<ValueTuple<IPAddress, int>>";
+					return "ValueTuple<IPAddress, int>[]";
 
 				case NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.MacAddr8:
@@ -1652,7 +1652,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr:
 				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr8:
-					return "IEnumerable<PhysicalAddress>";
+					return "PhysicalAddress[]";
 
 				case NpgsqlDbType.Unknown:
 					{

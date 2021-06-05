@@ -65,7 +65,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t\t//\tUn-comment out the line below if this table is large, and you want to prevent users from requesting a full table scan");
 			results.AppendLine("\t\t\t//\tRequireIndexedQuery(node, \"The query is too broad. Please specify a more refined query that will produce fewer records.\");");
 			results.AppendLine();
-			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
+			results.AppendLine("\t\t\tawait Task.CompletedTask;");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
 
@@ -84,7 +84,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine();
 			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to");
 			results.AppendLine("\t\t\t//\t       adding or updating an item.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
+			results.AppendLine("\t\t\tawait Task.CompletedTask;");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
 
@@ -100,7 +100,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
 			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceClassName} item, RqlNode node, object[] parms)");
 			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms).ConfigureAwait(false);");
+			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms);");
 			results.AppendLine();
 			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to updating an item.");
 			results.AppendLine("\t\t}");
@@ -117,7 +117,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
 			results.AppendLine($"\t\tpublic override async Task ValidateForAddAsync({resourceClassName} item, object[] parms)");
 			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms).ConfigureAwait(false);");
+			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms);");
 			results.AppendLine();
 			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to adding an item.");
 			results.AppendLine("\t\t}");
@@ -154,7 +154,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine();
 
 			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to patching an item.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
+			results.AppendLine("\t\t\tawait Task.CompletedTask;");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
 
@@ -170,7 +170,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine($"\t\tpublic override async Task ValidateForDeleteAsync(RqlNode node, object[] parms)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to deleting an item.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask.ConfigureAwait(false);");
+			results.AppendLine("\t\t\tawait Task.CompletedTask;");
 			results.AppendLine("\t\t}");
 			results.AppendLine("\t}");
 
@@ -549,6 +549,15 @@ namespace COFRS.Template.Common.ServiceUtilities
 							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.DateTime))");
 					}
 				}
+				else if (string.Equals(entityColumn.EntityType, "BitArray", StringComparison.OrdinalIgnoreCase))
+				{
+					if (first)
+						first = false;
+					else
+						results.AppendLine();
+
+					results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => src.{entityColumn.EntityName} ?? new System.Collections.BitArray(new bool[] {{ }})))");
+				}
 				else if (!string.Equals(member.ResourceMemberName, member.EntityNames[0].EntityName, StringComparison.OrdinalIgnoreCase))
 				{
 					if (first)
@@ -731,6 +740,22 @@ namespace COFRS.Template.Common.ServiceUtilities
 							else
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
 						}
+					}
+				}
+				else if (string.Equals(entityColumn.EntityType, "BitArray", StringComparison.OrdinalIgnoreCase))
+				{
+					if (first)
+						first = false;
+					else
+						results.AppendLine();
+
+					if (string.IsNullOrWhiteSpace(prefix))
+					{
+						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} ?? new System.Collections.BitArray(new bool[] {{ }})))");
+					}
+					else
+					{
+						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix}.{member.ResourceMemberName} ?? new System.Collections.BitArray(new bool[] {{ }})))");
 					}
 				}
 				else if (string.Equals(entityColumn.EntityType, "Uri", StringComparison.OrdinalIgnoreCase))

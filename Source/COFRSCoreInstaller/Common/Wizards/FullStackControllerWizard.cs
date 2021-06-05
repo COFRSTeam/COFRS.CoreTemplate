@@ -126,9 +126,11 @@ namespace COFRS.Template.Common.Wizards
 					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 					HandleMessages();
+					var projectName = StandardUtils.GetProjectName(_appObject.Solution);
+					connectionString = $"{form.ConnectionString}Application Name={projectName}";
 
 					//	Replace the ConnectionString
-					StandardUtils.ReplaceConnectionString(_appObject.Solution, form.ConnectionString);
+					StandardUtils.ReplaceConnectionString(_appObject.Solution, connectionString);
 					HandleMessages();
 
 					var entityClassName = $"E{form.SingularResourceName}";

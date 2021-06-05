@@ -89,10 +89,13 @@ namespace COFRS.Template.Common.Wizards
 
 					HandleMessages();
 
+					var projectName = StandardUtils.GetProjectName(_appObject.Solution);
+					connectionString = $"{form.ConnectionString}Application Name={projectName}";
+
 					//	Replace the default connection string in the appSettings.Local.json, so that the 
 					//	user doesn't have to do it. Note: this function only replaces the connection string
 					//	if the appSettings.Local.json contains the original placeholder connection string.
-					StandardUtils.ReplaceConnectionString(_appObject.Solution, form.ConnectionString);
+					StandardUtils.ReplaceConnectionString(_appObject.Solution, connectionString);
 
 					//	We well need these when we replace placeholders in the class
 					var className = replacementsDictionary["$safeitemname$"];
