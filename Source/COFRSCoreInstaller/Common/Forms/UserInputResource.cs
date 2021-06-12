@@ -25,6 +25,7 @@ namespace COFRS.Template.Common.Forms
 		public string ConnectionString { get; set; }
 		public List<ClassFile> ClassList { get; set; }
 		public DBServerType ServerType { get; set; }
+		public string DefaultConnectionString { get; set; }
 		#endregion
 
 		#region Utility functions
@@ -710,10 +711,38 @@ select s.name, t.name
 			//	the windows controls.
 			if (_serverConfig.Servers.Count() > 0)
 			{
+				int LastServerUsed = _serverConfig.LastServerUsed;
 				//	When we populate the windows controls, ensure that the last server that
 				//	the user used is in the visible list, and make sure it is the one
 				//	selected.
-				var dbServer = _serverConfig.Servers.ToList()[_serverConfig.LastServerUsed];
+				for (int candidate = 0; candidate < _serverConfig.Servers.ToList().Count(); candidate++)
+				{
+					var candidateServer = _serverConfig.Servers.ToList()[candidate];
+					var candidateConnectionString = string.Empty;
+
+					switch (candidateServer.DBType)
+					{
+						case DBServerType.MYSQL:
+							candidateConnectionString = $"Server={candidateServer.ServerName};Port={candidateServer.PortNumber}";
+							break;
+
+						case DBServerType.POSTGRESQL:
+							candidateConnectionString = $"Server={candidateServer.ServerName};Port={candidateServer.PortNumber}";
+							break;
+
+						case DBServerType.SQLSERVER:
+							candidateConnectionString = $"Server={candidateServer.ServerName}";
+							break;
+					}
+
+					if (DefaultConnectionString.StartsWith(candidateConnectionString))
+					{
+						LastServerUsed = candidate;
+						break;
+					}
+				}
+
+				var dbServer = _serverConfig.Servers.ToList()[LastServerUsed];
 				DBServerType selectedType = dbServer.DBType;
 
 				switch (dbServer.DBType)
@@ -911,6 +940,7 @@ select s.name, t.name
 
 				_dbList.Items.Clear();
 				_tableList.Items.Clear();
+				int selectedItem = -1;
 
 				try
 				{
@@ -929,16 +959,27 @@ SELECT datname
 						{
 							using (var reader = command.ExecuteReader())
 							{
+								int itemindex = 0;
+
 								while (reader.Read())
 								{
-									_dbList.Items.Add(reader.GetString(0));
+									var databaseName = reader.GetString(0);
+
+									_dbList.Items.Add(databaseName);
+
+									string cs = $"Server={server.ServerName};Port={server.PortNumber};Database={databaseName};User ID={server.Username};Password={_password.Text};";
+
+									if (DefaultConnectionString.StartsWith(cs, StringComparison.OrdinalIgnoreCase))
+										selectedItem = itemindex;
+
+									itemindex++;
 								}
 							}
 						}
 					}
 
 					if (_dbList.Items.Count > 0)
-						_dbList.SelectedIndex = 0;
+						_dbList.SelectedIndex = selectedItem;
 				}
 				catch (Exception error)
 				{
@@ -954,6 +995,7 @@ SELECT datname
 
 				_dbList.Items.Clear();
 				_tableList.Items.Clear();
+				int selectedItem = -1;
 
 				try
 				{
@@ -969,16 +1011,27 @@ select SCHEMA_NAME from information_schema.SCHEMATA
 						{
 							using (var reader = command.ExecuteReader())
 							{
+								int itemindex = 0;
+
 								while (reader.Read())
 								{
-									_dbList.Items.Add(reader.GetString(0));
+									var databaseName = reader.GetString(0);
+
+									_dbList.Items.Add(databaseName);
+
+									string cs = $"Server={server.ServerName};Port={server.PortNumber};Database={databaseName};UID={server.Username};PWD={_password.Text};";
+
+									if (DefaultConnectionString.StartsWith(cs, StringComparison.OrdinalIgnoreCase))
+										selectedItem = itemindex;
+
+									itemindex++;
 								}
 							}
 						}
 					}
 
 					if (_dbList.Items.Count > 0)
-						_dbList.SelectedIndex = 0;
+						_dbList.SelectedIndex = selectedItem;
 				}
 				catch (Exception error)
 				{
@@ -997,6 +1050,7 @@ select SCHEMA_NAME from information_schema.SCHEMATA
 
 				_dbList.Items.Clear();
 				_tableList.Items.Clear();
+				int selectedItem = -1;
 
 				try
 				{
@@ -1014,16 +1068,31 @@ select name
 						{
 							using (var reader = command.ExecuteReader())
 							{
+								int itemindex = 0;
+
 								while (reader.Read())
 								{
-									_dbList.Items.Add(reader.GetString(0));
+									var databaseName = reader.GetString(0);
+
+									_dbList.Items.Add(databaseName);
+									string cs;
+
+									if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
+										cs = $"Server={server.ServerName};Database={databaseName};Trusted_Connection=True;";
+									else
+										cs = $"Server={server.ServerName};Database={databaseName};uid={server.Username};pwd={_password.Text};";
+
+									if (DefaultConnectionString.StartsWith(cs, StringComparison.OrdinalIgnoreCase))
+										selectedItem = itemindex;
+
+									itemindex++;
 								}
 							}
 						}
 					}
 
 					if (_dbList.Items.Count > 0)
-						_dbList.SelectedIndex = 0;
+						_dbList.SelectedIndex = selectedItem;
 				}
 				catch (Exception error)
 				{

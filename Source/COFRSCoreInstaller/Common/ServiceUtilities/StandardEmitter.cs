@@ -37,16 +37,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t<summary>");
 			results.AppendLine($"\t\t///\tInitializes the {validatorClassName}");
 			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine($"\t\tpublic {validatorClassName}() : base()");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//	Validator Class with constructor with user
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tInitializes the {validatorClassName}");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine($"\t\tpublic {validatorClassName}(ClaimsPrincipal user) : base(user)");
+			results.AppendLine($"\t\tpublic {validatorClassName}()");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
@@ -58,9 +49,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t<summary>");
 			results.AppendLine($"\t\t///\tValidation for Queries");
 			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the query</param>");
+			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the query.</param>");
+			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForGetAsync(RqlNode node, object[] parms)");
+			results.AppendLine($"\t\tpublic override async Task ValidateForGetAsync(RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\t//\tUn-comment out the line below if this table is large, and you want to prevent users from requesting a full table scan");
 			results.AppendLine("\t\t\t//\tRequireIndexedQuery(node, \"The query is too broad. Please specify a more refined query that will produce fewer records.\");");
@@ -77,11 +69,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine($"\t\t///\tValidations common to adding and updating items");
 			results.AppendLine("\t\t///\t</summary>");
 			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added or updated</param>");
+			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic async Task ValidateForAddAndUpdateAsync({resourceClassName} item, object[] parms)");
+			results.AppendLine($"\t\tpublic async Task ValidateForAddAndUpdateAsync({resourceClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 
-			results.AppendLine();
 			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to");
 			results.AppendLine("\t\t\t//\t       adding or updating an item.");
 			results.AppendLine("\t\t\tawait Task.CompletedTask;");
@@ -97,10 +89,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t</summary>");
 			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being updated</param>");
 			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the update</param>");
+			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceClassName} item, RqlNode node, object[] parms)");
+			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceClassName} item, RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms);");
+			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, User, parms);");
 			results.AppendLine();
 			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to updating an item.");
 			results.AppendLine("\t\t}");
@@ -114,10 +107,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine($"\t\t///\tValidation for adding new items");
 			results.AppendLine("\t\t///\t</summary>");
 			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added</param>");
+			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForAddAsync({resourceClassName} item, object[] parms)");
+			results.AppendLine($"\t\tpublic override async Task ValidateForAddAsync({resourceClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, parms);");
+			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, User, parms);");
 			results.AppendLine();
 			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to adding an item.");
 			results.AppendLine("\t\t}");
@@ -132,8 +126,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t</summary>");
 			results.AppendLine("\t\t///\t<param name=\"patchCommands\">The set of patch commands to validate</param>");
 			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the update</param>");
+			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine("\t\tpublic override async Task ValidateForPatchAsync(IEnumerable<PatchCommand> patchCommands, RqlNode node, object[] parms)");
+			results.AppendLine("\t\tpublic override async Task ValidateForPatchAsync(IEnumerable<PatchCommand> patchCommands, RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 
 			results.AppendLine("\t\t\tforeach (var command in patchCommands)");
@@ -166,8 +161,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine($"\t\t///\tValidation for deleting an item");
 			results.AppendLine("\t\t///\t</summary>");
 			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the delete</param>");
+			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForDeleteAsync(RqlNode node, object[] parms)");
+			results.AppendLine($"\t\tpublic override async Task ValidateForDeleteAsync(RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to deleting an item.");
 			results.AppendLine("\t\t\tawait Task.CompletedTask;");
@@ -204,9 +200,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t</summary>");
 			results.AppendLine($"\t\tpublic {mappingClassName}()");
 			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tvar rootUrl = Startup.AppConfig.GetSection(\"ApiSettings\").GetValue<string>(\"RootUrl\");");
-			results.AppendLine("\t\t\twhile (rootUrl.EndsWith(\"/\") || rootUrl.EndsWith(\"\\\\\"))");
-			results.AppendLine("\t\t\t\trootUrl = rootUrl.Substring(0, rootUrl.Length - 1);");
+			results.AppendLine("\t\t\tvar rootUrl = Startup.AppConfig.GetRootUrl();");
 
 			#region Create the Resource to Entity Mapping
 			results.AppendLine();
@@ -556,7 +550,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					else
 						results.AppendLine();
 
-					results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => src.{entityColumn.EntityName} ?? new System.Collections.BitArray(new bool[] {{ }})))");
+					results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => src.{entityColumn.EntityName} ?? new System.Collections.BitArray(Array.Empty<bool>())))");
 				}
 				else if (!string.Equals(member.ResourceMemberName, member.EntityNames[0].EntityName, StringComparison.OrdinalIgnoreCase))
 				{
@@ -627,6 +621,28 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName} == null ? null : new string(src.{prefix}{member.ResourceMemberName})))");
 							else
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new string(src.{prefix}.{member.ResourceMemberName})))");
+						}
+					}
+					else if (string.Equals(entityColumn.EntityType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Uri", StringComparison.OrdinalIgnoreCase))
+					{
+						if (first)
+							first = false;
+						else
+							results.AppendLine();
+
+						if (string.IsNullOrWhiteSpace(prefix))
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? (string) null : src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())).ToString()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())).ToString()))");
+						}
+						else
+						{
+							if (entityColumn.IsNullable)
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (string) null : {prefix}.{member.ResourceMemberName} == null ? (string) null : src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
+							else
+								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
 						}
 					}
 					else if (string.Equals(entityColumn.EntityType, "Image", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "byte[]", StringComparison.OrdinalIgnoreCase))
@@ -719,28 +735,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new DateTimeOffset(src.{prefix}.{member.ResourceMemberName})))");
 						}
 					}
-					else if (string.Equals(entityColumn.EntityType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Uri", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (string.IsNullOrWhiteSpace(prefix))
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? (string) null : src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())).ToString()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())).ToString()))");
-						}
-						else
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (string) null : {prefix}.{member.ResourceMemberName} == null ? (string) null : src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
-						}
-					}
 				}
 				else if (string.Equals(entityColumn.EntityType, "BitArray", StringComparison.OrdinalIgnoreCase))
 				{
@@ -751,11 +745,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 					if (string.IsNullOrWhiteSpace(prefix))
 					{
-						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} ?? new System.Collections.BitArray(new bool[] {{ }})))");
+						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} ?? new System.Collections.BitArray(Array.Empty<bool>())))");
 					}
 					else
 					{
-						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix}.{member.ResourceMemberName} ?? new System.Collections.BitArray(new bool[] {{ }})))");
+						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix}.{member.ResourceMemberName} ?? new System.Collections.BitArray(Array.Empty<bool>())))");
 					}
 				}
 				else if (string.Equals(entityColumn.EntityType, "Uri", StringComparison.OrdinalIgnoreCase))
@@ -1120,11 +1114,20 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				//	Insert the column definition
 				if (serverType == DBServerType.POSTGRESQL)
-					result.AppendLine($"\t\tpublic {DBHelper.GetPostgresDataType(column, classList)} {column.ColumnName} {{ get; set; }}");
+				{
+					column.EntityType = DBHelper.GetPostgresDataType(column, classList);
+					result.AppendLine($"\t\tpublic {column.EntityType} {column.ColumnName} {{ get; set; }}");
+				}
 				else if (serverType == DBServerType.MYSQL)
-					result.AppendLine($"\t\tpublic {DBHelper.GetMySqlDataType(column)} {column.ColumnName} {{ get; set; }}");
+				{
+					column.EntityType = DBHelper.GetMySqlDataType(column);
+					result.AppendLine($"\t\tpublic {column.EntityType} {column.ColumnName} {{ get; set; }}");
+				}
 				else if (serverType == DBServerType.SQLSERVER)
-					result.AppendLine($"\t\tpublic {DBHelper.GetSQLServerDataType(column)} {column.ColumnName} {{ get; set; }}");
+				{
+					column.EntityType = DBHelper.GetSQLServerDataType(column);
+					result.AppendLine($"\t\tpublic {column.EntityType} {column.ColumnName} {{ get; set; }}");
+				}
 			}
 
 			result.AppendLine("\t}");
@@ -1179,6 +1182,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						results.AppendLine($"\t\t///\tThe hypertext reference that identifies the resource.");
 						results.AppendLine("\t\t///\t</summary>");
 						results.AppendLine($"\t\tpublic Uri {member.ResourceMemberName} {{ get; set; }}");
+						member.ResourceMemberType = "Uri";
 						hasPrimary = true;
 					}
 				}
@@ -1195,18 +1199,18 @@ namespace COFRS.Template.Common.ServiceUtilities
 					results.AppendLine($"\t\t///\t{member.ResourceMemberName}");
 					results.AppendLine("\t\t///\t</summary>");
 
-					if ( entityClassFile.ServerType == DBServerType.SQLSERVER)
-                    {
-						if ( (SqlDbType)member.EntityNames[0].DataType == SqlDbType.Image)
-                        {
+					if (entityClassFile.ServerType == DBServerType.SQLSERVER)
+					{
+						if ((SqlDbType)member.EntityNames[0].DataType == SqlDbType.Image)
+						{
 							replacementsDictionary["$resourceimage$"] = "true";
 						}
 					}
-					else if ( entityClassFile.ServerType == DBServerType.POSTGRESQL)
-                    {
+					else if (entityClassFile.ServerType == DBServerType.POSTGRESQL)
+					{
 						if ((NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Inet ||
 							(NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Cidr ||
-							(NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.MacAddr )
+							(NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.MacAddr)
 						{
 							replacementsDictionary["$resourcenet$"] = "true";
 						}
@@ -1232,14 +1236,23 @@ namespace COFRS.Template.Common.ServiceUtilities
 						{
 							replacementsDictionary["$usenpgtypes$"] = "true";
 						}
-                    }
+					}
 
 					if (entityClassFile.ServerType == DBServerType.POSTGRESQL)
-						results.AppendLine($"\t\tpublic {DBHelper.GetPostgresqlResourceDataType(member.EntityNames[0], classList)} {member.ResourceMemberName} {{ get; set; }}");
+					{
+						member.ResourceMemberType = DBHelper.GetPostgresqlResourceDataType(member.EntityNames[0], classList);
+						results.AppendLine($"\t\tpublic {member.ResourceMemberType} {member.ResourceMemberName} {{ get; set; }}");
+					}
 					else if (entityClassFile.ServerType == DBServerType.MYSQL)
-						results.AppendLine($"\t\tpublic {DBHelper.GetMySqlResourceDataType(member.EntityNames[0])} {member.ResourceMemberName} {{ get; set; }}");
+					{
+						member.ResourceMemberType = DBHelper.GetMySqlResourceDataType(member.EntityNames[0]);
+						results.AppendLine($"\t\tpublic {member.ResourceMemberType} {member.ResourceMemberName} {{ get; set; }}");
+					}
 					else if (entityClassFile.ServerType == DBServerType.SQLSERVER)
-						results.AppendLine($"\t\tpublic {DBHelper.GetSqlServerResourceDataType(member.EntityNames[0])} {member.ResourceMemberName} {{ get; set; }}");
+					{
+						member.ResourceMemberType = DBHelper.GetSqlServerResourceDataType(member.EntityNames[0]);
+						results.AppendLine($"\t\tpublic {member.ResourceMemberType} {member.ResourceMemberName} {{ get; set; }}");
+					}
 				}
 			}
 
