@@ -774,7 +774,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (Uri) null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())))");
 					}
 				}
-				else if (!string.Equals(member.ResourceMemberName, member.EntityNames[0].EntityName, StringComparison.OrdinalIgnoreCase))
+				else if (!string.Equals(member.ResourceMemberName, entityColumn.EntityName, StringComparison.OrdinalIgnoreCase))
 				{
 					if (first)
 						first = false;
@@ -783,7 +783,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 					if (string.IsNullOrWhiteSpace(prefix))
 					{
-						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix}.{member.ResourceMemberName}))");
+						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}))");
 					}
 					else
 					{
