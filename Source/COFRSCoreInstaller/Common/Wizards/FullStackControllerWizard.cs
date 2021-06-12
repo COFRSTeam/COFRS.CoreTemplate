@@ -42,7 +42,6 @@ namespace COFRS.Template.Common.Wizards
 			Dictionary<string, string> replacementsDictionary,
 			WizardRunKind runKind, object[] customParams)
 		{
-
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
 			ProgressDialog progressDialog = null;
