@@ -552,7 +552,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 					results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => src.{entityColumn.EntityName} ?? new System.Collections.BitArray(Array.Empty<bool>())))");
 				}
-				else if (!string.Equals(member.ResourceMemberName, member.EntityNames[0].EntityName, StringComparison.OrdinalIgnoreCase))
+				else if (!string.Equals(member.ResourceMemberName, member.EntityNames[0].ColumnName, StringComparison.OrdinalIgnoreCase))
 				{
 					if (first)
 						first = false;
@@ -774,7 +774,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (Uri) null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())))");
 					}
 				}
-				else if (!string.Equals(member.ResourceMemberName, entityColumn.EntityName, StringComparison.OrdinalIgnoreCase))
+				else if (!string.Equals(member.ResourceMemberName, entityColumn.ColumnName, StringComparison.OrdinalIgnoreCase))
 				{
 					if (first)
 						first = false;
@@ -1142,6 +1142,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			replacementsDictionary.Add("$resourcenetinfo$", "false");
 			replacementsDictionary.Add("$resourcebarray$", "false");
 			replacementsDictionary.Add("$usenpgtypes$", "false");
+			replacementsDictionary.Add("$annotations$", "false");
 
 			var resourceNamespace = replacementsDictionary["$rootnamespace$"];
 			if (replacementsDictionary.ContainsKey("$resourcenamespace$"))
@@ -1240,6 +1241,13 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 					if (entityClassFile.ServerType == DBServerType.POSTGRESQL)
 					{
+						if ((NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Date ||
+							(NpgsqlDbType)member.EntityNames[0].DataType == (NpgsqlDbType.Date | NpgsqlDbType.Array))
+						{
+							results.AppendLine("\t\t[DisplayFormat(DataFormatString = \"yyyy-MM-dd\")]");
+							replacementsDictionary["$annotations$"] = "true";
+						}
+
 						member.ResourceMemberType = DBHelper.GetPostgresqlResourceDataType(member.EntityNames[0], classList);
 						results.AppendLine($"\t\tpublic {member.ResourceMemberType} {member.ResourceMemberName} {{ get; set; }}");
 					}
