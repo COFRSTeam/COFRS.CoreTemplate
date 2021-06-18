@@ -57,15 +57,7 @@ namespace $safeprojectname$
 				PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 			};
 
-			defaultSettings.Converters.Add(new ApiJsonBitArrayConverter());
-			defaultSettings.Converters.Add(new ApiJsonPhysicalAddressConverter());
-			defaultSettings.Converters.Add(new ApiJsonIPAddressConverter());
-			defaultSettings.Converters.Add(new ApiJsonValueTupleConverter());
-			defaultSettings.Converters.Add(new ApiJsonIPEndPointConverter());
-			defaultSettings.Converters.Add(new ApiJsonByteArrayConverter());
-			defaultSettings.Converters.Add(new ApiJsonImageConverter());
-			defaultSettings.Converters.Add(new ApiJsonBitmapConverter());
-			defaultSettings.Converters.Add(new ApiJsonTimeSpanConverter());
+			defaultSettings.Converters.Add(new ApiCustomConverterFactory());
 			defaultSettings.Converters.Add(new ApiEnumConverterFactory());
 
 			services.Configure<IISServerOptions>(options =>
