@@ -1248,6 +1248,20 @@ namespace COFRS.Template.Common.ServiceUtilities
 							replacementsDictionary["$annotations$"] = "true";
 						}
 
+						else if ((NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Time ||
+						         (NpgsqlDbType)member.EntityNames[0].DataType == (NpgsqlDbType.Time | NpgsqlDbType.Array))
+						{
+							results.AppendLine("\t\t[DisplayFormat(DataFormatString = \"HH:mm:ss.fffffff\")]");
+							replacementsDictionary["$annotations$"] = "true";
+						}
+
+						else if ((NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.TimeTz ||
+						        (NpgsqlDbType)member.EntityNames[0].DataType == (NpgsqlDbType.TimeTz | NpgsqlDbType.Array))
+						{
+							results.AppendLine("\t\t[DisplayFormat(DataFormatString = \"HH:mm:ss.fffffffzzz\")]");
+							replacementsDictionary["$annotations$"] = "true";
+						}
+
 						member.ResourceMemberType = DBHelper.GetPostgresqlResourceDataType(member.EntityNames[0], classList);
 						results.AppendLine($"\t\tpublic {member.ResourceMemberType} {member.ResourceMemberName} {{ get; set; }}");
 					}
