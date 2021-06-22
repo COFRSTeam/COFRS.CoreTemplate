@@ -1244,21 +1244,14 @@ namespace COFRS.Template.Common.ServiceUtilities
 						if ((NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Date ||
 							(NpgsqlDbType)member.EntityNames[0].DataType == (NpgsqlDbType.Date | NpgsqlDbType.Array))
 						{
-							results.AppendLine("\t\t[DisplayFormat(DataFormatString = \"yyyy-MM-dd\")]");
-							replacementsDictionary["$annotations$"] = "true";
-						}
-
-						else if ((NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.Time ||
-						         (NpgsqlDbType)member.EntityNames[0].DataType == (NpgsqlDbType.Time | NpgsqlDbType.Array))
-						{
-							results.AppendLine("\t\t[DisplayFormat(DataFormatString = \"HH:mm:ss.fffffff\")]");
+							results.AppendLine("\t\t[JsonFormat(\"yyyy-MM-dd\")]");
 							replacementsDictionary["$annotations$"] = "true";
 						}
 
 						else if ((NpgsqlDbType)member.EntityNames[0].DataType == NpgsqlDbType.TimeTz ||
 						        (NpgsqlDbType)member.EntityNames[0].DataType == (NpgsqlDbType.TimeTz | NpgsqlDbType.Array))
 						{
-							results.AppendLine("\t\t[DisplayFormat(DataFormatString = \"HH:mm:ss.fffffffzzz\")]");
+							results.AppendLine("\t\t[JsonFormat(\"HH:mm:ss.fffffffzzz\")]");
 							replacementsDictionary["$annotations$"] = "true";
 						}
 
