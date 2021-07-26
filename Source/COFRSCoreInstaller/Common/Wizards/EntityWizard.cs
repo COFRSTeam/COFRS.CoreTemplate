@@ -7,6 +7,8 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using VSLangProj;
 
@@ -42,165 +44,262 @@ namespace COFRS.Template.Common.Wizards
 		public void RunStarted(object automationObject, Dictionary<string, string> replacementsDictionary, WizardRunKind runKind, object[] customParams)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
+			DTE2 _appObject = automationObject as DTE2;
 			ProgressDialog progressDialog = null;
 
-			try
-			{
-				//	Show the user that we are busy doing things...
-				progressDialog = new ProgressDialog("Loading classes and preparing project...");
-				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
-				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-				HandleMessages();
+            try
+            {
+                //	Show the user that we are busy doing things...
+                progressDialog = new ProgressDialog("Loading classes and preparing project...");
+                progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
+                _appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+                HandleMessages();
 
-				var entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
-				HandleMessages();
+                var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
+                ProjectFolder entityModelsFolder = null;
+                var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
 
-				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
-				HandleMessages();
+                //  Load the project mapping information
+                if (projectMapping == null)
+                {
+                    entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
 
-				var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
-				HandleMessages();
+                    if (entityModelsFolder == null)
+                        entityModelsFolder = installationFolder;
 
-				var classList = StandardUtils.LoadClassList(programfiles);
-				HandleMessages();
+                    projectMapping = new ProjectMapping
+                    {
+                        EntityFolder = entityModelsFolder.Folder,
+                        EntityNamespace = entityModelsFolder.Namespace,
+                        EntityProject = entityModelsFolder.ProjectName
+                    };
 
-				//	Construct the form, and fill in all the prerequisite data
-				var form = new UserInputEntity
-				{
-					ReplacementsDictionary = replacementsDictionary,
-					EntityModelsFolder = entityModelsFolder,
-					DefaultConnectionString = connectionString,
-					ClassList = classList,
-					Members = programfiles
-				};
+                    StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(projectMapping.EntityProject) ||
+                        string.IsNullOrWhiteSpace(projectMapping.EntityNamespace) ||
+                        string.IsNullOrWhiteSpace(projectMapping.EntityFolder))
+                    {
+                        entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
 
-				HandleMessages();
+                        if (entityModelsFolder == null)
+                            entityModelsFolder = installationFolder;
 
-				progressDialog.Close();
-				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+                        projectMapping.EntityFolder = entityModelsFolder.Folder;
+                        projectMapping.EntityNamespace = entityModelsFolder.Namespace;
+                        projectMapping.EntityProject = entityModelsFolder.ProjectName;
 
-				if (form.ShowDialog() == DialogResult.OK)
-				{
-					//	Show the user that we are busy...
-					progressDialog = new ProgressDialog("Building classes...");
-					progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
-					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+                        StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+                    }
+                    else
+                    {
+                        entityModelsFolder = new ProjectFolder
+                        {
+                            Folder = projectMapping.EntityFolder,
+                            Namespace = projectMapping.EntityNamespace,
+                            ProjectName = projectMapping.EntityProject,
+                            Name = Path.GetFileName(projectMapping.EntityFolder)
+                        };
+                    }
+                }
+                
+                //  Make sure we are where we're supposed to be
+                if ( !StandardUtils.IsChildOf(entityModelsFolder.Folder, installationFolder.Folder))
+                {
+                    HandleMessages();
 
-					HandleMessages();
+                    progressDialog.Close();
+                    _appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
-					var projectName = StandardUtils.GetProjectName(_appObject.Solution);
-					connectionString = $"{form.ConnectionString}Application Name={projectName}";
+                    var result = MessageBox.Show($"You are attempting to install an entity model into {StandardUtils.GetRelativeFolder(_appObject.Solution, installationFolder)}. Typically, entity models reside in {StandardUtils.GetRelativeFolder(_appObject.Solution, entityModelsFolder)}.\r\n\r\nDo you wish to place the new entity model in this non-standard location?", 
+                        "Warning: Non-Standard Location", 
+                        MessageBoxButtons.YesNo, 
+                        MessageBoxIcon.Warning);
 
-					//	Replace the default connection string in the appSettings.Local.json, so that the 
-					//	user doesn't have to do it. Note: this function only replaces the connection string
-					//	if the appSettings.Local.json contains the original placeholder connection string.
-					StandardUtils.ReplaceConnectionString(_appObject.Solution, connectionString);
+                    if (result == DialogResult.No)
+                    {
+                        Proceed = false;
+                        return;
+                    }
 
-					//	We well need these when we replace placeholders in the class
-					var className = replacementsDictionary["$safeitemname$"];
-					replacementsDictionary["$entityClass$"] = className;
+                    progressDialog = new ProgressDialog("Loading classes and preparing project...");
+                    progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
+                    _appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+                    HandleMessages();
 
-					//	Get the list of any undefined items that we encountered. (This list will only contain
-					//	items if we are using the Postgrsql database)
-					List<ClassFile> composits = form.UndefinedClassList;
+                    entityModelsFolder = installationFolder;
 
-					var emitter = new Emitter();
-					var standardEmitter = new StandardEmitter();
+                    projectMapping.EntityFolder = entityModelsFolder.Folder;
+                    projectMapping.EntityNamespace = entityModelsFolder.Namespace;
+                    projectMapping.EntityProject = entityModelsFolder.ProjectName;
 
-					if (form.ServerType == DBServerType.POSTGRESQL)
-					{
-						//	Generate any undefined composits before we construct our entity model (because, 
-						//	the entity model depends upon them)
+                    StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+                }
 
-						var definedList = new List<ClassFile>();
-						definedList.AddRange(classList);
-						definedList.AddRange(composits);
+                var projectName = entityModelsFolder.ProjectName;
+                var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
+                HandleMessages();
 
-						standardEmitter.GenerateComposites(composits, 
-							                               form.ConnectionString, 
-														   replacementsDictionary, 
-														   definedList,
-														   entityModelsFolder.Folder);
-						HandleMessages();
+                var entityMap = StandardUtils.LoadEntityModels(_appObject.Solution, entityModelsFolder);
+                HandleMessages();
 
-						foreach (var composite in composits)
-						{
-							//	TO DO: This is incorret - the item could reside in another project
-							var pj = (VSProject)_appObject.Solution.Projects.Item(1).Object;
-							pj.Project.ProjectItems.AddFromFile(composite.FileName);
+                //	Construct the form, and fill in all the prerequisite data
+                var form = new UserInputEntity
+                {
+                    ReplacementsDictionary = replacementsDictionary,
+                    EntityModelsFolder = entityModelsFolder,
+                    DefaultConnectionString = connectionString,
+                    EntityMap = entityMap
+                };
 
-							StandardUtils.RegisterComposite(_appObject.Solution, (EntityClassFile) composite);
-						}
+                HandleMessages();
 
-						classList.AddRange(composits);
-					}
+                progressDialog.Close();
+                _appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
-					string entityModel = string.Empty;
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    //	Show the user that we are busy...
+                    progressDialog = new ProgressDialog("Building classes...");
+                    progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
+                    _appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-					if (form.eType == ElementType.Enum)
-					{
-						entityModel = standardEmitter.EmitEnum(form.DatabaseTable.Schema, form.DatabaseTable.Table, replacementsDictionary["$safeitemname$"], form.ConnectionString);
-						replacementsDictionary["$npgsqltypes$"] = "true";
+                    HandleMessages();
 
-						var entityclassFile = new EntityClassFile()
-						{
-							ClassName = replacementsDictionary["$safeitemname$"],
-							SchemaName = form.DatabaseTable.Schema,
-							TableName = form.DatabaseTable.Table,
-							ClassNameSpace = replacementsDictionary["$rootnamespace$"],
-							ElementType = ElementType.Enum,
-						};
+                    connectionString = $"{form.ConnectionString}Application Name={projectName}";
 
-						StandardUtils.RegisterComposite(_appObject.Solution, entityclassFile);
-					}
-					else if (form.eType == ElementType.Composite)
-					{
-						var undefinedElements = new List<ClassFile>();
-						entityModel = standardEmitter.EmitComposite(form.DatabaseTable.Schema, 
-							                                        form.DatabaseTable.Table, 
-																	replacementsDictionary["$safeitemname$"], 
-																	form.ConnectionString, 
-																	replacementsDictionary, 
-																	classList, 
-																	undefinedElements,
-																	entityModelsFolder.Folder);
-						replacementsDictionary["$npgsqltypes$"] = "true";
+                    //	Replace the default connection string in the appSettings.Local.json, so that the 
+                    //	user doesn't have to do it. Note: this function only replaces the connection string
+                    //	if the appSettings.Local.json contains the original placeholder connection string.
+                    StandardUtils.ReplaceConnectionString(_appObject.Solution, connectionString);
 
-						var classFile = new EntityClassFile()
-						{
-							ClassName = replacementsDictionary["$safeitemname$"],
-							SchemaName = form.DatabaseTable.Schema,
-							TableName = form.DatabaseTable.Table,
-							ClassNameSpace = replacementsDictionary["$rootnamespace$"],
-							ElementType = ElementType.Composite
-						};
+                    //	We well need these when we replace placeholders in the class
+                    var className = replacementsDictionary["$safeitemname$"];
+                    replacementsDictionary["$entityClass$"] = className;
 
-						StandardUtils.RegisterComposite(_appObject.Solution, classFile);
-					}
-					else
-					{
-						entityModel = standardEmitter.EmitEntityModel(form.ServerType, 
-							                                          form.DatabaseTable, 
-																	  replacementsDictionary["$safeitemname$"], 
-																	  classList,
-																	  form.DatabaseColumns, 
-																	  replacementsDictionary, 
-																	  out EntityClassFile entityClass);
-					}
+                    //	Get the list of any undefined items that we encountered. (This list will only contain
+                    //	items if we are using the Postgrsql database)
+                    List<EntityModel> undefinedEntityModels = form.UndefinedEntityModels;
 
-					replacementsDictionary.Add("$entityModel$", entityModel);
-					HandleMessages();
+                    var emitter = new Emitter();
+                    var standardEmitter = new StandardEmitter();
 
-					progressDialog.Close();
-					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+                    if (form.ServerType == DBServerType.POSTGRESQL)
+                    {
+                        //	Generate any undefined composits before we construct our entity model (because, 
+                        //	the entity model depends upon them)
 
-					Proceed = true;
-				}
-				else
-					Proceed = false;
-			}
-			catch (Exception error)
+                        standardEmitter.GenerateComposites(_appObject.Solution, 
+                                                           undefinedEntityModels,
+                                                           form.ConnectionString,
+                                                           replacementsDictionary,
+                                                           entityMap,
+                                                           entityModelsFolder);
+                        HandleMessages();
+                    }
+
+                    string model = string.Empty;
+
+                    if (form.EType == ElementType.Enum)
+                    {
+                        var entityModel = new EntityModel()
+                        {
+                            ClassName = StandardUtils.NormalizeClassName(replacementsDictionary["$safeitemname$"]),
+                            SchemaName = form.DatabaseTable.Schema,
+                            TableName = form.DatabaseTable.Table,
+                            Namespace = replacementsDictionary["$rootnamespace$"],
+                            ElementType = ElementType.Enum,
+                            ServerType = form.ServerType,
+                            Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"])
+                        };
+
+                        StandardUtils.GenerateEnumColumns(entityModel, form.ConnectionString);
+                        model = standardEmitter.EmitEntityEnum(entityModel, form.ConnectionString);
+                        replacementsDictionary["$npgsqltypes$"] = "true";
+
+                        StandardUtils.RegisterComposite(_appObject.Solution, entityModel);
+
+                        var preexistingEntities = entityMap.Maps.ToList();
+                        preexistingEntities.Add(entityModel);
+                        entityMap.Maps = preexistingEntities.ToArray();
+                        StandardUtils.SaveEntityMap(_appObject.Solution, entityMap);
+                    }
+                    else if (form.EType == ElementType.Composite)
+                    {
+                        var undefinedElements = new List<EntityModel>();
+
+                        var entityModel = new EntityModel()
+                        {
+                            ClassName = replacementsDictionary["$safeitemname$"],
+                            SchemaName = form.DatabaseTable.Schema,
+                            TableName = form.DatabaseTable.Table,
+                            Namespace = replacementsDictionary["$rootnamespace$"],
+                            ElementType = ElementType.Composite,
+                            ServerType = form.ServerType,
+                            Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"])
+                        };
+
+                        StandardUtils.GenerateColumns(entityModel, form.ConnectionString);
+
+                        model = standardEmitter.EmitComposite(_appObject.Solution,
+                                                              entityModel,
+                                                              form.ConnectionString,
+                                                              replacementsDictionary,
+                                                              entityMap,
+                                                              ref undefinedElements,
+                                                              entityModelsFolder);
+
+                        replacementsDictionary["$npgsqltypes$"] = "true";
+
+
+                        StandardUtils.RegisterComposite(_appObject.Solution, entityModel);
+
+                        var existingEntities = entityMap.Maps.ToList();
+                        existingEntities.Add(entityModel);
+                        entityMap.Maps = existingEntities.ToArray();
+                        StandardUtils.SaveEntityMap(_appObject.Solution, entityMap);
+                    }
+                    else
+                    {
+                        var entityModel = new EntityModel()
+                        {
+                            ClassName = replacementsDictionary["$safeitemname$"],
+                            SchemaName = form.DatabaseTable.Schema,
+                            TableName = form.DatabaseTable.Table,
+                            Namespace = replacementsDictionary["$rootnamespace$"],
+                            ElementType = ElementType.Composite,
+                            ServerType = form.ServerType,
+                            Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"])
+                        };
+
+                        StandardUtils.GenerateColumns(entityModel, form.ConnectionString);
+
+                        model = standardEmitter.EmitEntityModel(entityModel,
+                                                                entityMap,
+                                                                replacementsDictionary);
+
+                        var existingEntities = entityMap.Maps.ToList();
+
+                        entityModel.Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"]);
+
+                        existingEntities.Add(entityModel);
+                        entityMap.Maps = existingEntities.ToArray();
+                    }
+
+                    replacementsDictionary.Add("$entityModel$", model);
+                    HandleMessages();
+
+                    progressDialog.Close();
+                    _appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+
+                    Proceed = true;
+                }
+                else
+                    Proceed = false;
+            }
+            catch (Exception error)
 			{
 				if (progressDialog != null)
 					if ( progressDialog.IsHandleCreated)
@@ -212,7 +311,7 @@ namespace COFRS.Template.Common.Wizards
 			}
 		}
 
-		public bool ShouldAddProjectItem(string filePath)
+        public bool ShouldAddProjectItem(string filePath)
 		{
 			return Proceed;
 		}

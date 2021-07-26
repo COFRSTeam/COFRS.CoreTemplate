@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
@@ -44,16 +45,113 @@ namespace COFRS.Template.Common.Wizards
 				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
 				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-				HandleMessages();
-				var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
+				var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
 				HandleMessages();
 
-				var classList = StandardUtils.LoadClassList(programfiles);
+				var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
+				HandleMessages();
+
+				ProjectFolder entityModelsFolder;
+				ProjectFolder resourceModelsFolder;
+
+				//  Load the project mapping information
+				if (projectMapping == null)
+				{
+					entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
+
+					if (entityModelsFolder == null)
+						entityModelsFolder = installationFolder;
+
+					resourceModelsFolder = StandardUtils.FindResourceModelsFolder(_appObject.Solution);
+
+					if (resourceModelsFolder == null)
+						resourceModelsFolder = installationFolder;
+
+					projectMapping = new ProjectMapping
+					{
+						EntityFolder = entityModelsFolder.Folder,
+						EntityNamespace = entityModelsFolder.Namespace,
+						EntityProject = entityModelsFolder.ProjectName,
+						ResourceFolder = resourceModelsFolder.Folder,
+						ResourceNamespace = resourceModelsFolder.Namespace,
+						ResourceProject = resourceModelsFolder.ProjectName,
+						IncludeSDK = !string.Equals(entityModelsFolder.ProjectName, resourceModelsFolder.ProjectName, StringComparison.Ordinal)
+					};
+
+					StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+				}
+				else
+				{
+					if (string.IsNullOrWhiteSpace(projectMapping.EntityProject) ||
+						string.IsNullOrWhiteSpace(projectMapping.EntityNamespace) ||
+						string.IsNullOrWhiteSpace(projectMapping.EntityFolder))
+					{
+						entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
+
+						if (entityModelsFolder == null)
+							entityModelsFolder = installationFolder;
+
+						projectMapping.EntityFolder = entityModelsFolder.Folder;
+						projectMapping.EntityNamespace = entityModelsFolder.Namespace;
+						projectMapping.EntityProject = entityModelsFolder.ProjectName;
+
+						StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+					}
+					else
+					{
+						entityModelsFolder = new ProjectFolder
+						{
+							Folder = projectMapping.EntityFolder,
+							Namespace = projectMapping.EntityNamespace,
+							ProjectName = projectMapping.EntityProject,
+							Name = Path.GetFileName(projectMapping.EntityFolder)
+						};
+					}
+
+					if (string.IsNullOrWhiteSpace(projectMapping.ResourceProject) ||
+						string.IsNullOrWhiteSpace(projectMapping.ResourceNamespace) ||
+						string.IsNullOrWhiteSpace(projectMapping.ResourceFolder))
+					{
+						resourceModelsFolder = StandardUtils.FindResourceModelsFolder(_appObject.Solution);
+
+						if (resourceModelsFolder == null)
+							resourceModelsFolder = installationFolder;
+
+						projectMapping.ResourceFolder = resourceModelsFolder.Folder;
+						projectMapping.ResourceNamespace = resourceModelsFolder.Namespace;
+						projectMapping.ResourceProject = resourceModelsFolder.ProjectName;
+
+						StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+					}
+					else
+					{
+						resourceModelsFolder = new ProjectFolder
+						{
+							Folder = projectMapping.ResourceFolder,
+							Namespace = projectMapping.ResourceNamespace,
+							ProjectName = projectMapping.ResourceProject,
+							Name = Path.GetFileName(projectMapping.ResourceFolder)
+						};
+					}
+				}
+
+				HandleMessages();
+
+				var entityMap = StandardUtils.LoadEntityModels(_appObject.Solution, entityModelsFolder);
+				HandleMessages();
+
+				var resourceMap = StandardUtils.LoadResourceModels(_appObject.Solution, entityMap, resourceModelsFolder);
+				HandleMessages();
+
+				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
 				HandleMessages();
 
 				var form = new UserInputResource()
 				{
-					ClassList = classList
+					EntityMap = entityMap,
+					ResourceMap = resourceMap,
+					DefaultConnectionString = connectionString,
+					ResourceModelsFolder = resourceModelsFolder
 				};
 
 				HandleMessages();
@@ -63,19 +161,33 @@ namespace COFRS.Template.Common.Wizards
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
-					var entityClassFile = (EntityClassFile)form._entityClassList.SelectedItem;
-					var classMembers = StandardUtils.LoadEntityClassMembers(entityClassFile);
+                    var standardEmitter = new StandardEmitter();
+					var undefinedModels = form.UndefinedResources;
 
-					var standardEmitter = new StandardEmitter();
-					var model = standardEmitter.EmitResourceModel(entityClassFile, 
-						                                          form.ClassList, 
-																  classMembers, 
-																  replacementsDictionary["$safeitemname$"], 
-																  replacementsDictionary,
-																  out ResourceClassFile resourceClass);
+					standardEmitter.GenerateResourceComposites(_appObject.Solution,
+																undefinedModels, 
+																resourceModelsFolder, 
+																entityMap,
+																resourceMap);
 
-					replacementsDictionary.Add("$model$", model);
-					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
+					var entityModel = (EntityModel)form._entityClassList.SelectedItem;
+					var resourceClassName = replacementsDictionary["$safeitemname$"];
+
+					var resourceModel = new ResourceModel()
+					{
+						ProjectName = resourceModelsFolder.ProjectName,
+						Namespace = resourceModelsFolder.Namespace,
+						Folder = Path.Combine(resourceModelsFolder.Folder, $"{resourceClassName}.cs"),
+						ClassName = resourceClassName,
+						EntityModel = entityModel,
+						ServerType = form.ServerType
+					};
+
+					var model = standardEmitter.EmitResourceModel(resourceModel,
+																  resourceMap,
+																  replacementsDictionary);
+                    replacementsDictionary.Add("$model$", model);
+                    replacementsDictionary.Add("$entitynamespace$", entityModel.Namespace);
 					Proceed = true;
 				}
 				else

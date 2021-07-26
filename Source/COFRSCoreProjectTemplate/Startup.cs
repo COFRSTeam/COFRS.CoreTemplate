@@ -27,6 +27,11 @@ namespace $safeprojectname$
 		///	</summary>
 		public static IConfiguration AppConfig { get; private set; }
 
+		/// <summary>
+		/// Gets or sets the ApiOptions
+		/// </summary>
+		public static ApiOptions apiOptions { get; set; }
+
 		///	<summary>
 		///	Initializes the Startup class
 		///	</summary>
@@ -42,28 +47,27 @@ namespace $safeprojectname$
 		///	<param name="services"></param>
 		public void ConfigureServices(IServiceCollection services)
 		{
+			apiOptions = ApiOptions.Load(AppConfig);
+			services.AddSingleton<IApiOptions>(apiOptions);
+
 			$if$ ($securitymodel$ == OAuth)var authorityUrl = AppConfig["OAuth2:AuthorityURL"];
 			var scopes = Scope.Load(AppConfig.GetSection("OAuth2:Scopes"));
 			var policies = Policy.Load(AppConfig.GetSection("OAuth2:Policies"));
 
 			$endif$//	Configure services
-			var options = services.ConfigureServices(AppConfig);
+			services.ConfigureServices(AppConfig);
 
  			//	Configure JSON formatting
             var defaultSettings = new JsonSerializerOptions
 			{
 				WriteIndented = true,
 				DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-				PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+				PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+				PropertyNameCaseInsensitive = true
 			};
 
 			defaultSettings.Converters.Add(new ApiCustomConverterFactory());
 			defaultSettings.Converters.Add(new ApiEnumConverterFactory());
-
-			services.Configure<IISServerOptions>(options =>
-			{
-				options.AllowSynchronousIO = true;
-			});
 
 			services.AddSingleton<JsonSerializerOptions>(defaultSettings);
 
@@ -102,13 +106,8 @@ namespace $safeprojectname$
 				services.AddApiAuthentication(authorityUrl, scopes, policies);
 			}
 
-			$endif$services.Configure<IISServerOptions>(options =>
-			{
-				options.AllowSynchronousIO = true;
-			});
-
-			//	Configure Swagger
-			$if$ ( $securitymodel$ == OAuth )services.UseSwagger(authorityUrl, options, scopes);$else$services.UseSwagger(options);
+			$endif$//	Configure Swagger
+			$if$ ( $securitymodel$ == OAuth )services.UseSwagger(authorityUrl, apiOptions, scopes);$else$services.UseSwagger(apiOptions);
 
 			$endif$var supportedJsonTypes = new string[] { "application/json", "text/json", "application/vnd.$companymoniker$.v1+json" };
 

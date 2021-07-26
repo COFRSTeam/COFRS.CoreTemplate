@@ -854,7 +854,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return "Unknown";
 		}
 
-		public static string GetPostgresDataType(DBColumn column, List<ClassFile> classList)
+		public static string GetPostgresDataType(DBColumn column, EntityMap entityMap)
 		{
 			switch ((NpgsqlDbType)column.DataType)
 			{
@@ -1176,9 +1176,8 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Unknown:
                     {
-						var entity = classList.FirstOrDefault(e =>
-							e.GetType() == typeof(EntityClassFile) &&
-							string.Equals(((EntityClassFile)e).TableName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
+						var entity = entityMap.Maps.FirstOrDefault(e =>
+							string.Equals(e.TableName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
 
 						if (entity != null)
 							return entity.ClassName;
@@ -1333,7 +1332,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return "Unknown";
 		}
 
-		public static string GetPostgresqlResourceDataType(DBColumn column, List<ClassFile> classList)
+		public static string GetPostgresqlResourceDataType(DBColumn column, List<ResourceModel> resourceModels)
 		{
 			switch ((NpgsqlDbType)column.DataType)
 			{
@@ -1656,14 +1655,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case NpgsqlDbType.Unknown:
 					{
-						var entity = classList.FirstOrDefault(e =>
-						{
-							return e.GetType() == typeof(EntityClassFile) &&
-							string.Equals(((EntityClassFile)e).TableName, column.dbDataType, StringComparison.OrdinalIgnoreCase);
-						});
+						var resourceModel = resourceModels.FirstOrDefault(e =>
+							string.Equals(e.EntityModel.TableName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
 
-						if (entity != null)
-							return entity.ClassName;
+						if (resourceModel != null)
+							return resourceModel.ClassName;
 					}
 					break;
 			}
@@ -1927,18 +1923,15 @@ namespace COFRS.Template.Common.ServiceUtilities
 		}
 
 		#region Postgrsql Helper Functions
-		public static ElementType GetElementType(string schema, string datatype, List<ClassFile> ClassList, string connectionString)
+		public static ElementType GetElementType(string schema, string datatype, EntityMap entityMap, string connectionString)
 		{
-			if (ClassList != null)
-			{
-				var classFile = ClassList.FirstOrDefault(c =>
-					c.GetType() == typeof(EntityClassFile) &&
-					string.Equals(((EntityClassFile)c).SchemaName, schema, StringComparison.OrdinalIgnoreCase) && 
-					string.Equals(((EntityClassFile)c).TableName, datatype, StringComparison.OrdinalIgnoreCase));
+				var entityModel = entityMap.Maps.FirstOrDefault(c =>
+					c.GetType() == typeof(EntityModel) &&
+					string.Equals(((EntityModel)c).SchemaName, schema, StringComparison.OrdinalIgnoreCase) && 
+					string.Equals(((EntityModel)c).TableName, datatype, StringComparison.OrdinalIgnoreCase));
 
-				if (classFile != null)
-					return classFile.ElementType;
-			}
+				if (entityModel != null)
+					return entityModel.ElementType;
 
 			string query = @"
 select t.typtype
@@ -1977,6 +1970,7 @@ select t.typtype
 
 			return ElementType.Table;
 		}
+
 		#endregion
 	}
 }

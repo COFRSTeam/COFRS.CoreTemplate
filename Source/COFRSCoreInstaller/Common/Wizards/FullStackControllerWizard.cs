@@ -7,6 +7,8 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using VSLangProj;
 
@@ -73,11 +75,13 @@ namespace COFRS.Template.Common.Wizards
 				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
 				HandleMessages();
 
-				var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
-				HandleMessages();
+                var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
+                HandleMessages();
 
-				var classList = StandardUtils.LoadClassList(programfiles);
-				HandleMessages();
+                var classList = StandardUtils.LoadClassList(programfiles);
+                HandleMessages();
+
+				var entityMap = StandardUtils.OpenEntityMap(_appObject.Solution);
 
 				var policies = StandardUtils.LoadPolicies(_appObject.Solution);
 				HandleMessages();
@@ -106,7 +110,7 @@ namespace COFRS.Template.Common.Wizards
 					PluralResourceName = resourceName.PluralForm,
 					RootNamespace = rootNamespace,
 					ReplacementsDictionary = replacementsDictionary,
-					ClassList = classList,
+					EntityMap = entityMap,
 					EntityModelsFolder = entityModelsFolder,
 					Policies = policies,
 					DefaultConnectionString = connectionString
@@ -152,13 +156,17 @@ namespace COFRS.Template.Common.Wizards
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
 					replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
 
-					StandardUtils.EnsureFolder(_appObject.Solution, "Mapping");
-					StandardUtils.EnsureFolder(_appObject.Solution, "Validation");
-					StandardUtils.EnsureFolder(_appObject.Solution, "Controllers");
-					StandardUtils.EnsureFolder(_appObject.Solution, "Models\\EntityModels");
-					StandardUtils.EnsureFolder(_appObject.Solution, "Models\\ResourceModels");
+					//ProjectFolder mappingFolder = StandardUtils.FindProjectFolder(_appObject.Solution, "*.Mapping");
+					//ProjectFolder validationFolder = StandardUtils.FindProjectFolder(_appObject.Solution, "*.Validation");
+					//ProjectFolder controllersFolder = StandardUtils.FindProjectFolder(_appObject.Solution, "*.Controllers");
 
-					List<ClassFile> composits = form.UndefinedClassList;
+					//StandardUtils.EnsureFolder(_appObject.Solution, mappingFolder);
+					//StandardUtils.EnsureFolder(_appObject.Solution, validationFolder);
+					//StandardUtils.EnsureFolder(_appObject.Solution, controllersFolder);
+					//StandardUtils.EnsureFolder(_appObject.Solution, "Models\\EntityModels");
+					//StandardUtils.EnsureFolder(_appObject.Solution, "Models\\ResourceModels");
+
+					List<EntityModel> undefinedModels = form.UndefinedClassList;
 
 					var emitter = new Emitter();
 					var standardEmitter = new StandardEmitter();
@@ -168,63 +176,80 @@ namespace COFRS.Template.Common.Wizards
 						//	Generate any undefined composits before we construct our entity model (because, 
 						//	the entity model depends upon them)
 
-						var definedList = new List<ClassFile>();
+						var definedList = new List<EntityModel>();
 						definedList.AddRange(classList);
-						definedList.AddRange(composits);
+						definedList.AddRange(undefinedModels);
 
-						standardEmitter.GenerateComposites(composits,
+						standardEmitter.GenerateComposites(_appObject.Solution, 
+							                               undefinedModels,
 							                               form.ConnectionString, 
 														   replacementsDictionary, 
-														   definedList,
-														   entityModelsFolder.Folder);
+														   entityMap,
+														   entityModelsFolder);
 						HandleMessages();
 
-						foreach (var composite in composits)
+						foreach (var composite in undefinedModels)
 						{
 							//	TO DO: This is incorret - the item could reside in another project
 							var pj = (VSProject)_appObject.Solution.Projects.Item(1).Object;
-							pj.Project.ProjectItems.AddFromFile(composite.FileName);
+							pj.Project.ProjectItems.AddFromFile(composite.Folder);
 
-							StandardUtils.RegisterComposite(_appObject.Solution, (EntityClassFile)composite);
+							StandardUtils.RegisterComposite(_appObject.Solution, composite);
 						}
 
-						classList.AddRange(composits);
+						classList.AddRange(undefinedModels);
 					}
 
 					//	Emit Entity Model
-					var entityModel = standardEmitter.EmitEntityModel(form.ServerType, 
-						                                              form.DatabaseTable, 
-																	  entityClassName,
-																	  classList, 
-																	  form.DatabaseColumns, 
-																	  replacementsDictionary, 
-																	  out EntityClassFile entityClassFile);
+					var entityModel = new EntityModel()
+					{
+						ClassName = replacementsDictionary["$safeitemname$"],
+						SchemaName = form.DatabaseTable.Schema,
+						TableName = form.DatabaseTable.Table,
+						Namespace = replacementsDictionary["$rootnamespace$"],
+						ElementType = ElementType.Composite,
+						Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"])
+					};
 
-					classList.Add(entityClassFile);
+					StandardUtils.GenerateColumns(entityModel, form.ConnectionString);
 
-					replacementsDictionary.Add("$entityModel$", entityModel);
+					var emodel = standardEmitter.EmitEntityModel(entityModel,
+															entityMap,
+															replacementsDictionary);
+
+					var existingEntities = entityMap.Maps.ToList();
+
+					entityModel.Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"]);
+
+					existingEntities.Add(entityModel);
+					entityMap.Maps = existingEntities.ToArray();
+					StandardUtils.SaveEntityMap(_appObject.Solution, entityMap);
+
+					classList.Add(entityModel);
+
+					replacementsDictionary.Add("$entityModel$", emodel);
 					HandleMessages();
 
-					var classMembers = StandardUtils.LoadEntityClassMembers(entityClassFile);
+					var classMembers = StandardUtils.LoadEntityClassMembers(entityModel);
 
 					//	Emit Resource Model
-					var resourceModel = standardEmitter.EmitResourceModel(entityClassFile, 
-						                                                  classList, 
-																		  classMembers, 
-																		  resourceClassName, 
-																		  replacementsDictionary,
-																		  out ResourceClassFile resourceClassFile);
-					replacementsDictionary.Add("$resourceModel$", resourceModel);
-					HandleMessages();
+					//var resourceModel = standardEmitter.EmitResourceModel(entityClassFile, 
+					//	                                                  entityMap, 
+					//													  classMembers, 
+					//													  resourceClassName, 
+					//													  replacementsDictionary,
+					//													  out ResourceClassFile resourceClassFile);
+					//replacementsDictionary.Add("$resourceModel$", resourceModel);
+					//HandleMessages();
 
 					//	Emit Mapping Model
-					var mappingModel = standardEmitter.EmitMappingModel(entityClassFile,
-									 resourceClassFile,
-									 mappingClassName,
-									 replacementsDictionary);
+					//var mappingModel = standardEmitter.EmitMappingModel(entityClassFile,
+					//				 resourceClassFile,
+					//				 mappingClassName,
+					//				 replacementsDictionary);
 
-					replacementsDictionary.Add("$mappingModel$", mappingModel);
-					HandleMessages();
+					//replacementsDictionary.Add("$mappingModel$", mappingModel);
+					//HandleMessages();
 
 
 					//	Emit Validation Model
@@ -239,14 +264,14 @@ namespace COFRS.Template.Common.Wizards
 													  replacementsDictionary["$validatornamespace$"]);
 
 					//	Emit Controller
-					var controllerModel = emitter.EmitController(entityClassFile,
-													   resourceClassFile,
-	                                                   moniker,
-													   controllerClassName,
-	                                                   validatorInterface,
-	                                                   policy);
+					//var controllerModel = emitter.EmitController(entityClassFile,
+					//								   resourceClassFile,
+	    //                                               moniker,
+					//								   controllerClassName,
+	    //                                               validatorInterface,
+	    //                                               policy);
 
-					replacementsDictionary.Add("$controllerModel$", controllerModel);
+					//replacementsDictionary.Add("$controllerModel$", controllerModel);
 					HandleMessages();
 
 					progressDialog.Close();

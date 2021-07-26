@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
+  <TemplateData>
+    <Name>COFRS REST Service (.NET Core)</Name>
+    <Description>Create a RESTful Web Service with the COFRS Library.</Description>
+    <Icon>COFRS.ico</Icon>
+    <ProjectType>CSharp</ProjectType>
+    <ProjectSubType>Web</ProjectSubType>
+    <LanguageTag>C#</LanguageTag>
+    <ProjectTypeTag>Web</ProjectTypeTag>
+    <PlatformTag>Windows</PlatformTag>
+    <SortOrder>1</SortOrder>
+    <Hidden>true</Hidden>
+    <TemplateID>c711adac-2559-4845-9163-68a1d466d084</TemplateID>
+    <CreateNewFolder>true</CreateNewFolder>
+    <DefaultName>WebService</DefaultName>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <CreateInPlace>true</CreateInPlace>
+  </TemplateData>
+  <TemplateContent>
+    <Project File="ProjectTemplate.csproj" TargetFileName="$safeprojectname$.csproj" ReplaceParameters="true">
+      <ProjectItem>COFRS.xml</ProjectItem>
+      <ProjectItem>COFRS.Common.xml</ProjectItem>
+      <ProjectItem ReplaceParameters="true" OpenInEditor="true">ReadMe.txt</ProjectItem>
+      <ProjectItem ReplaceParameters="true">Startup.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">Program.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true">appSettings.json</ProjectItem>
+      <ProjectItem ReplaceParameters="true">appSettings.Local.json</ProjectItem>
+      <ProjectItem ReplaceParameters="true">appSettings.Development.json</ProjectItem>
+      <ProjectItem ReplaceParameters="true">appSettings.QA.json</ProjectItem>
+      <ProjectItem ReplaceParameters="true">appSettings.Staging.json</ProjectItem>
+      <ProjectItem ReplaceParameters="true">appSettings.Production.json</ProjectItem>
+      <Folder Name="App_Start">
+        <ProjectItem ReplaceParameters="true">ServicesConfig.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true">SwaggerConfig.cs</ProjectItem>
+      </Folder>
+      <Folder Name="Controllers">
+        <ProjectItem ReplaceParameters="true">HealthCheckController.cs</ProjectItem>
+      </Folder>
+      <Folder Name="Orchestration">
+        <ProjectItem ReplaceParameters="true">IServiceOrchestrator.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true">ServiceOrchestrator.cs</ProjectItem>
+      </Folder>
+      <Folder Name="Repository">
+        <ProjectItem ReplaceParameters="true">IServiceRepository.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true">ServiceRepository.cs</ProjectItem>
+      </Folder>
+      <Folder Name="Properties">
+        <ProjectItem ReplaceParameters="true">launchSettings.json</ProjectItem>
+      </Folder>
+      <Folder Name ="Mapping"></Folder>
+      <Folder Name ="Validation"></Folder>
+    </Project>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
+    <FullClassName>COFRS.Template.COFRSServiceProjectWizard</FullClassName>
+  </WizardExtension>
+</VSTemplate>

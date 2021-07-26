@@ -59,6 +59,8 @@ namespace COFRS.Template.Common.Wizards
 				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
 				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
+				var entityMap = StandardUtils.OpenEntityMap(_appObject.Solution);
+
 				HandleMessages();
 
 				var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
@@ -76,7 +78,7 @@ namespace COFRS.Template.Common.Wizards
 				var form = new UserInputGeneral()
 				{
 					DefaultConnectionString = connectionString,
-					ClassList = classList,
+					EntityMap = entityMap,
 					Policies = policies,
 					InstallType = 5
 				};

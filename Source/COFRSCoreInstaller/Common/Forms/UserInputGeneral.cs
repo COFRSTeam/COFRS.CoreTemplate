@@ -34,6 +34,7 @@ namespace COFRS.Template.Common.Forms
 		public List<ClassFile> ClassList { get; set; }
 		public DBServerType ServerType { get; set; }
 		public List<string> Policies { get; set; }
+		public EntityMap EntityMap { get; set; }
 		#endregion
 
 		#region Utility functions
