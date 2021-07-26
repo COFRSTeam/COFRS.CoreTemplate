@@ -17,7 +17,7 @@ namespace $safeprojectname$.Orchestration
 		///	<remarks>Add new, customized functions to the <see cref="IServiceOrchestrator"/> interface, and then add their
 		///	implementations in this class, to extend the orchestrator with your custom functions.
 		///	</remarks>
-		public ServiceOrchestrator() 
+		public ServiceOrchestrator(IServiceRepository repository, IRepositoryOptions options) : base(repository, options) 
 		{
 		}
 	}

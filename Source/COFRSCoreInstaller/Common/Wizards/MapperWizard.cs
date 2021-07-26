@@ -36,12 +36,15 @@ namespace COFRS.Template.Common.Wizards
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
 			ProgressDialog progressDialog = new ProgressDialog("Loading classes and preparing project...");
+			Mapper mapperDialog = new Mapper();
 
 			try
 			{
 				//	Show the user that we are busy doing things...
 				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
 				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+
+				var entityMap = StandardUtils.OpenEntityMap(_appObject.Solution);
 
 				HandleMessages();
 
@@ -57,7 +60,7 @@ namespace COFRS.Template.Common.Wizards
 				var form = new UserInputGeneral()
 				{
 					DefaultConnectionString = connectionString,
-					ClassList = classList,
+					EntityMap = entityMap,
 					InstallType = 1
 				};
 
@@ -78,10 +81,18 @@ namespace COFRS.Template.Common.Wizards
 														 replacementsDictionary["$safeitemname$"],
 														 replacementsDictionary);
 
-					replacementsDictionary.Add("$model$", model);
-					replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
-					replacementsDictionary.Add("$resourcenamespace$", resourceClassFile.ClassNameSpace);
-					Proceed = true;
+					mapperDialog.resourceClassFile = resourceClassFile;
+					mapperDialog.entityClassFile = entityClassFile; 
+
+					if (mapperDialog.ShowDialog() == DialogResult.OK)
+					{
+						replacementsDictionary.Add("$model$", model);
+						replacementsDictionary.Add("$entitynamespace$", entityClassFile.ClassNameSpace);
+						replacementsDictionary.Add("$resourcenamespace$", resourceClassFile.ClassNameSpace);
+						Proceed = true;
+					}
+					else
+						Proceed = false;
 				}
 				else
 					Proceed = false;

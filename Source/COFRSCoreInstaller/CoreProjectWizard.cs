@@ -1,8 +1,11 @@
-﻿using EnvDTE;
+﻿using COFRS.Template.Common.Models;
+using EnvDTE;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.AccessControl;
+using System.Text.Json;
 using System.Windows.Forms;
 
 namespace COFRS.Template
@@ -15,6 +18,7 @@ namespace COFRS.Template
 		private string securityModel;
 		private string databaseTechnology;
 		private string logPath;
+		private string projectMapPath;
 
 		// This method is called before opening any item that
 		// has the OpenInEditor attribute.
@@ -55,6 +59,61 @@ namespace COFRS.Template
 					securityModel = inputForm.SecurityModel;
 					databaseTechnology = inputForm.DatabaseTechnology;
 					logPath = Path.Combine(replacementsDictionary["$destinationdirectory$"], "App_Data\\log-{Date}.json").Replace("\\", "\\\\");
+
+					if ( string.IsNullOrWhiteSpace(replacementsDictionary["$specifiedsolutionname$"]))
+						projectMapPath = Path.Combine(replacementsDictionary["$destinationdirectory$"], ".cofrs");
+					else
+						projectMapPath = Path.Combine(replacementsDictionary["$solutiondirectory$"], ".cofrs");
+
+					if (!Directory.Exists(projectMapPath))
+					{
+						DirectoryInfo dir = Directory.CreateDirectory(projectMapPath);
+						dir.Attributes = FileAttributes.Directory | FileAttributes.Hidden;
+					}
+
+					var projectMapping = new ProjectMapping
+					{
+						EntityProject = replacementsDictionary["$safeprojectname$"],
+						EntityFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Models\\EntityModels"),
+						EntityNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Models.EntityModels",
+
+						ResourceProject = replacementsDictionary["$safeprojectname$"],
+						ResourceFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Models\\ResourceModels"),
+						ResourceNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Models.ResourceModels",
+
+						MappingProject = replacementsDictionary["$safeprojectname$"],
+						MappingFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Mapping"),
+						MappingNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Mapping",
+
+						ValidationProject = replacementsDictionary["$safeprojectname$"],
+						ValidationFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Validation"),
+						ValidationNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Validation",
+
+						ControllersProject = replacementsDictionary["$safeprojectname$"],
+						ControllersFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Controllers"),
+						ControllersNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Controllers",
+
+						IncludeSDK = false
+					};
+
+					var jsonData = JsonSerializer.Serialize<ProjectMapping>(projectMapping, new JsonSerializerOptions()
+										{
+										    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+										    IgnoreNullValues = true,
+											WriteIndented = true
+										});
+
+					var projectMappingPath = Path.Combine(projectMapPath, "ProjectMap.json");
+					
+					using ( var stream = new FileStream(projectMappingPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+                    {
+						using ( var writer = new StreamWriter(stream))
+                        {
+							writer.Write(jsonData);
+							writer.Flush();
+                        }
+                    }
+
 					var portNumber = randomNumberGenerator.Next(1024, 65534);
 
 					// Add custom parameters.

@@ -21,38 +21,44 @@ namespace COFRS.Template.Common.Forms
 		private ServerConfig _serverConfig;
 		private bool Populating = false;
 		public DBTable DatabaseTable { get; set; }
-		public List<DBColumn> DatabaseColumns { get; set; }
 		public string ConnectionString { get; set; }
-		public List<ClassFile> ClassList { get; set; }
 		public DBServerType ServerType { get; set; }
+		public ProjectFolder ResourceModelsFolder { get; set; }
 		public string DefaultConnectionString { get; set; }
+		public EntityMap EntityMap { get; set; }
+		public ResourceMap ResourceMap { get; set; } 
+		public List<ResourceModel> UndefinedResources { get; set; }
 		#endregion
 
 		#region Utility functions
 		public UserInputResource()
 		{
 			InitializeComponent();
+			UndefinedResources = new List<ResourceModel>();
 		}
 
+		/// <summary>
+		/// Called when the dialog is loaded.
+		/// </summary>
+		/// <param name="sender">The sender of the notification</param>
+		/// <param name="e">The <see cref="EventArgs"/> for the notification</param>
 		private void OnLoad(object sender, EventArgs e)
 		{
 			_portNumber.Location = new Point(93, 60);
-			DatabaseColumns = new List<DBColumn>();
 			ReadServerList();
 
-			_entityClassList.Items.Clear();
-
-			foreach (var classFile in ClassList)
-			{
-				if (classFile.ElementType == ElementType.Table)
-					_entityClassList.Items.Add(classFile);
-			}
-
-			if (_entityClassList.Items.Count == 0)
+			if (EntityMap.Maps == null || EntityMap.Maps.ToList().Count == 0)
 			{
 				MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create the resource model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				DialogResult = DialogResult.Cancel;
 				Close();
+			}
+
+			var entityModelList = EntityMap.Maps.ToList();
+
+			foreach ( var entityModel in entityModelList )
+            {
+				_entityClassList.Items.Add(entityModel);
 			}
 
 			OnServerChanged(this, new EventArgs());
@@ -217,10 +223,33 @@ namespace COFRS.Template.Common.Forms
 						connection.Open();
 
 						var query = @"
-SELECT schemaname, tablename
+select schemaname, elementname
+  from (
+SELECT schemaname as schemaName, 
+       tablename as elementName
   FROM pg_catalog.pg_tables
- WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';
-";
+ WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'
+
+union all
+
+select n.nspname as schemaName, 
+       t.typname as elementName
+  from pg_type as t 
+ inner join pg_catalog.pg_namespace n on n.oid = t.typnamespace
+ WHERE ( t.typrelid = 0
+                OR ( SELECT c.relkind = 'c'
+                        FROM pg_catalog.pg_class c
+                        WHERE c.oid = t.typrelid ) )
+            AND NOT EXISTS (
+                    SELECT 1
+                        FROM pg_catalog.pg_type el
+                        WHERE el.oid = t.typelem
+                        AND el.typarray = t.oid )
+            AND n.nspname <> 'pg_catalog'
+            AND n.nspname <> 'information_schema'
+            AND n.nspname !~ '^pg_toast'
+			and ( t.typcategory = 'C' or t.typcategory = 'E' ) ) as X
+order by schemaname, elementname"; 
 
 						using (var command = new NpgsqlCommand(query, connection))
 						{
@@ -354,7 +383,7 @@ select s.name, t.name
 
 				for (int i = 0; i < _entityClassList.Items.Count; i++)
 				{
-					var entity = (EntityClassFile)_entityClassList.Items[i];
+					var entity = (EntityModel)_entityClassList.Items[i];
 
 					if (string.Equals(entity.TableName, table.Table, StringComparison.OrdinalIgnoreCase))
 					{
@@ -369,6 +398,63 @@ select s.name, t.name
 					_entityClassList.SelectedIndex = -1;
 					MessageBox.Show("No matching entity class found. You will not be able to create a resource model without a matching entity model.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 					_tableList.SelectedIndex = -1;
+				}
+				else
+				{
+					EntityModel entityModel = _entityClassList.SelectedItem as EntityModel;
+					UndefinedResources.Clear();
+
+					foreach ( var column in entityModel.Columns)
+                    {
+						if ( column.DataType.Equals(NpgsqlDbType.Unknown))
+                        {
+							var entityType = column.EntityType;
+							var childEntityModel = EntityMap.Maps.FirstOrDefault(ent =>
+							   string.Equals(ent.ClassName, entityType, StringComparison.OrdinalIgnoreCase));
+
+							if (childEntityModel != null)
+							{
+								var resourceModels = ResourceMap.Maps.ToList();
+								var resourceModel = resourceModels.FirstOrDefault(res =>
+										string.Equals(res.EntityModel.ClassName, childEntityModel.ClassName, StringComparison.OrdinalIgnoreCase));
+
+								if ( resourceModel == null )
+                                {
+									var className = $"{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(childEntityModel.TableName))}";
+
+									resourceModel = new ResourceModel()
+									{
+										ProjectName = ResourceModelsFolder.ProjectName,
+										Namespace = ResourceModelsFolder.Namespace,
+										Folder = Path.Combine(ResourceModelsFolder.Folder, $"{className}.cs"),
+										ClassName = className,
+										ServerType = server.DBType,
+										EntityModel = childEntityModel,
+										Columns = new DBColumn[] { }
+									};
+
+									UndefinedResources.Add(resourceModel);
+                                }
+							}
+							else
+                            {
+								MessageBox.Show($"The entity class {entityModel.ClassName} references the column {entityType}, a database composite or enumeration that is not defined.\r\n\r\nPlease ensure all dependent composites and enumerations are defined as entity classes before attempting to produce a resource class for this entity.", "Error: Undefined Type", MessageBoxButtons.OK, MessageBoxIcon.Error);
+								_tableList.SelectedIndex = -1;
+								UndefinedResources.Clear();
+                            }
+						}
+					}
+
+					if ( UndefinedResources.Count() > 0 )
+                    {
+						var className = $"{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(entityModel.TableName))}";
+						if ( MessageBox.Show($"The class {className} contains references to composits or enumerations for which therer is no defined resource model.\r\n\r\nWould you like COFRS to generate the missing resource models as part of generating this model?", 
+							"Warning: Missing Resource Model", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                        {
+							_tableList.SelectedIndex = -1;
+							UndefinedResources.Clear();
+						}
+					}
 				}
 
 				Populating = false;
@@ -654,7 +740,6 @@ select s.name, t.name
 		{
 			Save();
 			DatabaseTable = (DBTable)_tableList.SelectedItem;
-			OnSelectedTableChanged(this, new EventArgs());
 
 			if (_entityClassList.SelectedIndex == -1)
 			{

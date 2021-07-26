@@ -52,12 +52,20 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="COFRSModelsProjectWizard.cs" />
+    <Compile Include="COFRSSDKProjectWizard.cs" />
     <Compile Include="Common\Extensions\CodeElementsExtensions.cs" />
     <Compile Include="Common\Forms\AddConnection.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Common\Forms\AddConnection.Designer.cs">
       <DependentUpon>AddConnection.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Common\Forms\Mapper.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Common\Forms\Mapper.Designer.cs">
+      <DependentUpon>Mapper.cs</DependentUpon>
     </Compile>
     <Compile Include="Common\Forms\ProgressDialog.cs">
       <SubType>Form</SubType>
@@ -104,9 +112,14 @@
     <Compile Include="Common\Models\DBTable.cs" />
     <Compile Include="Common\Models\ElementType.cs" />
     <Compile Include="Common\Models\EntityClassFile.cs" />
+    <Compile Include="Common\Models\EntityMap.cs" />
+    <Compile Include="Common\Models\EntityModel.cs" />
     <Compile Include="Common\Models\MemberInfo.cs" />
+    <Compile Include="Common\Models\ProjectMapping.cs" />
     <Compile Include="Common\Models\ProjectFolder.cs" />
     <Compile Include="Common\Models\ResourceClassFile.cs" />
+    <Compile Include="Common\Models\ResourceMap.cs" />
+    <Compile Include="Common\Models\ResourceModel.cs" />
     <Compile Include="Common\Models\ServerConfig.cs" />
     <Compile Include="Common\Models\Snipit.cs" />
     <Compile Include="Common\Models\SnipitType.cs" />
@@ -123,8 +136,10 @@
     <Compile Include="Common\Wizards\MapperWizard.cs" />
     <Compile Include="Common\Wizards\ResourceWizard.cs" />
     <Compile Include="Common\Wizards\ValidationWizard.cs" />
+    <Compile Include="CoreProjectWtihSDKWizard.cs" />
     <Compile Include="Emitter.cs" />
     <Compile Include="ProviderOptions.cs" />
+    <Compile Include="COFRSServiceProjectWizard.cs" />
     <Compile Include="UserInputProject.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -227,6 +242,9 @@
     <EmbeddedResource Include="Common\Forms\AddConnection.resx">
       <DependentUpon>AddConnection.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Common\Forms\Mapper.resx">
+      <DependentUpon>Mapper.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Common\Forms\ProgressDialog.resx">
       <DependentUpon>ProgressDialog.cs</DependentUpon>
     </EmbeddedResource>
@@ -265,6 +283,13 @@
       <Project>{564C7BDB-0523-4C30-BD4C-E4D14A933BB6}</Project>
       <Name>COFRSCoreFullStackTemplate</Name>
       <VSIXSubPath>ItemTemplates</VSIXSubPath>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+    </ProjectReference>
+    <ProjectReference Include="..\COFRSCoreProjectWitihSDKTemplate\COFRSCoreProjectWitihSDKTemplate.csproj">
+      <Project>{AB8D0DF0-0A8A-40FC-8850-4B0524A1B103}</Project>
+      <Name>COFRSCoreProjectWitihSDKTemplate</Name>
+      <VSIXSubPath>ProjectTemplates</VSIXSubPath>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
     </ProjectReference>

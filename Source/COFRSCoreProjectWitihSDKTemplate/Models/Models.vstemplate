@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
+  <TemplateData>
+    <Name>COFRS REST Service (.NET Core)</Name>
+    <Description>Create a RESTful Web Service with the COFRS Library.</Description>
+    <Icon>COFRS.ico</Icon>
+    <ProjectType>CSharp</ProjectType>
+    <ProjectSubType>Web</ProjectSubType>
+    <LanguageTag>C#</LanguageTag>
+    <ProjectTypeTag>Web</ProjectTypeTag>
+    <PlatformTag>Windows</PlatformTag>
+    <SortOrder>1</SortOrder>
+    <Hidden>true</Hidden>
+    <TemplateID>c711adac-2559-4847-9163-68a1d466d084</TemplateID>
+    <CreateNewFolder>true</CreateNewFolder>
+    <DefaultName>WebService</DefaultName>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <CreateInPlace>true</CreateInPlace>
+  </TemplateData>
+  <TemplateContent>
+    <Project File="ProjectTemplate.csproj" TargetFileName="$safeprojectname$.csproj" ReplaceParameters="true">
+      <Folder Name="EntityModels"></Folder>
+      <Folder Name="ResourceModels">
+        <ProjectItem ReplaceParameters="true">HealthCheck.cs</ProjectItem>
+      </Folder>
+    </Project>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
+    <FullClassName>COFRS.Template.COFRSModelsProjectWizard</FullClassName>
+  </WizardExtension>
+</VSTemplate>

@@ -43,10 +43,10 @@ namespace COFRS.Template.Common.Forms
 		public JObject Examples { get; set; }
 		public Dictionary<string, string> ReplacementsDictionary { get; set; }
 		public List<string> Policies;
-		public List<ClassFile> ClassList { get; set; }
-		public List<ClassFile> UndefinedClassList = new List<ClassFile>();
+		public List<EntityModel> UndefinedClassList = new List<EntityModel>();
 		public DBServerType ServerType { get; set; }
 		public Dictionary<string, MemberInfo> Members { get; set; }
+		public EntityMap EntityMap { get; set; }
 
 		public string Policy
 		{
@@ -709,23 +709,22 @@ select a.attname as columnname,
 
 									if (dataType == NpgsqlDbType.Unknown)
 									{
-										var entity = ClassList.FirstOrDefault(ent =>
-											ent.GetType() == typeof(EntityClassFile) &&
-											string.Equals(((EntityClassFile)ent).SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
-											string.Equals(((EntityClassFile)ent).TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase));
+										var entity = EntityMap.Maps.FirstOrDefault(ent =>
+											string.Equals(ent.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
+											string.Equals(ent.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase));
 
 										if (entity == null)
 										{
 											entityName = reader.GetString(1);
 											var className = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(entityName));
 
-											entity = new EntityClassFile()
+											entity = new EntityModel()
 											{
 												SchemaName = table.Schema,
 												ClassName = className,
 												TableName = entityName,
-												FileName = Path.Combine(EntityModelsFolder.Folder, $"{className}.cs"),
-												ClassNameSpace = EntityModelsFolder.Namespace
+												Folder = Path.Combine(EntityModelsFolder.Folder, $"{className}.cs"),
+												Namespace = EntityModelsFolder.Namespace
 											};
 
 											UndefinedClassList.Add(entity);
@@ -757,7 +756,7 @@ select a.attname as columnname,
 
 						foreach (var unknownClass in UndefinedClassList)
 						{
-							unknownClass.ElementType = DBHelper.GetElementType(((EntityClassFile)unknownClass).SchemaName, ((EntityClassFile)unknownClass).TableName, ClassList, connectionString);
+							unknownClass.ElementType = DBHelper.GetElementType(unknownClass.SchemaName, unknownClass.TableName, EntityMap, connectionString);
 						}
 					}
 				}
@@ -949,8 +948,7 @@ select c.name as column_name,
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
 				UndefinedClassList = StandardUtils.GenerateEntityClassList(UndefinedClassList, 
-					                                                       ClassList, 
-																		   Members, 
+					                                                       EntityMap, 
 																		   EntityModelsFolder.Folder, 
 																		   ConnectionString);
 			}

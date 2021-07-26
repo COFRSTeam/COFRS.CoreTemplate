@@ -18,14 +18,13 @@ namespace $safeprojectname$.App_Start
 	{
 		private static TranslationOptions TranslationOptions { get; set; }
 		private static RepositoryOptions RepositoryOptions { get; set; }
-		private static ApiOptions ApiOptions { get; set; }
 
 		///	<summary>
 		///	Configure Services
 		///	</summary>
 		///	<param name="services">The service collection</param>
 		///	<param name="Configuration">The configuration service</param>
-		public static IApiOptions ConfigureServices(this IServiceCollection services, IConfiguration Configuration)
+		public static void ConfigureServices(this IServiceCollection services, IConfiguration Configuration)
 		{
 			var loggerConfig = new LoggerConfiguration().ReadFrom.Configuration(Configuration);
 
@@ -39,9 +38,7 @@ namespace $safeprojectname$.App_Start
 			//	services.AddSingleton<ICacheProvider>(new DefaultCacheProvider(-1));
 
 			//	Configure API Settings
-			ApiOptions = ApiOptions.Load(Configuration);
 			services.InitializeFactories();
-			services.AddSingleton<IApiOptions>(ApiOptions);
 
 			//	Configure Translation options
 			TranslationOptions = new TranslationOptions(Configuration.GetSection("ApiSettings").GetValue<string>("RootUrl"));
