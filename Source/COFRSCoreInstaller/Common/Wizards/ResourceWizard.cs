@@ -39,161 +39,120 @@ namespace COFRS.Template.Common.Wizards
 			ProgressDialog progressDialog = null;
 
 			try
-			{
-				//	Show the user that we are busy doing things...
-				progressDialog = new ProgressDialog("Loading classes and preparing project...");
-				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
-				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+            {
+                //	Show the user that we are busy doing things...
+                progressDialog = new ProgressDialog("Loading classes and preparing project...");
+                progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
+                _appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-				var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
-				HandleMessages();
+                var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
+                HandleMessages();
 
-				var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
-				HandleMessages();
+                var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
+                HandleMessages();
 
-				ProjectFolder entityModelsFolder;
-				ProjectFolder resourceModelsFolder;
+                //  Load the project mapping information
+                projectMapping = LoadProjectMapping(_appObject,
+                                                    projectMapping,
+                                                    installationFolder,
+                                                    out ProjectFolder entityModelsFolder,
+                                                    out ProjectFolder resourceModelsFolder);
 
-				//  Load the project mapping information
-				if (projectMapping == null)
-				{
-					entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
+                HandleMessages();
 
-					if (entityModelsFolder == null)
-						entityModelsFolder = installationFolder;
+                var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
+                HandleMessages();
 
-					resourceModelsFolder = StandardUtils.FindResourceModelsFolder(_appObject.Solution);
+                //  Make sure we are where we're supposed to be
+                if (!StandardUtils.IsChildOf(resourceModelsFolder.Folder, installationFolder.Folder))
+                {
+                    HandleMessages();
 
-					if (resourceModelsFolder == null)
-						resourceModelsFolder = installationFolder;
+                    progressDialog.Close();
+                    _appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
-					projectMapping = new ProjectMapping
-					{
-						EntityFolder = entityModelsFolder.Folder,
-						EntityNamespace = entityModelsFolder.Namespace,
-						EntityProject = entityModelsFolder.ProjectName,
-						ResourceFolder = resourceModelsFolder.Folder,
-						ResourceNamespace = resourceModelsFolder.Namespace,
-						ResourceProject = resourceModelsFolder.ProjectName,
-						IncludeSDK = !string.Equals(entityModelsFolder.ProjectName, resourceModelsFolder.ProjectName, StringComparison.Ordinal)
-					};
+                    var result = MessageBox.Show($"You are attempting to install a resource model into {StandardUtils.GetRelativeFolder(_appObject.Solution, installationFolder)}. Typically, resource models reside in {StandardUtils.GetRelativeFolder(_appObject.Solution, resourceModelsFolder)}.\r\n\r\nDo you wish to place the new resource model in this non-standard location?",
+                        "Warning: Non-Standard Location",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
 
-					StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
-				}
-				else
-				{
-					if (string.IsNullOrWhiteSpace(projectMapping.EntityProject) ||
-						string.IsNullOrWhiteSpace(projectMapping.EntityNamespace) ||
-						string.IsNullOrWhiteSpace(projectMapping.EntityFolder))
-					{
-						entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
+                    if (result == DialogResult.No)
+                    {
+                        Proceed = false;
+                        return;
+                    }
 
-						if (entityModelsFolder == null)
-							entityModelsFolder = installationFolder;
+                    progressDialog = new ProgressDialog("Loading classes and preparing project...");
+                    progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
+                    _appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+                    HandleMessages();
 
-						projectMapping.EntityFolder = entityModelsFolder.Folder;
-						projectMapping.EntityNamespace = entityModelsFolder.Namespace;
-						projectMapping.EntityProject = entityModelsFolder.ProjectName;
+                    resourceModelsFolder = installationFolder;
 
-						StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
-					}
-					else
-					{
-						entityModelsFolder = new ProjectFolder
-						{
-							Folder = projectMapping.EntityFolder,
-							Namespace = projectMapping.EntityNamespace,
-							ProjectName = projectMapping.EntityProject,
-							Name = Path.GetFileName(projectMapping.EntityFolder)
-						};
-					}
+                    projectMapping.ResourceFolder = resourceModelsFolder.Folder;
+                    projectMapping.ResourceNamespace = resourceModelsFolder.Namespace;
+                    projectMapping.ResourceProject = resourceModelsFolder.ProjectName;
 
-					if (string.IsNullOrWhiteSpace(projectMapping.ResourceProject) ||
-						string.IsNullOrWhiteSpace(projectMapping.ResourceNamespace) ||
-						string.IsNullOrWhiteSpace(projectMapping.ResourceFolder))
-					{
-						resourceModelsFolder = StandardUtils.FindResourceModelsFolder(_appObject.Solution);
+                    StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+                }
 
-						if (resourceModelsFolder == null)
-							resourceModelsFolder = installationFolder;
 
-						projectMapping.ResourceFolder = resourceModelsFolder.Folder;
-						projectMapping.ResourceNamespace = resourceModelsFolder.Namespace;
-						projectMapping.ResourceProject = resourceModelsFolder.ProjectName;
+                var entityMap = StandardUtils.LoadEntityModels(_appObject.Solution, entityModelsFolder);
+                HandleMessages();
 
-						StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
-					}
-					else
-					{
-						resourceModelsFolder = new ProjectFolder
-						{
-							Folder = projectMapping.ResourceFolder,
-							Namespace = projectMapping.ResourceNamespace,
-							ProjectName = projectMapping.ResourceProject,
-							Name = Path.GetFileName(projectMapping.ResourceFolder)
-						};
-					}
-				}
+                var defaultServerType = StandardUtils.GetDefaultServerType(connectionString);
 
-				HandleMessages();
+                var resourceMap = StandardUtils.LoadResourceModels(_appObject.Solution, entityMap, resourceModelsFolder, defaultServerType);
+                HandleMessages();
 
-				var entityMap = StandardUtils.LoadEntityModels(_appObject.Solution, entityModelsFolder);
-				HandleMessages();
+                var form = new UserInputResource()
+                {
+                    EntityMap = entityMap,
+                    ResourceMap = resourceMap,
+                    DefaultConnectionString = connectionString,
+                    ResourceModelsFolder = resourceModelsFolder
+                };
 
-				var resourceMap = StandardUtils.LoadResourceModels(_appObject.Solution, entityMap, resourceModelsFolder);
-				HandleMessages();
+                HandleMessages();
 
-				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
-				HandleMessages();
+                progressDialog.Close();
+                _appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
-				var form = new UserInputResource()
-				{
-					EntityMap = entityMap,
-					ResourceMap = resourceMap,
-					DefaultConnectionString = connectionString,
-					ResourceModelsFolder = resourceModelsFolder
-				};
-
-				HandleMessages();
-
-				progressDialog.Close();
-				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-
-				if (form.ShowDialog() == DialogResult.OK)
-				{
+                if (form.ShowDialog() == DialogResult.OK)
+                {
                     var standardEmitter = new StandardEmitter();
-					var undefinedModels = form.UndefinedResources;
+                    var undefinedModels = form.UndefinedResources;
 
-					standardEmitter.GenerateResourceComposites(_appObject.Solution,
-																undefinedModels, 
-																resourceModelsFolder, 
-																entityMap,
-																resourceMap);
+                    standardEmitter.GenerateResourceComposites(_appObject.Solution,
+                                                                undefinedModels,
+                                                                resourceModelsFolder,
+                                                                entityMap,
+                                                                resourceMap);
 
-					var entityModel = (EntityModel)form._entityClassList.SelectedItem;
-					var resourceClassName = replacementsDictionary["$safeitemname$"];
+                    var entityModel = (EntityModel)form._entityClassList.SelectedItem;
+                    var resourceClassName = replacementsDictionary["$safeitemname$"];
 
-					var resourceModel = new ResourceModel()
-					{
-						ProjectName = resourceModelsFolder.ProjectName,
-						Namespace = resourceModelsFolder.Namespace,
-						Folder = Path.Combine(resourceModelsFolder.Folder, $"{resourceClassName}.cs"),
-						ClassName = resourceClassName,
-						EntityModel = entityModel,
-						ServerType = form.ServerType
-					};
+                    var resourceModel = new ResourceModel()
+                    {
+                        ProjectName = resourceModelsFolder.ProjectName,
+                        Namespace = resourceModelsFolder.Namespace,
+                        Folder = Path.Combine(resourceModelsFolder.Folder, $"{resourceClassName}.cs"),
+                        ClassName = resourceClassName,
+                        EntityModel = entityModel,
+                        ServerType = form.ServerType
+                    };
 
-					var model = standardEmitter.EmitResourceModel(resourceModel,
-																  resourceMap,
-																  replacementsDictionary);
+                    var model = standardEmitter.EmitResourceModel(resourceModel,
+                                                                  resourceMap,
+                                                                  replacementsDictionary);
                     replacementsDictionary.Add("$model$", model);
                     replacementsDictionary.Add("$entitynamespace$", entityModel.Namespace);
-					Proceed = true;
-				}
-				else
-					Proceed = false;
-			}
-			catch ( Exception error)
+                    Proceed = true;
+                }
+                else
+                    Proceed = false;
+            }
+            catch ( Exception error)
             {
 				if (progressDialog != null)
 					if (progressDialog.IsHandleCreated)
@@ -205,7 +164,94 @@ namespace COFRS.Template.Common.Wizards
 			}
 		}
 
-		public bool ShouldAddProjectItem(string filePath)
+        private static ProjectMapping LoadProjectMapping(DTE2 _appObject, ProjectMapping projectMapping, ProjectFolder installationFolder, out ProjectFolder entityModelsFolder, out ProjectFolder resourceModelsFolder)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (projectMapping == null)
+            {
+                entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
+
+                if (entityModelsFolder == null)
+                    entityModelsFolder = installationFolder;
+
+                resourceModelsFolder = StandardUtils.FindResourceModelsFolder(_appObject.Solution);
+
+                if (resourceModelsFolder == null)
+                    resourceModelsFolder = installationFolder;
+
+                projectMapping = new ProjectMapping
+                {
+                    EntityFolder = entityModelsFolder.Folder,
+                    EntityNamespace = entityModelsFolder.Namespace,
+                    EntityProject = entityModelsFolder.ProjectName,
+                    ResourceFolder = resourceModelsFolder.Folder,
+                    ResourceNamespace = resourceModelsFolder.Namespace,
+                    ResourceProject = resourceModelsFolder.ProjectName,
+                    IncludeSDK = !string.Equals(entityModelsFolder.ProjectName, resourceModelsFolder.ProjectName, StringComparison.Ordinal)
+                };
+
+                StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(projectMapping.EntityProject) ||
+                    string.IsNullOrWhiteSpace(projectMapping.EntityNamespace) ||
+                    string.IsNullOrWhiteSpace(projectMapping.EntityFolder))
+                {
+                    entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
+
+                    if (entityModelsFolder == null)
+                        entityModelsFolder = installationFolder;
+
+                    projectMapping.EntityFolder = entityModelsFolder.Folder;
+                    projectMapping.EntityNamespace = entityModelsFolder.Namespace;
+                    projectMapping.EntityProject = entityModelsFolder.ProjectName;
+
+                    StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+                }
+                else
+                {
+                    entityModelsFolder = new ProjectFolder
+                    {
+                        Folder = projectMapping.EntityFolder,
+                        Namespace = projectMapping.EntityNamespace,
+                        ProjectName = projectMapping.EntityProject,
+                        Name = Path.GetFileName(projectMapping.EntityFolder)
+                    };
+                }
+
+                if (string.IsNullOrWhiteSpace(projectMapping.ResourceProject) ||
+                    string.IsNullOrWhiteSpace(projectMapping.ResourceNamespace) ||
+                    string.IsNullOrWhiteSpace(projectMapping.ResourceFolder))
+                {
+                    resourceModelsFolder = StandardUtils.FindResourceModelsFolder(_appObject.Solution);
+
+                    if (resourceModelsFolder == null)
+                        resourceModelsFolder = installationFolder;
+
+                    projectMapping.ResourceFolder = resourceModelsFolder.Folder;
+                    projectMapping.ResourceNamespace = resourceModelsFolder.Namespace;
+                    projectMapping.ResourceProject = resourceModelsFolder.ProjectName;
+
+                    StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+                }
+                else
+                {
+                    resourceModelsFolder = new ProjectFolder
+                    {
+                        Folder = projectMapping.ResourceFolder,
+                        Namespace = projectMapping.ResourceNamespace,
+                        ProjectName = projectMapping.ResourceProject,
+                        Name = Path.GetFileName(projectMapping.ResourceFolder)
+                    };
+                }
+            }
+
+            return projectMapping;
+        }
+
+        public bool ShouldAddProjectItem(string filePath)
 		{
 			return Proceed;
 		}

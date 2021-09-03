@@ -54,12 +54,6 @@ namespace COFRS.Template.Common.Wizards
 				var entityMap = StandardUtils.OpenEntityMap(_appObject.Solution);
 				HandleMessages();
 
-				var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
-				HandleMessages();
-
-				var classList = StandardUtils.LoadClassList(programfiles);
-				HandleMessages();
-
 				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
 				HandleMessages();
 

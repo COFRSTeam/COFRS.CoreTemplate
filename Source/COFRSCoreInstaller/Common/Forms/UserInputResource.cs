@@ -406,7 +406,7 @@ select s.name, t.name
 
 					foreach ( var column in entityModel.Columns)
                     {
-						if ( column.DataType.Equals(NpgsqlDbType.Unknown))
+						if ( column.DataType != null && column.DataType.Equals(NpgsqlDbType.Unknown))
                         {
 							var entityType = column.EntityType;
 							var childEntityModel = EntityMap.Maps.FirstOrDefault(ent =>

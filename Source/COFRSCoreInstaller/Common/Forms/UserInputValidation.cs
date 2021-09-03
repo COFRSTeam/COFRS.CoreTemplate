@@ -49,13 +49,13 @@ namespace COFRS.Template.Common.Forms
 
 			_entityModelList.Items.Clear();
 
-			foreach (var classFile in ClassList)
-			{
-				if (classFile.ElementType == ElementType.Table)
-					_entityModelList.Items.Add((EntityClassFile)classFile);
-				else if (classFile.ElementType == ElementType.Resource)
-					_resourceModelList.Items.Add((ResourceClassFile)classFile);
-			}
+			//foreach (var classFile in ClassList)
+			//{
+			//	if (classFile.ElementType == ElementType.Table)
+			//		_entityModelList.Items.Add((EntityClassFile)classFile);
+			//	else if (classFile.ElementType == ElementType.Resource)
+			//		_resourceModelList.Items.Add((ResourceClassFile)classFile);
+			//}
 
 			if (_entityModelList.Items.Count == 0)
 			{

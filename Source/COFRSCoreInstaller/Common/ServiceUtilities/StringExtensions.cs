@@ -18,5 +18,20 @@ namespace COFRS.Template.Common.ServiceUtilities
 
             return theCount;
         }
+
+        public static string GetBaseColumn(this string str)
+        {
+            var parts = str.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+            StringBuilder theBase = new StringBuilder();
+
+            for (int i = 0; i < parts.Count() - 1; i++)
+            {
+                if (theBase.Length > 0)
+                    theBase.Append(".");
+                theBase.Append(parts[i]);
+            }
+
+            return theBase.ToString();
+        }
     }
 }
