@@ -75,12 +75,6 @@ namespace COFRS.Template.Common.Wizards
 				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
 				HandleMessages();
 
-                var programfiles = StandardUtils.LoadProgramDetail(_appObject.Solution);
-                HandleMessages();
-
-                var classList = StandardUtils.LoadClassList(programfiles);
-                HandleMessages();
-
 				var entityMap = StandardUtils.OpenEntityMap(_appObject.Solution);
 
 				var policies = StandardUtils.LoadPolicies(_appObject.Solution);
@@ -177,7 +171,6 @@ namespace COFRS.Template.Common.Wizards
 						//	the entity model depends upon them)
 
 						var definedList = new List<EntityModel>();
-						definedList.AddRange(classList);
 						definedList.AddRange(undefinedModels);
 
 						standardEmitter.GenerateComposites(_appObject.Solution, 
@@ -197,7 +190,6 @@ namespace COFRS.Template.Common.Wizards
 							StandardUtils.RegisterComposite(_appObject.Solution, composite);
 						}
 
-						classList.AddRange(undefinedModels);
 					}
 
 					//	Emit Entity Model
@@ -224,8 +216,6 @@ namespace COFRS.Template.Common.Wizards
 					existingEntities.Add(entityModel);
 					entityMap.Maps = existingEntities.ToArray();
 					StandardUtils.SaveEntityMap(_appObject.Solution, entityMap);
-
-					classList.Add(entityModel);
 
 					replacementsDictionary.Add("$entityModel$", emodel);
 					HandleMessages();

@@ -31,10 +31,11 @@ namespace COFRS.Template.Common.Forms
 		public JObject Examples { get; set; }
 		public string DefaultConnectionString { get; set; }
 		public string ConnectionString { get; set; }
-		public List<ClassFile> ClassList { get; set; }
+
+		public EntityMap EntityMap { get; set; }
+		public ResourceMap ResourceMap { get; set; }
 		public DBServerType ServerType { get; set; }
 		public List<string> Policies { get; set; }
-		public EntityMap EntityMap { get; set; }
 		#endregion
 
 		#region Utility functions
@@ -85,13 +86,11 @@ namespace COFRS.Template.Common.Forms
 			_entityModelList.Items.Clear();
 			_resourceModelList.Items.Clear();
 
-			foreach (var classFile in ClassList)
-			{
-				if (classFile.ElementType == ElementType.Table)
-					_entityModelList.Items.Add((EntityClassFile)classFile);
-				else if ( classFile.ElementType == ElementType.Resource)
-					_resourceModelList.Items.Add((ResourceClassFile)classFile);
-			}
+			foreach (var entityModel in EntityMap.Maps)
+				_entityModelList.Items.Add(entityModel);
+
+			foreach (var resourceModel in ResourceMap.Maps)
+				_resourceModelList.Items.Add(resourceModel);
 
 			if (_entityModelList.Items.Count == 0)
 			{
@@ -293,10 +292,33 @@ namespace COFRS.Template.Common.Forms
 						connection.Open();
 
 						var query = @"
-SELECT schemaname, tablename
+select schemaname, elementname
+  from (
+SELECT schemaname as schemaName, 
+       tablename as elementName
   FROM pg_catalog.pg_tables
- WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';
-";
+ WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'
+
+union all
+
+select n.nspname as schemaName, 
+       t.typname as elementName
+  from pg_type as t 
+ inner join pg_catalog.pg_namespace n on n.oid = t.typnamespace
+ WHERE ( t.typrelid = 0
+                OR ( SELECT c.relkind = 'c'
+                        FROM pg_catalog.pg_class c
+                        WHERE c.oid = t.typrelid ) )
+            AND NOT EXISTS (
+                    SELECT 1
+                        FROM pg_catalog.pg_type el
+                        WHERE el.oid = t.typelem
+                        AND el.typarray = t.oid )
+            AND n.nspname <> 'pg_catalog'
+            AND n.nspname <> 'information_schema'
+            AND n.nspname !~ '^pg_toast'
+			and ( t.typcategory = 'C' or t.typcategory = 'E' ) ) as X
+order by schemaname, elementname";
 
 						using (var command = new NpgsqlCommand(query, connection))
 						{
@@ -405,14 +427,36 @@ select s.name, t.name
 
 				if (server == null)
 				{
-					MessageBox.Show("You must select a Database server to create a new resource model. Please select a database server and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					if (InstallType == 1)
+					{
+						MessageBox.Show("You must select a Database server to create a new mapping model. Please select a database server and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					}
+					else if (InstallType == 4)
+					{
+						MessageBox.Show("You must select a Database server to create a new example model. Please select a database server and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					}
+					else if (InstallType == 5)
+					{
+						MessageBox.Show("You must select a Database server to create a new controller. Please select a database server and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					}
 					return;
 				}
 
 				var db = (string)_dbList.SelectedItem;
 				if (string.IsNullOrWhiteSpace(db))
 				{
-					MessageBox.Show("You must select a Database to create a new resource model. Please select a database and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					if (InstallType == 1)
+					{
+						MessageBox.Show("You must select a Database to create a new mapping model. Please select a database and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					}
+					else if (InstallType == 4)
+					{
+						MessageBox.Show("You must select a Database to create a new example model. Please select a database and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					}
+					else if (InstallType == 5)
+					{
+						MessageBox.Show("You must select a Database to create a new controller. Please select a database server and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					}
 					return;
 				}
 
@@ -420,7 +464,18 @@ select s.name, t.name
 
 				if (table == null)
 				{
-					MessageBox.Show("You must select a Database table to create a new resource model. Please select a database table and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					if (InstallType == 1)
+					{
+						MessageBox.Show("You must select a Database table to create a new mapping model. Please select a database and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					}
+					else if (InstallType == 4)
+					{
+						MessageBox.Show("You must select a Database table to create a new example model. Please select a database and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					}
+					else if (InstallType == 5)
+					{
+						MessageBox.Show("You must select a Database table to create a new controller. Please select a database server and try again.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					}
 					return;
 				}
 
@@ -430,7 +485,7 @@ select s.name, t.name
 
 				for (int i = 0; i < _entityModelList.Items.Count; i++)
 				{
-					var entity = (EntityClassFile)_entityModelList.Items[i];
+					var entity = (EntityModel)_entityModelList.Items[i];
 
 					if (entity.TableName == table.Table)
 					{
@@ -438,13 +493,16 @@ select s.name, t.name
 
 						for (int j = 0; j < _resourceModelList.Items.Count; j++)
 						{
-							var resource = (ResourceClassFile)_resourceModelList.Items[j];
+							var resource = (ResourceModel)_resourceModelList.Items[j];
 
-							if (string.Equals(resource.EntityClass, entity.ClassName, StringComparison.OrdinalIgnoreCase))
+							if (resource.EntityModel != null)
 							{
-								_resourceModelList.SelectedIndex = j;
-								foundit = true;
-								break;
+								if (string.Equals(resource.EntityModel.ClassName, entity.ClassName, StringComparison.OrdinalIgnoreCase))
+								{
+									_resourceModelList.SelectedIndex = j;
+									foundit = true;
+									break;
+								}
 							}
 						}
 						break;

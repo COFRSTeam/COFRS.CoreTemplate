@@ -212,6 +212,7 @@ namespace COFRS.Template.Common.Wizards
                             Namespace = replacementsDictionary["$rootnamespace$"],
                             ElementType = ElementType.Enum,
                             ServerType = form.ServerType,
+                            ProjectName = entityModelsFolder.ProjectName,
                             Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"])
                         };
 
@@ -220,11 +221,6 @@ namespace COFRS.Template.Common.Wizards
                         replacementsDictionary["$npgsqltypes$"] = "true";
 
                         StandardUtils.RegisterComposite(_appObject.Solution, entityModel);
-
-                        var preexistingEntities = entityMap.Maps.ToList();
-                        preexistingEntities.Add(entityModel);
-                        entityMap.Maps = preexistingEntities.ToArray();
-                        StandardUtils.SaveEntityMap(_appObject.Solution, entityMap);
                     }
                     else if (form.EType == ElementType.Composite)
                     {
@@ -255,11 +251,6 @@ namespace COFRS.Template.Common.Wizards
 
 
                         StandardUtils.RegisterComposite(_appObject.Solution, entityModel);
-
-                        var existingEntities = entityMap.Maps.ToList();
-                        existingEntities.Add(entityModel);
-                        entityMap.Maps = existingEntities.ToArray();
-                        StandardUtils.SaveEntityMap(_appObject.Solution, entityMap);
                     }
                     else
                     {
@@ -271,10 +262,9 @@ namespace COFRS.Template.Common.Wizards
                             Namespace = replacementsDictionary["$rootnamespace$"],
                             ElementType = ElementType.Composite,
                             ServerType = form.ServerType,
-                            Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"])
+                            Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"]),
+                            Columns = form.DatabaseColumns.ToArray()
                         };
-
-                        StandardUtils.GenerateColumns(entityModel, form.ConnectionString);
 
                         model = standardEmitter.EmitEntityModel(entityModel,
                                                                 entityMap,
