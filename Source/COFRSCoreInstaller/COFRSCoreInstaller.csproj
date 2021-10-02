@@ -137,10 +137,10 @@
     <Compile Include="Common\Wizards\ControllerWizard.cs" />
     <Compile Include="Common\Wizards\EntityWizard.cs" />
     <Compile Include="Common\Wizards\FullStackControllerWizard.cs" />
-    <Compile Include="Common\Wizards\MapEditor.cs">
+    <Compile Include="Common\Forms\MapEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Common\Wizards\MapEditor.Designer.cs">
+    <Compile Include="Common\Forms\MapEditor.Designer.cs">
       <DependentUpon>MapEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="Common\Wizards\MapperWizard.cs" />
@@ -278,7 +278,7 @@
     <EmbeddedResource Include="Common\Forms\UserInputValidation.resx">
       <DependentUpon>UserInputValidation.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Common\Wizards\MapEditor.resx">
+    <EmbeddedResource Include="Common\Forms\MapEditor.resx">
       <DependentUpon>MapEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UserInputProject.resx">
