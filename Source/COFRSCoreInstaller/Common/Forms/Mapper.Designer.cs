@@ -44,12 +44,22 @@ namespace COFRS.Template.Common.Forms
             this.ResourceMemberLabel = new System.Windows.Forms.Label();
             this.UnmappedEntityMembersLabel = new System.Windows.Forms.Label();
             this.resourceGrid = new System.Windows.Forms.DataGridView();
+            this.ResourceColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.EntityColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.EditMapping = new System.Windows.Forms.DataGridViewImageColumn();
+            this.EntityColumns = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.AssignButton = new System.Windows.Forms.Button();
             this.UnassignButton = new System.Windows.Forms.Button();
             this.tabControl = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.EntityList = new System.Windows.Forms.ListBox();
             this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.ResourceList = new System.Windows.Forms.ListBox();
             this.EntityGrid = new System.Windows.Forms.DataGridView();
+            this.dataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewImageColumn1 = new System.Windows.Forms.DataGridViewImageColumn();
+            this.ResourceMembers = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ResourceAssign = new System.Windows.Forms.Button();
             this.ResourceUnassign = new System.Windows.Forms.Button();
             this.UnmappedResourceMembersLabel = new System.Windows.Forms.Label();
@@ -59,16 +69,7 @@ namespace COFRS.Template.Common.Forms
             this._cancelButton = new System.Windows.Forms.Button();
             this.dataGridViewImageColumn2 = new System.Windows.Forms.DataGridViewImageColumn();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
-            this.EntityList = new System.Windows.Forms.ListBox();
-            this.ResourceColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.EntityColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.EditMapping = new System.Windows.Forms.DataGridViewImageColumn();
-            this.EntityColumns = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.dataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.dataGridViewTextBoxColumn2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.dataGridViewImageColumn1 = new System.Windows.Forms.DataGridViewImageColumn();
-            this.ResourceMembers = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.ResourceList = new System.Windows.Forms.ListBox();
+            this.label1 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.resourceGrid)).BeginInit();
             this.tabControl.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -80,16 +81,16 @@ namespace COFRS.Template.Common.Forms
             // 
             // Explanation
             // 
-            this.Explanation.Location = new System.Drawing.Point(155, 12);
+            this.Explanation.Location = new System.Drawing.Point(155, 51);
             this.Explanation.Name = "Explanation";
-            this.Explanation.Size = new System.Drawing.Size(793, 89);
+            this.Explanation.Size = new System.Drawing.Size(793, 59);
             this.Explanation.TabIndex = 1;
             this.Explanation.Text = resources.GetString("Explanation.Text");
             // 
             // Resource_Label
             // 
             this.Resource_Label.AutoSize = true;
-            this.Resource_Label.Location = new System.Drawing.Point(155, 101);
+            this.Resource_Label.Location = new System.Drawing.Point(155, 124);
             this.Resource_Label.Name = "Resource_Label";
             this.Resource_Label.Size = new System.Drawing.Size(53, 13);
             this.Resource_Label.TabIndex = 2;
@@ -98,7 +99,7 @@ namespace COFRS.Template.Common.Forms
             // Entity_Label
             // 
             this.Entity_Label.AutoSize = true;
-            this.Entity_Label.Location = new System.Drawing.Point(155, 127);
+            this.Entity_Label.Location = new System.Drawing.Point(649, 124);
             this.Entity_Label.Name = "Entity_Label";
             this.Entity_Label.Size = new System.Drawing.Size(33, 13);
             this.Entity_Label.TabIndex = 3;
@@ -106,17 +107,17 @@ namespace COFRS.Template.Common.Forms
             // 
             // ResourceClass_Lablel
             // 
-            this.ResourceClass_Lablel.Location = new System.Drawing.Point(223, 101);
+            this.ResourceClass_Lablel.Location = new System.Drawing.Point(214, 123);
             this.ResourceClass_Lablel.Name = "ResourceClass_Lablel";
-            this.ResourceClass_Lablel.Size = new System.Drawing.Size(565, 23);
+            this.ResourceClass_Lablel.Size = new System.Drawing.Size(75, 23);
             this.ResourceClass_Lablel.TabIndex = 4;
             this.ResourceClass_Lablel.Text = "label1";
             // 
             // EntityClass_Label
             // 
-            this.EntityClass_Label.Location = new System.Drawing.Point(223, 127);
+            this.EntityClass_Label.Location = new System.Drawing.Point(700, 123);
             this.EntityClass_Label.Name = "EntityClass_Label";
-            this.EntityClass_Label.Size = new System.Drawing.Size(565, 23);
+            this.EntityClass_Label.Size = new System.Drawing.Size(235, 23);
             this.EntityClass_Label.TabIndex = 5;
             this.EntityClass_Label.Text = "label1";
             // 
@@ -185,9 +186,44 @@ namespace COFRS.Template.Common.Forms
             this.resourceGrid.ShowCellErrors = false;
             this.resourceGrid.ShowEditingIcon = false;
             this.resourceGrid.ShowRowErrors = false;
-            this.resourceGrid.Size = new System.Drawing.Size(649, 382);
+            this.resourceGrid.Size = new System.Drawing.Size(649, 326);
             this.resourceGrid.TabIndex = 12;
             this.resourceGrid.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.OnCellClick);
+            // 
+            // ResourceColumn
+            // 
+            this.ResourceColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.ResourceColumn.HeaderText = "Resource Member";
+            this.ResourceColumn.Name = "ResourceColumn";
+            this.ResourceColumn.ReadOnly = true;
+            this.ResourceColumn.Width = 109;
+            // 
+            // EntityColumn
+            // 
+            this.EntityColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.EntityColumn.HeaderText = "Mapped Entity Members";
+            this.EntityColumn.Name = "EntityColumn";
+            this.EntityColumn.ReadOnly = true;
+            this.EntityColumn.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            // 
+            // EditMapping
+            // 
+            this.EditMapping.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.EditMapping.HeaderText = "";
+            this.EditMapping.Image = global::COFRS.Template.Properties.Resources.EditButton;
+            this.EditMapping.Name = "EditMapping";
+            this.EditMapping.ReadOnly = true;
+            this.EditMapping.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.EditMapping.ToolTipText = "Edit the mapping formulas for this resource.";
+            this.EditMapping.Width = 60;
+            // 
+            // EntityColumns
+            // 
+            this.EntityColumns.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.EntityColumns.HeaderText = "Entity Columns";
+            this.EntityColumns.Name = "EntityColumns";
+            this.EntityColumns.ReadOnly = true;
+            this.EntityColumns.Visible = false;
             // 
             // AssignButton
             // 
@@ -214,7 +250,7 @@ namespace COFRS.Template.Common.Forms
             this.tabControl.Location = new System.Drawing.Point(12, 156);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(940, 260);
+            this.tabControl.Size = new System.Drawing.Size(940, 415);
             this.tabControl.TabIndex = 15;
             // 
             // tabPage1
@@ -228,10 +264,18 @@ namespace COFRS.Template.Common.Forms
             this.tabPage1.Location = new System.Drawing.Point(4, 22);
             this.tabPage1.Name = "tabPage1";
             this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(932, 234);
+            this.tabPage1.Size = new System.Drawing.Size(932, 389);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Resource from Entity";
             this.tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // EntityList
+            // 
+            this.EntityList.FormattingEnabled = true;
+            this.EntityList.Location = new System.Drawing.Point(723, 43);
+            this.EntityList.Name = "EntityList";
+            this.EntityList.Size = new System.Drawing.Size(192, 329);
+            this.EntityList.TabIndex = 15;
             // 
             // tabPage2
             // 
@@ -244,10 +288,18 @@ namespace COFRS.Template.Common.Forms
             this.tabPage2.Location = new System.Drawing.Point(4, 22);
             this.tabPage2.Name = "tabPage2";
             this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(932, 234);
+            this.tabPage2.Size = new System.Drawing.Size(932, 389);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "Entity from Resource";
             this.tabPage2.UseVisualStyleBackColor = true;
+            // 
+            // ResourceList
+            // 
+            this.ResourceList.FormattingEnabled = true;
+            this.ResourceList.Location = new System.Drawing.Point(725, 51);
+            this.ResourceList.Name = "ResourceList";
+            this.ResourceList.Size = new System.Drawing.Size(187, 316);
+            this.ResourceList.TabIndex = 22;
             // 
             // EntityGrid
             // 
@@ -296,8 +348,42 @@ namespace COFRS.Template.Common.Forms
             this.EntityGrid.ShowCellErrors = false;
             this.EntityGrid.ShowEditingIcon = false;
             this.EntityGrid.ShowRowErrors = false;
-            this.EntityGrid.Size = new System.Drawing.Size(649, 382);
+            this.EntityGrid.Size = new System.Drawing.Size(649, 324);
             this.EntityGrid.TabIndex = 21;
+            this.EntityGrid.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.OnEntityCellClick);
+            // 
+            // dataGridViewTextBoxColumn1
+            // 
+            this.dataGridViewTextBoxColumn1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.dataGridViewTextBoxColumn1.HeaderText = "Entity Member";
+            this.dataGridViewTextBoxColumn1.Name = "dataGridViewTextBoxColumn1";
+            this.dataGridViewTextBoxColumn1.ReadOnly = true;
+            this.dataGridViewTextBoxColumn1.Width = 91;
+            // 
+            // dataGridViewTextBoxColumn2
+            // 
+            this.dataGridViewTextBoxColumn2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.dataGridViewTextBoxColumn2.HeaderText = "Mapped Resource Members";
+            this.dataGridViewTextBoxColumn2.Name = "dataGridViewTextBoxColumn2";
+            this.dataGridViewTextBoxColumn2.ReadOnly = true;
+            this.dataGridViewTextBoxColumn2.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            // 
+            // dataGridViewImageColumn1
+            // 
+            this.dataGridViewImageColumn1.HeaderText = "";
+            this.dataGridViewImageColumn1.Image = global::COFRS.Template.Properties.Resources.EditButton;
+            this.dataGridViewImageColumn1.Name = "dataGridViewImageColumn1";
+            this.dataGridViewImageColumn1.ReadOnly = true;
+            this.dataGridViewImageColumn1.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.dataGridViewImageColumn1.ToolTipText = "Edit the mapping formulas for this resource.";
+            this.dataGridViewImageColumn1.Width = 60;
+            // 
+            // ResourceMembers
+            // 
+            this.ResourceMembers.HeaderText = "ResourceMembers";
+            this.ResourceMembers.Name = "ResourceMembers";
+            this.ResourceMembers.ReadOnly = true;
+            this.ResourceMembers.Visible = false;
             // 
             // ResourceAssign
             // 
@@ -340,7 +426,7 @@ namespace COFRS.Template.Common.Forms
             this.panel1.BackColor = System.Drawing.SystemColors.ActiveCaption;
             this.panel1.Controls.Add(this._okButton);
             this.panel1.Controls.Add(this._cancelButton);
-            this.panel1.Location = new System.Drawing.Point(12, 418);
+            this.panel1.Location = new System.Drawing.Point(-10, 577);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(1025, 144);
             this.panel1.TabIndex = 84;
@@ -384,93 +470,22 @@ namespace COFRS.Template.Common.Forms
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
-            // EntityList
+            // label1
             // 
-            this.EntityList.FormattingEnabled = true;
-            this.EntityList.Location = new System.Drawing.Point(723, 43);
-            this.EntityList.Name = "EntityList";
-            this.EntityList.Size = new System.Drawing.Size(192, 303);
-            this.EntityList.TabIndex = 15;
-            // 
-            // ResourceColumn
-            // 
-            this.ResourceColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.ResourceColumn.HeaderText = "Resource Member";
-            this.ResourceColumn.Name = "ResourceColumn";
-            this.ResourceColumn.ReadOnly = true;
-            this.ResourceColumn.Width = 109;
-            // 
-            // EntityColumn
-            // 
-            this.EntityColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.EntityColumn.HeaderText = "Mapped Entity Members";
-            this.EntityColumn.Name = "EntityColumn";
-            this.EntityColumn.ReadOnly = true;
-            this.EntityColumn.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            // 
-            // EditMapping
-            // 
-            this.EditMapping.HeaderText = "";
-            this.EditMapping.Image = global::COFRS.Template.Properties.Resources.EditButton;
-            this.EditMapping.Name = "EditMapping";
-            this.EditMapping.ReadOnly = true;
-            this.EditMapping.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.EditMapping.ToolTipText = "Edit the mapping formulas for this resource.";
-            this.EditMapping.Width = 60;
-            // 
-            // EntityColumns
-            // 
-            this.EntityColumns.HeaderText = "Entity Columns";
-            this.EntityColumns.Name = "EntityColumns";
-            this.EntityColumns.ReadOnly = true;
-            this.EntityColumns.Visible = false;
-            // 
-            // dataGridViewTextBoxColumn1
-            // 
-            this.dataGridViewTextBoxColumn1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.dataGridViewTextBoxColumn1.HeaderText = "Entity Member";
-            this.dataGridViewTextBoxColumn1.Name = "dataGridViewTextBoxColumn1";
-            this.dataGridViewTextBoxColumn1.ReadOnly = true;
-            this.dataGridViewTextBoxColumn1.Width = 99;
-            // 
-            // dataGridViewTextBoxColumn2
-            // 
-            this.dataGridViewTextBoxColumn2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.dataGridViewTextBoxColumn2.HeaderText = "Mapped Entity Members";
-            this.dataGridViewTextBoxColumn2.Name = "dataGridViewTextBoxColumn2";
-            this.dataGridViewTextBoxColumn2.ReadOnly = true;
-            this.dataGridViewTextBoxColumn2.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            // 
-            // dataGridViewImageColumn1
-            // 
-            this.dataGridViewImageColumn1.HeaderText = "";
-            this.dataGridViewImageColumn1.Image = global::COFRS.Template.Properties.Resources.EditButton;
-            this.dataGridViewImageColumn1.Name = "dataGridViewImageColumn1";
-            this.dataGridViewImageColumn1.ReadOnly = true;
-            this.dataGridViewImageColumn1.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.dataGridViewImageColumn1.ToolTipText = "Edit the mapping formulas for this resource.";
-            this.dataGridViewImageColumn1.Width = 60;
-            // 
-            // ResourceMembers
-            // 
-            this.ResourceMembers.HeaderText = "ResourceMembers";
-            this.ResourceMembers.Name = "ResourceMembers";
-            this.ResourceMembers.ReadOnly = true;
-            this.ResourceMembers.Visible = false;
-            // 
-            // ResourceList
-            // 
-            this.ResourceList.FormattingEnabled = true;
-            this.ResourceList.Location = new System.Drawing.Point(725, 51);
-            this.ResourceList.Name = "ResourceList";
-            this.ResourceList.Size = new System.Drawing.Size(187, 290);
-            this.ResourceList.TabIndex = 22;
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Location = new System.Drawing.Point(403, 9);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(195, 31);
+            this.label1.TabIndex = 85;
+            this.label1.Text = "Mapping Editor";
             // 
             // Mapper
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1010, 628);
+            this.ClientSize = new System.Drawing.Size(965, 628);
+            this.Controls.Add(this.label1);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.tabControl);
             this.Controls.Add(this.EntityClass_Label);
@@ -525,11 +540,12 @@ namespace COFRS.Template.Common.Forms
         private System.Windows.Forms.DataGridView EntityGrid;
         private System.Windows.Forms.ListBox EntityList;
         private System.Windows.Forms.DataGridViewImageColumn dataGridViewImageColumn2;
+        private System.Windows.Forms.ListBox ResourceList;
+        private System.Windows.Forms.Label label1;
         private System.Windows.Forms.DataGridViewTextBoxColumn ResourceColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn EntityColumn;
         private System.Windows.Forms.DataGridViewImageColumn EditMapping;
         private System.Windows.Forms.DataGridViewTextBoxColumn EntityColumns;
-        private System.Windows.Forms.ListBox ResourceList;
         private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn1;
         private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn2;
         private System.Windows.Forms.DataGridViewImageColumn dataGridViewImageColumn1;

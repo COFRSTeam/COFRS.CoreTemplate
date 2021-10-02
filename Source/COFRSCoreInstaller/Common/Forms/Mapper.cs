@@ -48,12 +48,7 @@ namespace COFRS.Template.Common.Forms
             };
 
             var unmappedColumns = new List<DBColumn>();
-
-            foreach ( var column in ResourceModel.EntityModel.Columns )
-            {
-                unmappedColumns.Add(column);
-            }
-
+            GetEntityModelList(ResourceModel.EntityModel, string.Empty, unmappedColumns);
             GenerateResourceFromEntityMapping(nn, unmappedColumns);
 
             foreach (DataGridViewRow row in resourceGrid.Rows)
@@ -71,8 +66,7 @@ namespace COFRS.Template.Common.Forms
             }
 
             unmappedColumns.Clear();
-            unmappedColumns.AddRange(ResourceModel.Columns);
-
+            GetResourceModelList(ResourceModel, string.Empty, unmappedColumns);
             GenerateEntityFromResourceMapping(unmappedColumns);
 
             foreach (DataGridViewRow row in EntityGrid.Rows)
@@ -87,6 +81,58 @@ namespace COFRS.Template.Common.Forms
                 };
 
                 ProfileMap.EntityProfiles.Add(profile);
+            }
+        }
+
+        private void GetResourceModelList(ResourceModel source, string ParentName, List<DBColumn> unmappedColumns)
+        {
+            foreach (var column in source.Columns)
+            {
+                var resourceModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, column.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+
+                if (resourceModel != null && resourceModel.ResourceType != ResourceType.Enum)
+                {
+                    string newParent = string.Empty;
+
+                    if (string.IsNullOrWhiteSpace(ParentName))
+                        newParent = column.ColumnName;
+                    else
+                        newParent = $"{ParentName}.{column.ColumnName}";
+
+                    GetResourceModelList(resourceModel, newParent, unmappedColumns);
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(ParentName))
+                        column.ColumnName = $"{ParentName}.{column.ColumnName}";
+
+                    unmappedColumns.Add(column);
+                }
+            }
+        }
+        private void GetEntityModelList(EntityModel source, string ParentName, List<DBColumn> unmappedColumns)
+        {
+            foreach (var column in source.Columns)
+            {
+                var entityModel = EntityModels.FirstOrDefault(r => string.Equals(r.ClassName, column.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+
+                if (entityModel != null && entityModel.ElementType != ElementType.Enum)
+                {
+                    string newParent = string.Empty;
+
+                    if (string.IsNullOrWhiteSpace(ParentName))
+                        newParent = column.ColumnName;
+                    else
+                        newParent = $"{ParentName}.{column.ColumnName}";
+
+                    GetEntityModelList(entityModel, newParent, unmappedColumns);
+                }
+                else 
+                { 
+                    if (!string.IsNullOrWhiteSpace(ParentName))
+                        column.ColumnName = $"{ParentName}.{column.ColumnName}";
+                    unmappedColumns.Add(column);
+                }
             }
         }
 
@@ -234,20 +280,52 @@ namespace COFRS.Template.Common.Forms
                                 for (int i = 0 ; i < parts.Count()-1; i++)
                                 {
                                     var parentClass = parts[i];
-                                    mapFunction.Append($"{parent}.{parentClass} == null ? {NullValue} : ");
-                                    parent.Append($".{parentClass}");
+
+                                    if ( string.IsNullOrWhiteSpace(parent.ToString()))
+                                        mapFunction.Append($"source.{parentClass} == null ? {NullValue} : ");
+                                    else
+                                        mapFunction.Append($"source.{parent}.{parentClass} == null ? {NullValue} : ");
+                                    parent.Append($"source.{parentClass}");
+
                                 }
 
                                 mapFunction.Append($"{parent}.{parts[parts.Count()-1]}");
                                 dataRow.Cells[1].Value = mapFunction.ToString();
+
+                                StringBuilder childColumn = new StringBuilder();
+
+                                foreach (var p in parts)
+                                {
+                                    if (childColumn.Length > 0)
+                                        childColumn.Append(".");
+                                    childColumn.Append(p);
+                                }
+
+                                var cc = unmappedColumns.FirstOrDefault(c => string.Equals(c.ColumnName, childColumn.ToString(), StringComparison.OrdinalIgnoreCase));
+                                if (cc != null)
+                                {
+                                    dataRow.Cells[3].Value = cc.ColumnName;
+                                    unmappedColumns.Remove(cc);
+                                }
                             }
                             else
                             {
-                                resourceMember = unmappedColumns.FirstOrDefault(r => string.Equals(r.ColumnName, rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
+                                StringBuilder mc = new StringBuilder();
+
                                 dataRow.Cells[1].Value = $"source.{rp.ResourceColumnName}";
 
-                                if (resourceMember != null)
-                                    unmappedColumns.Remove(resourceMember);
+                                var c = new List<DBColumn>();
+                                c.AddRange(unmappedColumns.Where(r => r.ColumnName.StartsWith(rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase)));
+
+                                foreach (var m in c)
+                                {
+                                    if (mc.Length > 0)
+                                        mc.Append(",");
+                                    mc.Append(m.ColumnName);
+                                    unmappedColumns.Remove(m);
+                                }
+
+                                dataRow.Cells[3].Value = mc.ToString();
                             }
                         }
                     }
@@ -1571,7 +1649,7 @@ namespace COFRS.Template.Common.Forms
                 MapEditor mapEditor = new MapEditor();
 
                 var sourceColumnNames = resourceGrid.Rows[e.RowIndex].Cells[3].Value.ToString().Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                var destinationColumnName = ResourceModel.Columns[e.RowIndex].ColumnName;
+                var destinationColumnName = resourceGrid.Rows[e.RowIndex].Cells[0].Value.ToString();
 
                 mapEditor.DestinationMemberLabel.Text = destinationColumnName;
                 mapEditor.MappingFunctionTextBox.Text = resourceGrid.Rows[e.RowIndex].Cells[1].Value.ToString();
@@ -1584,6 +1662,30 @@ namespace COFRS.Template.Common.Forms
                 if ( mapEditor.ShowDialog() == DialogResult.OK)
                 {
                     resourceGrid.Rows[e.RowIndex].Cells[1].Value = mapEditor.MappingFunctionTextBox.Text;
+                }
+            }
+        }
+
+        private void OnEntityCellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.ColumnIndex == 2)
+            {
+                MapEditor mapEditor = new MapEditor();
+
+                var sourceColumnNames = EntityGrid.Rows[e.RowIndex].Cells[3].Value.ToString().Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var destinationColumnName = EntityGrid.Rows[e.RowIndex].Cells[0].Value.ToString();
+
+                mapEditor.DestinationMemberLabel.Text = destinationColumnName;
+                mapEditor.MappingFunctionTextBox.Text = EntityGrid.Rows[e.RowIndex].Cells[1].Value.ToString();
+                mapEditor.MappedList.Items.AddRange(sourceColumnNames);
+                mapEditor.UnmappedList.Items.AddRange(EntityList.Items);
+
+                mapEditor.MappedResourcesLabel.Text = "Mapped Resources";
+                mapEditor.UnmappedResourcesLabel.Text = "Unmapped Resources";
+
+                if (mapEditor.ShowDialog() == DialogResult.OK)
+                {
+                    EntityGrid.Rows[e.RowIndex].Cells[1].Value = mapEditor.MappingFunctionTextBox.Text;
                 }
             }
         }

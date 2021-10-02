@@ -16,5 +16,11 @@ namespace COFRS.Template.Common.Wizards
         {
             InitializeComponent();
         }
+
+        private void OnOK(object sender, EventArgs e)
+        {
+            DialogResult = DialogResult.OK;
+            Close();
+        }
     }
 }

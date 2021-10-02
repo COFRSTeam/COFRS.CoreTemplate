@@ -243,8 +243,8 @@ namespace COFRS.Template.Common.Wizards
 
 
 					//	Emit Validation Model
-					var validationModel = standardEmitter.EmitValidationModel(resourceClassName, validationClassName, out string validatorInterface);
-					replacementsDictionary.Add("$validationModel$", validationModel);
+//					var validationModel = standardEmitter.EmitValidationModel(resourceClassName, validationClassName, out string validatorInterface);
+					replacementsDictionary.Add("$validationModel$", "");
 					HandleMessages();
 
 					//	Register the validation model

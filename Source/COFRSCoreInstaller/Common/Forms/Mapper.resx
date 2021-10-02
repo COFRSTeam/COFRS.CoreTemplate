@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Explanation.Text" xml:space="preserve">
-    <value>Use this dialog to map resource members to entity members. A mapping is between a resource member and one or more entity members. When the conversion from entity member to resource member is done, the mapping informs the conversion process that the mapped entity members are used to populate the resource member. Typically, a resource member is mapped to one entity member. The exception is usually for primary or foreign keys that contain more than one member. The exact conversion method is defined in the Automapper profile for this resource.</value>
+    <value>Use this dialog to map source members to destination members. A mapping is between a source (what you have) and a destination (what you want). When the conversion from one or more source members to a destination member is done, the mapping informs the conversion process that the mapped source members are used to populate the destination member using a conversion, or mapping, function. This dialog defines two mappings, a Resource -&gt; Entity mapping and an Entity -&gt; Resource mapping.</value>
   </data>
   <metadata name="ResourceColumn.UserAddedColumn" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>True</value>

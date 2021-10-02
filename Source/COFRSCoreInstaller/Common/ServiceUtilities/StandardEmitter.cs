@@ -16,30 +16,49 @@ namespace COFRS.Template.Common.ServiceUtilities
 {
 	public class StandardEmitter
 	{
-		public string EmitValidationModel(string resourceClassName, string validatorClassName, out string validatorInterface)
+		/// <summary>
+		/// Generates a validation model for the specified resource
+		/// </summary>
+		/// <param name="resourceModel">The resource model for the resource being validated.</param>
+		/// <param name="entityModel">The corresponding entity model for the resource being validated.</param>
+		/// <param name="profileMap">The profile map between the resource and entity models.</param>
+		/// <param name="validatorClassName">The name of the validator class</param>
+		/// <param name="validatorInterface">The output parameter returning the validator interface name.</param>
+		/// <returns>The code for the validator class in a string.</returns>
+		public string EmitValidationModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, EntityMap entityMap, string validatorClassName, out string validatorInterface)
 		{
+			//	Instantiate a string builder. We will use the string builder to construct our code.
 			var results = new StringBuilder();
 
+			//	The validator interface is nothing more than I followed by the validator class name.
 			validatorInterface = $"I{validatorClassName}";
 
-			//	IValidator interface
+			//	Define the IValidator interface. This is nothing more than an interface that is derrived from
+			//	the IValidator<T> interface. The IValidator<T> interface has all the important methods defined
+			//	in it, so that this interface we are creating doesn't need any methods.
+			//
+			//	It will be up the the user to add any additional validation methods to this interface that they
+			//	deem necessasry.
 			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\tInterface for the {resourceClassName} Validator");
+			results.AppendLine($"\t///\tInterface for the {resourceModel.ClassName} Validator");
 			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic interface {validatorInterface} : IValidator<{resourceClassName}>");
+			results.AppendLine($"\tpublic interface {validatorInterface} : IValidator<{resourceModel.ClassName}>");
 			results.AppendLine("\t{");
 			results.AppendLine("\t}");
 			results.AppendLine();
 
-			//	Validator Class with constructor
+			//	Define the validator class and it's constructor. This class is derrived from the Validator<T> base class,
+			//	and the interface we just defined above.
 			results.AppendLine("\t///\t<summary>");
 			results.AppendLine($"\t///\t{validatorClassName}");
 			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic class {validatorClassName} : Validator<{resourceClassName}>, {validatorInterface}");
+			results.AppendLine($"\tpublic class {validatorClassName} : Validator<{resourceModel.ClassName}>, {validatorInterface}");
 			results.AppendLine("\t{");
+
+			//	Here is the constructor - nothing much to do here, just an empty constructor.
 			results.AppendLine("\t\t///\t<summary>");
 			results.AppendLine($"\t\t///\tInitializes the {validatorClassName}");
-			results.AppendLine("\t\t///\t</summary>");
+			results.AppendLine("\t\t///\t</summary>");	
 			results.AppendLine($"\t\tpublic {validatorClassName}()");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t}");
@@ -74,12 +93,19 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added or updated</param>");
 			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic async Task ValidateForAddAndUpdateAsync({resourceClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
+			results.AppendLine($"\t\tpublic async Task ValidateForAddAndUpdateAsync({resourceModel.ClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 
-			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to");
-			results.AppendLine("\t\t\t//\t       adding or updating an item.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask;");
+			//	To do:	Scan the profileMap to see which resource elements are nullable (if they are not, write code here to verify that 
+			//			they are not null), and write code to check the length of any strings.
+			//
+			//			This code will look like:	Require(item.membername != null, "The value for membername cannot be null."); 
+			//										Require(!string.IsNullOrWhiteSpace(item.membername), "The value for membername cannot be null."); 
+			//										Require(item.membername.Length <= 10, "The value of membername must be 10 characters or less.");
+
+			results.AppendLine("\t\t\t//\tTo do: Add any additinal code to perform any specific validations pertaining to");
+			results.AppendLine("\t\t\t//\t       adding or updating an item here.");
+			results.AppendLine("\t\t\tRequire(!string.IsNullOrWhiteSpace(item.Name.FirstName), \"Name.FirstName cannot be null.\");");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
 
@@ -94,10 +120,14 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the update</param>");
 			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceClassName} item, RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
+			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceModel.ClassName} item, RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, User, parms);");
 			results.AppendLine();
+
+			//	To do:	If the item has an href, then that href cannot be null for an update. Write the code to ensure it is not null
+			//			here, if needed.
+
 			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to updating an item.");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
@@ -112,7 +142,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added</param>");
 			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForAddAsync({resourceClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
+			results.AppendLine($"\t\tpublic override async Task ValidateForAddAsync({resourceModel.ClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, User, parms);");
 			results.AppendLine();
@@ -123,6 +153,15 @@ namespace COFRS.Template.Common.ServiceUtilities
 			//------------------------------------------------------------------------------------------
 			//	Validation for PATCH
 			//------------------------------------------------------------------------------------------
+
+			//	A patch command consists of 3 fields:
+			//		command.Op => The operation to perform. Can be "replace", "add" or "delete"
+			//		command.Path => The fully qualified reference to the member to acted upon
+			//		command.Value => The new value (if applicable)
+			//
+			//	For example: command.Op = "replace", command.Path = "Name.FirstName", command.Value = "John"
+			//	instructs the program to replace the value for Name.FirstName with "John".
+			//
 
 			results.AppendLine("\t\t///\t<summary>");
 			results.AppendLine("\t\t///\tValidates a set of patch commands on an item");
@@ -139,19 +178,135 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t\t\tif (string.Equals(command.Op, \"replace\", StringComparison.OrdinalIgnoreCase))");
 			results.AppendLine("\t\t\t\t{");
 
+			//	The command op is "replace".
+			//
+			//	The replace command tells the system to "replace", or update, the value of the member with the new value. Typically,
+			//	the Path specifies a single value: 
+			//
+			//	op/path/value => replace/name.firstName/John
+			//
+			//	This command tells the system to set the item.name.firstName = "John".
+			//
+			//	However, a replace command can set an entire object:
+			//
+			//	op/path/value => replace/name/{ "firstName": "Jonn", "lastName": "Smith", "Suffix": "Jr." }
+			//
+			//	This command tells the system to replace all the values in the Name object.
+			//
+			//	Reserved words for value:  <null>, <default>
+			//
+			//	<null> will set the value to null.
+			//	<default> will set the value to the default value for the member (this might be null, or whatever the min value is if
+			//	null is not acceptable).
+			//
+			//	For a collection, the replace command will replace the entire item in the collection
+			//
+			//	Imagine we have a class called PhoneContact. The class has two values: Type and Number.
+			//	Imagine we have a class that contains a member called phoneContacts that is a collection of PhoneContact classes:
+			//
+			//	public PhoneContact[] phoneContacts { get; set; }
+			//
+			//	Now, imagine that our collection looks like this:
+			//
+			//	[ { "Type": "Home", "Number": "913 754-1411" }
+			//	  { "Type": "Work", "Number": "913 241-6400" }
+			//	  { "Type": "Mobile", "Number": "913 624-9084" }
+			//	  { "Type": "Fax", "Number": "913 313-1140" } ]
+			//	  
+			//	op/path/value => replace/phoneContacts[1]/{ "Type": "Work", "Number": "913 214-4572" }
+			//
+			//	Then our resultant collection would be:
+			//
+			//	[ { "Type": "Home", "Number": "913 754-1411" }
+			//	  { "Type": "Work", "Number": "913 214-4572" }
+			//	  { "Type": "Mobile", "Number": "913 624-9084" }
+			//	  { "Type": "Fax", "Number": "913 313-1140" } ]
+
+			//	TO DO: For single item values, check length and not nullable (if the command.Value = <null>)
+			//		   For object values, check each length and not nullable in the object : note, you'll need to deserialize the json to do this
+			//		   For array values, check array range (the item they are trying to replace actually exists), and check length and not nullable of the object
+
 			results.AppendLine("\t\t\t\t}");
 			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"add\", StringComparison.OrdinalIgnoreCase))");
 			results.AppendLine("\t\t\t\t{");
+
+			//	The command op is "add".
+			//
+			//	The add command tells the system to "add", or update, the value of the member with the new value. Typically,
+			//	the Path specifies a collection. However, when the path specifes a single value, add acts just the same as replace.
+			//
+			//	op/path/value => add/name.firstName/John
+			//
+			//	This command tells the system to set the item.name.firstName = "John".
+			//
+			//	However, an add command can set an entire object (again, works just like replace):
+			//
+			//	op/path/value => add/name/{ "firstName": "Jonn", "lastName": "Smith", "Suffix": "Jr." }
+			//
+			//	This command tells the system to add (i.e. replace) all the values in the Name object.
+			//
+			//	Reserved words for value:  <null>, <default>
+			//
+			//	<null> will set the value to null.
+			//	<default> will set the value to the default value for the member (this might be null, or whatever the min value is if
+			//	null is not acceptable).
+			//
+			//	Imagine the phoneContacts class again. This time, add really does mean add.
+			//	  
+			//	op/path/value => add/phoneContacts/{ "Type": "Other", "Number": "913 667-5144" }
+			//
+			//	Then our resultant collection would be:
+			//
+			//	[ { "Type": "Home", "Number": "913 754-1411" }
+			//	  { "Type": "Work", "Number": "913 214-4572" }
+			//	  { "Type": "Mobile", "Number": "913 624-9084" }
+			//	  { "Type": "Fax", "Number": "913 313-1140" }
+			//	  { "Type": "Other", "Number": "913 667-5144" } ]
+
+			//	TO DO: For single item values, check length and not nullable (if the command.Value = <null>)
+			//		   For object values, check each length and not nullable in the object : note, you'll need to deserialize the json to do this
+			//		   For array values,  check each length and not nullable of the object : note, you'll need to deserialize the json to do this
 
 			results.AppendLine("\t\t\t\t}");
 			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"delete\", StringComparison.OrdinalIgnoreCase))");
 			results.AppendLine("\t\t\t\t{");
 
+			//	The command op is "delete".
+			//
+			//	The delete command tells the system to "delete", or remove, the value of the member. The Value item is ignored for delete.
+			//	Typically, the Path specifies a collection. However, when the path specifes a single value, delete acts like replace, except
+			//	that it replaces the value of the member with the default value for that member.
+			//
+			//	op/path/value => delete/name.firstName
+			//
+			//	This command tells the system to set the item.name.firstName = null
+			//
+			//	However, a delete command can set an entire object (again, works just like replace):
+			//
+			//	op/path/value => delete/name
+			//
+			//	This command tells the system to delete (i.e. replace) the name object:   item.name = null
+			//
+			//	Imagine the phoneContacts class again. This time, delete really does mean delete.
+			//	  
+			//	op/path/value => delete/phoneContacts[2]
+			//
+			//	Then our resultant collection would be:
+			//
+			//	[ { "Type": "Home", "Number": "913 754-1411" }
+			//	  { "Type": "Work", "Number": "913 214-4572" }
+			//	  { "Type": "Fax", "Number": "913 313-1140" } ]
+
+			//	TO DO: For single item values, check not nullable
+			//		   For object values, check object not nullable 
+			//		   For array values,  check valid range (the item they are trying to delete actually exists)
+
+
 			results.AppendLine("\t\t\t\t}");
 			results.AppendLine("\t\t\t}");
 			results.AppendLine();
 
-			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to patching an item.");
+			results.AppendLine("\t\t\t//\tTo do: Add any additional code to perform any specific validations pertaining to patching an item.");
 			results.AppendLine("\t\t\tawait Task.CompletedTask;");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
@@ -168,7 +323,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
 			results.AppendLine($"\t\tpublic override async Task ValidateForDeleteAsync(RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\t//\tTo do: Replace the line below with code to perform any specific validations pertaining to deleting an item.");
+			results.AppendLine("\t\t\t//\tTo do: Add any additional code to perform any specific validations pertaining to deleting an item.");
 			results.AppendLine("\t\t\tawait Task.CompletedTask;");
 			results.AppendLine("\t\t}");
 			results.AppendLine("\t}");

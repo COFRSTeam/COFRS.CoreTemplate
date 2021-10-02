@@ -11,12 +11,10 @@ using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using VSLangProj;
 
 namespace COFRS.Template.Common.ServiceUtilities
 {
@@ -950,70 +948,110 @@ select a.attname as columnname,
 			window.Close();
 		}
 
+		/// <summary>
+		/// This function will add the appropriate code to regster the validation model in the ServicesConfig.cs file.
+		/// </summary>
+		/// <param name="solution">The <see cref="Solution"/> containing the new validation class.</param>
+		/// <param name="validationClass">The name of the validation class.</param>
+		/// <param name="validationNamespace">The namespace where the validation class resides.</param>
 		public static void RegisterValidationModel(Solution solution, string validationClass, string validationNamespace)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
+			//	Get the ServicesConfig.cs project item.
 			ProjectItem serviceConfig = solution.FindProjectItem("ServicesConfig.cs");
-			var window = serviceConfig.Open(EnvDTE.Constants.vsViewKindTextView);
+			bool wasOpen = serviceConfig.IsOpen[Constants.vsViewKindAny];				//	Record if it was already open
+			bool wasModified = false;													//	We haven't modified it yet
 
-			bool wasOpen = serviceConfig.IsOpen[Constants.vsViewKindAny];
-
-			if (!wasOpen)
+			if (!wasOpen)																//	If it wasn't open, open it.
 				serviceConfig.Open(Constants.vsViewKindCode);
 
-			Document doc = serviceConfig.Document;
-			TextSelection sel = (TextSelection)doc.Selection;
-			var activePoint = sel.ActivePoint;
+			var window = serviceConfig.Open(EnvDTE.Constants.vsViewKindTextView);		//	Get the window (so we can close it later)
+			Document doc = serviceConfig.Document;										//	Get the doc 
+			TextSelection sel = (TextSelection)doc.Selection;							//	Get the current selection
+			var activePoint = sel.ActivePoint;											//	Get the active point
 
-			sel.StartOfDocument();
-			var hasValidationUsing = sel.FindText($"using {validationNamespace}");
+			//	The code will need to reference the validation namespace. Look
+			//	to see if we have a using statement for that namespace.
+			bool hasValidationUsing = false;											
+			TextPoint endOfImports = sel.ActivePoint;
 
-			if (!hasValidationUsing)
+			foreach (CodeElement candidateUsing in serviceConfig.FileCodeModel.CodeElements)
 			{
-				sel.StartOfDocument();
-				sel.FindText("namespace");
-				sel.LineUp();
-				sel.LineUp();
-				sel.EndOfLine();
+				if (candidateUsing.Kind == vsCMElement.vsCMElementImportStmt)
+                {
+					CodeImport codeImport = (CodeImport)candidateUsing;
+					var theNamespace = codeImport.Namespace;
+					endOfImports = codeImport.EndPoint;
 
-				sel.NewLine();
-				sel.Insert($"using {validationNamespace};");
+					if ( string.Equals(theNamespace, validationNamespace, StringComparison.OrdinalIgnoreCase))
+                    {
+						hasValidationUsing = true;
+					}
+                }
 			}
 
-			if (!sel.FindText($"services.AddScoped<I{validationClass}, {validationClass}>();", (int)vsFindOptions.vsFindOptionsFromStart))
-			{
-				sel.StartOfDocument();
-				sel.FindText("services.AddSingleton<IApiOptions>(ApiOptions)");
-				sel.SelectLine();
-				sel.LineDown();
-				sel.SelectLine();
+			//	If we don't have the using validation statement, we need to add it.
+			//	We've kept track of the end of statement point on the last using
+			//	statement, so insert the new one there.
 
-				if (sel.Text.Contains("Configure Translation options"))
+			if ( !hasValidationUsing )
+            {
+				EditPoint2 editPoint = (EditPoint2)endOfImports.CreateEditPoint();
+				editPoint.InsertNewLine();
+				editPoint.Insert($"using {validationNamespace};");
+				wasModified = true;
+			}
+
+			//	Now, we need to ensure that the code contains the AddScoped registration line. Find the namespace in this
+			//	code. Inside of the namespace, find the class "ServiceCollectionExtension". Inside that class, find the
+			//	function "ConfigureServices"
+			//
+			//	Once you have the "ConfigureServices" function, check to see if it already contains the AddScoped registration
+			//	function (we don't want to insert it more than once). If it is not there, insert it as the last line of the
+			//	function.
+			foreach (CodeNamespace namespaceElement in serviceConfig.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
+			{
+				foreach (CodeClass candidateClass in namespaceElement.Members.GetTypes<CodeClass>())
 				{
-					sel.LineUp();
-					sel.EndOfLine();
-					sel.Insert($"\r\n\t\t\t//\tRegister Validators");
-					sel.NewLine();
-					sel.Insert($"services.AddScoped<I{validationClass}, {validationClass}>();");
-					sel.NewLine();
-				}
-				else
-				{
-					sel.EndOfLine();
-					sel.Insert($"\r\n\t\t\tservices.AddScoped<I{validationClass}, {validationClass}>();");
+					if (string.Equals(candidateClass.Name, "ServiceCollectionExtension", StringComparison.OrdinalIgnoreCase))
+					{
+						foreach (CodeFunction candidateFunction in candidateClass.Members.GetTypes<CodeFunction>())
+						{
+							if (string.Equals(candidateFunction.Name, "ConfigureServices", StringComparison.OrdinalIgnoreCase))
+							{
+								sel.MoveToPoint(candidateFunction.StartPoint);
+								var lineOfCode = $"services.AddScoped<I{validationClass}, {validationClass}>();";
+
+								if (!sel.FindText(lineOfCode))
+								{
+									sel.MoveToPoint(candidateFunction.EndPoint);
+									sel.LineUp();
+									sel.EndOfLine();
+
+									EditPoint2 editPoint = (EditPoint2)sel.ActivePoint.CreateEditPoint();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									sel.Insert(lineOfCode);
+									wasModified = true;
+								}
+							}
+						}
+					}
 				}
 			}
 
-			doc.Save();
+			//	If we modified the document, save it now.
+			if ( wasModified )
+				doc.Save();
 
+			//	If we were previously open, restore the active point to what it was before we changed it.
+			//	Otherwise, if we were not previously open, the close the window.
 			if (wasOpen)
-			{
 				sel.MoveToPoint(activePoint);
-			}
-			else
-				window.Close();
-		}
+            else
+                window.Close();
+        }
 
 		public static void RegisterComposite(Solution solution, EntityModel entityModel)
 		{
@@ -1538,10 +1576,10 @@ select a.attname as columnname,
 
 		#region Find the Resource Models Folder
 		/// <summary>
-		/// Locates and returns the entity models folder for the project
+		/// Locates and returns the resource models folder for the project
 		/// </summary>
 		/// <param name="solution">The <see cref="Solution"/> that contains the projects</param>
-		/// <returns>The first <see cref="ProjectFolder"/> that contains an entity model, or null if none are found.</returns>
+		/// <returns>The first <see cref="ProjectFolder"/> that contains an resource model, or null if none are found.</returns>
 		public static ProjectFolder FindResourceModelsFolder(Solution solution)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -1589,11 +1627,11 @@ select a.attname as columnname,
 		}
 
 		/// <summary>
-		/// Locates and returns the entity models folder for the project
+		/// Locates and returns the resource models folder for the project
 		/// </summary>
 		/// <param name="parent">A <see cref="ProjectItem"/> folder within the project.</param>
 		/// <param name="projectName">The name of the project containing the <see cref="ProjectItem"/> folder.</param>
-		/// <returns>The first <see cref="ProjectFolder"/> that contains an entity model, or null if none are found.</returns>
+		/// <returns>The first <see cref="ProjectFolder"/> that contains an resource model, or null if none are found.</returns>
 		private static ProjectFolder FindResourceModelsFolder(ProjectItem parent, string projectName)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -1685,6 +1723,187 @@ select a.attname as columnname,
 
 			return null;
 		}
+
+		/// <summary>
+		/// Find Validation Folder
+		/// </summary>
+		/// <param name="solution"></param>
+		/// <returns></returns>
+		public static ProjectFolder FindValidationFolder(Solution solution)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			//	Search the solution for a validator class. If one is found then return the 
+			//	project folder for the folder in which it resides.
+			foreach (Project project in solution.Projects)
+			{
+				var validadtionFolder = ScanForValidator(project);
+
+				if (validadtionFolder != null)
+					return validadtionFolder;
+
+				foreach (ProjectItem candidateFolder in project.ProjectItems)
+				{
+					if (candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
+						candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindVirtualFolder)
+					{
+						validadtionFolder = FindValidationFolder(candidateFolder, project.Name);
+
+						if (validadtionFolder != null)
+							return validadtionFolder;
+					}
+				}
+			}
+
+			//	We didn't find any resource models in the project. Search for the default resource models folder.
+			var theCandidateNamespace = "*.Validation";
+
+			var candidates = FindProjectFolder(solution, theCandidateNamespace);
+
+			if (candidates.Count > 0)
+				return candidates[0];
+
+			//	We didn't find any folder matching the required namespace, so just return null.
+			return null;
+		}
+
+		/// <summary>
+		/// Locates and returns the mapping folder for the project
+		/// </summary>
+		/// <param name="parent">A <see cref="ProjectItem"/> folder within the project.</param>
+		/// <param name="projectName">The name of the project containing the <see cref="ProjectItem"/> folder.</param>
+		/// <returns>The first <see cref="ProjectFolder"/> that contains an entity model, or null if none are found.</returns>
+		private static ProjectFolder FindValidationFolder(ProjectItem parent, string projectName)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var validatorFolder = ScanForValidator(parent, projectName);
+
+			if (validatorFolder != null)
+				return validatorFolder;
+
+			foreach (ProjectItem candidateFolder in parent.ProjectItems)
+			{
+				if (candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
+					candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindVirtualFolder)
+				{
+					validatorFolder = FindValidationFolder(candidateFolder, projectName);
+
+					if (validatorFolder != null)
+						return validatorFolder;
+				}
+			}
+
+			return null;
+		}
+
+		/// <summary>
+		/// Scans the project folder for a validator class
+		/// </summary>
+		/// <param name="parent">The <see cref="ProjectItem"/> folder to scan</param>
+		/// <param name="projectName">the name of the project</param>
+		/// <returns>Returns the <see cref="ProjectFolder"/> for the <see cref="ProjectItem"/> folder if the folder contains an entity model</returns>
+		private static ProjectFolder ScanForValidator(ProjectItem parent, string projectName)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			foreach (ProjectItem candidate in parent.ProjectItems)
+			{
+				if (candidate.Kind == Constants.vsProjectItemKindPhysicalFile &&
+					candidate.FileCodeModel != null &&
+					candidate.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
+					Convert.ToInt32(candidate.Properties.Item("BuildAction").Value) == 1)
+				{
+					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
+					{
+						foreach (CodeElement childElement in namespaceElement.Members)
+						{
+							if (childElement.Kind == vsCMElement.vsCMElementClass)
+							{
+								CodeClass codeClass = (CodeClass)childElement;
+								bool isProfile = false;
+
+								foreach (CodeElement parentClass in codeClass.Bases)
+								{
+									if (string.Equals(parentClass.Name, "Validator", StringComparison.OrdinalIgnoreCase))
+									{
+										isProfile = true;
+										break;
+									}
+								}
+
+								if (isProfile)
+								{
+									return new ProjectFolder()
+									{
+										Folder = parent.Properties.Item("FullPath").Value.ToString(),
+										Namespace = parent.Properties.Item("DefaultNamespace").Value.ToString(),
+										ProjectName = projectName,
+										Name = childElement.Name
+									};
+								}
+							}
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
+		/// <summary>
+		/// Scans the projects root folder for a validator class
+		/// </summary>
+		/// <param name="parent">The <see cref="Project"/> to scan</param>
+		/// <returns>Returns the <see cref="ProjectFolder"/> for the <see cref="Project"/> if the root folder contains an entity model</returns>
+		private static ProjectFolder ScanForValidator(Project parent)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			foreach (ProjectItem candidate in parent.ProjectItems)
+			{
+				if (candidate.Kind == Constants.vsProjectItemKindPhysicalFile &&
+					candidate.FileCodeModel != null &&
+					candidate.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
+					Convert.ToInt32(candidate.Properties.Item("BuildAction").Value) == 1)
+				{
+					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
+					{
+						foreach (CodeElement childElement in namespaceElement.Members)
+						{
+							if (childElement.Kind == vsCMElement.vsCMElementClass)
+							{
+								CodeClass codeClass = (CodeClass)childElement;
+								bool isValidator = false;
+
+								foreach (CodeElement parentClass in codeClass.Bases)
+								{
+									if (string.Equals(parentClass.Name, "Validator", StringComparison.OrdinalIgnoreCase))
+									{
+										isValidator = true;
+										break;
+									}
+								}
+
+								if (isValidator)
+								{
+									return new ProjectFolder()
+									{
+										Folder = parent.Properties.Item("FullPath").Value.ToString(),
+										Namespace = namespaceElement.Name,
+										ProjectName = parent.Name,
+										Name = childElement.Name
+									};
+								}
+							}
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
 
 		/// <summary>
 		/// Scans the project folder for an entity model
@@ -2020,137 +2239,135 @@ select a.attname as columnname,
 				{
 					foreach (CodeNamespace namespaceElement in projectItem.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
 					{
-						foreach (CodeElement childElement in namespaceElement.Members)
+						foreach (CodeClass classElement in namespaceElement.Members.GetTypes<CodeClass>())
 						{
-							if (childElement.Kind == vsCMElement.vsCMElementClass)
+							CodeAttribute tableAttribute = null;
+							CodeAttribute compositeAttribute = null;
+
+							try { tableAttribute = (CodeAttribute)classElement.Children.Item("Table"); } catch (Exception) { }
+							try { compositeAttribute = (CodeAttribute)classElement.Children.Item("PgComposite"); } catch (Exception) { }
+
+							if (tableAttribute != null)
 							{
-								CodeAttribute tableAttribute = null;
-								CodeAttribute compositeAttribute = null;
+								var entityName = string.Empty;
+								var schemaName = string.Empty;
+								DBServerType serverType = DBServerType.SQLSERVER;
 
-								try { tableAttribute = (CodeAttribute)childElement.Children.Item("Table"); } catch (Exception) { }
-								try { compositeAttribute = (CodeAttribute)childElement.Children.Item("PgComposite"); } catch (Exception) { }
+								var match = Regex.Match(tableAttribute.Value, "\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}([ \t]*\\,[ \t]*DBType[ \t]*=[ \t]*\"(?<dbtype>[A-Za-z][A-Za-z0-9_]*)\"){0,1}");
 
-								if (tableAttribute != null)
-                                {
-                                    var entityName = string.Empty;
-                                    var schemaName = string.Empty;
-                                    DBServerType serverType = DBServerType.SQLSERVER;
-
-                                    var match = Regex.Match(tableAttribute.Value, "\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}([ \t]*\\,[ \t]*DBType[ \t]*=[ \t]*\"(?<dbtype>[A-Za-z][A-Za-z0-9_]*)\"){0,1}");
-
-                                    if (match.Success)
-                                    {
-                                        entityName = match.Groups["tableName"].Value;
-                                        schemaName = match.Groups["schemaName"].Value;
-                                        serverType = (DBServerType)Enum.Parse(typeof(DBServerType), match.Groups["dbtype"].Value);
-                                    }
-
-                                    var entityModel = new EntityModel
-                                    {
-                                        ClassName = childElement.Name,
-                                        ElementType = ElementType.Table,
-                                        Namespace = namespaceElement.Name,
-                                        ServerType = serverType,
-                                        SchemaName = schemaName,
-                                        TableName = entityName,
-                                        ProjectName = entityModelsFolder.ProjectName,
-                                        Folder = projectItem.Properties.Item("FullPath").Value.ToString()
-                                    };
-
-                                    entityModel.Columns = LoadColumns(childElement, entityModel);
-									map.Add(entityModel);
-                                }
-                                else if (compositeAttribute != null)
+								if (match.Success)
 								{
-									var entityName = string.Empty;
-									var schemaName = string.Empty;
-									DBServerType serverType = DBServerType.POSTGRESQL;
-									var match = Regex.Match(compositeAttribute.Value, "\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}");
-
-									if (match.Success)
-									{
-										entityName = match.Groups["tableName"].Value;
-										schemaName = match.Groups["schemaName"].Value;
-									}
-
-									var entityModel = new EntityModel
-									{
-										ClassName = childElement.Name,
-										ElementType = ElementType.Composite,
-										Namespace = namespaceElement.Name,
-										ServerType = serverType,
-										SchemaName = schemaName,
-										TableName = entityName,
-										ProjectName = entityModelsFolder.ProjectName,
-										Folder = projectItem.Properties.Item("FullPath").Value.ToString()
-									};
-
-									entityModel.Columns = LoadColumns(childElement, entityModel);
-									map.Add(entityModel);
+									entityName = match.Groups["tableName"].Value;
+									schemaName = match.Groups["schemaName"].Value;
+									serverType = (DBServerType)Enum.Parse(typeof(DBServerType), match.Groups["dbtype"].Value);
 								}
+
+								var entityModel = new EntityModel
+								{
+									ClassName = classElement.Name,
+									ElementType = ElementType.Table,
+									Namespace = namespaceElement.Name,
+									ServerType = serverType,
+									SchemaName = schemaName,
+									TableName = entityName,
+									ProjectName = entityModelsFolder.ProjectName,
+									Folder = projectItem.Properties.Item("FullPath").Value.ToString()
+								};
+
+								entityModel.Columns = LoadColumns(classElement, entityModel);
+								map.Add(entityModel);
 							}
-							else if (childElement.Kind == vsCMElement.vsCMElementEnum)
+							else if (compositeAttribute != null)
 							{
-								CodeAttribute attributeElement = null;
+								var entityName = string.Empty;
+								var schemaName = string.Empty;
+								DBServerType serverType = DBServerType.POSTGRESQL;
+								var match = Regex.Match(compositeAttribute.Value, "\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}");
 
-								try { attributeElement = (CodeAttribute)childElement.Children.Item("PgEnum"); } catch (Exception) { }
-
-								if (attributeElement != null)
+								if (match.Success)
 								{
-									var entityName = string.Empty;
-									var schemaName = string.Empty;
-									DBServerType serverType = DBServerType.POSTGRESQL;
-
-									var match = Regex.Match(attributeElement.Value, "\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}");
-
-									if (match.Success)
-									{
-										entityName = match.Groups["tableName"].Value;
-										schemaName = match.Groups["schemaName"].Value;
-									}
-
-									var entityModel = new EntityModel
-									{
-										ClassName = childElement.Name,
-										ElementType = ElementType.Enum,
-										Namespace = namespaceElement.Name,
-										ServerType = serverType,
-										SchemaName = schemaName,
-										TableName = entityName,
-										ProjectName = entityModelsFolder.ProjectName,
-										Folder = projectItem.Properties.Item("FullPath").Value.ToString()
-									};
-
-									var columns = new List<DBColumn>();
-
-									foreach (CodeElement enumElement in childElement.Children)
-									{
-										if (enumElement.Kind == vsCMElement.vsCMElementVariable)
-										{
-											CodeAttribute pgNameAttribute = null;
-											try { pgNameAttribute = (CodeAttribute)enumElement.Children.Item("PgName"); } catch (Exception) { }
-
-											var dbColumn = new DBColumn
-											{
-												ColumnName = enumElement.Name,
-											};
-
-											if (pgNameAttribute != null)
-											{
-												var matchit = Regex.Match(pgNameAttribute.Value, "\\\"(?<pgName>[_A-Za-z][A-Za-z0-9_]*)\\\"");
-
-												if (matchit.Success)
-													dbColumn.EntityName = matchit.Groups["pgName"].Value;
-											}
-
-											columns.Add(dbColumn);
-										}
-									}
-
-									entityModel.Columns = columns.ToArray();
-
-									map.Add(entityModel);
+									entityName = match.Groups["tableName"].Value;
+									schemaName = match.Groups["schemaName"].Value;
 								}
+
+								var entityModel = new EntityModel
+								{
+									ClassName = classElement.Name,
+									ElementType = ElementType.Composite,
+									Namespace = namespaceElement.Name,
+									ServerType = serverType,
+									SchemaName = schemaName,
+									TableName = entityName,
+									ProjectName = entityModelsFolder.ProjectName,
+									Folder = projectItem.Properties.Item("FullPath").Value.ToString()
+								};
+
+								entityModel.Columns = LoadColumns(classElement, entityModel);
+								map.Add(entityModel);
+							}
+						}
+
+						foreach (CodeEnum enumElement in namespaceElement.Members.GetTypes<CodeEnum>())
+						{ 
+							CodeAttribute attributeElement = null;
+
+							try { attributeElement = (CodeAttribute)enumElement.Children.Item("PgEnum"); } catch (Exception) { }
+
+							if (attributeElement != null)
+							{
+								var entityName = string.Empty;
+								var schemaName = string.Empty;
+								DBServerType serverType = DBServerType.POSTGRESQL;
+
+								var match = Regex.Match(attributeElement.Value, "\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}");
+
+								if (match.Success)
+								{
+									entityName = match.Groups["tableName"].Value;
+									schemaName = match.Groups["schemaName"].Value;
+								}
+
+								var entityModel = new EntityModel
+								{
+									ClassName = enumElement.Name,
+									ElementType = ElementType.Enum,
+									Namespace = namespaceElement.Name,
+									ServerType = serverType,
+									SchemaName = schemaName,
+									TableName = entityName,
+									ProjectName = entityModelsFolder.ProjectName,
+									Folder = projectItem.Properties.Item("FullPath").Value.ToString()
+								};
+
+								var columns = new List<DBColumn>();
+
+								foreach (CodeElement enumVariable in enumElement.Children)
+								{
+									if (enumVariable.Kind == vsCMElement.vsCMElementVariable)
+									{
+										CodeAttribute pgNameAttribute = null;
+										try { pgNameAttribute = (CodeAttribute)enumElement.Children.Item("PgName"); } catch (Exception) { }
+
+										var dbColumn = new DBColumn
+										{
+											ColumnName = enumElement.Name,
+										};
+
+										if (pgNameAttribute != null)
+										{
+											var matchit = Regex.Match(pgNameAttribute.Value, "\\\"(?<pgName>[_A-Za-z][A-Za-z0-9_]*)\\\"");
+
+											if (matchit.Success)
+												dbColumn.EntityName = matchit.Groups["pgName"].Value;
+										}
+
+										columns.Add(dbColumn);
+									}
+								}
+
+								entityModel.Columns = columns.ToArray();
+
+								map.Add(entityModel);
 							}
 						}
 					}
@@ -2160,12 +2377,12 @@ select a.attname as columnname,
 			return new EntityMap() { Maps = map.ToArray() };
 		}
 
-        private static DBColumn[] LoadColumns(CodeElement childElement, EntityModel entityModel)
+        private static DBColumn[] LoadColumns(CodeClass codeClass, EntityModel entityModel)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var columns = new List<DBColumn>();
 
-            foreach (CodeElement memberElement in childElement.Children)
+            foreach (CodeElement memberElement in codeClass.Children)
             {
                 if (memberElement.Kind == vsCMElement.vsCMElementProperty)
                 {
@@ -2233,7 +2450,7 @@ select a.attname as columnname,
                         if (matchit.Success)
                             dbColumn.dbDataType = matchit.Groups["NativeDataType"].Value;
 
-						matchit = Regex.Match(memberAttribute.Value, "Length[ \t]*=[ \t]*\"(?<Length>[0-9]+)\"");
+						matchit = Regex.Match(memberAttribute.Value, "Length[ \t]*=[ \t]*(?<Length>[0-9]+)");
 
 						if (matchit.Success)
 							dbColumn.Length = Convert.ToInt32(matchit.Groups["Length"].Value);
@@ -2242,7 +2459,6 @@ select a.attname as columnname,
 
 						if (matchit.Success)
 							dbColumn.ForeignTableName = matchit.Groups["ForeignTableName"].Value;
-
 					}
 
 					if (entityModel.ServerType == DBServerType.MYSQL)
