@@ -52,11 +52,14 @@ namespace COFRS.Template.Common.Wizards
                 HandleMessages();
 
                 //  Load the project mapping information
-                projectMapping = LoadProjectMapping(_appObject,
+                projectMapping = StandardUtils.LoadProjectMapping(_appObject,
                                                     projectMapping,
                                                     installationFolder,
                                                     out ProjectFolder entityModelsFolder,
-                                                    out ProjectFolder resourceModelsFolder);
+                                                    out ProjectFolder resourceModelsFolder,
+                                                    out ProjectFolder mappingFolder,
+                                                    out ProjectFolder validationFolder,
+                                                    out ProjectFolder controllersFolder);
 
                 HandleMessages();
 

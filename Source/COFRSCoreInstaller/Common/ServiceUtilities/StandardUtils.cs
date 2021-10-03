@@ -1797,6 +1797,294 @@ select a.attname as columnname,
 			return null;
 		}
 
+
+		/// <summary>
+		/// Find Validation Folder
+		/// </summary>
+		/// <param name="solution"></param>
+		/// <returns></returns>
+		public static string FindValidatorInterface(Solution solution, string resourceClassName)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			//	Search the solution for a validator class. If one is found then return the 
+			//	project folder for the folder in which it resides.
+			foreach (Project project in solution.Projects)
+			{
+				var validationInterface = ScanForValidatorInterface(project.ProjectItems, resourceClassName);
+
+				if (!string.IsNullOrWhiteSpace(validationInterface))
+					return validationInterface;
+
+				foreach (ProjectItem candidateFolder in project.ProjectItems)
+				{
+					if (candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
+						candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindVirtualFolder)
+					{
+						validationInterface = FindValidatorInterface(candidateFolder, resourceClassName);
+
+						if (!string.IsNullOrWhiteSpace(validationInterface))
+							return validationInterface;
+					}
+				}
+			}
+
+			return string.Empty;
+		}
+
+		/// <summary>
+		/// Locates and returns the mapping folder for the project
+		/// </summary>
+		/// <param name="parent">A <see cref="ProjectItem"/> folder within the project.</param>
+		/// <param name="projectName">The name of the project containing the <see cref="ProjectItem"/> folder.</param>
+		/// <returns>The first <see cref="ProjectFolder"/> that contains an entity model, or null if none are found.</returns>
+		private static string FindValidatorInterface(ProjectItem parent, string resourceClassName)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var validationInterface = ScanForValidatorInterface(parent.ProjectItems, resourceClassName);
+
+			if (!string.IsNullOrWhiteSpace(validationInterface))
+				return validationInterface;
+
+			foreach (ProjectItem candidateFolder in parent.ProjectItems)
+			{
+				if (candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
+					candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindVirtualFolder)
+				{
+					validationInterface = FindValidatorInterface(candidateFolder, resourceClassName);
+
+					if (!string.IsNullOrWhiteSpace(validationInterface))
+						return validationInterface;
+				}
+			}
+
+			return null;
+		}
+
+
+		/// <summary>
+		/// Find Controllers Folder
+		/// </summary>
+		/// <param name="solution"></param>
+		/// <returns></returns>
+		public static ProjectFolder FindControllersFolder(Solution solution)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			//	Search the solution for a validator class. If one is found then return the 
+			//	project folder for the folder in which it resides.
+			foreach (Project project in solution.Projects)
+			{
+				var controllersFolder = ScanForControllers(project);
+
+				if (controllersFolder != null)
+					return controllersFolder;
+
+				foreach (ProjectItem candidateFolder in project.ProjectItems)
+				{
+					if (candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
+						candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindVirtualFolder)
+					{
+						controllersFolder = FindControllersFolder(candidateFolder, project.Name);
+
+						if (controllersFolder != null)
+							return controllersFolder;
+					}
+				}
+			}
+
+			//	We didn't find any resource models in the project. Search for the default resource models folder.
+			var theCandidateNamespace = "*.Controllers";
+
+			var candidates = FindProjectFolder(solution, theCandidateNamespace);
+
+			if (candidates.Count > 0)
+				return candidates[0];
+
+			//	We didn't find any folder matching the required namespace, so just return null.
+			return null;
+		}
+
+		/// <summary>
+		/// Locates and returns the mapping folder for the project
+		/// </summary>
+		/// <param name="parent">A <see cref="ProjectItem"/> folder within the project.</param>
+		/// <param name="projectName">The name of the project containing the <see cref="ProjectItem"/> folder.</param>
+		/// <returns>The first <see cref="ProjectFolder"/> that contains an entity model, or null if none are found.</returns>
+		private static ProjectFolder FindControllersFolder(ProjectItem parent, string projectName)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var controllersFolder = ScanForControllers(parent, projectName);
+
+			if (controllersFolder != null)
+				return controllersFolder;
+
+			foreach (ProjectItem candidateFolder in parent.ProjectItems)
+			{
+				if (candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
+					candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindVirtualFolder)
+				{
+					controllersFolder = FindControllersFolder(candidateFolder, projectName);
+
+					if (controllersFolder != null)
+						return controllersFolder;
+				}
+			}
+
+			return null;
+		}
+
+
+		/// <summary>
+		/// Scans the projects root folder for a validator class
+		/// </summary>
+		/// <param name="parent">The <see cref="Project"/> to scan</param>
+		/// <returns>Returns the <see cref="ProjectFolder"/> for the <see cref="Project"/> if the root folder contains an entity model</returns>
+		private static ProjectFolder ScanForControllers(Project parent)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			foreach (ProjectItem candidate in parent.ProjectItems)
+			{
+				if (candidate.Kind == Constants.vsProjectItemKindPhysicalFile &&
+					candidate.FileCodeModel != null &&
+					candidate.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
+					Convert.ToInt32(candidate.Properties.Item("BuildAction").Value) == 1)
+				{
+					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
+					{
+						foreach (CodeClass candidateClass in namespaceElement.Members.GetTypes<CodeClass>())
+						{
+							bool isController = false;
+
+							foreach (CodeElement parentClass in candidateClass.Bases)
+							{
+								if (string.Equals(parentClass.Name, "COFRSController", StringComparison.OrdinalIgnoreCase))
+								{
+									isController = true;
+									break;
+								}
+							}
+
+							if (isController)
+							{
+								return new ProjectFolder()
+								{
+									Folder = parent.Properties.Item("FullPath").Value.ToString(),
+									Namespace = namespaceElement.Name,
+									ProjectName = parent.Name,
+									Name = candidateClass.Name
+								};
+							}
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
+		/// <summary>
+		/// Scans the project folder for a validator class
+		/// </summary>
+		/// <param name="parent">The <see cref="ProjectItem"/> folder to scan</param>
+		/// <param name="projectName">the name of the project</param>
+		/// <returns>Returns the <see cref="ProjectFolder"/> for the <see cref="ProjectItem"/> folder if the folder contains an entity model</returns>
+		private static ProjectFolder ScanForControllers(ProjectItem parent, string projectName)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			foreach (ProjectItem candidate in parent.ProjectItems)
+			{
+				if (candidate.Kind == Constants.vsProjectItemKindPhysicalFile &&
+					candidate.FileCodeModel != null &&
+					candidate.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
+					Convert.ToInt32(candidate.Properties.Item("BuildAction").Value) == 1)
+				{
+					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
+					{
+						foreach (CodeClass codeClass in namespaceElement.Members.GetTypes<CodeClass>())
+						{
+							bool isController = false;
+
+							foreach (CodeElement parentClass in codeClass.Bases)
+							{
+								if (string.Equals(parentClass.Name, "COFRSController", StringComparison.OrdinalIgnoreCase))
+								{
+									isController = true;
+									break;
+								}
+							}
+
+							if (isController)
+							{
+								return new ProjectFolder()
+								{
+									Folder = parent.Properties.Item("FullPath").Value.ToString(),
+									Namespace = parent.Properties.Item("DefaultNamespace").Value.ToString(),
+									ProjectName = projectName,
+									Name = codeClass.Name
+								};
+							}
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
+		/// <summary>
+		/// Scans the projects root folder for a validator class
+		/// </summary>
+		/// <param name="parent">The <see cref="Project"/> to scan</param>
+		/// <returns>Returns the <see cref="ProjectFolder"/> for the <see cref="Project"/> if the root folder contains an entity model</returns>
+		private static ProjectFolder ScanForValidator(Project parent)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			foreach (ProjectItem candidate in parent.ProjectItems)
+			{
+				if (candidate.Kind == Constants.vsProjectItemKindPhysicalFile &&
+					candidate.FileCodeModel != null &&
+					candidate.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
+					Convert.ToInt32(candidate.Properties.Item("BuildAction").Value) == 1)
+				{
+					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
+					{
+						foreach (CodeClass codeClass in namespaceElement.Members.GetTypes<CodeClass>())
+						{
+							bool isValidator = false;
+
+							foreach (CodeElement parentClass in codeClass.Bases)
+							{
+								if (string.Equals(parentClass.Name, "Validator", StringComparison.OrdinalIgnoreCase))
+								{
+									isValidator = true;
+									break;
+								}
+							}
+
+							if (isValidator)
+							{
+								return new ProjectFolder()
+								{
+									Folder = parent.Properties.Item("FullPath").Value.ToString(),
+									Namespace = namespaceElement.Name,
+									ProjectName = parent.Name,
+									Name = codeClass.Name
+								};
+							}
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
 		/// <summary>
 		/// Scans the project folder for a validator class
 		/// </summary>
@@ -1856,12 +2144,14 @@ select a.attname as columnname,
 		/// </summary>
 		/// <param name="parent">The <see cref="Project"/> to scan</param>
 		/// <returns>Returns the <see cref="ProjectFolder"/> for the <see cref="Project"/> if the root folder contains an entity model</returns>
-		private static ProjectFolder ScanForValidator(Project parent)
+		private static string ScanForValidatorInterface(ProjectItems projectItems, string resourceClassName)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
-			foreach (ProjectItem candidate in parent.ProjectItems)
+			foreach (ProjectItem candidate in projectItems)
 			{
+				string validatorParentInterface = $"COFRS.IValidator<{resourceClassName}>";
+
 				if (candidate.Kind == Constants.vsProjectItemKindPhysicalFile &&
 					candidate.FileCodeModel != null &&
 					candidate.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
@@ -1869,41 +2159,22 @@ select a.attname as columnname,
 				{
 					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
 					{
-						foreach (CodeElement childElement in namespaceElement.Members)
+						foreach (CodeInterface candidateInterface in namespaceElement.Members.GetTypes<CodeInterface>())
 						{
-							if (childElement.Kind == vsCMElement.vsCMElementClass)
-							{
-								CodeClass codeClass = (CodeClass)childElement;
-								bool isValidator = false;
+							foreach ( CodeInterface candidateParent in candidateInterface.Bases.GetTypes<CodeInterface>())
+                            {
+								var candidateParentName = candidateParent.FullName;
 
-								foreach (CodeElement parentClass in codeClass.Bases)
-								{
-									if (string.Equals(parentClass.Name, "Validator", StringComparison.OrdinalIgnoreCase))
-									{
-										isValidator = true;
-										break;
-									}
-								}
-
-								if (isValidator)
-								{
-									return new ProjectFolder()
-									{
-										Folder = parent.Properties.Item("FullPath").Value.ToString(),
-										Namespace = namespaceElement.Name,
-										ProjectName = parent.Name,
-										Name = childElement.Name
-									};
-								}
-							}
+								if (string.Equals(candidateParentName, validatorParentInterface, StringComparison.OrdinalIgnoreCase))
+									return candidateInterface.Name;
+                            }
 						}
 					}
 				}
 			}
 
-			return null;
+			return string.Empty;
 		}
-
 
 		/// <summary>
 		/// Scans the project folder for an entity model
@@ -1924,32 +2195,28 @@ select a.attname as columnname,
 				{
 					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
 					{
-						foreach (CodeElement childElement in namespaceElement.Members)
+						foreach (CodeClass codeClass in namespaceElement.Members.GetTypes<CodeClass>())
 						{
-							if (childElement.Kind == vsCMElement.vsCMElementClass)
+							bool isProfile = false;
+
+							foreach (CodeElement parentClass in codeClass.Bases)
 							{
-								CodeClass codeClass = (CodeClass)childElement;
-								bool isProfile = false;
-
-								foreach ( CodeElement parentClass in codeClass.Bases)
-                                {
-									if (string.Equals(parentClass.Name, "Profile", StringComparison.OrdinalIgnoreCase))
-									{
-										isProfile = true;
-										break;
-									}
-                                }
-
-								if ( isProfile )
+								if (string.Equals(parentClass.Name, "Profile", StringComparison.OrdinalIgnoreCase))
 								{
-									return new ProjectFolder()
-									{
-										Folder = parent.Properties.Item("FullPath").Value.ToString(),
-										Namespace = parent.Properties.Item("DefaultNamespace").Value.ToString(),
-										ProjectName = projectName,
-										Name = childElement.Name
-									};
+									isProfile = true;
+									break;
 								}
+							}
+
+							if (isProfile)
+							{
+								return new ProjectFolder()
+								{
+									Folder = parent.Properties.Item("FullPath").Value.ToString(),
+									Namespace = parent.Properties.Item("DefaultNamespace").Value.ToString(),
+									ProjectName = projectName,
+									Name = codeClass.Name
+								};
 							}
 						}
 					}
@@ -1977,32 +2244,28 @@ select a.attname as columnname,
 				{
 					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
 					{
-						foreach (CodeElement childElement in namespaceElement.Members)
+						foreach (CodeClass codeClass in namespaceElement.Members.GetTypes<CodeClass>())
 						{
-							if (childElement.Kind == vsCMElement.vsCMElementClass)
+							bool isProfile = false;
+
+							foreach (CodeElement parentClass in codeClass.Bases)
 							{
-								CodeClass codeClass = (CodeClass)childElement;
-								bool isProfile = false;
-
-								foreach (CodeElement parentClass in codeClass.Bases)
+								if (string.Equals(parentClass.Name, "Profile", StringComparison.OrdinalIgnoreCase))
 								{
-									if (string.Equals(parentClass.Name, "Profile", StringComparison.OrdinalIgnoreCase))
-									{
-										isProfile = true;
-										break;
-									}
+									isProfile = true;
+									break;
 								}
+							}
 
-								if (isProfile)
+							if (isProfile)
+							{
+								return new ProjectFolder()
 								{
-									return new ProjectFolder()
-									{
-										Folder = parent.Properties.Item("FullPath").Value.ToString(),
-										Namespace = namespaceElement.Name,
-										ProjectName = parent.Name,
-										Name = childElement.Name
-									};
-								}
+									Folder = parent.Properties.Item("FullPath").Value.ToString(),
+									Namespace = namespaceElement.Name,
+									ProjectName = parent.Name,
+									Name = codeClass.Name
+								};
 							}
 						}
 					}
@@ -2032,24 +2295,21 @@ select a.attname as columnname,
 				{
 					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
 					{
-						foreach (CodeElement childElement in namespaceElement.Members)
+						foreach (CodeClass candidateClass in namespaceElement.Members.GetTypes<CodeClass>())
 						{
-							if (childElement.Kind == vsCMElement.vsCMElementClass)
+							CodeAttribute entityAttribute = null;
+
+							try { entityAttribute = (CodeAttribute)candidateClass.Children.Item("Entity"); } catch (Exception) { }
+
+							if (entityAttribute != null)
 							{
-								CodeAttribute entityAttribute = null;
-
-								try { entityAttribute = (CodeAttribute)childElement.Children.Item("Entity"); } catch (Exception) { }
-
-								if (entityAttribute != null )
+								return new ProjectFolder()
 								{
-									return new ProjectFolder()
-									{
-										Folder = parent.Properties.Item("FullPath").Value.ToString(),
-										Namespace = parent.Properties.Item("DefaultNamespace").Value.ToString(),
-										ProjectName = projectName,
-										Name = childElement.Name
-									};
-								}
+									Folder = parent.Properties.Item("FullPath").Value.ToString(),
+									Namespace = parent.Properties.Item("DefaultNamespace").Value.ToString(),
+									ProjectName = projectName,
+									Name = candidateClass.Name
+								};
 							}
 						}
 					}
@@ -2077,24 +2337,21 @@ select a.attname as columnname,
 				{
 					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.GetTypes<CodeNamespace>())
 					{
-						foreach (CodeElement childElement in namespaceElement.Members)
+						foreach (CodeElement candidateClass in namespaceElement.Members.GetTypes<CodeClass>())
 						{
-							if (childElement.Kind == vsCMElement.vsCMElementClass)
+							CodeAttribute entityAttribute = null;
+
+							try { entityAttribute = (CodeAttribute)candidateClass.Children.Item("Entity"); } catch (Exception) { }
+
+							if (entityAttribute != null)
 							{
-								CodeAttribute entityAttribute = null;
-
-								try { entityAttribute = (CodeAttribute)childElement.Children.Item("Entity"); } catch (Exception) { }
-
-								if (entityAttribute != null )
+								return new ProjectFolder()
 								{
-									return new ProjectFolder()
-									{
-										Folder = parent.Properties.Item("FullPath").Value.ToString(),
-										Namespace = namespaceElement.Name,
-										ProjectName = parent.Name,
-										Name = childElement.Name
-									};
-								}
+									Folder = parent.Properties.Item("FullPath").Value.ToString(),
+									Namespace = namespaceElement.Name,
+									ProjectName = parent.Name,
+									Name = candidateClass.Name
+								};
 							}
 						}
 					}
@@ -2690,6 +2947,196 @@ select a.attname as columnname,
 
 			return new ResourceMap() { Maps = map.ToArray() };
 		}
+
+		public static ProjectMapping LoadProjectMapping(DTE2 _appObject, ProjectMapping projectMapping, ProjectFolder installationFolder, out ProjectFolder entityModelsFolder, out ProjectFolder resourceModelsFolder, out ProjectFolder mappingFolder, out ProjectFolder validationFolder, out ProjectFolder controllersFolder)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (projectMapping == null)
+			{
+				entityModelsFolder = FindEntityModelsFolder(_appObject.Solution);
+
+				if (entityModelsFolder == null)
+					entityModelsFolder = installationFolder;
+
+				resourceModelsFolder = FindResourceModelsFolder(_appObject.Solution);
+
+				if (resourceModelsFolder == null)
+					resourceModelsFolder = installationFolder;
+
+				mappingFolder = FindMappingFolder(_appObject.Solution);
+
+				if (mappingFolder == null)
+					mappingFolder = installationFolder;
+
+				validationFolder = FindValidationFolder(_appObject.Solution);
+
+				if (validationFolder == null)
+					validationFolder = installationFolder;
+
+				controllersFolder = FindControllersFolder(_appObject.Solution);
+
+				if (controllersFolder == null)
+					controllersFolder = installationFolder;
+
+				projectMapping = new ProjectMapping
+				{
+					EntityFolder = entityModelsFolder.Folder,
+					EntityNamespace = entityModelsFolder.Namespace,
+					EntityProject = entityModelsFolder.ProjectName,
+					ResourceFolder = resourceModelsFolder.Folder,
+					ResourceNamespace = resourceModelsFolder.Namespace,
+					ResourceProject = resourceModelsFolder.ProjectName,
+					MappingFolder = mappingFolder.Folder,
+					MappingNamespace = mappingFolder.Namespace,
+					MappingProject = mappingFolder.ProjectName,
+					ValidationFolder = validationFolder.Folder,
+					ValidationNamespace = validationFolder.Namespace,
+					ValidationProject = validationFolder.ProjectName,
+					ControllersProject = controllersFolder.ProjectName,
+					ControllersNamespace = controllersFolder.Namespace,
+					ControllersFolder = controllersFolder.Folder,
+					IncludeSDK = !string.Equals(entityModelsFolder.ProjectName, resourceModelsFolder.ProjectName, StringComparison.Ordinal)
+				};
+
+				SaveProjectMapping(_appObject.Solution, projectMapping);
+			}
+			else
+			{
+				if (string.IsNullOrWhiteSpace(projectMapping.EntityProject) ||
+					string.IsNullOrWhiteSpace(projectMapping.EntityNamespace) ||
+					string.IsNullOrWhiteSpace(projectMapping.EntityFolder))
+				{
+					entityModelsFolder = FindEntityModelsFolder(_appObject.Solution);
+
+					if (entityModelsFolder == null)
+						entityModelsFolder = installationFolder;
+
+					projectMapping.EntityFolder = entityModelsFolder.Folder;
+					projectMapping.EntityNamespace = entityModelsFolder.Namespace;
+					projectMapping.EntityProject = entityModelsFolder.ProjectName;
+
+					SaveProjectMapping(_appObject.Solution, projectMapping);
+				}
+				else
+				{
+					entityModelsFolder = new ProjectFolder
+					{
+						Folder = projectMapping.EntityFolder,
+						Namespace = projectMapping.EntityNamespace,
+						ProjectName = projectMapping.EntityProject,
+						Name = Path.GetFileName(projectMapping.EntityFolder)
+					};
+				}
+
+				if (string.IsNullOrWhiteSpace(projectMapping.ResourceProject) ||
+					string.IsNullOrWhiteSpace(projectMapping.ResourceNamespace) ||
+					string.IsNullOrWhiteSpace(projectMapping.ResourceFolder))
+				{
+					resourceModelsFolder = StandardUtils.FindResourceModelsFolder(_appObject.Solution);
+
+					if (resourceModelsFolder == null)
+						resourceModelsFolder = installationFolder;
+
+					projectMapping.ResourceFolder = resourceModelsFolder.Folder;
+					projectMapping.ResourceNamespace = resourceModelsFolder.Namespace;
+					projectMapping.ResourceProject = resourceModelsFolder.ProjectName;
+
+					SaveProjectMapping(_appObject.Solution, projectMapping);
+				}
+				else
+				{
+					resourceModelsFolder = new ProjectFolder
+					{
+						Folder = projectMapping.ResourceFolder,
+						Namespace = projectMapping.ResourceNamespace,
+						ProjectName = projectMapping.ResourceProject,
+						Name = Path.GetFileName(projectMapping.ResourceFolder)
+					};
+				}
+
+				if (string.IsNullOrWhiteSpace(projectMapping.MappingProject) ||
+					string.IsNullOrWhiteSpace(projectMapping.MappingNamespace) ||
+					string.IsNullOrWhiteSpace(projectMapping.MappingFolder))
+				{
+					mappingFolder = StandardUtils.FindMappingFolder(_appObject.Solution);
+
+					if (mappingFolder == null)
+						mappingFolder = installationFolder;
+
+					projectMapping.MappingProject = mappingFolder.ProjectName;
+					projectMapping.MappingNamespace = mappingFolder.Namespace;
+					projectMapping.MappingFolder = mappingFolder.Folder;
+					
+					SaveProjectMapping(_appObject.Solution, projectMapping);
+				}
+				else
+				{
+					mappingFolder = new ProjectFolder
+					{
+						Folder = projectMapping.MappingFolder,
+						Namespace = projectMapping.MappingNamespace,
+						ProjectName = projectMapping.MappingProject,
+						Name = Path.GetFileName(projectMapping.MappingFolder)
+					};
+				}
+
+				if (string.IsNullOrWhiteSpace(projectMapping.ValidationProject) ||
+					string.IsNullOrWhiteSpace(projectMapping.ValidationNamespace) ||
+					string.IsNullOrWhiteSpace(projectMapping.ValidationFolder))
+				{
+					validationFolder = FindValidationFolder(_appObject.Solution);
+
+					if (validationFolder == null)
+						validationFolder = installationFolder;
+
+					projectMapping.ValidationProject = validationFolder.ProjectName;
+					projectMapping.ValidationNamespace = validationFolder.Namespace;
+					projectMapping.ValidationFolder = validationFolder.Folder;
+
+					SaveProjectMapping(_appObject.Solution, projectMapping);
+				}
+				else
+				{
+					validationFolder = new ProjectFolder
+					{
+						Folder = projectMapping.ValidationFolder,
+						Namespace = projectMapping.ValidationNamespace,
+						ProjectName = projectMapping.ValidationProject,
+						Name = Path.GetFileName(projectMapping.MappingFolder)
+					};
+				}
+
+				if (string.IsNullOrWhiteSpace(projectMapping.ControllersProject) ||
+					string.IsNullOrWhiteSpace(projectMapping.ControllersNamespace) ||
+					string.IsNullOrWhiteSpace(projectMapping.ControllersFolder))
+				{
+					controllersFolder = FindControllersFolder(_appObject.Solution);
+
+					if (controllersFolder == null)
+						controllersFolder = installationFolder;
+
+					projectMapping.ControllersProject = controllersFolder.ProjectName;
+					projectMapping.ControllersNamespace = controllersFolder.Namespace;
+					projectMapping.ControllersFolder = controllersFolder.Folder;
+
+					SaveProjectMapping(_appObject.Solution, projectMapping);
+				}
+				else
+				{
+					controllersFolder = new ProjectFolder
+					{
+						Folder = projectMapping.ControllersFolder,
+						Namespace = projectMapping.ControllersNamespace,
+						ProjectName = projectMapping.ControllersProject,
+						Name = Path.GetFileName(projectMapping.MappingFolder)
+					};
+				}
+			}
+
+			return projectMapping;
+		}
+
 		#endregion
 
 		#region Helper Functions

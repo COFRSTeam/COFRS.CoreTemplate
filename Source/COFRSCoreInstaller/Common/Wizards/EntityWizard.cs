@@ -55,56 +55,23 @@ namespace COFRS.Template.Common.Wizards
                 _appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
                 HandleMessages();
 
-                var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
-                ProjectFolder entityModelsFolder = null;
-                var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
-
                 //  Load the project mapping information
-                if (projectMapping == null)
-                {
-                    entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
+                var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
+                HandleMessages();
 
-                    if (entityModelsFolder == null)
-                        entityModelsFolder = installationFolder;
+                var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
+                HandleMessages();
 
-                    projectMapping = new ProjectMapping
-                    {
-                        EntityFolder = entityModelsFolder.Folder,
-                        EntityNamespace = entityModelsFolder.Namespace,
-                        EntityProject = entityModelsFolder.ProjectName
-                    };
+                projectMapping = StandardUtils.LoadProjectMapping(_appObject,
+                                                    projectMapping,
+                                                    installationFolder,
+                                                    out ProjectFolder entityModelsFolder,
+                                                    out ProjectFolder resourceModelsFolder,
+                                                    out ProjectFolder mappingFolder,
+                                                    out ProjectFolder validationFolder,
+                                                    out ProjectFolder controllersFolder);
+                HandleMessages();
 
-                    StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
-                }
-                else
-                {
-                    if (string.IsNullOrWhiteSpace(projectMapping.EntityProject) ||
-                        string.IsNullOrWhiteSpace(projectMapping.EntityNamespace) ||
-                        string.IsNullOrWhiteSpace(projectMapping.EntityFolder))
-                    {
-                        entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
-
-                        if (entityModelsFolder == null)
-                            entityModelsFolder = installationFolder;
-
-                        projectMapping.EntityFolder = entityModelsFolder.Folder;
-                        projectMapping.EntityNamespace = entityModelsFolder.Namespace;
-                        projectMapping.EntityProject = entityModelsFolder.ProjectName;
-
-                        StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
-                    }
-                    else
-                    {
-                        entityModelsFolder = new ProjectFolder
-                        {
-                            Folder = projectMapping.EntityFolder,
-                            Namespace = projectMapping.EntityNamespace,
-                            ProjectName = projectMapping.EntityProject,
-                            Name = Path.GetFileName(projectMapping.EntityFolder)
-                        };
-                    }
-                }
-                
                 //  Make sure we are where we're supposed to be
                 if ( !StandardUtils.IsChildOf(entityModelsFolder.Folder, installationFolder.Folder))
                 {
