@@ -60,26 +60,28 @@ namespace COFRS.Template.Common.Wizards
 				var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
 				HandleMessages();
 
-				projectMapping = LoadProjectMapping(_appObject,
-									projectMapping,
-									installationFolder,
-									out ProjectFolder entityModelsFolder,
-									out ProjectFolder resourceModelsFolder,
-									out ProjectFolder validadtionFolder);
+				projectMapping = StandardUtils.LoadProjectMapping(_appObject,
+													projectMapping,
+													installationFolder,
+													out ProjectFolder entityModelsFolder,
+													out ProjectFolder resourceModelsFolder,
+													out ProjectFolder mappingFolder,
+													out ProjectFolder validationFolder,
+													out ProjectFolder controllersFolder);
 				HandleMessages();
 
 				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
 				HandleMessages();
 
 				//  Make sure we are where we're supposed to be
-				if (!StandardUtils.IsChildOf(validadtionFolder.Folder, installationFolder.Folder))
+				if (!StandardUtils.IsChildOf(validationFolder.Folder, installationFolder.Folder))
 				{
 					HandleMessages();
 
 					progressDialog.Close();
 					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
-					var result = MessageBox.Show($"You are attempting to install a validator model into {StandardUtils.GetRelativeFolder(_appObject.Solution, installationFolder)}. Typically, validator models reside in {StandardUtils.GetRelativeFolder(_appObject.Solution, validadtionFolder)}.\r\n\r\nDo you wish to place the new validator model in this non-standard location?",
+					var result = MessageBox.Show($"You are attempting to install a validator model into {StandardUtils.GetRelativeFolder(_appObject.Solution, installationFolder)}. Typically, validator models reside in {StandardUtils.GetRelativeFolder(_appObject.Solution, validationFolder)}.\r\n\r\nDo you wish to place the new validator model in this non-standard location?",
 						"Warning: Non-Standard Location",
 						MessageBoxButtons.YesNo,
 						MessageBoxIcon.Warning);
@@ -95,11 +97,11 @@ namespace COFRS.Template.Common.Wizards
 					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 					HandleMessages();
 
-					validadtionFolder = installationFolder;
+					validationFolder = installationFolder;
 
-					projectMapping.ValidationFolder = validadtionFolder.Folder;
-					projectMapping.ValidationNamespace = validadtionFolder.Namespace;
-					projectMapping.ValidationProject = validadtionFolder.ProjectName;
+					projectMapping.ValidationFolder = validationFolder.Folder;
+					projectMapping.ValidationNamespace = validationFolder.Namespace;
+					projectMapping.ValidationProject = validationFolder.ProjectName;
 
 					StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
 				}

@@ -20,11 +20,11 @@ namespace COFRS.Template
 		/// <param name="ValidatorInterface">The validiator interface used for validations</param>
 		/// <param name="policy">The authentication policy used by the controller</param>
 		/// <returns></returns>
-		public string EmitController(EntityClassFile entityClass, ResourceClassFile resourceClass, string moniker, string controllerClassName, string ValidatorInterface, string policy)
+		public string EmitController(EntityModel entityClass, ResourceModel resourceClass, string moniker, string controllerClassName, string ValidatorInterface, string policy)
 		{
 			var results = new StringBuilder();
 			var nn = new NameNormalizer(resourceClass.ClassName);
-			var pkcolumns = resourceClass.Members.Where(c => c.EntityNames.Count > 0 && c.EntityNames[0].IsPrimaryKey);
+			var pkcolumns = resourceClass.EntityModel.Columns.Where(c => c.IsPrimaryKey);
 
 			// --------------------------------------------------------------------------------
 			//	Class
@@ -130,7 +130,7 @@ namespace COFRS.Template
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
 				results.AppendLine();
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
 				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				results.AppendLine("\t\t\tawait Validator.ValidateForGetAsync(node);");
@@ -170,7 +170,7 @@ namespace COFRS.Template
 
 			results.AppendLine("\t\t\tawait Validator.ValidateForAddAsync(item);");
 			results.AppendLine($"\t\t\titem = await Orchestrator.AddAsync(item);");
-			results.AppendLine($"\t\t\treturn Created(item.Href.AbsoluteUri, item);");
+			results.AppendLine($"\t\t\treturn Created(item.HRef.AbsoluteUri, item);");
 
 			results.AppendLine("\t\t}");
 			results.AppendLine();
@@ -197,7 +197,7 @@ namespace COFRS.Template
 			results.AppendLine($"\t\tpublic async Task<IActionResult> Update{resourceClass.ClassName}Async([FromBody] {resourceClass.ClassName} item)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-			results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href=uri:{{item.Href}}\")");
+			results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:{{item.HRef}}\")");
 			results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 			results.AppendLine();
 
@@ -236,7 +236,7 @@ namespace COFRS.Template
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
 				results.AppendLine();
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
 				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				results.AppendLine("\t\t\tawait Validator.ValidateForPatchAsync(commands, node);");
@@ -268,7 +268,7 @@ namespace COFRS.Template
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
 				results.AppendLine();
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"Href=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
 				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				results.AppendLine("\t\t\tawait Validator.ValidateForDeleteAsync(node);");
@@ -282,58 +282,52 @@ namespace COFRS.Template
 			return results.ToString();
 		}
 
-		private void EmitEndpointExamples(DBServerType serverType, string resourceClassName, StringBuilder results, IEnumerable<ClassMember> pkcolumns)
+		private void EmitEndpointExamples(DBServerType serverType, string resourceClassName, StringBuilder results, IEnumerable<DBColumn> pkcolumns)
 		{
 			bool first = true;
 
-			foreach (var resourceMember in pkcolumns)
+			foreach (var entityColumn in pkcolumns)
 			{
-				foreach (var entityColumn in resourceMember.EntityNames)
-				{
-					if (first)
-						first = false;
-					else
-						results.Append(", ");
+				if (first)
+					first = false;
+				else
+					results.Append(", ");
 
-					string exampleValue = "example";
+				string exampleValue = "example";
 
-					if (serverType == DBServerType.POSTGRESQL)
-						exampleValue = DBHelper.GetPostgresqlExampleValue(entityColumn);
-					else if (serverType == DBServerType.MYSQL)
-						exampleValue = DBHelper.GetMySqlExampleValue(entityColumn);
-					else if (serverType == DBServerType.SQLSERVER)
-						exampleValue = DBHelper.GetSqlServerExampleValue(entityColumn);
+				if (serverType == DBServerType.POSTGRESQL)
+					exampleValue = DBHelper.GetPostgresqlExampleValue(entityColumn);
+				else if (serverType == DBServerType.MYSQL)
+					exampleValue = DBHelper.GetMySqlExampleValue(entityColumn);
+				else if (serverType == DBServerType.SQLSERVER)
+					exampleValue = DBHelper.GetSqlServerExampleValue(entityColumn);
 
-					results.AppendLine($"\t\t///\t<param name=\"{entityColumn.EntityName}\" example=\"{exampleValue}\">The {entityColumn.EntityName} of the {resourceClassName}.</param>");
-				}
+				results.AppendLine($"\t\t///\t<param name=\"{entityColumn.EntityName}\" example=\"{exampleValue}\">The {entityColumn.EntityName} of the {resourceClassName}.</param>");
 			}
 		}
 
-		private void EmitEndpoint(DBServerType serverType, string resourceClassName, string action, StringBuilder results, IEnumerable<ClassMember> pkcolumns)
+		private void EmitEndpoint(DBServerType serverType, string resourceClassName, string action, StringBuilder results, IEnumerable<DBColumn> pkcolumns)
 		{
 			results.Append($"\t\tpublic async Task<IActionResult> {action}{resourceClassName}Async(");
 			bool first = true;
 
-			foreach (var resourceColumn in pkcolumns)
+			foreach (var entityColumn in pkcolumns)
 			{
-				foreach (var entityColumn in resourceColumn.EntityNames)
-				{
-					if (first)
-						first = false;
-					else
-						results.Append(", ");
+				if (first)
+					first = false;
+				else
+					results.Append(", ");
 
-					string dataType = "Unrecognized";
+				string dataType = "Unrecognized";
 
-					if (serverType == DBServerType.POSTGRESQL)
-						dataType = DBHelper.GetNonNullablePostgresqlDataType(entityColumn);
-					else if (serverType == DBServerType.MYSQL)
-						dataType = DBHelper.GetNonNullableMySqlDataType(entityColumn);
-					else if (serverType == DBServerType.SQLSERVER)
-						dataType = DBHelper.GetNonNullableSqlServerDataType(entityColumn);
+				if (serverType == DBServerType.POSTGRESQL)
+					dataType = DBHelper.GetNonNullablePostgresqlDataType(entityColumn);
+				else if (serverType == DBServerType.MYSQL)
+					dataType = DBHelper.GetNonNullableMySqlDataType(entityColumn);
+				else if (serverType == DBServerType.SQLSERVER)
+					dataType = DBHelper.GetNonNullableSqlServerDataType(entityColumn);
 
-					results.Append($"{dataType} {entityColumn.EntityName}");
-				}
+				results.Append($"{dataType} {entityColumn.EntityName}");
 			}
 
 			if (string.Equals(action, "patch", StringComparison.OrdinalIgnoreCase))
@@ -342,34 +336,28 @@ namespace COFRS.Template
 				results.AppendLine(")");
 		}
 
-		private static void EmitRoute(StringBuilder results, string routeName, IEnumerable<ClassMember> pkcolumns)
+		private static void EmitRoute(StringBuilder results, string routeName, IEnumerable<DBColumn> pkcolumns)
 		{
 			results.Append($"\t\t[Route(\"{routeName}/id");
 
-			foreach (var resourceColumn in pkcolumns)
+			foreach (var entityColumn in pkcolumns)
 			{
-				foreach (var entityColumn in resourceColumn.EntityNames)
-				{
-					results.Append($"/{{{entityColumn.EntityName}}}");
-				}
+				results.Append($"/{{{entityColumn.EntityName}}}");
 			}
 
 			results.AppendLine("\")]");
 		}
 
-		private static string BuildRoute(string routeName, IEnumerable<ClassMember> pkcolumns)
+		private static string BuildRoute(string routeName, IEnumerable<DBColumn> pkcolumns)
 		{
 			var route = new StringBuilder();
 
 			route.Append(routeName);
 			route.Append("/id");
 
-			foreach (var resourceColumn in pkcolumns)
+			foreach (var entityColumn in pkcolumns)
 			{
-				foreach (var entityColumn in resourceColumn.EntityNames)
-				{
-					route.Append($"/{{{entityColumn.EntityName}}}");
-				}
+				route.Append($"/{{{entityColumn.ColumnName}}}");
 			}
 
 			return route.ToString();

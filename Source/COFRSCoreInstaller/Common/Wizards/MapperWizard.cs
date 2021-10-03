@@ -53,12 +53,14 @@ namespace COFRS.Template.Common.Wizards
 				var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
 				HandleMessages();
 
-                projectMapping = LoadProjectMapping(_appObject,
+                projectMapping = StandardUtils.LoadProjectMapping(_appObject,
                                                     projectMapping,
                                                     installationFolder,
                                                     out ProjectFolder entityModelsFolder,
                                                     out ProjectFolder resourceModelsFolder,
-                                                    out ProjectFolder mappingFolder);
+                                                    out ProjectFolder mappingFolder,
+													out ProjectFolder validationFolder,
+													out ProjectFolder controllersFolder);
                 HandleMessages();
 
 				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
@@ -169,127 +171,6 @@ namespace COFRS.Template.Common.Wizards
 			{
 				WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
 			}
-		}
-
-		private static ProjectMapping LoadProjectMapping(DTE2 _appObject, ProjectMapping projectMapping, ProjectFolder installationFolder, out ProjectFolder entityModelsFolder, out ProjectFolder resourceModelsFolder, out ProjectFolder mappingFolder)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			if (projectMapping == null)
-			{
-				entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
-
-				if (entityModelsFolder == null)
-					entityModelsFolder = installationFolder;
-
-				resourceModelsFolder = StandardUtils.FindResourceModelsFolder(_appObject.Solution);
-
-				if (resourceModelsFolder == null)
-					resourceModelsFolder = installationFolder;
-
-				mappingFolder = StandardUtils.FindMappingFolder(_appObject.Solution);
-
-				if (mappingFolder == null)
-					mappingFolder = installationFolder;
-
-				projectMapping = new ProjectMapping
-				{
-					EntityFolder = entityModelsFolder.Folder,
-					EntityNamespace = entityModelsFolder.Namespace,
-					EntityProject = entityModelsFolder.ProjectName,
-					ResourceFolder = resourceModelsFolder.Folder,
-					ResourceNamespace = resourceModelsFolder.Namespace,
-					ResourceProject = resourceModelsFolder.ProjectName,
-					MappingFolder = mappingFolder.Folder,
-					MappingNamespace = mappingFolder.Namespace,
-					MappingProject = mappingFolder.ProjectName,
-					IncludeSDK = !string.Equals(entityModelsFolder.ProjectName, resourceModelsFolder.ProjectName, StringComparison.Ordinal)
-				};
-
-				StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
-			}
-			else
-			{
-				if (string.IsNullOrWhiteSpace(projectMapping.EntityProject) ||
-					string.IsNullOrWhiteSpace(projectMapping.EntityNamespace) ||
-					string.IsNullOrWhiteSpace(projectMapping.EntityFolder))
-				{
-					entityModelsFolder = StandardUtils.FindEntityModelsFolder(_appObject.Solution);
-
-					if (entityModelsFolder == null)
-						entityModelsFolder = installationFolder;
-
-					projectMapping.EntityFolder = entityModelsFolder.Folder;
-					projectMapping.EntityNamespace = entityModelsFolder.Namespace;
-					projectMapping.EntityProject = entityModelsFolder.ProjectName;
-
-					StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
-				}
-				else
-				{
-					entityModelsFolder = new ProjectFolder
-					{
-						Folder = projectMapping.EntityFolder,
-						Namespace = projectMapping.EntityNamespace,
-						ProjectName = projectMapping.EntityProject,
-						Name = Path.GetFileName(projectMapping.EntityFolder)
-					};
-				}
-
-				if (string.IsNullOrWhiteSpace(projectMapping.ResourceProject) ||
-					string.IsNullOrWhiteSpace(projectMapping.ResourceNamespace) ||
-					string.IsNullOrWhiteSpace(projectMapping.ResourceFolder))
-				{
-					resourceModelsFolder = StandardUtils.FindResourceModelsFolder(_appObject.Solution);
-
-					if (resourceModelsFolder == null)
-						resourceModelsFolder = installationFolder;
-
-					projectMapping.ResourceFolder = resourceModelsFolder.Folder;
-					projectMapping.ResourceNamespace = resourceModelsFolder.Namespace;
-					projectMapping.ResourceProject = resourceModelsFolder.ProjectName;
-
-					StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
-				}
-				else
-				{
-					resourceModelsFolder = new ProjectFolder
-					{
-						Folder = projectMapping.ResourceFolder,
-						Namespace = projectMapping.ResourceNamespace,
-						ProjectName = projectMapping.ResourceProject,
-						Name = Path.GetFileName(projectMapping.ResourceFolder)
-					};
-				}
-
-				if (string.IsNullOrWhiteSpace(projectMapping.MappingProject) ||
-					string.IsNullOrWhiteSpace(projectMapping.MappingNamespace) ||
-					string.IsNullOrWhiteSpace(projectMapping.MappingFolder))
-				{
-					mappingFolder = StandardUtils.FindMappingFolder(_appObject.Solution);
-
-					if (mappingFolder == null)
-						mappingFolder = installationFolder;
-
-					projectMapping.MappingProject = mappingFolder.Folder;
-					projectMapping.MappingNamespace = mappingFolder.Namespace;
-					projectMapping.MappingFolder = mappingFolder.ProjectName;
-
-					StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
-				}
-				else
-				{
-					mappingFolder = new ProjectFolder
-					{
-						Folder = projectMapping.MappingFolder,
-						Namespace = projectMapping.MappingNamespace,
-						ProjectName = projectMapping.MappingProject,
-						Name = Path.GetFileName(projectMapping.MappingFolder)
-					};
-				}
-			}
-
-			return projectMapping;
 		}
 	}
 }
