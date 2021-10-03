@@ -105,7 +105,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			results.AppendLine("\t\t\t//\tTo do: Add any additinal code to perform any specific validations pertaining to");
 			results.AppendLine("\t\t\t//\t       adding or updating an item here.");
-			results.AppendLine("\t\t\tRequire(!string.IsNullOrWhiteSpace(item.Name.FirstName), \"Name.FirstName cannot be null.\");");
+			results.AppendLine("\t\t\tawait Task.CompletedTask;");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
 
