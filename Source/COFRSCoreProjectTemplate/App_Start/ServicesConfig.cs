@@ -55,8 +55,6 @@ namespace $safeprojectname$.App_Start
 			services.AddSingleton<IRepositoryOptions>(RepositoryOptions);
 			services.AddTransient<IServiceRepository, ServiceRepository>();
 			services.AddScoped<IServiceOrchestrator, ServiceOrchestrator<IServiceRepository>>();
-
-			return ApiOptions;
 		}
 	}
 }
