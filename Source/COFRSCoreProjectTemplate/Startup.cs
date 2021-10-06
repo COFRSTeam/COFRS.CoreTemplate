@@ -113,13 +113,27 @@ namespace $safeprojectname$
 
 			services.AddMvc();
 
+			var formatterOptions = new JsonFormatterOptions
+			{
+				RootUrl = new Uri(AppConfig.GetSection("ApiSettings").GetValue<string>("RootUrl")),
+			};
+
+			try
+			{
+				formatterOptions.HrefType = (HrefType)Enum.Parse(typeof(HrefType), AppConfig.GetSection("ApiSettings").GetValue<string>("HrefType"));
+			}
+			catch (Exception)
+			{
+				formatterOptions.HrefType = HrefType.FULLYQUALIFIED;
+			}
+
 			services.AddControllers(o => 
 			{
 				o.EnableEndpointRouting = false;
 				o.OutputFormatters.Clear();
-				o.OutputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes));
+				o.OutputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes, formatterOptions));
 				o.InputFormatters.Clear();
-				o.InputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes));
+				o.InputFormatters.Insert(0, new COFRSJsonFormatter(supportedJsonTypes, formatterOptions));
 			});
 		}
 
