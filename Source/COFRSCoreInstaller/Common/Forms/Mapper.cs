@@ -3,17 +3,12 @@ using COFRS.Template.Common.ServiceUtilities;
 using COFRS.Template.Common.Wizards;
 using EnvDTE;
 using EnvDTE80;
-using Newtonsoft.Json;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Forms
@@ -67,7 +62,7 @@ namespace COFRS.Template.Common.Forms
 
             unmappedColumns.Clear();
             GetResourceModelList(ResourceModel, string.Empty, unmappedColumns);
-            GenerateEntityFromResourceMapping(unmappedColumns);
+            GenerateEntityFromResourceMapping(unmappedColumns, ResourceModel);
 
             foreach (DataGridViewRow row in EntityGrid.Rows)
             {
@@ -136,7 +131,7 @@ namespace COFRS.Template.Common.Forms
             }
         }
 
-        private void GenerateEntityFromResourceMapping(List<DBColumn> unmappedColumns)
+        private void GenerateEntityFromResourceMapping(List<DBColumn> unmappedColumns, ResourceModel resourceModel)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             foreach (var entityMember in ResourceModel.EntityModel.Columns)
@@ -198,7 +193,11 @@ namespace COFRS.Template.Common.Forms
                     var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey && string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase)); ;
                     var nnx = new NameNormalizer(entityMember.ForeignTableName);
 
-                    var formula = new StringBuilder($"source.{nnx.PluralCamelCase}.GetId<{dataType}>(");
+                    var resourceMember = unmappedColumns.FirstOrDefault(u => ( string.Equals(u.ColumnName, nnx.SingleForm, StringComparison.OrdinalIgnoreCase) 
+                        || string.Equals(u.ColumnName, nnx.PluralForm, StringComparison.OrdinalIgnoreCase)));
+
+
+                    var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>(");
 
                     if (foreignKeys.Count() > 1)
                     {
@@ -216,9 +215,6 @@ namespace COFRS.Template.Common.Forms
                     formula.Append(")");
                     dataRow.Cells[1].Value = formula.ToString();
 
-                    var resourceMember = unmappedColumns.FirstOrDefault(u =>
-                        string.Equals(u.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
-
                     if (resourceMember != null)
                         unmappedColumns.Remove(resourceMember);
                 }
@@ -232,7 +228,7 @@ namespace COFRS.Template.Common.Forms
                     
                     if (resourceMember != null)
                     {
-                        MapDestinationFromSource(entityMember, dataRow, resourceMember, ref unmappedColumns);
+                        MapResourceDestinationFromSource(entityMember, dataRow, resourceMember, ref unmappedColumns);
                         unmappedColumns.Remove(resourceMember);
                     }
                     else
@@ -312,20 +308,10 @@ namespace COFRS.Template.Common.Forms
                             {
                                 StringBuilder mc = new StringBuilder();
 
-                                dataRow.Cells[1].Value = $"source.{rp.ResourceColumnName}";
+                                resourceMember = resourceModel.Columns.FirstOrDefault(c => 
+                                    string.Equals(c.DataType.ToString(), rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
 
-                                var c = new List<DBColumn>();
-                                c.AddRange(unmappedColumns.Where(r => r.ColumnName.StartsWith(rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase)));
-
-                                foreach (var m in c)
-                                {
-                                    if (mc.Length > 0)
-                                        mc.Append(",");
-                                    mc.Append(m.ColumnName);
-                                    unmappedColumns.Remove(m);
-                                }
-
-                                dataRow.Cells[3].Value = mc.ToString();
+                                MapResourceDestinationFromSource(entityMember, dataRow, resourceMember, ref unmappedColumns);
                             }
                         }
                     }
@@ -377,7 +363,10 @@ namespace COFRS.Template.Common.Forms
                 else if (resourceMember.IsForeignKey)
                 {
                     var nnn = new NameNormalizer(resourceMember.ColumnName);
-                    var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey && string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal));
+                    var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey && 
+                       ( string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
+                         string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
+                    
                     var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
                     StringBuilder sourceColumns = new StringBuilder();
 
@@ -404,7 +393,7 @@ namespace COFRS.Template.Common.Forms
                     if (entityMember != null)
                     {
                         //  There is, just assign it.
-                        MapDestinationFromSource(resourceMember, dataRow, entityMember, ref unmappedColumns);
+                        MapEntityDestinationFromSource(resourceMember, dataRow, entityMember, ref unmappedColumns);
                     }
                     else
                     {
@@ -417,7 +406,7 @@ namespace COFRS.Template.Common.Forms
                             dataRow.Cells[1].Value = $"new {model.ClassName}()";
 
                             //  Now, go map all of it's children
-                            MapChildMembers(unmappedColumns, resourceMember, model, resourceMember.ColumnName);
+                            MapEntityChildMembers(unmappedColumns, resourceMember, model, resourceMember.ColumnName);
                         }
                     }
                 }
@@ -581,7 +570,7 @@ namespace COFRS.Template.Common.Forms
             return result;
         }
 
-        private void MapChildMembers(List<DBColumn> unmappedColumns, DBColumn member, ResourceModel model, string parent)
+        private void MapResourceChildMembers(List<DBColumn> unmappedColumns, DBColumn member, ResourceModel model, string parent)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             //  We have a model, and the parent column name.
@@ -602,7 +591,7 @@ namespace COFRS.Template.Common.Forms
                 if (entityMember != null)
                 {
                     //  We do, just assign it
-                    MapDestinationFromSource(childMember, dataRow, entityMember, ref unmappedColumns);
+                    MapResourceDestinationFromSource(childMember, dataRow, entityMember, ref unmappedColumns);
                 }
                 else
                 {
@@ -611,18 +600,53 @@ namespace COFRS.Template.Common.Forms
                     if (model != null)
                     {
                         dataRow.Cells[1].Value = $"new {model.ClassName}()";
-                        MapChildMembers(unmappedColumns, member, model, $"{parent}?.{childMember.ColumnName}");
+                        MapResourceChildMembers(unmappedColumns, member, model, $"{parent}?.{childMember.ColumnName}");
+                    }
+                }
+            }
+        }
+        private void MapEntityChildMembers(List<DBColumn> unmappedColumns, DBColumn member, ResourceModel model, string parent)
+        {
+            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            //  We have a model, and the parent column name.
+
+            //  Map the children
+            foreach (var childMember in model.Columns)
+            {
+                int dataRowIndex = resourceGrid.Rows.Add();
+                var dataRow = resourceGrid.Rows[dataRowIndex];
+
+                //  Include the child in the list...
+                dataRow.Cells[0].Value = $"{parent}.{childMember.ColumnName}";
+
+                //  Do we have an existing entity member that matches the child resource column name?
+                var entityMember = unmappedColumns.FirstOrDefault(u =>
+                    string.Equals(u.ColumnName, childMember.ColumnName, StringComparison.OrdinalIgnoreCase));
+
+                if (entityMember != null)
+                {
+                    //  We do, just assign it
+                    MapEntityDestinationFromSource(childMember, dataRow, entityMember, ref unmappedColumns);
+                }
+                else
+                {
+                    var childModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+
+                    if (model != null)
+                    {
+                        dataRow.Cells[1].Value = $"new {model.ClassName}()";
+                        MapEntityChildMembers(unmappedColumns, member, model, $"{parent}?.{childMember.ColumnName}");
                     }
                 }
             }
         }
 
-        private void MapDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
+        private void MapEntityDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
-            if (string.Equals(destinationMember.DataType.ToString(), sourceMember.EntityType, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(destinationMember.DataType.ToString(), sourceMember.EntityType.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
@@ -813,6 +837,215 @@ namespace COFRS.Template.Common.Forms
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.DataType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToGuid(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else
+            {
+                dataRow.Cells[1].Value = $"({destinationMember.DataType}) AFunc(source.{sourceMember.ColumnName})";
+                dataRow.Cells[1].Style.ForeColor = Color.Red;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+        }
+        private void MapResourceDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
+        {
+            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+
+            if (string.Equals(destinationMember.EntityType.ToString(), sourceMember.DataType.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (model != null)
+            {
+                if (model.ResourceType == ResourceType.Enum)
+                {
+                    if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase))
+                    {
+                        dataRow.Cells[1].Value = $"({model.ClassName}) source.{sourceMember.ColumnName}";
+                        dataRow.Cells[3].Value = sourceMember.ColumnName;
+                        unmappedColumns.Remove(sourceMember);
+                    }
+                    else if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+                    {
+                        dataRow.Cells[1].Value = $"Enum.Parse<{model.ClassName}>(source.{sourceMember.ColumnName})";
+                        dataRow.Cells[3].Value = sourceMember.ColumnName;
+                        unmappedColumns.Remove(sourceMember);
+                    }
+                    else
+                    {
+                        dataRow.Cells[1].Value = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
+                        dataRow.Cells[1].Style.ForeColor = Color.Red;
+                        dataRow.Cells[3].Value = sourceMember.ColumnName;
+                        unmappedColumns.Remove(sourceMember);
+                    }
+                }
+                else
+                {
+                    if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (ContainsParseFunction(model))
+                        {
+                            dataRow.Cells[1].Value = $"{model.ClassName}.Parse(source.{sourceMember.ColumnName})";
+                            dataRow.Cells[3].Value = sourceMember.ColumnName;
+                            unmappedColumns.Remove(sourceMember);
+                        }
+                        else
+                        {
+                            dataRow.Cells[1].Value = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
+                            dataRow.Cells[1].Style.ForeColor = Color.Red;
+                            dataRow.Cells[3].Value = sourceMember.ColumnName;
+                            unmappedColumns.Remove(sourceMember);
+                        }
+                    }
+                    else
+                    {
+                        dataRow.Cells[1].Value = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
+                        dataRow.Cells[1].Style.ForeColor = Color.Red;
+                        dataRow.Cells[3].Value = sourceMember.ColumnName;
+                        unmappedColumns.Remove(sourceMember);
+                    }
+                }
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "byte", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToByte(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "sbyte", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToSByte(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "short", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToShort(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "ushort", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToUShort(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "int", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToInt(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "uint", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToUInt(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "long", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToLong(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "ulong", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToULong(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "decimal", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToDecimal(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "float", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToFloat(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "double", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToDouble(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "bool", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToBoolean(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "char", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToChar(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "DateTime", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToDateTime(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToDateTimeOffset(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToTimeSpan(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToString(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "byte[]", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToByteArray(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToEnumerableBytes(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "List<byte>", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToByteList(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "Image", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToImage(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.EntityType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToGuid(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
