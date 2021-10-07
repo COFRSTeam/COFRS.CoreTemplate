@@ -2837,16 +2837,19 @@ select a.attname as columnname,
 										{
 											CodeProperty property = (CodeProperty)memberElement;
 
-											var strCodeTypeParts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-											var dataType = strCodeTypeParts[strCodeTypeParts.Length - 1];
-
-											var dbColumn = new DBColumn
+											if (property.Access == vsCMAccess.vsCMAccessPublic || property.Access == vsCMAccess.vsCMAccessProtected)
 											{
-												ColumnName = property.Name,
-												DataType = dataType
-											};
+												var strCodeTypeParts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+												var dataType = strCodeTypeParts[strCodeTypeParts.Length - 1];
 
-											columns.Add(dbColumn);
+												var dbColumn = new DBColumn
+												{
+													ColumnName = property.Name,
+													DataType = dataType
+												};
+
+												columns.Add(dbColumn);
+											}
 										}
 										else if ( memberElement.Kind == vsCMElement.vsCMElementFunction)
                                         {
