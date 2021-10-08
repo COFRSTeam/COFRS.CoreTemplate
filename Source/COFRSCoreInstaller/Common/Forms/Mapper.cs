@@ -131,21 +131,41 @@ namespace COFRS.Template.Common.Forms
             }
         }
 
+        /// <summary>
+        /// Generates a mapping to construct the entity member from the corresponding resource members
+        /// </summary>
+        /// <param name="unmappedColumns"></param>
+        /// <param name="resourceModel"></param>
         private void GenerateEntityFromResourceMapping(List<DBColumn> unmappedColumns, ResourceModel resourceModel)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+
+            //  Let's create a mapping for each entity member
             foreach (var entityMember in ResourceModel.EntityModel.Columns)
             {
+                //  Construct a data row for this entity member, and populate the column name
                 var dataRowIndex = EntityGrid.Rows.Add();
                 var dataRow = EntityGrid.Rows[dataRowIndex];
-
                 dataRow.Cells[0].Value = entityMember.ColumnName;
-                StringBuilder entityColumns = new StringBuilder();
 
+                //  Now, construct the mapping
                 if (entityMember.IsPrimaryKey)
                 {
+                    //  This entity member is part of the primary key. In the resource model, the primary
+                    //  key is contained in the hRef. Therefore, the formula to extract the value of this
+                    //  entity member is going to take the form: source.HRef.GetId<datatype>(n), were datatype
+                    //  is the datatype of this entity member, and n is the position of this member in the 
+                    //  HRef, counting backwards.
+                    //
+                    //  For example, suppose we have the HRef = /resourcename/id/10/20
+                    //  Where 10 is the dealer id and it is an int.
+                    //  And 20 is the user id and it is a short.
+                    //
+                    //  To extract the dealer id, the formula would be: source.HRef.GetId<int>(1)
+                    //  To extract the user id, the formula would be: source.HRef.GetId<short>(0)
                     string dataType = "Unknown";
 
+                    //  We're going to need that datatype. Get it here.
                     if (ResourceModel.EntityModel.ServerType == DBServerType.MYSQL)
                         dataType = DBHelper.GetNonNullableMySqlDataType(entityMember);
                     else if (ResourceModel.EntityModel.ServerType == DBServerType.POSTGRESQL)
@@ -153,25 +173,38 @@ namespace COFRS.Template.Common.Forms
                     else if (ResourceModel.EntityModel.ServerType == DBServerType.SQLSERVER)
                         dataType = DBHelper.GetNonNullableSqlServerDataType(entityMember);
 
+                    //  We need the list of all the primary keys in the entity model, so that we know the
+                    //  position of this member.
                     var primaryKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
 
-                    var formula = new StringBuilder($"source.HRef == null ? default : source.HRef.GetId<{dataType}>(");
-
-                    if (primaryKeys.Count() > 1)
+                    if (primaryKeys.Count() == 1)
                     {
-                        var index = primaryKeys.Count() - 1;
-
-                        foreach (var pk in primaryKeys)
-                        {
-                            if (pk == entityMember)
-                                formula.Append(index.ToString());
-                            else
-                                index--;
-                        }
+                        //  There is only one primary key element, so we don't need to bother with the count.
+                        var formula = new StringBuilder($"source.HRef == null ? default : source.HRef.GetId<{dataType}>()");
+                        dataRow.Cells[1].Value = formula.ToString();
                     }
+                    else
+                    {
+                        var formula = new StringBuilder($"source.HRef == null ? default : source.HRef.GetId<{dataType}>(");
 
-                    formula.Append(")");
-                    dataRow.Cells[1].Value = formula.ToString();
+                        //  Compute the index and append it to the above formula.
+                        if (primaryKeys.Count() > 1)
+                        {
+                            var index = primaryKeys.Count() - 1;
+
+                            foreach (var pk in primaryKeys)
+                            {
+                                if (pk == entityMember)
+                                    formula.Append(index.ToString());
+                                else
+                                    index--;
+                            }
+                        }
+
+                        //  Close the formula
+                        formula.Append(")");
+                        dataRow.Cells[1].Value = formula.ToString();
+                    }
 
                     var resourceMember = unmappedColumns.FirstOrDefault(u =>
                         string.Equals(u.ColumnName, "HRef", StringComparison.OrdinalIgnoreCase));
@@ -181,51 +214,113 @@ namespace COFRS.Template.Common.Forms
                 }
                 else if (entityMember.IsForeignKey)
                 {
-                    string dataType = "Unknown";
-
-                    if (ResourceModel.EntityModel.ServerType == DBServerType.MYSQL)
-                        dataType = DBHelper.GetNonNullableMySqlDataType(entityMember);
-                    else if (ResourceModel.EntityModel.ServerType == DBServerType.POSTGRESQL)
-                        dataType = DBHelper.GetNonNullablePostgresqlDataType(entityMember);
-                    else if (ResourceModel.EntityModel.ServerType == DBServerType.SQLSERVER)
-                        dataType = DBHelper.GetNonNullableSqlServerDataType(entityMember);
-
-                    var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey && string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase)); ;
+                    //  This is a special case of a foreign key. The first challenge is to discover which resource member
+                    //  is used to represent this foreign key. In all likelyhood, it will be the resource member that has
+                    //  the same name as the foreign table that this foreign key represents. It's probably going to be the
+                    //  single form, but it could be the plural form. Look for either one.
                     var nnx = new NameNormalizer(entityMember.ForeignTableName);
 
-                    var resourceMember = unmappedColumns.FirstOrDefault(u => ( string.Equals(u.ColumnName, nnx.SingleForm, StringComparison.OrdinalIgnoreCase) 
-                        || string.Equals(u.ColumnName, nnx.PluralForm, StringComparison.OrdinalIgnoreCase)));
-
-
-                    var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>(");
-
-                    if (foreignKeys.Count() > 1)
-                    {
-                        var index = foreignKeys.Count() - 1;
-
-                        foreach (var pk in foreignKeys)
-                        {
-                            if (pk == entityMember)
-                                formula.Append(index.ToString());
-                            else
-                                index--;
-                        }
-                    }
-
-                    formula.Append(")");
-                    dataRow.Cells[1].Value = formula.ToString();
+                    var resourceMember = unmappedColumns.FirstOrDefault(u => (
+                            string.Equals(u.ColumnName, nnx.SingleForm, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(u.ColumnName, nnx.PluralForm, StringComparison.OrdinalIgnoreCase)));
 
                     if (resourceMember != null)
-                        unmappedColumns.Remove(resourceMember);
+                    {
+                        //  We found a resource member.
+                        //
+                        //  Foreign keys generally come in one of two forms. Either it is a reference to a primary key
+                        //  in a foreign table, or it is an enumeration. If it is a reference to a primary key in a 
+                        //  foreign table, then it will be a Uri.
+
+                        if (string.Equals(resourceMember.DataType.ToString(), "uri", StringComparison.Ordinal))
+                        {
+                            //  This is an href. Very much like the primary key, there can be more than one single 
+                            //  element in this href. 
+                            string dataType = "Unknown";
+
+                            if (ResourceModel.EntityModel.ServerType == DBServerType.MYSQL)
+                                dataType = DBHelper.GetNonNullableMySqlDataType(entityMember);
+                            else if (ResourceModel.EntityModel.ServerType == DBServerType.POSTGRESQL)
+                                dataType = DBHelper.GetNonNullablePostgresqlDataType(entityMember);
+                            else if (ResourceModel.EntityModel.ServerType == DBServerType.SQLSERVER)
+                                dataType = DBHelper.GetNonNullableSqlServerDataType(entityMember);
+
+                            var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+                                                string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
+
+                            if (foreignKeys.Count() == 1)
+                            {
+                                var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>()");
+                                dataRow.Cells[1].Value = formula.ToString();
+                            }
+                            else
+                            {
+                                var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>(");
+
+                                if (foreignKeys.Count() > 1)
+                                {
+                                    var index = foreignKeys.Count() - 1;
+
+                                    foreach (var pk in foreignKeys)
+                                    {
+                                        if (pk == entityMember)
+                                            formula.Append(index.ToString());
+                                        else
+                                            index--;
+                                    }
+                                }
+
+                                formula.Append(")");
+                                dataRow.Cells[1].Value = formula.ToString();
+                                unmappedColumns.Remove(resourceMember);
+                            }
+                        }
+                        else
+                        {
+                            //  The resource member is not a URI. It should be an enum. If it is, we sould be able to
+                            //  find it in our resource models list.
+
+                            var referenceModel = ResourceModels.FirstOrDefault(r =>
+                                            string.Equals(r.ClassName, resourceMember.DataType.ToString(), StringComparison.Ordinal));
+
+                            if ( referenceModel != null )
+                            {
+                                if ( referenceModel.ResourceType == ResourceType.Enum )
+                                { 
+                                    var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+                                        string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
+
+                                    //  If the resource member is an enum that represents the value of the primary key of a foreign table,
+                                    //  then that foreign key can only have one member. If it has more than one member, then this 
+                                    //  is not the proper mapping.
+                                    if (foreignKeys.Count() == 1)
+                                    {
+                                        string dataType = "Unknown";
+
+                                        if (ResourceModel.EntityModel.ServerType == DBServerType.MYSQL)
+                                            dataType = DBHelper.GetNonNullableMySqlDataType(entityMember);
+                                        else if (ResourceModel.EntityModel.ServerType == DBServerType.POSTGRESQL)
+                                            dataType = DBHelper.GetNonNullablePostgresqlDataType(entityMember);
+                                        else if (ResourceModel.EntityModel.ServerType == DBServerType.SQLSERVER)
+                                            dataType = DBHelper.GetNonNullableSqlServerDataType(entityMember);
+
+                                        var formula = $"Convert.ChangeType(source.{resourceMember.ColumnName}, source.{resourceMember.ColumnName}.GetTypeCode())";
+                                        dataRow.Cells[1].Value = formula.ToString();
+                                        unmappedColumns.Remove(resourceMember);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 else
                 {
                     //  Is there a corresponding Entity Column for this resource Column?
                     var resourceMember = unmappedColumns.FirstOrDefault(u =>
-                                                            string.Equals(u.ColumnName, 
-                                                                          entityMember.ColumnName, 
+                                                            string.Equals(u.ColumnName,
+                                                                          entityMember.ColumnName,
                                                                           StringComparison.OrdinalIgnoreCase));
-                    
+
                     if (resourceMember != null)
                     {
                         MapResourceDestinationFromSource(entityMember, dataRow, resourceMember, ref unmappedColumns);
@@ -247,7 +342,7 @@ namespace COFRS.Template.Common.Forms
                                 var parentModel = GetParentModel(ResourceModels, ResourceModel, parts);
 
 
-                                if ( parentModel != null )
+                                if (parentModel != null)
                                 {
                                     var parentColumn = parentModel.Columns.FirstOrDefault(c => string.Equals(c.ColumnName, parts[parts.Count() - 1], StringComparison.OrdinalIgnoreCase));
 
@@ -261,7 +356,7 @@ namespace COFRS.Template.Common.Forms
                                         {
                                             var theDataType = Type.GetType(parentColumn.DataType.ToString());
 
-                                            if ( theDataType != null )
+                                            if (theDataType != null)
                                             {
                                                 NullValue = "default";
                                             }
@@ -273,11 +368,11 @@ namespace COFRS.Template.Common.Forms
                                     }
                                 }
 
-                                for (int i = 0 ; i < parts.Count()-1; i++)
+                                for (int i = 0; i < parts.Count() - 1; i++)
                                 {
                                     var parentClass = parts[i];
 
-                                    if ( string.IsNullOrWhiteSpace(parent.ToString()))
+                                    if (string.IsNullOrWhiteSpace(parent.ToString()))
                                         mapFunction.Append($"source.{parentClass} == null ? {NullValue} : ");
                                     else
                                         mapFunction.Append($"source.{parent}.{parentClass} == null ? {NullValue} : ");
@@ -285,7 +380,7 @@ namespace COFRS.Template.Common.Forms
 
                                 }
 
-                                mapFunction.Append($"{parent}.{parts[parts.Count()-1]}");
+                                mapFunction.Append($"{parent}.{parts[parts.Count() - 1]}");
                                 dataRow.Cells[1].Value = mapFunction.ToString();
 
                                 StringBuilder childColumn = new StringBuilder();
@@ -308,7 +403,7 @@ namespace COFRS.Template.Common.Forms
                             {
                                 StringBuilder mc = new StringBuilder();
 
-                                resourceMember = resourceModel.Columns.FirstOrDefault(c => 
+                                resourceMember = resourceModel.Columns.FirstOrDefault(c =>
                                     string.Equals(c.DataType.ToString(), rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
 
                                 MapResourceDestinationFromSource(entityMember, dataRow, resourceMember, ref unmappedColumns);
@@ -362,27 +457,62 @@ namespace COFRS.Template.Common.Forms
                 //  those entity members that are foreign keys, that have the same table name as this members name.
                 else if (resourceMember.IsForeignKey)
                 {
-                    var nnn = new NameNormalizer(resourceMember.ColumnName);
-                    var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey && 
-                       ( string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
-                         string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
-                    
-                    var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
-                    StringBuilder sourceColumns = new StringBuilder();
+                    //  A foreign key is commonly represented in one of two forms. Either it is a hypertext reference
+                    //  (an href), in which case the resource member should be a Uri, or it is an enum.
 
-                    foreach (var entityMember in foreignKeys)
+                    if (string.Equals(resourceMember.DataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
                     {
-                        formula.Append($"/{{source.{entityMember.ColumnName}}}");
-                        unmappedColumns.Remove(entityMember);
+                        var nnn = new NameNormalizer(resourceMember.ColumnName);
+                        var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey &&
+                           (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
+                             string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
 
-                        if (sourceColumns.Length > 0)
-                            sourceColumns.Append(", ");
-                        sourceColumns.Append(entityMember.ColumnName);
+                        var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
+                        StringBuilder sourceColumns = new StringBuilder();
+
+                        foreach (var entityMember in foreignKeys)
+                        {
+                            formula.Append($"/{{source.{entityMember.ColumnName}}}");
+                            unmappedColumns.Remove(entityMember);
+
+                            if (sourceColumns.Length > 0)
+                                sourceColumns.Append(", ");
+                            sourceColumns.Append(entityMember.ColumnName);
+                        }
+
+                        formula.Append("\")");
+                        dataRow.Cells[1].Value = formula.ToString();
+                        dataRow.Cells[3].Value = sourceColumns.ToString();
                     }
+                    else
+                    {
+                        //  This is probably an Enum. If it is, we should be able to find it in the list of 
+                        //  resource models.
+                        var referenceModel = ResourceModels.FirstOrDefault(r =>
+                                string.Equals(r.ClassName, resourceMember.DataType.ToString(), StringComparison.Ordinal));
 
-                    formula.Append("\")");
-                    dataRow.Cells[1].Value = formula.ToString();
-                    dataRow.Cells[3].Value = sourceColumns.ToString();
+                        if (referenceModel != null)
+                        {
+                            if (referenceModel.ResourceType == ResourceType.Enum)
+                            {
+                                var nnn = new NameNormalizer(resourceMember.ColumnName);
+                                var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey &&
+                                         (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
+                                           string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
+
+                                if ( foreignKeys.Count() == 1 )
+                                {
+                                    var entityMember = foreignKeys[0];
+
+                                    var formula = $"({referenceModel.ClassName}) source.{entityMember.ColumnName}";
+                                    dataRow.Cells[1].Value = formula.ToString();
+                                    dataRow.Cells[3].Value = entityMember.ColumnName;
+
+                                    unmappedColumns.Remove(entityMember);
+                                }
+                            }
+                        }
+                    }
                 }
                 else
                 {
