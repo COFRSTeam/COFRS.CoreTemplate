@@ -232,7 +232,7 @@ namespace COFRS.Template.Common.Forms
                         //  in a foreign table, or it is an enumeration. If it is a reference to a primary key in a 
                         //  foreign table, then it will be a Uri.
 
-                        if (string.Equals(resourceMember.DataType.ToString(), "uri", StringComparison.Ordinal))
+                        if (string.Equals(resourceMember.DataType.ToString(), "uri", StringComparison.OrdinalIgnoreCase))
                         {
                             //  This is an href. Very much like the primary key, there can be more than one single 
                             //  element in this href. 
