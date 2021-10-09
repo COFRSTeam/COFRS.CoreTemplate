@@ -219,10 +219,29 @@ namespace COFRS.Template.Common.Forms
                     //  the same name as the foreign table that this foreign key represents. It's probably going to be the
                     //  single form, but it could be the plural form. Look for either one.
                     var nnx = new NameNormalizer(entityMember.ForeignTableName);
+                    DBColumn resourceMember = null;
 
-                    var resourceMember = unmappedColumns.FirstOrDefault(u => (
-                            string.Equals(u.ColumnName, nnx.SingleForm, StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(u.ColumnName, nnx.PluralForm, StringComparison.OrdinalIgnoreCase)));
+                    foreach ( DataGridViewRow resourceMap in resourceGrid.Rows )
+                    {
+                        var entityColumnsUsed = resourceMap.Cells[3].Value.ToString().Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                        foreach ( var entityColumnUsed in entityColumnsUsed )
+                        {
+                            if ( string.Equals(entityColumnUsed, entityMember.ColumnName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                var resourceMemberName = resourceMap.Cells[0].Value.ToString();
+                                resourceMember = resourceModel.Columns.FirstOrDefault(c =>
+                                    string.Equals(c.ColumnName, resourceMemberName, StringComparison.OrdinalIgnoreCase));
+
+                                if (resourceMember != null)
+                                    unmappedColumns.Remove(resourceMember);
+                                break;
+                            }
+                        }
+
+                        if (resourceMember != null)
+                            break;
+                    }
 
                     if (resourceMember != null)
                     {
@@ -234,8 +253,7 @@ namespace COFRS.Template.Common.Forms
 
                         if (string.Equals(resourceMember.DataType.ToString(), "uri", StringComparison.OrdinalIgnoreCase))
                         {
-                            //  This is an href. Very much like the primary key, there can be more than one single 
-                            //  element in this href. 
+                            //  This is an href. First, get the data type.
                             string dataType = "Unknown";
 
                             if (ResourceModel.EntityModel.ServerType == DBServerType.MYSQL)
@@ -244,6 +262,12 @@ namespace COFRS.Template.Common.Forms
                                 dataType = DBHelper.GetNonNullablePostgresqlDataType(entityMember);
                             else if (ResourceModel.EntityModel.ServerType == DBServerType.SQLSERVER)
                                 dataType = DBHelper.GetNonNullableSqlServerDataType(entityMember);
+
+                            //  Now, we need the list of entity members that correspond to this resource member.
+                            //  To get that, we need to look at the resource mapping.
+
+                            //  This is an href. Very much like the primary key, there can be more than one single 
+                            //  element in this href. 
 
                             var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
                                                 string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
