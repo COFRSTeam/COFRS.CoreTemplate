@@ -130,7 +130,7 @@ namespace COFRS.Template
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
 				results.AppendLine();
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
 				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				results.AppendLine("\t\t\tawait Validator.ValidateForGetAsync(node);");
@@ -197,7 +197,7 @@ namespace COFRS.Template
 			results.AppendLine($"\t\tpublic async Task<IActionResult> Update{resourceClass.ClassName}Async([FromBody] {resourceClass.ClassName} item)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-			results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:{{item.HRef}}\")");
+			results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"{{item.HRef}}\\\"\")");
 			results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 			results.AppendLine();
 
@@ -236,7 +236,7 @@ namespace COFRS.Template
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
 				results.AppendLine();
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
 				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				results.AppendLine("\t\t\tawait Validator.ValidateForPatchAsync(commands, node);");
@@ -268,7 +268,7 @@ namespace COFRS.Template
 				results.AppendLine("\t\t{");
 				results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
 				results.AppendLine();
-				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\")");
+				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
 				results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
 				results.AppendLine("\t\t\tawait Validator.ValidateForDeleteAsync(node);");
