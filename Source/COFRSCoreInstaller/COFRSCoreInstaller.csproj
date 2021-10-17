@@ -136,6 +136,7 @@
     <Compile Include="Common\ServiceUtilities\WinNative.cs" />
     <Compile Include="Common\Wizards\ControllerWizard.cs" />
     <Compile Include="Common\Wizards\EntityWizard.cs" />
+    <Compile Include="Common\Wizards\ExampleWizard.cs" />
     <Compile Include="Common\Wizards\FullStackControllerWizard.cs" />
     <Compile Include="Common\Forms\MapEditor.cs">
       <SubType>Form</SubType>
@@ -293,6 +294,13 @@
     <ProjectReference Include="..\COFRSCoreControllerTemplate\COFRSCoreControllerTemplate.csproj">
       <Project>{D7E7E13E-DC23-49AE-9FE2-A71483170879}</Project>
       <Name>COFRSCoreControllerTemplate</Name>
+      <VSIXSubPath>ItemTemplates</VSIXSubPath>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+    </ProjectReference>
+    <ProjectReference Include="..\COFRSCoreExampleTemplate\COFRSCoreExampleTemplate.csproj">
+      <Project>{7CCD693E-5AA8-4B9E-9F4E-A4696091567F}</Project>
+      <Name>COFRSCoreExampleTemplate</Name>
       <VSIXSubPath>ItemTemplates</VSIXSubPath>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>

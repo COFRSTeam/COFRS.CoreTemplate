@@ -20,6 +20,9 @@ namespace COFRS.Template.Common.Models
         public string ValidationProject { get; set; }
         public string ValidationNamespace { get; set; }
         public string ValidationFolder { get; set; }
+        public string ExampleProject { get; set; }
+        public string ExampleNamespace { get; set; }
+        public string ExampleFolder { get; set; }
         public string ControllersProject { get; set; }
         public string ControllersNamespace { get; set; }
         public string ControllersFolder { get; set; }

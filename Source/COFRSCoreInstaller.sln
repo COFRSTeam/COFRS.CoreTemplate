@@ -20,6 +20,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COFRSCoreFullStackTemplate"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COFRSCoreProjectWitihSDKTemplate", "COFRSCoreProjectWitihSDKTemplate\COFRSCoreProjectWitihSDKTemplate.csproj", "{AB8D0DF0-0A8A-40FC-8850-4B0524A1B103}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COFRSCoreExampleTemplate", "COFRSCoreExampleTemplate\COFRSCoreExampleTemplate.csproj", "{7CCD693E-5AA8-4B9E-9F4E-A4696091567F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -62,6 +64,10 @@ Global
 		{AB8D0DF0-0A8A-40FC-8850-4B0524A1B103}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AB8D0DF0-0A8A-40FC-8850-4B0524A1B103}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AB8D0DF0-0A8A-40FC-8850-4B0524A1B103}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CCD693E-5AA8-4B9E-9F4E-A4696091567F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CCD693E-5AA8-4B9E-9F4E-A4696091567F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CCD693E-5AA8-4B9E-9F4E-A4696091567F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CCD693E-5AA8-4B9E-9F4E-A4696091567F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

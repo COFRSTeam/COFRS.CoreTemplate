@@ -55,6 +55,13 @@ namespace COFRS.Template.Common.Forms
 				PolicyLabel.Hide();
 				policyCombo.Hide();
 			}
+			else if (InstallType == 2)
+			{
+				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to create an example for. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate the example class. Then press OK to generate the example class.";
+				_titleLabel.Text = "COFRS Example Class Generator";
+				PolicyLabel.Hide();
+				policyCombo.Hide();
+			}
 			else if (InstallType == 3)
 			{
 				_InstructionsLabel.Text = "Select the database and table that contains the resource/entity combination you wish to create a validator for. This will select the Entity and Resource models in the dropdowns provided if they exist. Both entity and resource models must exist to generate the validator class. Then press OK to generate the validator class.";

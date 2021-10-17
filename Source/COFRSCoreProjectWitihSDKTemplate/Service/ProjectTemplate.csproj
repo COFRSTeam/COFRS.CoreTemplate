@@ -50,6 +50,7 @@
   <ItemGroup>
     <Folder Include="Mapping\"/>
     <Folder Include="Validation\"/>
+    <Folder Include="Examples\"/>
   </ItemGroup>
 
 </Project>

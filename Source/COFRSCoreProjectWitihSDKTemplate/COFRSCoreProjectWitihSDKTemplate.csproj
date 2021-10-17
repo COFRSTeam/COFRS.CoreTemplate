@@ -103,6 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\EntityModels\" />
+    <Folder Include="Service\Examples\" />
     <Folder Include="Service\Mapping\" />
     <Folder Include="Service\Validation\" />
   </ItemGroup>
