@@ -1,15 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
   <TemplateData>
-    <Name>COFRS Web API Controller</Name>
-    <Description>Creates a Web API Controller for a COFRS REST Service using .NET Core</Description>
+    <Name>COFRS Example Model</Name>
+    <Description>Adds an example model to a COFRS REST Service</Description>
     <Icon>COFRS.ico</Icon>
-    <TemplateID>7bf13309-626f-4ee5-88ec-763755320b7d</TemplateID>
+    <TemplateID>8e90de2e-cfde-426a-bfaa-8e2e46c3ce42</TemplateID>
     <ProjectType>CSharp</ProjectType>
     <TemplateGroupID>AspNetCore</TemplateGroupID>
     <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
     <NumberOfParentCategoriesToRollUp>2</NumberOfParentCategoriesToRollUp>
-    <DefaultName>ValuesController.cs</DefaultName>
+    <DefaultName>ClassExample.cs</DefaultName>
   </TemplateData>
   <TemplateContent>
     <References>
@@ -17,10 +17,10 @@
         <Assembly>System</Assembly>
       </Reference>
     </References>
-    <ProjectItem ReplaceParameters="true" TargetFileName="$safeitemname$.cs" OpenInEditor="true">Class.cs</ProjectItem>
+    <ProjectItem ReplaceParameters="true" OpenInEditor="true" TargetFileName="$safeitemname$.cs">Example.cs</ProjectItem>
   </TemplateContent>
   <WizardExtension>
     <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
-    <FullClassName>COFRS.Template.Common.Wizards.ControllerWizard</FullClassName>
+    <FullClassName>COFRS.Template.Common.Wizards.ExampleWizard</FullClassName>
   </WizardExtension>
 </VSTemplate>

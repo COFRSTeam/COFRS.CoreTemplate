@@ -83,7 +83,8 @@ namespace COFRS.Template
 				results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
 			results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(RqlCollection<{resourceClass.ClassName}>))]");
-
+			results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({resourceClass.ClassName}CollectionExample))]");
+				
 			results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
 			results.AppendLine("\t\t[SupportRQL]");
 			results.AppendLine($"\t\tpublic async Task<IActionResult> Get{nn.PluralForm}Async()");
@@ -112,6 +113,7 @@ namespace COFRS.Template
 				results.AppendLine("\t\t///\t<remarks>This call supports RQL. Use the RQL select clause to limit the members returned.</remarks>");
 				results.AppendLine($"\t\t///\t<response code=\"200\">Returns the specified {nn.SingleForm}.</response>");
 				results.AppendLine($"\t\t///\t<response code=\"404\">Not Found - returned when the speicifed {nn.SingleForm} does not exist in the datastore.</response>");
+				results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({resourceClass.ClassName}Example))]");
 				results.AppendLine("\t\t[HttpGet]");
 				results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
 				EmitRoute(results, nn.PluralCamelCase, pkcolumns);
@@ -153,6 +155,8 @@ namespace COFRS.Template
 			results.AppendLine("\t\t///\t</summary>");
 			results.AppendLine($"\t\t///\t<remarks>Add a {nn.SingleForm} to the datastore.</remarks>");
 			results.AppendLine($"\t\t///\t<response code=\"201\">Created - returned when the new {nn.SingleForm} was successfully added to the datastore.</response>");
+			results.AppendLine($"\t\t[SwaggerRequestExample(typeof({resourceClass.ClassName}), typeof({resourceClass.ClassName}Example))]");
+			results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({resourceClass.ClassName}Example))]");
 			results.AppendLine("\t\t[HttpPost]");
 			results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
 			results.AppendLine($"\t\t[Route(\"{nn.PluralCamelCase}\")]");
@@ -184,6 +188,7 @@ namespace COFRS.Template
 			results.AppendLine($"\t\t///\t<remarks>Update a {nn.SingleForm} in the datastore.</remarks>");
 			results.AppendLine($"\t\t///\t<response code=\"204\">No Content - returned when the {nn.SingleForm} was successfully updated in the datastore.</response>");
 			results.AppendLine($"\t\t///\t<response code=\"404\">Not Found - returned when the speicifed {nn.SingleForm} does not exist in the datastore.</response>");
+			results.AppendLine($"\t\t[SwaggerRequestExample(typeof({resourceClass.ClassName}), typeof({resourceClass.ClassName}Example))]");
 			results.AppendLine("\t\t[HttpPut]");
 			results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
 			results.AppendLine($"\t\t[Route(\"{nn.PluralCamelCase}\")]");

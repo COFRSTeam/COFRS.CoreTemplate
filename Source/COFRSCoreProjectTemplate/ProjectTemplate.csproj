@@ -51,6 +51,7 @@
     <Folder Include="Mapping\"/>
     <Folder Include="Models\EntityModels\"/>
     <Folder Include="Validation\"/>
+    <Folder Include="Examples\"/>
   </ItemGroup>
 
 </Project>

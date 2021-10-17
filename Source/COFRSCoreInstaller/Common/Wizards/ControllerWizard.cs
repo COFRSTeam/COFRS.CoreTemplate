@@ -74,6 +74,7 @@ namespace COFRS.Template.Common.Wizards
 													out ProjectFolder resourceModelsFolder,
 													out ProjectFolder mappingFolder,
 													out ProjectFolder validationFolder,
+													out ProjectFolder exampleFolder,
 													out ProjectFolder controllersFolder);
 				HandleMessages();
 
@@ -156,6 +157,7 @@ namespace COFRS.Template.Common.Wizards
 					replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
 					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
 					replacementsDictionary.Add("$validationnamespace$", validationFolder.Namespace);
+					replacementsDictionary.Add("$examplesnamespace$", exampleFolder.Namespace);
 
 					var columns = new List<ClassMember>();
 

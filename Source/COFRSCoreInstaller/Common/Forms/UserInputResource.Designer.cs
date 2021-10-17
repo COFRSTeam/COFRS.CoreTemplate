@@ -55,6 +55,7 @@
             this._portNumber = new System.Windows.Forms.NumericUpDown();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
             this.panel1 = new System.Windows.Forms.Panel();
+            this._GenerateAsEnum = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this._portNumber)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.panel1.SuspendLayout();
@@ -327,6 +328,16 @@
             this.panel1.Size = new System.Drawing.Size(985, 100);
             this.panel1.TabIndex = 47;
             // 
+            // _GenerateAsEnum
+            // 
+            this._GenerateAsEnum.AutoSize = true;
+            this._GenerateAsEnum.Location = new System.Drawing.Point(770, 239);
+            this._GenerateAsEnum.Name = "_GenerateAsEnum";
+            this._GenerateAsEnum.Size = new System.Drawing.Size(114, 17);
+            this._GenerateAsEnum.TabIndex = 48;
+            this._GenerateAsEnum.Text = "Generate as Enum";
+            this._GenerateAsEnum.UseVisualStyleBackColor = true;
+            // 
             // UserInputResource
             // 
             this.AcceptButton = this._okButton;
@@ -334,6 +345,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this._cancelButton;
             this.ClientSize = new System.Drawing.Size(906, 505);
+            this.Controls.Add(this._GenerateAsEnum);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this._portNumber);
             this.Controls.Add(this._removeServer);
@@ -399,5 +411,6 @@
 		private System.Windows.Forms.Button _removeServer;
 		private System.Windows.Forms.NumericUpDown _portNumber;
 		private System.Windows.Forms.Panel panel1;
-	}
+        private System.Windows.Forms.CheckBox _GenerateAsEnum;
+    }
 }

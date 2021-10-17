@@ -54,6 +54,9 @@ namespace COFRS.Template.Common.Forms
 				Close();
 			}
 
+			_GenerateAsEnum.Enabled = false;
+			_GenerateAsEnum.Hide();
+
 			var entityModelList = EntityMap.Maps.ToList();
 
 			foreach ( var entityModel in entityModelList )
@@ -455,6 +458,32 @@ select s.name, t.name
 							UndefinedResources.Clear();
 						}
 					}
+
+					_GenerateAsEnum.Checked = false;
+					_GenerateAsEnum.Enabled = false;
+					_GenerateAsEnum.Hide();
+
+					if ( entityModel.Columns.Count() == 2)
+                    {
+						if (entityModel.Columns[0].IsPrimaryKey )
+                        {
+							if (string.Equals(entityModel.Columns[0].EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].EntityType, "ulong", StringComparison.OrdinalIgnoreCase))
+							{
+								if (string.Equals(entityModel.Columns[1].EntityType, "string", StringComparison.OrdinalIgnoreCase))
+								{
+									_GenerateAsEnum.Enabled = true;
+									_GenerateAsEnum.Show();
+								}
+							}
+                        }
+                    }
 				}
 
 				Populating = false;

@@ -50,6 +50,7 @@
       </Folder>
       <Folder Name ="Mapping"></Folder>
       <Folder Name ="Validation"></Folder>
+      <Folder Name ="Examples"></Folder>
     </Project>
   </TemplateContent>
   <WizardExtension>

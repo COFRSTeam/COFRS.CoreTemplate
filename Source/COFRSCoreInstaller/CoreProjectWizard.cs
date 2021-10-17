@@ -89,6 +89,10 @@ namespace COFRS.Template
 						ValidationFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Validation"),
 						ValidationNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Validation",
 
+						ExampleProject = replacementsDictionary["$safeprojectname$"],
+						ExampleFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Examples"),
+						ExampleNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Examples",
+
 						ControllersProject = replacementsDictionary["$safeprojectname$"],
 						ControllersFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Controllers"),
 						ControllersNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Controllers",

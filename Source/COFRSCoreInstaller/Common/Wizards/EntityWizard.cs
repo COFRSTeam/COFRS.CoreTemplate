@@ -69,6 +69,7 @@ namespace COFRS.Template.Common.Wizards
                                                     out ProjectFolder resourceModelsFolder,
                                                     out ProjectFolder mappingFolder,
                                                     out ProjectFolder validationFolder,
+                                                    out ProjectFolder exampleFolder,
                                                     out ProjectFolder controllersFolder);
                 HandleMessages();
 
