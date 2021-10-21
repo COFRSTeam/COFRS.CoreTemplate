@@ -227,6 +227,7 @@ namespace COFRS.Template
 				results.AppendLine($"\t\t///\t<remarks>Update a {nn.SingleForm} in the datastore.</remarks>");
 				results.AppendLine($"\t\t///\t<response code=\"204\">No Content - returned when the {nn.SingleForm} was successfully updated in the datastore.</response>");
 				results.AppendLine($"\t\t///\t<response code=\"404\">Not Found - returned when the speicifed {nn.SingleForm} does not exist in the datastore.</response>");
+				results.AppendLine($"\t\t[SwaggerRequestExample(typeof(IEnumerable<PatchCommand>), typeof({resourceClass.ClassName}PatchExample))]");
 				results.AppendLine("\t\t[HttpPatch]");
 				results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
 				EmitRoute(results, nn.PluralCamelCase, pkcolumns);

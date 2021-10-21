@@ -2964,9 +2964,7 @@ select a.attname as columnname,
 										if (memberElement.Kind == vsCMElement.vsCMElementProperty)
 										{
 											CodeProperty property = (CodeProperty)memberElement;
-
-											var strCodeTypeParts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-											var dataType = strCodeTypeParts[strCodeTypeParts.Length - 1];
+											var dataType = property.Type.AsFullName;
 
 											var dbColumn = new DBColumn
 											{

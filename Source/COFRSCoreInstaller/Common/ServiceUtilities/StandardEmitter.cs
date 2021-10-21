@@ -336,10 +336,129 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 		public string EmitExampleModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, EntityMap entityMap, string exampleClassName, DBServerType serverType, string connectionString)
         {
-            var results = new StringBuilder();
-			string baseUrl = "";
+            var results = new StringBuilder();          
+			
+			//	Generate the patch example class
+			results.AppendLine("\t///\t<summary>");
 
-            results.AppendLine("\t///\t<summary>");
+			if (resourceModel.ClassName.StartsWith("a", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("e", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("i", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("o", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("u", StringComparison.OrdinalIgnoreCase))
+				results.AppendLine($"\t///\tGenerates an example model of a patch command affecting an <see cref=\"{resourceModel.ClassName}\"/> resource.");
+			else
+				results.AppendLine($"\t///\tGenerates an example model of a patch command affecting a <see cref=\"{resourceModel.ClassName}\"/> resource.");
+
+			results.AppendLine("\t///\t</summary>");
+			results.AppendLine($"\tpublic class {resourceModel.ClassName}PatchExample : IExamplesProvider<IEnumerable<PatchCommand>>");
+			results.AppendLine("\t{");
+
+			results.AppendLine("\t\t///\t<summary>");
+			if (resourceModel.ClassName.StartsWith("a", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("e", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("i", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("o", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("u", StringComparison.OrdinalIgnoreCase))
+				results.AppendLine($"\t\t///\tGenerates an example model of a patch command affecting an <see cref=\"{resourceModel.ClassName}\"/> resource.");
+			else
+				results.AppendLine($"\t\t///\tGenerates an example model of a patch command affecting a <see cref=\"{resourceModel.ClassName}\"/> resource.");
+
+			results.AppendLine("\t\t///\t</summary>");
+
+			if (resourceModel.ClassName.StartsWith("a", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("e", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("i", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("o", StringComparison.OrdinalIgnoreCase) ||
+				resourceModel.ClassName.StartsWith("u", StringComparison.OrdinalIgnoreCase))
+				results.AppendLine($"\t\t///\t<returns>An example model of a patch command affecting an <see cref=\"{resourceModel.ClassName}\"/> resource.</returns>");
+			else
+				results.AppendLine($"\t\t///\t<returns>An example model of a patch command affecting a <see cref=\"{resourceModel.ClassName}\"/> resource.</returns>");
+
+			results.AppendLine($"\t\tpublic IEnumerable<PatchCommand> GetExamples()");
+			results.AppendLine("\t\t{");
+
+			results.AppendLine("\t\t\tvar results = new List<PatchCommand> {");
+
+			var exampleModel = GetExampleModel(0, resourceModel, serverType, connectionString);
+			var entityJson = JObject.Parse(exampleModel);
+			var count = 0;
+
+			foreach ( var property in entityJson.Children())
+            {
+				switch ( count )
+                {
+					case 1:
+						{
+							results.AppendLine("\t\t\t\tnew PatchCommand {");
+							results.AppendLine("\t\t\t\t\tOp = \"replace\",");
+							results.AppendLine($"\t\t\t\t\tPath = \"{property.Path}\",");
+
+							if ( property.First.Type == JTokenType.Null )
+								results.AppendLine($"\t\t\t\t\tValue = null");
+							else if (property.First.Type == JTokenType.String ||
+									 property.First.Type == JTokenType.Date ||
+									 property.First.Type == JTokenType.Guid ||
+									 property.First.Type == JTokenType.TimeSpan )
+								results.AppendLine($"\t\t\t\t\tValue = \"{((string)property.Value<JProperty>())}\"");
+							else if (property.First.Type == JTokenType.Integer)
+								results.AppendLine($"\t\t\t\t\tValue = \"{((long)property.Value<JProperty>())}\"");
+							else if (property.First.Type == JTokenType.Float)
+								results.AppendLine($"\t\t\t\t\tValue = \"{((double)property.Value<JProperty>())}\"");
+							else
+								results.AppendLine($"\t\t\t\t\tValue = \"value\"");
+
+							results.AppendLine("\t\t\t\t},");
+						}
+						break;
+
+					case 2:
+						{
+							results.AppendLine("\t\t\t\tnew PatchCommand {");
+							results.AppendLine("\t\t\t\t\tOp = \"add\",");
+							results.AppendLine($"\t\t\t\t\tPath = \"{property.Path}\",");
+
+							if (property.First.Type == JTokenType.Null)
+								results.AppendLine($"\t\t\t\t\tValue = null");
+							else if (property.First.Type == JTokenType.String ||
+									 property.First.Type == JTokenType.Date ||
+									 property.First.Type == JTokenType.Guid ||
+									 property.First.Type == JTokenType.TimeSpan)
+								results.AppendLine($"\t\t\t\t\tValue = \"{((string)property.Value<JProperty>())}\"");
+							else if (property.First.Type == JTokenType.Integer)
+								results.AppendLine($"\t\t\t\t\tValue = \"{((long)property.Value<JProperty>())}\"");
+							else if (property.First.Type == JTokenType.Float)
+								results.AppendLine($"\t\t\t\t\tValue = \"{((double)property.Value<JProperty>())}\"");
+							else
+								results.AppendLine($"\t\t\t\t\tValue = \"value\"");
+
+							results.AppendLine("\t\t\t\t},");
+						}
+						break;
+
+					case 3:
+						results.AppendLine("\t\t\t\tnew PatchCommand {");
+						results.AppendLine("\t\t\t\t\tOp = \"delete\",");
+						results.AppendLine($"\t\t\t\t\tPath = \"{property.Path}\",");
+						results.AppendLine("\t\t\t\t}");
+						break;
+				};
+
+				count++;
+            }
+
+			results.AppendLine("\t\t\t};");
+
+			results.AppendLine();
+			results.AppendLine("\t\t\treturn results;");
+
+			results.AppendLine("\t\t}");
+			results.AppendLine("\t}");
+			results.AppendLine();
+
+
+			//	Generate the single example class
+			results.AppendLine("\t///\t<summary>");
 
             if (resourceModel.ClassName.StartsWith("a", StringComparison.OrdinalIgnoreCase) ||
                 resourceModel.ClassName.StartsWith("e", StringComparison.OrdinalIgnoreCase) ||
@@ -381,11 +500,8 @@ namespace COFRS.Template.Common.ServiceUtilities
             results.AppendLine("\t\t\tvar rootUrl = new Uri(Startup.AppConfig.GetRootUrl());");
             results.AppendLine();
 
-            var exampleModel = GetExampleModel(0, resourceModel, serverType, connectionString);
-            var entityJson = JObject.Parse(exampleModel);
-
 			results.Append("\t\t\tvar singleExample = ");
-            EmitSingleModel("", resourceModel, profileMap, results, entityJson, out baseUrl);
+            EmitSingleModel("", resourceModel, profileMap, results, entityJson);
             results.AppendLine(";");
 
             results.AppendLine();
@@ -395,8 +511,8 @@ namespace COFRS.Template.Common.ServiceUtilities
             results.AppendLine("\t}");
             results.AppendLine();
 
+			//	Generate the collection example class
             results.AppendLine("\t///\t<summary>");
-
             results.AppendLine($"\t///\tGenerates an example model of a collection of <see cref=\"{resourceModel.ClassName}\"/> resources.");
             results.AppendLine("\t///\t</summary>");
             results.AppendLine($"\t///\t<returns>An example model of a collection of <see cref=\"{resourceModel.ClassName}\"/> resources.</returns>");
@@ -426,10 +542,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 				entityJson = JObject.Parse(exampleModel);
 
 				results.Append("\t\t\t\t");
-				EmitSingleModel("\t", resourceModel, profileMap, results, entityJson, out baseUrl);
+				EmitSingleModel("\t", resourceModel, profileMap, results, entityJson);
 			}
 
-
+			var baseUrl = ExtractBaseUrl(profileMap);
 
 			results.AppendLine();
 			results.AppendLine("\t\t\t};");
@@ -451,113 +567,290 @@ namespace COFRS.Template.Common.ServiceUtilities
             return results.ToString();
         }
 
-        private static void EmitSingleModel(string prefix, ResourceModel resourceModel, ProfileMap profileMap, StringBuilder results, JObject entityJson, out string baseUrl)
+		public string EmitResourceEnum(ResourceModel model, DBServerType serverType, string connectionString)
+        {
+			if (serverType == DBServerType.MYSQL)
+				return EmitResourceMySqlEnum(model, connectionString);
+			else if (serverType == DBServerType.POSTGRESQL)
+				return EmitResourcePostgresqlEnum(model, connectionString);
+			else if (serverType == DBServerType.SQLSERVER)
+				return EmitResourceSqlServerEnum(model, connectionString);
+
+			return "Invalid DB Server Type";
+        }
+
+		private static string EmitResourceMySqlEnum(ResourceModel model, string connectionString)
+		{
+			throw new NotImplementedException("not implemented yet");
+		}
+		private static string EmitResourcePostgresqlEnum(ResourceModel model, string connectionString)
+		{
+			throw new NotImplementedException("not implemented yet");
+		}
+		private static string EmitResourceSqlServerEnum(ResourceModel resourceModel, string connectionString)
+		{
+			StringBuilder results = new StringBuilder();
+
+			results.AppendLine("\t///\t<summary>");
+			results.AppendLine($"\t///\t{resourceModel.ClassName}");
+			results.AppendLine("\t///\t</summary>");
+			results.AppendLine($"\t[Entity(typeof({resourceModel.EntityModel.ClassName}))]");
+
+			var dataType = "";
+
+			if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.TinyInt)
+				dataType = "byte";
+			else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.SmallInt)
+				dataType = "short";
+			else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.Int)
+				dataType = "int";
+			else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.BigInt)
+				dataType = "long";
+
+			results.AppendLine($"\tpublic enum {resourceModel.ClassName} : {dataType}");
+			results.AppendLine("\t{");
+
+			bool firstColumn = true;
+
+			string query = "select ";
+
+			foreach ( var col in resourceModel.EntityModel.Columns)
+            {
+				if (firstColumn)
+					firstColumn = false;
+				else
+				{
+						query += ", ";
+				}
+
+				query += col.ColumnName;
+            }
+
+			query += " from ";
+			query += resourceModel.EntityModel.TableName;
+
+			firstColumn = true;
+
+			using ( var connection = new SqlConnection(connectionString))
+            {
+				connection.Open();
+
+				using ( var command = new SqlCommand(query, connection))
+                {
+					using (var reader = command.ExecuteReader())
+                    {
+						while ( reader.Read())
+                        {
+							if ( firstColumn )
+                            {
+								firstColumn = false;
+                            }
+							else
+                            {
+								results.AppendLine(",");
+								results.AppendLine();
+                            }
+
+							if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.TinyInt)
+							{
+								var theValue = reader.GetByte(0);
+								var name = reader.GetString(1);
+
+								results.AppendLine("\t\t///\t<summary>");
+								results.AppendLine($"\t\t///\t{name}");
+								results.AppendLine("\t\t///\t</summary>");
+								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
+							}
+							else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.SmallInt)
+							{
+								var theValue = reader.GetInt16(0);
+								var name = reader.GetString(1);
+
+								results.AppendLine("\t\t///\t<summary>");
+								results.AppendLine($"\t\t///\t{name}");
+								results.AppendLine("\t\t///\t</summary>");
+								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
+							}
+							else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.Int)
+							{
+								var theValue = reader.GetInt32(0);
+								var name = reader.GetString(1);
+
+								results.AppendLine("\t\t///\t<summary>");
+								results.AppendLine($"\t\t///\t{name}");
+								results.AppendLine("\t\t///\t</summary>");
+								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
+							}
+							else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.BigInt)
+							{
+								var theValue = reader.GetInt64(0);
+								var name = reader.GetString(1);
+
+								results.AppendLine("\t\t///\t<summary>");
+								results.AppendLine($"\t\t///\t{name}");
+								results.AppendLine("\t\t///\t</summary>");
+								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
+							}
+						}
+					}
+                }
+            }
+
+			results.AppendLine();
+
+			results.AppendLine("\t}");
+
+			return results.ToString();
+		}
+
+		/// <summary>
+		/// Extracts the base URL for the resource
+		/// </summary>
+		/// <param name="profileMap"></param>
+		/// <returns></returns>
+		private static string ExtractBaseUrl(ProfileMap profileMap)
+        {
+			var baseUrl = "";
+			var map = profileMap.ResourceProfiles.FirstOrDefault(rp => string.Equals(rp.ResourceColumnName, "href", StringComparison.OrdinalIgnoreCase));
+
+			if ( map != null )
+            {
+				var mapFunction = map.MapFunction;
+				var indexStart = mapFunction.ToLower().IndexOf("$\"");
+				var indexEnd = mapFunction.ToLower().IndexOf("/id");
+				baseUrl = mapFunction.Substring(indexStart+2, indexEnd - indexStart-2);
+            }
+
+			return baseUrl;
+        }
+
+        private static void EmitSingleModel(string prefix, ResourceModel resourceModel, ProfileMap profileMap, StringBuilder results, JObject entityJson)
         {
 			bool first = true;
-			baseUrl = "";
 			results.AppendLine($"new {resourceModel.ClassName} {{");
 
-			foreach (var column in resourceModel.Columns)
+			foreach (var map in profileMap.ResourceProfiles)
             {
                 if (first)
                     first = false;
                 else
                     results.AppendLine(",");
 
-                results.Append($"{prefix}\t\t\t\t{column.ColumnName} = ");
+                results.Append($"{prefix}\t\t\t\t{map.ResourceColumnName} = ");
 
-                var rmap = profileMap.ResourceProfiles.FirstOrDefault(rp => string.Equals(rp.ResourceColumnName, column.ColumnName, StringComparison.OrdinalIgnoreCase));
-
-                if (rmap.MapFunction.StartsWith("new Uri(rootUrl,"))
+                if (map.MapFunction.StartsWith("new Uri(rootUrl,", StringComparison.OrdinalIgnoreCase))
                 {
-                    bool isDone = false;
-                    var mapFunction = rmap.MapFunction;
-
-                    while (!isDone)
-                    {
-                        var index = mapFunction.IndexOf('{');
-
-                        if (index > 0)
-                        {
-                            var lastIndex = mapFunction.IndexOf('}');
-
-                            if (lastIndex > 0)
-                            {
-                                var entityColumnReference = mapFunction.Substring(index + 8, lastIndex - index - 8);
-                                var token = entityJson[entityColumnReference];
-
-                                if (token.Type == JTokenType.Integer)
-                                {
-                                    var image = "{source." + entityColumnReference + "}";
-                                    mapFunction = mapFunction.Replace(image, token.Value<int>().ToString());
-                                }
-                                else if (token.Type == JTokenType.String)
-                                {
-                                    var image = "{source." + entityColumnReference + "}";
-                                    mapFunction = mapFunction.Replace(image, token.Value<string>());
-                                }
-                                else
-                                    throw new InvalidDataException($"invalid map function syntax: {column.ColumnName}:{rmap.MapFunction}");
-                            }
-                            else
-                                throw new InvalidDataException($"invalid map function syntax: {column.ColumnName}:{rmap.MapFunction}");
-                        }
-                        else
-                            isDone = true;
-                    }
-
-                    mapFunction = mapFunction.Replace("$\"", "\"");
-
-					if (column.IsPrimaryKey )
-                    {
-						baseUrl = mapFunction.Substring(18);
-						var index = baseUrl.IndexOf("/id");
-
-						if (index > 0)
-							baseUrl = baseUrl.Substring(0, index);
-                    }
-
-                    results.Append(mapFunction);
+                    results.Append(ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, map.MapFunction));
                 }
-                else
+                else if ( map.MapFunction.StartsWith("new", StringComparison.OrdinalIgnoreCase))
                 {
-                    var mapFunction = rmap.MapFunction;
+					results.Append(ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, map.MapFunction));
+				}
+				else if (map.MapFunction.StartsWith("source.", StringComparison.OrdinalIgnoreCase))
+				{
+					var mapFunction = $"{{{map.MapFunction}}}";
+					var value = ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, mapFunction);
+					var resourceColumn = resourceModel.Columns.FirstOrDefault(rc => rc.ColumnName.Equals(map.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
 
-                    if (mapFunction.StartsWith("source.", StringComparison.OrdinalIgnoreCase))
+					if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(string))
+					{
+						value = $"\"{value}\"";
+					}
+					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(Uri))
+					{
+						value = $"new Uri(\"{value}\")";
+					}
+					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(DateTime))
+					{
+						value = $"DateTime.Parse(\"{value}\")";
+					}
+					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(DateTimeOffset))
+					{
+						value = $"DateTimeOffset.Parse(\"{value}\")";
+					}
+					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(bool))
+					{
+						value = $"Boolean.Parse(\"{value}\")";
+					}
+					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(TimeSpan))
+					{
+						value = $"TimeSpan.Parse(\"{value}\")";
+					}
+					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(Guid))
+					{
+						value = $"Guid.Parse(\"{value}\")";
+					}
+					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(byte) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(sbyte) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(short) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(ushort) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(int) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(uint) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(long) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(ulong) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(double) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(float) ||
+							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(decimal))
+					{
+					}
+					else
+					{
+						throw new InvalidCastException($"Unable to translate datatype {resourceColumn.DataType.ToString()}");
+                    }
+
+					results.Append(value);
+				}
+				else
+                {
+					results.Append(ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, map.MapFunction));
+				}
+			}
+
+			results.AppendLine();
+			results.Append($"{prefix}\t\t\t}}");
+        }
+
+        private static string ReplaceEntityReferences(StringBuilder results, JObject entityJson, string columnName, string mapFunction)
+        {
+            bool isDone = false;
+			var originalMapFunction = mapFunction;
+
+            while (!isDone)
+            {
+                var index = mapFunction.IndexOf('{');
+
+                if (index >= 0)
+                {
+                    var lastIndex = mapFunction.IndexOf('}');
+
+                    if (lastIndex >= 0)
                     {
-                        var entityColumnReference = mapFunction.Substring(7);
+                        var entityColumnReference = mapFunction.Substring(index + 8, lastIndex - index - 8);
                         var token = entityJson[entityColumnReference];
 
                         if (token.Type == JTokenType.Integer)
                         {
-                            mapFunction = token.Value<byte>().ToString();
-                        }
-                        else if (token.Type == JTokenType.Boolean)
-                        {
-                            mapFunction = token.Value<bool>().ToString();
-                        }
-                        else if (token.Type == JTokenType.Guid)
-                        {
-                            mapFunction = $"\"{token.Value<Guid>()}\"";
-                        }
-                        else if (token.Type == JTokenType.Date)
-                        {
-                            mapFunction = $"\"{token.Value<DateTime>():O}\"";
+                            var image = "{source." + entityColumnReference + "}";
+                            mapFunction = mapFunction.Replace(image, token.Value<int>().ToString());
                         }
                         else if (token.Type == JTokenType.String)
                         {
-                            mapFunction = $"\"{token.Value<string>()}\"";
+                            var image = "{source." + entityColumnReference + "}";
+                            mapFunction = mapFunction.Replace(image, token.Value<string>());
                         }
                         else
-                            throw new InvalidDataException($"invalid map function syntax: {column.ColumnName}:{rmap.MapFunction}");
-
-                        results.Append(mapFunction);
+                            throw new InvalidDataException($"invalid map function syntax: {columnName}:{originalMapFunction}");
                     }
+                    else
+                        throw new InvalidDataException($"invalid map function syntax: {columnName}:{originalMapFunction}");
                 }
+                else
+                    isDone = true;
             }
 
-			results.AppendLine();
-			results.Append($"{prefix}\t\t\t}}");
+            mapFunction = mapFunction.Replace("$\"", "\"");
+
+			return mapFunction;
         }
 
         public string GetExampleModel(int skipRecords, ResourceModel resourceModel, DBServerType serverType, string connectionString)
