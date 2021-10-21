@@ -411,6 +411,6 @@
 		private System.Windows.Forms.Button _removeServer;
 		private System.Windows.Forms.NumericUpDown _portNumber;
 		private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.CheckBox _GenerateAsEnum;
+        public System.Windows.Forms.CheckBox _GenerateAsEnum;
     }
 }

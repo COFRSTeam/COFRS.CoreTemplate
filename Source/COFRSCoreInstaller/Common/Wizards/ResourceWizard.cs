@@ -146,9 +146,17 @@ namespace COFRS.Template.Common.Wizards
                         ServerType = form.ServerType
                     };
 
-                    var model = standardEmitter.EmitResourceModel(resourceModel,
+                    string model;
+
+                    if (form._GenerateAsEnum.Checked)
+                        model = standardEmitter.EmitResourceEnum(resourceModel,
+                                                                    form.ServerType,
+                                                                    connectionString);
+                    else
+                        model = standardEmitter.EmitResourceModel(resourceModel,
                                                                   resourceMap,
                                                                   replacementsDictionary);
+
                     replacementsDictionary.Add("$model$", model);
                     replacementsDictionary.Add("$entitynamespace$", entityModel.Namespace);
                     Proceed = true;

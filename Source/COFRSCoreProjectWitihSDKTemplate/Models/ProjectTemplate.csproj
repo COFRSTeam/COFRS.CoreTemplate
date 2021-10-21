@@ -9,9 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="COFRS.Common" Version="0.0.35-alpha" />
+    <PackageReference Include="COFRS.Common" Version="0.0.37-alpha" />
     <PackageReference Include="System.Drawing.Common" Version="5.0.2" />
     <PackageReference Include="System.Text.Json" Version="5.0.2" />
+    $if$ ($databaseTechnology$ == Postgresql)<PackageReference Include="Npgsql" Version="5.0.10" />
+    $endif$$if$ ($databaseTechnology$ == MySQL)<PackageReference Include="MySql.Data" Version="8.0.25" />
+    $endif$
   </ItemGroup>
 
   <ItemGroup>
