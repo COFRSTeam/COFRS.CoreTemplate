@@ -1538,13 +1538,13 @@ select name
 
 		private int ReadComposite(NpgsqlDataReader reader, DBColumn column, int ordinal, List<EntityClassFile> classList, JObject values)
 		{
-			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
+			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 			foreach (var member in cl.Columns)
 			{
-				if ((NpgsqlDbType)member.DataType == NpgsqlDbType.Unknown)
+				if (string.IsNullOrWhiteSpace(member.ModelDataType))
 				{
-					var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, member.dbDataType, StringComparison.OrdinalIgnoreCase));
+					var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, member.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 					if (ch.ElementType == ElementType.Enum)
 					{
@@ -1656,15 +1656,15 @@ select name
 
 		private bool DeconstructComposite(string parent, DBColumn column, List<EntityClassFile> classList, StringBuilder query, bool firstColumn)
 		{
-			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
+			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 			if (cl != null)
 			{
 				foreach (var childmember in cl.Columns)
 				{
-					if ((NpgsqlDbType)childmember.DataType == NpgsqlDbType.Unknown)
+					if (string.IsNullOrWhiteSpace(childmember.ModelDataType))
 					{
-						var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, childmember.dbDataType, StringComparison.OrdinalIgnoreCase));
+						var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, childmember.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 						if (ch.ElementType == ElementType.Enum)
 						{

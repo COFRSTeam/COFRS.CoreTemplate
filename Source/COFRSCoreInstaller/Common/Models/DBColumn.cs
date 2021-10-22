@@ -11,19 +11,14 @@
 		public string ColumnName { get; set; }
 
 		/// <summary>
-		/// The Entity type in the entity class
-		/// </summary>
-		public string EntityType { get; set; }
-
-		/// <summary>
 		/// The data type of the column as defined by the database
 		/// </summary>
-		public string dbDataType { get; set; }
+		public string DBDataType { get; set; }
 
 		/// <summary>
 		/// The SQL Data type that best corresponds to the data type
 		/// </summary>
-		public object DataType { get; set; }
+		public string ModelDataType { get; set; }
 
 		/// <summary>
 		/// The length of the column

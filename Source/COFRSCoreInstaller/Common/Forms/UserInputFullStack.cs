@@ -705,9 +705,9 @@ select a.attname as columnname,
 									var entityName = reader.GetString(0);
 									var columnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0)));
 
-									NpgsqlDbType dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
+									string dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
 
-									if (dataType == NpgsqlDbType.Unknown)
+									if (string.IsNullOrWhiteSpace(dataType))
 									{
 										var entity = EntityMap.Maps.FirstOrDefault(ent =>
 											string.Equals(ent.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
@@ -735,8 +735,8 @@ select a.attname as columnname,
 									{
 										ColumnName = columnName,
 										EntityName = entityName,
-										DataType = dataType,
-										dbDataType = reader.GetString(1),
+										ModelDataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
+										DBDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
 										NumericScale = Convert.ToInt32(reader.GetValue(4)),
@@ -804,8 +804,8 @@ ORDER BY c.ORDINAL_POSITION;
 									var dbColumn = new DBColumn
 									{
 										ColumnName = reader.GetString(0),
-										DataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
-										dbDataType = reader.GetString(1),
+										ModelDataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
+										DBDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
 										NumericScale = Convert.ToInt32(reader.GetValue(4)),
@@ -881,8 +881,8 @@ select c.name as column_name,
 									{
 										ColumnName = reader.GetString(0),
 										EntityName = reader.GetString(0),
-										dbDataType = reader.GetString(1),
-										DataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
+										DBDataType = reader.GetString(1),
+										ModelDataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
 										NumericScale = Convert.ToInt32(reader.GetValue(4)),
@@ -895,21 +895,21 @@ select c.name as column_name,
 										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
 									};
 
-									if (string.Equals(dbColumn.dbDataType, "geometry", StringComparison.OrdinalIgnoreCase))
+									if (string.Equals(dbColumn.DBDataType, "geometry", StringComparison.OrdinalIgnoreCase))
 									{
 										_tableList.SelectedIndex = -1;
 										MessageBox.Show(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 										return;
 									}
 
-									if (string.Equals(dbColumn.dbDataType, "geography", StringComparison.OrdinalIgnoreCase))
+									if (string.Equals(dbColumn.DBDataType, "geography", StringComparison.OrdinalIgnoreCase))
 									{
 										_tableList.SelectedIndex = -1;
 										MessageBox.Show(".NET Core does not support the SQL Server geography data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 										return;
 									}
 
-									if (string.Equals(dbColumn.dbDataType, "variant", StringComparison.OrdinalIgnoreCase))
+									if (string.Equals(dbColumn.DBDataType, "variant", StringComparison.OrdinalIgnoreCase))
 									{
 										_tableList.SelectedIndex = -1;
 										MessageBox.Show("COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -2664,15 +2664,15 @@ select name
 
 		private bool DeconstructComposite(string parent, DBColumn column, List<EntityClassFile> classList, StringBuilder query, bool firstColumn)
 		{
-			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
+			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 			if (cl != null)
 			{
 				foreach (var childmember in cl.Columns)
 				{
-					if ((NpgsqlDbType)childmember.DataType == NpgsqlDbType.Unknown)
+					if (string.IsNullOrWhiteSpace(childmember.ModelDataType))
 					{
-						var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, childmember.dbDataType, StringComparison.OrdinalIgnoreCase));
+						var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, childmember.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 						if (ch.ElementType == ElementType.Enum)
 						{
@@ -2708,13 +2708,13 @@ select name
 
 		private int ReadComposite(NpgsqlDataReader reader, DBColumn column, int ordinal, List<EntityClassFile> classList, JObject values)
 		{
-			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
+			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 			foreach (var member in cl.Columns)
 			{
-				if ((NpgsqlDbType)member.DataType == NpgsqlDbType.Unknown)
+				if (string.IsNullOrWhiteSpace(member.ModelDataType))
 				{
-					var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, member.dbDataType, StringComparison.OrdinalIgnoreCase));
+					var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, member.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 					if (ch.ElementType == ElementType.Enum)
 					{

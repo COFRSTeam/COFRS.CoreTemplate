@@ -395,7 +395,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 				{
 					foreach (var column in newClassFile.Columns)
 					{
-						if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Unknown)
+						if (string.IsNullOrWhiteSpace(column.ModelDataType))
 						{
 							if (UndefinedClassList.FirstOrDefault(c => string.Equals(c.TableName, column.EntityName, StringComparison.OrdinalIgnoreCase)) == null)
 							{
@@ -403,12 +403,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 								var bList = new List<EntityModel>();
 								var className = $"E{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(column.ColumnName))}";
 
-								var elementType = DBHelper.GetElementType(classFile.SchemaName, column.dbDataType, entityMap, connectionString);
+								var elementType = DBHelper.GetElementType(classFile.SchemaName, column.DBDataType, entityMap, connectionString);
 
 								var aClassFile = new EntityModel()
 								{
 									ClassName = className,
-									TableName = column.dbDataType,
+									TableName = column.DBDataType,
 									SchemaName = classFile.SchemaName,
 									ProjectName = classFile.ProjectName,
 									Folder = Path.Combine(baseFolder, $"{className}.cs"),
@@ -546,8 +546,8 @@ select a.attname as columnname,
 								{
 									EntityName = reader.GetString(0),
 									ColumnName = CorrectForReservedNames(NormalizeClassName(reader.GetString(0))),
-									DataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
-									dbDataType = reader.GetString(1),
+									ModelDataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
+									DBDataType = reader.GetString(1),
 									Length = Convert.ToInt64(reader.GetValue(2)),
 									IsNullable = Convert.ToBoolean(reader.GetValue(3)),
 									IsComputed = Convert.ToBoolean(reader.GetValue(4)),
@@ -637,14 +637,7 @@ select a.attname as columnname,
 				foreach (var column in entityClass.Columns)
 				{
 					var memberName = column.ColumnName;
-					var dataType = "Unknown";
-
-					if (dbType == DBServerType.MYSQL)
-						dataType = DBHelper.GetMySqlDataType(column);
-					else if (dbType == DBServerType.POSTGRESQL)
-						dataType = DBHelper.GetPostgresDataType(column, entityMap);
-					else if (dbType == DBServerType.SQLSERVER)
-						dataType = DBHelper.GetSQLServerDataType(column);
+					var dataType = column.ModelDataType;
 
 					var childMember = new ClassMember()
 					{
@@ -1166,10 +1159,9 @@ select a.attname as columnname,
 					var entityColumn = new DBColumn()
 					{
 						EntityName = column.EntityName,
-						EntityType = column.EntityType,
 						ColumnName = column.ColumnName,
-						DataType = column.DataType,
-						dbDataType = column.dbDataType,
+						DBDataType = column.DBDataType,
+						ModelDataType = column.ModelDataType,
 						ForeignTableName = column.ForeignTableName,
 						IsComputed = column.IsComputed,
 						IsForeignKey = column.IsForeignKey,
@@ -1217,10 +1209,9 @@ select a.attname as columnname,
 					var entityColumn = new DBColumn()
 					{
 						EntityName = column.EntityName,
-						EntityType = column.dbDataType,
 						ColumnName = column.ColumnName,
-						DataType = column.DataType,
-						dbDataType = column.dbDataType,
+						ModelDataType = column.ModelDataType,
+						DBDataType = column.DBDataType,
 						ForeignTableName = column.ForeignTableName,
 						IsComputed = column.IsComputed,
 						IsForeignKey = column.IsForeignKey,
@@ -1275,10 +1266,9 @@ select a.attname as columnname,
 					var entityColumn = new DBColumn()
 					{
 						EntityName = column.EntityName,
-						EntityType = column.EntityType,
 						ColumnName = column.ColumnName,
-						DataType = column.DataType,
-						dbDataType = column.dbDataType,
+						ModelDataType = column.ModelDataType,
+						DBDataType = column.DBDataType,
 						ForeignTableName = column.ForeignTableName,
 						IsComputed = column.IsComputed,
 						IsForeignKey = column.IsForeignKey,
@@ -1300,60 +1290,60 @@ select a.attname as columnname,
 
 		private static void SetFixed(DBServerType serverType, DBColumn column, DBColumn entityColumn)
 		{
-			if (serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.NVarChar)
+			if (serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "nvarchar", StringComparison.OrdinalIgnoreCase))
 			{
 				entityColumn.IsFixed = false;
 			}
-			else if ((serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Binary) ||
-					  (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Binary))
+			else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Binary", StringComparison.OrdinalIgnoreCase)) ||
+					  (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Binary", StringComparison.OrdinalIgnoreCase)))
 			{
 				entityColumn.IsFixed = true;
 			}
-			else if ((serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Char) ||
-					  (serverType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Char))
+			else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Char", StringComparison.OrdinalIgnoreCase)) ||
+					  (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Char", StringComparison.OrdinalIgnoreCase)))
 			{
 				entityColumn.IsFixed = true;
 			}
-			else if (serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.NChar)
+			else if (serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NChar", StringComparison.OrdinalIgnoreCase))
 			{
 				entityColumn.IsFixed = true;
 			}
-			else if (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.String)
+			else if (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "String", StringComparison.OrdinalIgnoreCase))
 			{
 				if (column.Length > 1)
 					entityColumn.IsFixed = true;
 			}
-			else if (serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Image)
+			else if (serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Image", StringComparison.OrdinalIgnoreCase))
 			{
 				entityColumn.IsFixed = false;
 				entityColumn.Length = -1;
 			}
-			else if (serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.NText)
+			else if (serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NText", StringComparison.OrdinalIgnoreCase))
 			{
 				entityColumn.IsFixed = true;
 			}
-			else if ((serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Text) ||
-					 (serverType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Text) ||
-					 (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Text) ||
-					 (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.MediumText) ||
-					 (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.LongText) ||
-					 (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.TinyText))
+			else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)) ||
+					 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)) ||
+					 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)) ||
+					 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "MediumText", StringComparison.OrdinalIgnoreCase)) ||
+					 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "LongText", StringComparison.OrdinalIgnoreCase)) ||
+					 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "TinyText", StringComparison.OrdinalIgnoreCase)))
 			{
 				entityColumn.IsFixed = false;
 			}
-			else if ((serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.VarBinary) ||
-					 (serverType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Bytea) ||
-					 (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.VarBinary))
+			else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "VarBinary", StringComparison.OrdinalIgnoreCase)) ||
+					 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "ByteA", StringComparison.OrdinalIgnoreCase)) ||
+					 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "VarBinary", StringComparison.OrdinalIgnoreCase)))
 			{
 				entityColumn.IsFixed = false;
 			}
-			else if ((serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.VarChar) ||
-					 (serverType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varchar) ||
-					 (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.VarChar))
+			else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "VarChar", StringComparison.OrdinalIgnoreCase)) ||
+					 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "VarChar", StringComparison.OrdinalIgnoreCase)) ||
+					 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "VarChar", StringComparison.OrdinalIgnoreCase)))
 			{
 				entityColumn.IsFixed = false;
 			}
-			else if (serverType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Timestamp)
+			else if (serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Timestamp", StringComparison.OrdinalIgnoreCase))
 			{
 				entityColumn.IsFixed = true;
 			}
@@ -2833,7 +2823,7 @@ select a.attname as columnname,
                     {
                         ColumnName = property.Name,
                         EntityName = property.Name,
-                        EntityType = dataType
+                        ModelDataType = dataType
                     };
 
                     if (memberAttribute != null)
@@ -2883,7 +2873,7 @@ select a.attname as columnname,
 						matchit = Regex.Match(memberAttribute.Value, "NativeDataType[ \t]*=[ \t]*\"(?<NativeDataType>[_a-zA-Z][_a-zA-Z0-9]*)\"");
 
                         if (matchit.Success)
-                            dbColumn.dbDataType = matchit.Groups["NativeDataType"].Value;
+                            dbColumn.DBDataType = matchit.Groups["NativeDataType"].Value;
 
 						matchit = Regex.Match(memberAttribute.Value, "Length[ \t]*=[ \t]*(?<Length>[0-9]+)");
 
@@ -2897,11 +2887,11 @@ select a.attname as columnname,
 					}
 
 					if (entityModel.ServerType == DBServerType.MYSQL)
-                        dbColumn.DataType = DBHelper.ConvertMySqlDataType(dbColumn.dbDataType);
+                        dbColumn.ModelDataType = DBHelper.ConvertMySqlDataType(dbColumn.DBDataType);
                     else if (entityModel.ServerType == DBServerType.POSTGRESQL)
-                        dbColumn.DataType = DBHelper.ConvertPostgresqlDataType(dbColumn.dbDataType);
+                        dbColumn.ModelDataType = DBHelper.ConvertPostgresqlDataType(dbColumn.DBDataType);
                     else if (entityModel.ServerType == DBServerType.SQLSERVER)
-                        dbColumn.DataType = DBHelper.ConvertSqlServerDataType(dbColumn.dbDataType);
+                        dbColumn.ModelDataType = DBHelper.ConvertSqlServerDataType(dbColumn.DBDataType);
 
                     columns.Add(dbColumn);
                 }
@@ -2969,7 +2959,7 @@ select a.attname as columnname,
 											var dbColumn = new DBColumn
 											{
 												ColumnName = property.Name,
-												DataType = dataType,
+												ModelDataType = dataType,
 												IsPrimaryKey = string.Equals(property.Name, "href", StringComparison.OrdinalIgnoreCase)
 											};
 
@@ -3021,7 +3011,7 @@ select a.attname as columnname,
 												var dbColumn = new DBColumn
 												{
 													ColumnName = property.Name,
-													DataType = dataType
+													ModelDataType = dataType
 												};
 
 												columns.Add(dbColumn);

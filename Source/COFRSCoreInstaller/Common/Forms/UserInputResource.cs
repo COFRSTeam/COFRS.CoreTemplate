@@ -409,9 +409,9 @@ select s.name, t.name
 
 					foreach ( var column in entityModel.Columns)
                     {
-						if ( column.DataType != null && column.DataType.Equals(NpgsqlDbType.Unknown))
+						if ( column.ModelDataType != null && column.ModelDataType.Equals(NpgsqlDbType.Unknown))
                         {
-							var entityType = column.EntityType;
+							var entityType = column.ModelDataType;
 							var childEntityModel = EntityMap.Maps.FirstOrDefault(ent =>
 							   string.Equals(ent.ClassName, entityType, StringComparison.OrdinalIgnoreCase));
 
@@ -467,16 +467,16 @@ select s.name, t.name
                     {
 						if (entityModel.Columns[0].IsPrimaryKey )
                         {
-							if (string.Equals(entityModel.Columns[0].EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-								string.Equals(entityModel.Columns[0].EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-								string.Equals(entityModel.Columns[0].EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-								string.Equals(entityModel.Columns[0].EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-								string.Equals(entityModel.Columns[0].EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-								string.Equals(entityModel.Columns[0].EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-								string.Equals(entityModel.Columns[0].EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-								string.Equals(entityModel.Columns[0].EntityType, "ulong", StringComparison.OrdinalIgnoreCase))
+							if (string.Equals(entityModel.Columns[0].ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase))
 							{
-								if (string.Equals(entityModel.Columns[1].EntityType, "string", StringComparison.OrdinalIgnoreCase))
+								if (string.Equals(entityModel.Columns[1].ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
 								{
 									_GenerateAsEnum.Enabled = true;
 									_GenerateAsEnum.Show();
