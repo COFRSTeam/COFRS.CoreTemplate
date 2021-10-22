@@ -324,14 +324,7 @@ namespace COFRS.Template
 				else
 					results.Append(", ");
 
-				string dataType = "Unrecognized";
-
-				if (serverType == DBServerType.POSTGRESQL)
-					dataType = DBHelper.GetNonNullablePostgresqlDataType(entityColumn);
-				else if (serverType == DBServerType.MYSQL)
-					dataType = DBHelper.GetNonNullableMySqlDataType(entityColumn);
-				else if (serverType == DBServerType.SQLSERVER)
-					dataType = DBHelper.GetNonNullableSqlServerDataType(entityColumn);
+				string dataType = entityColumn.ModelDataType;
 
 				results.Append($"{dataType} {entityColumn.EntityName}");
 			}

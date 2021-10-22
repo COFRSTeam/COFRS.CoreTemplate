@@ -83,7 +83,7 @@ namespace COFRS.Template.Common.Forms
         {
             foreach (var column in source.Columns)
             {
-                var resourceModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, column.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                var resourceModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                 if (resourceModel != null && resourceModel.ResourceType != ResourceType.Enum)
                 {
@@ -109,7 +109,7 @@ namespace COFRS.Template.Common.Forms
         {
             foreach (var column in source.Columns)
             {
-                var entityModel = EntityModels.FirstOrDefault(r => string.Equals(r.ClassName, column.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                var entityModel = EntityModels.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                 if (entityModel != null && entityModel.ElementType != ElementType.Enum)
                 {
@@ -166,12 +166,7 @@ namespace COFRS.Template.Common.Forms
                     string dataType = "Unknown";
 
                     //  We're going to need that datatype. Get it here.
-                    if (ResourceModel.EntityModel.ServerType == DBServerType.MYSQL)
-                        dataType = DBHelper.GetNonNullableMySqlDataType(entityMember);
-                    else if (ResourceModel.EntityModel.ServerType == DBServerType.POSTGRESQL)
-                        dataType = DBHelper.GetNonNullablePostgresqlDataType(entityMember);
-                    else if (ResourceModel.EntityModel.ServerType == DBServerType.SQLSERVER)
-                        dataType = DBHelper.GetNonNullableSqlServerDataType(entityMember);
+                    dataType = entityMember.ModelDataType;
 
                     //  We need the list of all the primary keys in the entity model, so that we know the
                     //  position of this member.
@@ -251,17 +246,10 @@ namespace COFRS.Template.Common.Forms
                         //  in a foreign table, or it is an enumeration. If it is a reference to a primary key in a 
                         //  foreign table, then it will be a Uri.
 
-                        if (string.Equals(resourceMember.DataType.ToString(), "uri", StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(resourceMember.ModelDataType.ToString(), "uri", StringComparison.OrdinalIgnoreCase))
                         {
                             //  This is an href. First, get the data type.
-                            string dataType = "Unknown";
-
-                            if (ResourceModel.EntityModel.ServerType == DBServerType.MYSQL)
-                                dataType = DBHelper.GetNonNullableMySqlDataType(entityMember);
-                            else if (ResourceModel.EntityModel.ServerType == DBServerType.POSTGRESQL)
-                                dataType = DBHelper.GetNonNullablePostgresqlDataType(entityMember);
-                            else if (ResourceModel.EntityModel.ServerType == DBServerType.SQLSERVER)
-                                dataType = DBHelper.GetNonNullableSqlServerDataType(entityMember);
+                            string dataType = entityMember.ModelDataType;
 
                             //  Now, we need the list of entity members that correspond to this resource member.
                             //  To get that, we need to look at the resource mapping.
@@ -305,7 +293,7 @@ namespace COFRS.Template.Common.Forms
                             //  find it in our resource models list.
 
                             var referenceModel = ResourceModels.FirstOrDefault(r =>
-                                            string.Equals(r.ClassName, resourceMember.DataType.ToString(), StringComparison.Ordinal));
+                                            string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
 
                             if ( referenceModel != null )
                             {
@@ -319,14 +307,7 @@ namespace COFRS.Template.Common.Forms
                                     //  is not the proper mapping.
                                     if (foreignKeys.Count() == 1)
                                     {
-                                        string dataType = "Unknown";
-
-                                        if (ResourceModel.EntityModel.ServerType == DBServerType.MYSQL)
-                                            dataType = DBHelper.GetNonNullableMySqlDataType(entityMember);
-                                        else if (ResourceModel.EntityModel.ServerType == DBServerType.POSTGRESQL)
-                                            dataType = DBHelper.GetNonNullablePostgresqlDataType(entityMember);
-                                        else if (ResourceModel.EntityModel.ServerType == DBServerType.SQLSERVER)
-                                            dataType = DBHelper.GetNonNullableSqlServerDataType(entityMember);
+                                        string dataType = entityMember.ModelDataType;
 
                                         var formula = $"Convert.ChangeType(source.{resourceMember.ColumnName}, source.{resourceMember.ColumnName}.GetTypeCode())";
                                         dataRow.Cells[1].Value = formula.ToString();
@@ -372,13 +353,13 @@ namespace COFRS.Template.Common.Forms
 
                                     if (parentColumn != null)
                                     {
-                                        if (string.Equals(parentColumn.DataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
+                                        if (string.Equals(parentColumn.ModelDataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
                                         {
                                             NullValue = "string.Empty";
                                         }
                                         else
                                         {
-                                            var theDataType = Type.GetType(parentColumn.DataType.ToString());
+                                            var theDataType = Type.GetType(parentColumn.ModelDataType.ToString());
 
                                             if (theDataType != null)
                                             {
@@ -428,7 +409,7 @@ namespace COFRS.Template.Common.Forms
                                 StringBuilder mc = new StringBuilder();
 
                                 resourceMember = resourceModel.Columns.FirstOrDefault(c =>
-                                    string.Equals(c.DataType.ToString(), rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
+                                    string.Equals(c.ModelDataType.ToString(), rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
 
                                 MapResourceDestinationFromSource(entityMember, dataRow, resourceMember, ref unmappedColumns);
                             }
@@ -484,7 +465,7 @@ namespace COFRS.Template.Common.Forms
                     //  A foreign key is commonly represented in one of two forms. Either it is a hypertext reference
                     //  (an href), in which case the resource member should be a Uri, or it is an enum.
 
-                    if (string.Equals(resourceMember.DataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(resourceMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
                     {
                         var nnn = new NameNormalizer(resourceMember.ColumnName);
                         var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey &&
@@ -513,7 +494,7 @@ namespace COFRS.Template.Common.Forms
                         //  This is probably an Enum. If it is, we should be able to find it in the list of 
                         //  resource models.
                         var referenceModel = ResourceModels.FirstOrDefault(r =>
-                                string.Equals(r.ClassName, resourceMember.DataType.ToString(), StringComparison.Ordinal));
+                                string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
 
                         if (referenceModel != null)
                         {
@@ -552,7 +533,7 @@ namespace COFRS.Template.Common.Forms
                     else
                     {
                         //  Is this resource member a class?
-                        var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, resourceMember.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                        var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                         if (model != null)
                         {
@@ -717,7 +698,7 @@ namespace COFRS.Template.Common.Forms
 
                 if (column != null)
                 {
-                    result = ResourceModels.FirstOrDefault(p => string.Equals(p.ClassName, column.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                    result = ResourceModels.FirstOrDefault(p => string.Equals(p.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
                 }
             }
 
@@ -749,7 +730,7 @@ namespace COFRS.Template.Common.Forms
                 }
                 else
                 {
-                    var childModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                    var childModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                     if (model != null)
                     {
@@ -784,7 +765,7 @@ namespace COFRS.Template.Common.Forms
                 }
                 else
                 {
-                    var childModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                    var childModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                     if (model != null)
                     {
@@ -798,9 +779,9 @@ namespace COFRS.Template.Common.Forms
         private void MapEntityDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
-            if (string.Equals(destinationMember.DataType.ToString(), sourceMember.EntityType.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
@@ -810,20 +791,20 @@ namespace COFRS.Template.Common.Forms
             {
                 if (model.ResourceType == ResourceType.Enum)
                 {
-                    if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase))
                     {
                         dataRow.Cells[1].Value = $"({model.ClassName}) source.{sourceMember.ColumnName}";
                         dataRow.Cells[3].Value = sourceMember.ColumnName;
                         unmappedColumns.Remove(sourceMember);
                     }
-                    else if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
                     {
                         dataRow.Cells[1].Value = $"Enum.Parse<{model.ClassName}>(source.{sourceMember.ColumnName})";
                         dataRow.Cells[3].Value = sourceMember.ColumnName;
@@ -839,7 +820,7 @@ namespace COFRS.Template.Common.Forms
                 }
                 else
                 {
-                    if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
                     {
                         if (ContainsParseFunction(model))
                         {
@@ -864,133 +845,133 @@ namespace COFRS.Template.Common.Forms
                     }
                 }
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "byte", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToByte(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "sbyte", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToSByte(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "short", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "short", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToShort(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "ushort", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToUShort(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "int", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "int", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToInt(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "uint", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToUInt(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "long", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "long", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToLong(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "ulong", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToULong(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "decimal", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToDecimal(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "float", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "float", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToFloat(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "double", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "double", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToDouble(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "bool", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToBoolean(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "char", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "char", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToChar(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "DateTime", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToDateTime(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToDateTimeOffset(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToTimeSpan(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToString(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "byte[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte[]", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToByteArray(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToEnumerableBytes(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "List<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "List<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToByteList(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "Image", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "Image", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToImage(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.DataType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToGuid(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
@@ -998,7 +979,7 @@ namespace COFRS.Template.Common.Forms
             }
             else
             {
-                dataRow.Cells[1].Value = $"({destinationMember.DataType}) AFunc(source.{sourceMember.ColumnName})";
+                dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
                 dataRow.Cells[1].Style.ForeColor = Color.Red;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
@@ -1007,9 +988,9 @@ namespace COFRS.Template.Common.Forms
         private void MapResourceDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.DataType.ToString(), StringComparison.OrdinalIgnoreCase));
+            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
-            if (string.Equals(destinationMember.EntityType.ToString(), sourceMember.DataType.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
@@ -1019,20 +1000,20 @@ namespace COFRS.Template.Common.Forms
             {
                 if (model.ResourceType == ResourceType.Enum)
                 {
-                    if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase))
                     {
                         dataRow.Cells[1].Value = $"({model.ClassName}) source.{sourceMember.ColumnName}";
                         dataRow.Cells[3].Value = sourceMember.ColumnName;
                         unmappedColumns.Remove(sourceMember);
                     }
-                    else if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
                     {
                         dataRow.Cells[1].Value = $"Enum.Parse<{model.ClassName}>(source.{sourceMember.ColumnName})";
                         dataRow.Cells[3].Value = sourceMember.ColumnName;
@@ -1048,7 +1029,7 @@ namespace COFRS.Template.Common.Forms
                 }
                 else
                 {
-                    if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
                     {
                         if (ContainsParseFunction(model))
                         {
@@ -1073,133 +1054,133 @@ namespace COFRS.Template.Common.Forms
                     }
                 }
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "byte", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToByte(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "sbyte", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToSByte(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "short", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "short", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToShort(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "ushort", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToUShort(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "int", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "int", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToInt(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "uint", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToUInt(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "long", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "long", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToLong(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "ulong", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToULong(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "decimal", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToDecimal(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "float", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "float", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToFloat(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "double", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "double", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToDouble(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "bool", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToBoolean(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "char", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "char", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToChar(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "DateTime", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToDateTime(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToDateTimeOffset(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToTimeSpan(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToString(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "byte[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte[]", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToByteArray(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToEnumerableBytes(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "List<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "List<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToByteList(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "Image", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "Image", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToImage(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
-            else if (string.Equals(destinationMember.EntityType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
             {
                 ConvertSourceToGuid(dataRow, sourceMember);
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
@@ -1207,7 +1188,7 @@ namespace COFRS.Template.Common.Forms
             }
             else
             {
-                dataRow.Cells[1].Value = $"({destinationMember.DataType}) AFunc(source.{sourceMember.ColumnName})";
+                dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
                 dataRow.Cells[1].Style.ForeColor = Color.Red;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
@@ -1221,7 +1202,7 @@ namespace COFRS.Template.Common.Forms
         /// <param name="sourceMember">The <see cref="DBColumn>"/> source member to convert.</param>
         private static void ConvertSourceToGuid(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Guid.Parse(source.{sourceMember.ColumnName})";
             }
@@ -1239,19 +1220,19 @@ namespace COFRS.Template.Common.Forms
         /// <param name="sourceMember">The <see cref="DBColumn>"/> source member to convert.</param>
         private static void ConvertSourceToImage(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"ImageEx.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"ImageEx.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"ImageEx.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "List<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "List<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"ImageEx.Parse(source.{sourceMember.ColumnName}.ToArray())";
             }
@@ -1264,23 +1245,23 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToByteList(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.FromBase64String(source.{sourceMember.ColumnName}.ToList())";
             }
-            else if (string.Equals(sourceMember.EntityType, "char[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.FromBase64CharArray(source.{sourceMember.ColumnName},0,source.{sourceMember.ColumnName}.Length).ToList()";
             }
-            else if (string.Equals(sourceMember.EntityType, "Image", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? null : source.{sourceMember.ColumnName}.GetBytes().ToList()";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToList()";
             }
-            else if (string.Equals(sourceMember.EntityType, "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToList()";
             }
@@ -1293,23 +1274,23 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToEnumerableBytes(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.FromBase64String(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "char[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.FromBase64CharArray(source.{sourceMember.ColumnName},0,source.{sourceMember.ColumnName}.Length)";
             }
-            else if (string.Equals(sourceMember.EntityType, "Image", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? null : ImageEx.Parse(source.{sourceMember.ColumnName}.GetBytes())";
             }
-            else if (string.Equals(sourceMember.EntityType, "List<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "List<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToArray()";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
             }
@@ -1322,23 +1303,23 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToByteArray(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.FromBase64String(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "char[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.FromBase64CharArray(source.{sourceMember.ColumnName},0,source.{sourceMember.ColumnName}.Length)";
             }
-            else if (string.Equals(sourceMember.EntityType, "Image", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? null : source.{sourceMember.ColumnName}.GetBytes()";
             }
-            else if (string.Equals(sourceMember.EntityType, "List<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "List<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToArray()";
             }
-            else if (string.Equals(sourceMember.EntityType, "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToArray()";
             }
@@ -1351,85 +1332,85 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToString(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
             }
-            else if (string.Equals(sourceMember.EntityType, "Guid", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "Guid", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString()";
             }
-            else if (string.Equals(sourceMember.EntityType, "Guid?", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "Guid?", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue() ? source.{sourceMember.ColumnName}.ToString() : string.Empty";
             }
-            else if (string.Equals(sourceMember.EntityType, "char[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? string.Empty : new string(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte[]", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? string.Empty : Convert.ToBase64String(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "Image", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? string.Empty : Convert.ToBase64String(source.{sourceMember.ColumnName}.GetBytes())";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString()";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float?", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double?", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float?", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue ? source.{sourceMember.ColumnName}.Value.ToString() : string.Empty";
             }
-            else if (string.Equals(sourceMember.EntityType, "DateTime", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "DateTime", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString(\"o\", CultureInfo.CurrentCulture)";
             }
-            else if (string.Equals(sourceMember.EntityType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString(\"o\", CultureInfo.CurrentCulture)";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString(@\"dd\\.hh\\:mm\\:ss\\.fffffff\")";
             }
-            else if (string.Equals(sourceMember.EntityType, "DateTime?", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "DateTime?", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue ? source.{sourceMember.ColumnName}.ToString(\"o\", CultureInfo.CurrentCulture) : string.Empty";
             }
-            else if (string.Equals(sourceMember.EntityType, "DateTimeOffset?", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "DateTimeOffset?", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue ? source.{sourceMember.ColumnName}.ToString(\"o\", CultureInfo.CurrentCulture) : string.Empty";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan?", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan?", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue ? source.{sourceMember.ColumnName}.ToString(@\"dd\\.hh\\:mm\\:ss\\.fffffff\") : string.Empty";
             }
-            else if (string.Equals(sourceMember.EntityType, "BitArray", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "BitArray", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? string.Empty : source.{sourceMember.ColumnName}.ToString()";
             }
@@ -1441,28 +1422,28 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToTimeSpan(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"TimeSpan.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"TimeSpan.FromMilliseconds(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"new TimeSpan(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"TimeSpan.FromMilliseconds((double) source.{sourceMember.ColumnName})";
             }
@@ -1475,26 +1456,26 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToDateTimeOffset(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"DateTimeOffset.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"DateTimeOffset.FromUnixTimeMilliseconds(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"(DateTimeOffset) Convert.ToDateTime(source.{sourceMember.ColumnName})";
             }
@@ -1507,26 +1488,26 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToDateTime(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"DateTime.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"DateTime.FromBinary(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToDateTime(source.{sourceMember.ColumnName})";
             }
@@ -1539,23 +1520,23 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToChar(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"char.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToChar(source.{sourceMember.ColumnName})";
             }
@@ -1568,23 +1549,23 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToBoolean(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"bool.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToBoolean(source.{sourceMember.ColumnName})";
             }
@@ -1597,27 +1578,27 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToDouble(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"double.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.TotalMilliseconds";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToDouble(source.{sourceMember.ColumnName})";
             }
@@ -1630,23 +1611,23 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToFloat(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"float.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToSingle(source.{sourceMember.ColumnName})";
             }
@@ -1659,27 +1640,27 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToDecimal(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"decimal.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToDecimal(source.{sourceMember.ColumnName}.TotalMilliseconds)";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToDecimal(source.{sourceMember.ColumnName})";
             }
@@ -1692,27 +1673,27 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToULong(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"ulong.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToUInt64(source.{sourceMember.ColumnName}.TotalMilliseconds)";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToUInt64(source.{sourceMember.ColumnName})";
             }
@@ -1725,35 +1706,35 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToLong(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"long.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "DateTime", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "DateTime", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToBinary()";
             }
-            else if (string.Equals(sourceMember.EntityType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToUnixTimeMilliseconds()";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.Ticks";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToInt64(source.{sourceMember.ColumnName})";
             }
@@ -1766,27 +1747,27 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToUInt(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"uint.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToUInt32(source.{sourceMember.ColumnName}.TotalMilliseconds)";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToUInt32(source.{sourceMember.ColumnName})";
             }
@@ -1799,9 +1780,9 @@ namespace COFRS.Template.Common.Forms
 
         private void ConvertSourceToInt(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (sourceMember.EntityType == null )
+            if (sourceMember.ModelDataType == null )
             {
-                var resourceModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, sourceMember.DataType.ToString(), StringComparison.Ordinal));
+                var resourceModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
 
                 if (resourceModel != null)
                 {
@@ -1817,7 +1798,7 @@ namespace COFRS.Template.Common.Forms
                 }
                 else
                 { 
-                    var entityModel = EntityModels.FirstOrDefault(e => string.Equals(e.ClassName, sourceMember.DataType.ToString(), StringComparison.Ordinal));
+                    var entityModel = EntityModels.FirstOrDefault(e => string.Equals(e.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
 
                     if (entityModel != null)
                     {
@@ -1833,27 +1814,27 @@ namespace COFRS.Template.Common.Forms
                     }
                 }
             }
-            else if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"int.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToInt32(source.{sourceMember.ColumnName}.TotalMilliseconds)";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToInt32(source.{sourceMember.ColumnName})";
             }
@@ -1866,27 +1847,27 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToUShort(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"ushort.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToUInt16(source.{sourceMember.ColumnName}.TotalMilliseconds)";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToUInt16(source.{sourceMember.ColumnName})";
             }
@@ -1899,27 +1880,27 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToShort(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"short.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToInt16(source.{sourceMember.ColumnName}.TotalMilliseconds)";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToInt16(source.{sourceMember.ColumnName})";
             }
@@ -1932,27 +1913,27 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToSByte(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"sbyte.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToSByte(source.{sourceMember.ColumnName}.TotalMilliseconds)";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToSByte(source.{sourceMember.ColumnName})";
             }
@@ -1965,27 +1946,27 @@ namespace COFRS.Template.Common.Forms
 
         private static void ConvertSourceToByte(DataGridViewRow dataRow, DBColumn sourceMember)
         {
-            if (string.Equals(sourceMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"byte.Parse(source.{sourceMember.ColumnName})";
             }
-            else if (string.Equals(sourceMember.EntityType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToByte(source.{sourceMember.ColumnName}.TotalMilliseconds)";
             }
-            else if (string.Equals(sourceMember.EntityType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.EntityType, "object", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
             {
                 dataRow.Cells[1].Value = $"Convert.ToByte(source.{sourceMember.ColumnName})";
             }

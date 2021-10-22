@@ -18,69 +18,69 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 		public static string GetPostgresqlExampleValue(DBColumn column)
         {
-			if ( string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
+			if ( string.Equals(column.DBDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
             {
 				if (column.Length == 1)
 					return "a";
 				else
 					return "string";
             }
-			else if (string.Equals(column.dbDataType, "char", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "char", StringComparison.OrdinalIgnoreCase))
 			{
 				if (column.Length == 1)
 					return "a";
 				else
 					return "string";
 			}
-			else if (string.Equals(column.dbDataType, "int2", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "int4", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "int8", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "oid", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "xid", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "cid", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "int2", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "int4", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "int8", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "oid", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "xid", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "cid", StringComparison.OrdinalIgnoreCase))
 			{
 				return "123";
 			}
-			else if (string.Equals(column.dbDataType, "text", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "varchar", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "name", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "citext", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "text", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "varchar", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "name", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "citext", StringComparison.OrdinalIgnoreCase))
 			{
 				return "string";
 			}
-			else if (string.Equals(column.dbDataType, "bool", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "bool", StringComparison.OrdinalIgnoreCase))
 			{
 				return "true";
 			}
-			else if (string.Equals(column.dbDataType, "date", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "date", StringComparison.OrdinalIgnoreCase))
 			{
 				return DateTime.Now.ToString("yyyy-MM-dd");
 			}
-			else if (string.Equals(column.dbDataType, "timestamp", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "timestamp", StringComparison.OrdinalIgnoreCase))
 			{
 				return DateTime.Now.ToString("s");
 			}
-			else if (string.Equals(column.dbDataType, "timestamptz", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "timestamptz", StringComparison.OrdinalIgnoreCase))
 			{
 				return DateTimeOffset.Now.ToString("yyyy-MM-ddThh:mm:ss.fffffzzz");
 			}
-			else if (string.Equals(column.dbDataType, "float4", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "float8", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "numeric", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "money", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "float4", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "float8", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "numeric", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "money", StringComparison.OrdinalIgnoreCase))
 			{
 				return "123.45";
 			}
-			else if (string.Equals(column.dbDataType, "bytea", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "varbit", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "bytea", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "varbit", StringComparison.OrdinalIgnoreCase))
 			{
 				return "VGhpcyBpcyBhbiBleGFtcGxlIHZhbHVl";
 			}
-			else if (string.Equals(column.dbDataType, "uuid", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "uuid", StringComparison.OrdinalIgnoreCase))
 			{
 				return Guid.NewGuid().ToString();
 			}
-			else if (string.Equals(column.dbDataType, "inet", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "inet", StringComparison.OrdinalIgnoreCase))
 			{
 				return "184.241.2.54";
 			}
@@ -90,71 +90,71 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 		public static string GetMySqlExampleValue(DBColumn column)
 		{
-			if (string.Equals(column.dbDataType, "text", StringComparison.OrdinalIgnoreCase) ||
-				string.Equals(column.dbDataType, "varchar", StringComparison.OrdinalIgnoreCase) ||
-				string.Equals(column.dbDataType, "sysname", StringComparison.OrdinalIgnoreCase) ||
-				string.Equals(column.dbDataType, "nvarchar", StringComparison.OrdinalIgnoreCase))
+			if (string.Equals(column.DBDataType, "text", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.DBDataType, "varchar", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.DBDataType, "sysname", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.DBDataType, "nvarchar", StringComparison.OrdinalIgnoreCase))
 			{
 				return "string";
 			}
-			if (string.Equals(column.dbDataType, "year", StringComparison.OrdinalIgnoreCase))
+			if (string.Equals(column.DBDataType, "year", StringComparison.OrdinalIgnoreCase))
 			{
 				return DateTime.Now.ToString("yyyy");
 			}
-			else if (string.Equals(column.dbDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-			         string.Equals(column.dbDataType, "nchar", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "char", StringComparison.OrdinalIgnoreCase) ||
+			         string.Equals(column.DBDataType, "nchar", StringComparison.OrdinalIgnoreCase))
 					{
 						if (column.Length == 1)
 					return "a";
 				else
 					return "string";
 			}
-			else if (string.Equals(column.dbDataType, "tinyint", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "tinyint(1)", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "tinyint unsigned", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "int unsigned", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "smallint", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "smallint unsigned", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "mediumint", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "mediumint unsigned", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "bigint", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "bigint unsigned", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "tinyint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "tinyint(1)", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "tinyint unsigned", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "int unsigned", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "smallint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "smallint unsigned", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "mediumint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "mediumint unsigned", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "bigint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "bigint unsigned", StringComparison.OrdinalIgnoreCase))
 			{
 				return "123";
 			}
-			else if (string.Equals(column.dbDataType, "bit", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "bit", StringComparison.OrdinalIgnoreCase))
 			{
 				return "true";
 			}
-			else if (string.Equals(column.dbDataType, "date", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "date", StringComparison.OrdinalIgnoreCase))
 			{
 				return DateTime.Now.ToString("yyyy-MM-dd");
 			}
-			else if (string.Equals(column.dbDataType, "datetime", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "datetime", StringComparison.OrdinalIgnoreCase))
 			{
 				return DateTimeOffset.Now.ToString("yyyy-MM-ddThh:mm:ss.fffffzzz");
 			}
-			else if (string.Equals(column.dbDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "float", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "float", StringComparison.OrdinalIgnoreCase))
 			{
 				return "123.45";
 			}
-			else if (string.Equals(column.dbDataType, "binary", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "varbinary", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "blob", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "tinyblob", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "mediumblob", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "longblob", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "binary", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "varbinary", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "blob", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "tinyblob", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "mediumblob", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "longblob", StringComparison.OrdinalIgnoreCase))
 			{
 				return "VGhpcyBpcyBhbiBleGFtcGxlIHZhbHVl";
 			}
-			else if (string.Equals(column.dbDataType, "uuid", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "uuid", StringComparison.OrdinalIgnoreCase))
 			{
 				return Guid.NewGuid().ToString();
 			}
-			else if (string.Equals(column.dbDataType, "inet", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "inet", StringComparison.OrdinalIgnoreCase))
 			{
 				return "184.241.2.54";
 			}
@@ -163,58 +163,58 @@ namespace COFRS.Template.Common.ServiceUtilities
 		}
 		public static string GetSqlServerExampleValue(DBColumn column)
 		{
-			if (string.Equals(column.dbDataType, "text", StringComparison.OrdinalIgnoreCase) ||
-				string.Equals(column.dbDataType, "ntext", StringComparison.OrdinalIgnoreCase) ||
-				string.Equals(column.dbDataType, "varchar", StringComparison.OrdinalIgnoreCase) ||
-				string.Equals(column.dbDataType, "nvarchar", StringComparison.OrdinalIgnoreCase) )
+			if (string.Equals(column.DBDataType, "text", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.DBDataType, "ntext", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.DBDataType, "varchar", StringComparison.OrdinalIgnoreCase) ||
+				string.Equals(column.DBDataType, "nvarchar", StringComparison.OrdinalIgnoreCase) )
 			{
 				return "string";
 			}
-			else if (string.Equals(column.dbDataType, "char", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "char", StringComparison.OrdinalIgnoreCase))
 			{
 				if (column.Length == 1)
 					return "a";
 				else
 					return "string";
 			}
-			else if (string.Equals(column.dbDataType, "tinyint", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "smallint)", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "int)", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "bigint", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "tinyint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "smallint)", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "int)", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "bigint", StringComparison.OrdinalIgnoreCase))
 			{
 				return "123";
 			}
-			else if (string.Equals(column.dbDataType, "bit", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "bit", StringComparison.OrdinalIgnoreCase))
 			{
 				return "true";
 			}
-			else if (string.Equals(column.dbDataType, "date", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "date", StringComparison.OrdinalIgnoreCase))
 			{
 				return DateTime.Now.ToString("yyyy-MM-dd");
 			}
-			else if (string.Equals(column.dbDataType, "datetime", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "datetime2", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "smalldatetime", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "datetimeoffset", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "datetime", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "datetime2", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "smalldatetime", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "datetimeoffset", StringComparison.OrdinalIgnoreCase))
 			{
 				return DateTimeOffset.Now.ToString("yyyy-MM-ddThh:mm:ss.fffffzzz");
 			}
-			else if (string.Equals(column.dbDataType, "real", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "money", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "numeric", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "smallmoney", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "float", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "real", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "money", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "double", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "numeric", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "smallmoney", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "float", StringComparison.OrdinalIgnoreCase))
 			{
 				return "123.45";
 			}
-			else if (string.Equals(column.dbDataType, "binary", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.dbDataType, "varbinary", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "binary", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "varbinary", StringComparison.OrdinalIgnoreCase))
 			{
 				return "VGhpcyBpcyBhbiBleGFtcGxlIHZhbHVl";
 			}
-			else if (string.Equals(column.dbDataType, "uniqueidentifier", StringComparison.OrdinalIgnoreCase))
+			else if (string.Equals(column.DBDataType, "uniqueidentifier", StringComparison.OrdinalIgnoreCase))
 			{
 				return Guid.NewGuid().ToString();
 			}
@@ -228,647 +228,450 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// </summary>
 		/// <param name="dataType"></param>
 		/// <returns></returns>
-		public static NpgsqlDbType ConvertPostgresqlDataType(string dataType)
+		public static string ConvertPostgresqlDataType(string dataType)
 		{
 			if (string.Equals(dataType, "bpchar", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Char;
+				return "string";
 			else if (string.Equals(dataType, "_bpchar", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Char;
+				return "string[]";
 			else if (string.Equals(dataType, "_char", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Char;
+				return "char[]";
 			else if (string.Equals(dataType, "char", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Char;
+				return "char";
 			else if (string.Equals(dataType, "int2", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Smallint;
+				return "short";
 			else if (string.Equals(dataType, "_int2", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Smallint;
+				return "short[]";
 			else if (string.Equals(dataType, "int4", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Integer;
+				return "int";
 			else if (string.Equals(dataType, "_int4", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Integer;
+				return "int[]";
 			else if (string.Equals(dataType, "oid", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Oid;
+				return "uint";
 			else if (string.Equals(dataType, "_oid", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Oid;
+				return "uint[]";
 			else if (string.Equals(dataType, "xid", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Xid;
+				return "uint";
 			else if (string.Equals(dataType, "_xid", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Xid;
+				return "uint[]";
 			else if (string.Equals(dataType, "cid", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Cid;
+				return "uint";
 			else if (string.Equals(dataType, "_cid", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Cid;
+				return "uint[]";
 			else if (string.Equals(dataType, "point", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Point;
+				return "NpgsqlPoint";
 			else if (string.Equals(dataType, "_point", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Point;
+				return "NpgsqlPoint[]";
 			else if (string.Equals(dataType, "lseg", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.LSeg;
+				return "NpgsqlLSeg";
 			else if (string.Equals(dataType, "_lseg", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.LSeg;
+				return "NpgsqlLSeg[]";
 			else if (string.Equals(dataType, "line", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Line;
+				return "NpgsqlLine";
 			else if (string.Equals(dataType, "_line", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Line;
+				return "NpgsqlLine[]";
 			else if (string.Equals(dataType, "circle", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Circle;
+				return "NpgsqlCircle";
 			else if (string.Equals(dataType, "_circle", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Circle;
+				return "NpgsqlCircle[]";
 			else if (string.Equals(dataType, "path", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Path;
+				return "NpgsqlPath";
 			else if (string.Equals(dataType, "_path", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Path;
+				return "NpgsqlPath[]";
 			else if (string.Equals(dataType, "polygon", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Polygon;
+				return "NpgsqlPolygon";
 			else if (string.Equals(dataType, "_polygon", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Polygon;
+				return "NpgsqlPolygon[]";
 			else if (string.Equals(dataType, "box", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Box;
+				return "NpgsqlBox";
 			else if (string.Equals(dataType, "_box", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Box;
+				return "NpgsqlBox[]";
 			else if (string.Equals(dataType, "int8", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Bigint;
+				return "long";
 			else if (string.Equals(dataType, "_int8", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Bigint;
+				return "long[]";
 			else if (string.Equals(dataType, "varchar", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Varchar;
+				return "string";
 			else if (string.Equals(dataType, "_varchar", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Varchar;
+				return "string[]";
 			else if (string.Equals(dataType, "text", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Text;
+				return "string";
 			else if (string.Equals(dataType, "_text", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Text;
+				return "string[]";
 			else if (string.Equals(dataType, "citext", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Citext;
+				return "string";
 			else if (string.Equals(dataType, "_citext", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Citext;
+				return "string[]";
 			else if (string.Equals(dataType, "name", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Name;
+				return "string";
 			else if (string.Equals(dataType, "_name", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Name;
+				return "string[]";
 			else if (string.Equals(dataType, "bit", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Bit;
+				return "BitArray";
 			else if (string.Equals(dataType, "_bit", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Bit;
+				return "BitArray";
 			else if (string.Equals(dataType, "varbit", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Varbit;
+				return "BitArray";
 			else if (string.Equals(dataType, "_varbit", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Varbit;
+				return "BitArray[][]";
 			else if (string.Equals(dataType, "bytea", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Bytea;
+				return "byte[]";
 			else if (string.Equals(dataType, "_bytea", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Bytea;
+				return "byte[][]";
 			else if (string.Equals(dataType, "bool", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Boolean;
+				return "bool";
 			else if (string.Equals(dataType, "_bool", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Boolean;
+				return "bool[]";
 			else if (string.Equals(dataType, "date", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Date;
+				return "DateTime";
 			else if (string.Equals(dataType, "_date", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Date;
+				return "DateTime[]";
 			else if (string.Equals(dataType, "timestamp", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Timestamp;
+				return "DateTime";
 			else if (string.Equals(dataType, "_timestamp", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Timestamp;
+				return "DateTime[]";
 			else if (string.Equals(dataType, "timestamptz", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.TimestampTz;
+				return "DateTimeOffset";
 			else if (string.Equals(dataType, "_timestamptz", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.TimestampTz;
+				return "DateTimeOffset[]";
 			else if (string.Equals(dataType, "timetz", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.TimeTz;
+				return "DateTimeOffset";
 			else if (string.Equals(dataType, "_timetz", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.TimeTz;
+				return "DateTimeOffset[]";
 			else if (string.Equals(dataType, "time", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Time;
+				return "TimeSpan";
 			else if (string.Equals(dataType, "_time", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Time;
+				return "TimeSpan[]";
 			else if (string.Equals(dataType, "interval", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Interval;
+				return "TimeSpan";
 			else if (string.Equals(dataType, "_interval", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Interval;
+				return "TimeSpan[]";
 			else if (string.Equals(dataType, "float8", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Double;
+				return "double";
 			else if (string.Equals(dataType, "_float8", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Double;
+				return "double[]";
 			else if (string.Equals(dataType, "float4", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Real;
+				return "single";
 			else if (string.Equals(dataType, "_float4", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Real;
+				return "single[]";
 			else if (string.Equals(dataType, "money", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Money;
+				return "decimal";
 			else if (string.Equals(dataType, "_money", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Money;
+				return "decimal[]";
 			else if (string.Equals(dataType, "numeric", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Numeric;
+				return "decimal";
 			else if (string.Equals(dataType, "_numeric", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Numeric;
+				return "decimal[]";
 			else if (string.Equals(dataType, "uuid", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Uuid;
+				return "Guid";
 			else if (string.Equals(dataType, "_uuid", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Uuid;
+				return "Guid[]";
 			else if (string.Equals(dataType, "json", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Json;
+				return "string";
 			else if (string.Equals(dataType, "_json", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Json;
+				return "string[]";
 			else if (string.Equals(dataType, "jsonb", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Jsonb;
+				return "string";
 			else if (string.Equals(dataType, "_jsonb", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Jsonb;
+				return "string[]";
 			else if (string.Equals(dataType, "jsonpath", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.JsonPath;
+				return "string";
 			else if (string.Equals(dataType, "_jsonpath", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.JsonPath;
+				return "string[]";
 			else if (string.Equals(dataType, "xml", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Xml;
+				return "string";
 			else if (string.Equals(dataType, "_xml", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Xml;
+				return "string[]";
 			else if (string.Equals(dataType, "inet", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Inet;
+				return "NpgsqlInet";
 			else if (string.Equals(dataType, "_inet", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Inet;
+				return "NpgsqlInet[]";
 			else if (string.Equals(dataType, "cidr", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Cidr;
+				return "NpgsqlInet";
 			else if (string.Equals(dataType, "_cidr", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.Cidr;
+				return "NpgsqlInet[]"; 
 			else if (string.Equals(dataType, "macaddr", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.MacAddr;
+				return "byte[]";
 			else if (string.Equals(dataType, "_macaddr", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.MacAddr;
+				return "byte[][]";
 			else if (string.Equals(dataType, "macaddr8", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.MacAddr8;
+				return "byte[]";
 			else if (string.Equals(dataType, "_macaddr8", StringComparison.OrdinalIgnoreCase))
-				return NpgsqlDbType.Array | NpgsqlDbType.MacAddr8;
+				return "byte[][]";
 
-			return NpgsqlDbType.Unknown;
+			return "";
 		}
 
-		public static MySqlDbType ConvertMySqlDataType(string dataType)
+		public static string ConvertMySqlDataType(string dataType)
 		{
 			if (string.Equals(dataType, "tinyint", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Byte;
+				return "sbyte";
 			else if (string.Equals(dataType, "tinyint(1)", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Byte;
+				return "sbyte";
 			else if (string.Equals(dataType, "tinyint unsigned", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.UByte;
+				return "byte";
 			else if (string.Equals(dataType, "smallint", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Int16;
+				return "short";
 			else if (string.Equals(dataType, "smallint unsigned", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.UInt16;
+				return "ushort";
 			else if (string.Equals(dataType, "mediumint", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Int24;
+				return "int";
 			else if (string.Equals(dataType, "mediumint unsigned", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.UInt24;
+				return "uint";
 			else if (string.Equals(dataType, "int", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Int32;
+				return "int";
 			else if (string.Equals(dataType, "int unsigned", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.UInt32;
+				return "uint";
 			else if (string.Equals(dataType, "bigint", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Int64;
+				return "long";
 			else if (string.Equals(dataType, "bigint unsigned", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.UInt64;
+				return "ulong";
 			else if (dataType.StartsWith("decimal", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Decimal;
+				return "decimal";
 			else if (string.Equals(dataType, "double", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Double;
+				return "double";
 			else if (string.Equals(dataType, "float", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Float;
+				return "float";
 			else if (dataType.StartsWith("char", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.String;
+				return "string";
 			else if (dataType.StartsWith("bit", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Bit;
+				return "bool";
 			else if (string.Equals(dataType, "text", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Text;
+				return "string";
 			else if (string.Equals(dataType, "tinytext", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.TinyText;
+				return "string";
 			else if (string.Equals(dataType, "mediumtext", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.MediumText;
+				return "string";
 			else if (string.Equals(dataType, "longtext", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.LongText;
+				return "string";
 			else if (dataType.StartsWith("varchar", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.VarChar;
+				return "string";
 			else if (string.Equals(dataType, "timestamp", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Timestamp;
+				return "DateTime";
 			else if (string.Equals(dataType, "datetime", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.DateTime;
+				return "DateTime";
 			else if (string.Equals(dataType, "year", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Year;
+				return "int";
 			else if (string.Equals(dataType, "date", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Date;
+				return "DateTime";
 			else if (string.Equals(dataType, "time", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Time;
+				return "TimeSpan";
 			else if (dataType.StartsWith("enum", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Enum;
+				return "Enum";
 			else if (dataType.StartsWith("set", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Set;
+				return "set";
 			else if (dataType.StartsWith("binary", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Binary;
+				return "byte[]";
 			else if (dataType.StartsWith("varbinary", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.VarBinary;
+				return "byte[]";
 			else if (dataType.StartsWith("tinyblob", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.TinyBlob;
+				return "byte[]";
 			else if (dataType.StartsWith("blob", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.Blob;
+				return "byte[]";
 			else if (dataType.StartsWith("mediumblob", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.MediumBlob;
+				return "byte[]";
 			else if (dataType.StartsWith("longblob", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.LongBlob;
+				return "byte[]";
 			else if (dataType.StartsWith("json", StringComparison.OrdinalIgnoreCase))
-				return MySqlDbType.JSON;
+				return "string";
 
 			throw new Exception($"Unrecognized data type: {dataType}");
 		}
 
-		public static SqlDbType ConvertSqlServerDataType(string dataType)
+		public static string ConvertSqlServerDataType(string dataType)
 		{
 			if (string.Equals(dataType, "image", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Image;
+				return "Image";
 			else if (string.Equals(dataType, "text", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Text;
+				return "string";
 			else if (string.Equals(dataType, "uniqueidentifier", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.UniqueIdentifier;
+				return "Guid";
 			else if (string.Equals(dataType, "date", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Date;
+				return "DateTime";
 			else if (string.Equals(dataType, "time", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Time;
+				return "TimeSpan";
 			else if (string.Equals(dataType, "datetime2", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.DateTime2;
+				return "DateTime";
 			else if (string.Equals(dataType, "datetimeoffset", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.DateTimeOffset;
+				return "DateTimeOffset";
 			else if (string.Equals(dataType, "tinyint", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.TinyInt;
+				return "sbyte";
 			else if (string.Equals(dataType, "smallint", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.SmallInt;
+				return "short";
 			else if (string.Equals(dataType, "int", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Int;
+				return "int";
 			else if (string.Equals(dataType, "smalldatetime", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.SmallDateTime;
+				return "DateTime";
 			else if (string.Equals(dataType, "real", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Real;
+				return "single";
 			else if (string.Equals(dataType, "money", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Money;
+				return "decimal";
 			else if (string.Equals(dataType, "datetime", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.DateTime;
+				return "DateTime";
 			else if (string.Equals(dataType, "float", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Float;
-			else if (string.Equals(dataType, "sql_variant", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Variant;
+				return "single";
 			else if (string.Equals(dataType, "ntext", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.NText;
+				return "string";
 			else if (string.Equals(dataType, "bit", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Bit;
+				return "bool";
 			else if (string.Equals(dataType, "decimal", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Decimal;
+				return "decimal";
 			else if (string.Equals(dataType, "numeric", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Decimal;
+				return "decimal";
 			else if (string.Equals(dataType, "smallmoney", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.SmallMoney;
+				return "decimal";
 			else if (string.Equals(dataType, "bigint", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.BigInt;
+				return "long";
 			else if (string.Equals(dataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.NVarChar;
+				return "string";
 			else if (string.Equals(dataType, "varbinary", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.VarBinary;
+				return "byte[]";
 			else if (string.Equals(dataType, "varchar", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.VarChar;
+				return "string";
 			else if (string.Equals(dataType, "binary", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Binary;
+				return "byte[]";
 			else if (string.Equals(dataType, "char", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Char;
+				return "char";
 			else if (string.Equals(dataType, "timestamp", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Timestamp;
+				return "byte[]";
 			else if (string.Equals(dataType, "nvarchar", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.NVarChar;
+				return "string";
 			else if (string.Equals(dataType, "nchar", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.NChar;
+				return "string";
 			else if (string.Equals(dataType, "xml", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Xml;
+				return "string";
 			else if (string.Equals(dataType, "sysname", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.NVarChar;
-			else if (string.Equals(dataType, "geography", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Variant;
-			else if (string.Equals(dataType, "geometry", StringComparison.OrdinalIgnoreCase))
-				return SqlDbType.Variant;
+				return "string";
 
 			throw new Exception($"Unrecognized data type: {dataType}");
-		}
-
-		public static string GetNonNullableSqlServerDataType(DBColumn column)
-		{
-			switch ((SqlDbType)column.DataType)
-			{
-				case SqlDbType.Bit:
-					return "bool";
-
-				case SqlDbType.TinyInt:
-					return "byte";
-
-				case SqlDbType.SmallInt:
-					return "short";
-
-				case SqlDbType.Int:
-					return "int";
-
-				case SqlDbType.BigInt:
-					return "long";
-
-				case SqlDbType.Real:
-					return "float";
-
-				case SqlDbType.Float:
-					return "double";
-
-				case SqlDbType.Decimal:
-				case SqlDbType.Money:
-				case SqlDbType.SmallMoney:
-					return "decimal";
-
-				case SqlDbType.Date:
-				case SqlDbType.DateTime:
-				case SqlDbType.DateTime2:
-				case SqlDbType.SmallDateTime:
-					return "DateTime";
-
-				case SqlDbType.DateTimeOffset:
-					return "DateTimeOffset";
-
-				case SqlDbType.NText:
-				case SqlDbType.NVarChar:
-				case SqlDbType.Text:
-				case SqlDbType.VarChar:
-					return "string";
-
-				case SqlDbType.NChar:
-				case SqlDbType.Char:
-					if (column.Length == 1)
-						return "char";
-					else
-						return "string";
-
-				case SqlDbType.Binary:
-					return $"IEnumerable<byte>";
-
-				case SqlDbType.VarBinary:
-				case SqlDbType.Image:
-				case SqlDbType.Timestamp:
-					return $"IEnumerable<byte>";
-
-				case SqlDbType.Time:
-					return "TimeSpan";
-
-				case SqlDbType.Xml:
-					return "string";
-
-				case SqlDbType.UniqueIdentifier:
-					return "Guid";
-			}
-
-			return "Unknown";
-		}
-
-		public static string GetNonNullablePostgresqlDataType(DBColumn column)
-		{
-			switch ((NpgsqlDbType)column.DataType)
-			{
-				case NpgsqlDbType.Bit:
-				case NpgsqlDbType.Boolean:
-					return "bool";
-
-				case NpgsqlDbType.Smallint:
-					return "short";
-
-				case NpgsqlDbType.Integer:
-					return "int";
-
-				case NpgsqlDbType.Bigint:
-					return "long";
-
-				case NpgsqlDbType.Real:
-					return "float";
-
-				case NpgsqlDbType.Numeric:
-				case NpgsqlDbType.Money:
-					return "decimal";
-
-				case NpgsqlDbType.Date:
-					return "DateTime";
-
-				case NpgsqlDbType.Text:
-				case NpgsqlDbType.Varchar:
-					return "string";
-
-				case NpgsqlDbType.Char:
-					if (column.Length == 1)
-						return "char";
-					else
-						return "string";
-
-				case NpgsqlDbType.Bytea:
-					return $"IEnumerable<byte>";
-			}
-
-			return "Unknown";
-		}
-
-		public static string GetNonNullableMySqlDataType(DBColumn column)
-		{
-			switch ((MySqlDbType)column.DataType)
-			{
-				case MySqlDbType.Bit:
-					return "bool";
-
-				case MySqlDbType.Byte:
-					return "sbyte";
-
-				case MySqlDbType.UByte:
-					return "byte";
-
-				case MySqlDbType.Int16:
-					return "short";
-
-				case MySqlDbType.UInt16:
-					return "ushort";
-
-				case MySqlDbType.Int24:
-				case MySqlDbType.Int32:
-					return "int";
-
-				case MySqlDbType.UInt24:
-				case MySqlDbType.UInt32:
-					return "uint";
-
-				case MySqlDbType.Int64:
-					return "long";
-
-				case MySqlDbType.UInt64:
-					return "ulong";
-
-				case MySqlDbType.Float:
-					return "float";
-
-				case MySqlDbType.Double:
-					return "double";
-
-				case MySqlDbType.Decimal:
-					return "decimal";
-
-				case MySqlDbType.Date:
-				case MySqlDbType.DateTime:
-				case MySqlDbType.Timestamp:
-					return "DateTime";
-
-				case MySqlDbType.Text:
-				case MySqlDbType.MediumText:
-				case MySqlDbType.LongText:
-				case MySqlDbType.VarChar:
-				case MySqlDbType.VarString:
-				case MySqlDbType.TinyText:
-					return "string";
-
-				case MySqlDbType.String:
-					if (column.Length == 1)
-						return "char";
-					return "string";
-
-				case MySqlDbType.Binary:
-				case MySqlDbType.VarBinary:
-					return $"IEnumerable<byte>";
-
-				case MySqlDbType.Time:
-					return "TimeSpan";
-
-				case MySqlDbType.Guid:
-					return "Guid";
-			}
-
-			return "Unknown";
 		}
 
 		public static string GetSQLServerDataType(DBColumn column)
 		{
-			switch ((SqlDbType)column.DataType)
+			switch (column.DBDataType.ToLower())
 			{
-				case SqlDbType.Bit:
+				case "bit":
 					if (column.IsNullable)
 						return "bool?";
 					else
 						return "bool";
 
-				case SqlDbType.SmallInt:
+				case "smallint":
 					if (column.IsNullable)
 						return "short?";
 					else
 						return "short";
 
-				case SqlDbType.Int:
+				case "int":
 					if (column.IsNullable)
 						return "int?";
 					else
 						return "int";
 
-				case SqlDbType.TinyInt:
+				case "tinyint":
 					if (column.IsNullable)
 						return "byte?";
 					else
 						return "byte";
 
-				case SqlDbType.BigInt:
+				case "bigint":
 					if (column.IsNullable)
 						return "long?";
 					else
 						return "long";
 
-				case SqlDbType.Float:
+				case "float":
 					if (column.IsNullable)
 						return "double?";
 					else
 						return "double";
 
-				case SqlDbType.Decimal:
+				case "decimal":
 					if (column.IsNullable)
 						return "decimal?";
 					else
 						return "decimal";
 
-				case SqlDbType.Date:
-				case SqlDbType.DateTime:
-				case SqlDbType.SmallDateTime:
-				case SqlDbType.DateTime2:
+				case "date":
+				case "datetime":
+				case "smalldatetime":
+				case "datetime2":
 					if (column.IsNullable)
 						return "DateTime?";
 					else
 						return "DateTime";
 
-				case SqlDbType.Real:
+				case "real":
 					if (column.IsNullable)
 						return "float?";
 					else
 						return "float";
 
-				case SqlDbType.Text:
-				case SqlDbType.VarChar:
-				case SqlDbType.NText:
-				case SqlDbType.NVarChar:
+				case "text":
+				case "varchar":
+				case "ntext":
+				case "nvarchar":
 					return "string";
 
-				case SqlDbType.Char:
-				case SqlDbType.NChar:
+				case "char":
+				case "nchar":
 					if (column.Length == 1)
 						return "char";
 
 					return "string";
 
-				case SqlDbType.Binary:
-				case SqlDbType.VarBinary:
-				case SqlDbType.Timestamp:
+				case "binary":
+				case "varbinary":
+				case "timestamp":
 					return $"IEnumerable<byte>";
 
-				case SqlDbType.Time:
+				case "time":
 					if (column.IsNullable)
 						return "TimeSpan?";
 					else
 						return "TimeSpan";
 
-				case SqlDbType.DateTimeOffset:
+				case "datetimeoffset":
 					if (column.IsNullable)
 						return "DateTimeOffset?";
 					else
 						return "DateTimeOffset";
 
-				case SqlDbType.Money:
-				case SqlDbType.SmallMoney:
+				case "money":
+				case "smallmoney":
 					if (column.IsNullable)
 						return "decimal?";
 					else
 						return "decimal";
 
-				case SqlDbType.Image:
+				case "image":
 					return "Image";
 
-				case SqlDbType.UniqueIdentifier:
+				case "uniqueidentifier":
 					if (column.IsNullable)
 						return "Guid?";
 					else
 						return "Guid";
 			}
 
-			return "Unknown";
+			return "";
 		}
 
 		public static string GetPostgresDataType(DBColumn column, EntityMap entityMap)
 		{
-			switch ((NpgsqlDbType)column.DataType)
+			switch (column.DBDataType.ToLower())
 			{
-				case NpgsqlDbType.Boolean:
+				case "boolean":
 					if (column.IsNullable)
 						return "bool?";
 					else
 						return "bool";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Boolean:
+				case "_boolean":
 					return "BitArray";
 
-				case NpgsqlDbType.Bit:
-				case NpgsqlDbType.Varbit:
+				case "bit":
+				case "varbit":
 					if (column.Length == 1)
 					{
 						if (column.IsNullable)
@@ -879,10 +682,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 					else
 						return "BitArray";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
-				case NpgsqlDbType.Array | NpgsqlDbType.Bit:
-					if (string.Equals(column.dbDataType, "_bit", StringComparison.OrdinalIgnoreCase) ||
-						string.Equals(column.dbDataType, "_varbit", StringComparison.OrdinalIgnoreCase))
+				case "_varbit":
+				case "_bit":
+					if (string.Equals(column.DBDataType, "_bit", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(column.DBDataType, "_varbit", StringComparison.OrdinalIgnoreCase))
 					{
 						if (column.Length == 1)
 							return "BitArray";
@@ -902,133 +705,133 @@ namespace COFRS.Template.Common.ServiceUtilities
 							return "BitArray";
 					}
 
-				case NpgsqlDbType.Smallint:
+				case "smallint":
 					if (column.IsNullable)
 						return "short?";
 					else
 						return "short";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Smallint:
+				case "_smallint":
 					return "short[]";
 
-				case NpgsqlDbType.Integer:
+				case "integer":
 					if (column.IsNullable)
 						return "int?";
 					else
 						return "int";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Integer:
+				case "_integer":
 					return "int[]";
 
-				case NpgsqlDbType.Bigint:
+				case "bigint":
 					if (column.IsNullable)
 						return "long?";
 					else
 						return "long";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Bigint:
+				case "_bigint":
 					return "long[]";
 
-				case NpgsqlDbType.Oid:
-				case NpgsqlDbType.Xid:
-				case NpgsqlDbType.Cid:
+				case "oid":
+				case "xid":
+				case "cid":
 					if (column.IsNullable)
 						return "uint?";
 					else
 						return "uint";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Oid:
-				case NpgsqlDbType.Array | NpgsqlDbType.Xid:
-				case NpgsqlDbType.Array | NpgsqlDbType.Cid:
+				case "_oid":
+				case "_xid":
+				case "_cid":
 					return "uint[]";
 
-				case NpgsqlDbType.Point:
+				case "point":
 					if (column.IsNullable)
 						return "NpgsqlPoint?";
 					else
 						return "NpgsqlPoint";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Point:
+				case "_point":
 					return "NpgsqlPoint[]";
 
-				case NpgsqlDbType.LSeg:
+				case "lseg":
 					if (column.IsNullable)
 						return "NpgsqlLSeg?";
 					else
 						return "NpgsqlLSeg";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.LSeg:
+				case "_lseg":
 					return "NpgsqlLSeg[]";
 
-				case NpgsqlDbType.Line:
+				case "line":
 					if (column.IsNullable)
 						return "NpgsqlLine?";
 					else
 						return "NpgsqlLine";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Line:
+				case "_line":
 					return "NpgsqlLine[]";
 
-				case NpgsqlDbType.Circle:
+				case "circle":
 					if (column.IsNullable)
 						return "NpgsqlCircle?";
 					else
 						return "NpgsqlCircle";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Circle:
+				case "_circle":
 					return "NpgsqlCircle[]";
 
-				case NpgsqlDbType.Box:
+				case "box":
 					if (column.IsNullable)
 						return "NpgsqlBox?";
 					else
 						return "NpgsqlBox";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Box:
+				case "_box":
 					return "NpgsqlBox[]";
 
-				case NpgsqlDbType.Path:
+				case "path":
 					return "NpgsqlPoint[]";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Path:
+				case "_path":
 					return "NpgsqlPoint[][]";
 
-				case NpgsqlDbType.Polygon:
+				case "polygon":
 					return "NpgsqlPoint[]";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Polygon:
+				case "_polygon":
 					return "NpgsqlPoint[][]";
 
-				case NpgsqlDbType.Bytea:
+				case "bytea":
 					return "byte[]";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
+				case "_bytea":
 					return "byte[][]";
 
-				case NpgsqlDbType.Text:
-				case NpgsqlDbType.Citext:
+				case "text":
+				case "citext":
 					return "string";
 
-				case NpgsqlDbType.Name:
-					if (string.Equals(column.dbDataType, "_name", StringComparison.OrdinalIgnoreCase))
+				case "name":
+					if (string.Equals(column.DBDataType, "_name", StringComparison.OrdinalIgnoreCase))
 						return "string[]";
 					else
 						return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Text:
-				case NpgsqlDbType.Array | NpgsqlDbType.Name:
-				case NpgsqlDbType.Array | NpgsqlDbType.Citext:
+				case "_text":
+				case "_name":
+				case "_citext":
 					return "string[]";
 
-				case NpgsqlDbType.Varchar:
-				case NpgsqlDbType.Json:
+				case "varchar":
+				case "json":
 					return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
-				case NpgsqlDbType.Array | NpgsqlDbType.Json:
+				case "_varchar":
+				case "_json":
 					return "string[]";
 
-				case NpgsqlDbType.Char:
+				case "char":
 					if (column.Length == 1)
 					{
 						if (column.IsNullable)
@@ -1036,317 +839,303 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							return "char";
 					}
-					else if (string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(column.DBDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
 						return "string";
 					else
 						return "char[]";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Char:
+				case "_char":
 					return "string[]";
 
-				case NpgsqlDbType.Uuid:
+				case "uuid":
 					if (column.IsNullable)
 						return "Guid?";
 					else
 						return "Guid";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Uuid:
+				case "_uuid":
 					return "Guid[]";
 
-				case NpgsqlDbType.Date:
+				case "date":
 					if (column.IsNullable)
 						return "DateTime?";
 					else
 						return "DateTime";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Date:
+				case "_date":
 					return "DateTime[]";
 
-				case NpgsqlDbType.TimeTz:
+				case "timetz":
 					if (column.IsNullable)
 						return "DateTimeOffset?";
 					else
 						return "DateTimeOffset";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.TimeTz:
+				case "_timetz":
 					return "DateTimeOffset[]";
 
-				case NpgsqlDbType.Time:
+				case "time":
 					if (column.IsNullable)
 						return "TimeSpan?";
 					else
 						return "TimeSpan";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Time:
+				case "_time":
 					return "TimeSpan[]";
 
-				case NpgsqlDbType.Interval:
+				case "interval":
 					if (column.IsNullable)
 						return "TimeSpan?";
 					else
 						return "TimeSpan";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Interval:
+				case "_interval":
 					return "TimeSpan[]";
 
-				case NpgsqlDbType.Timestamp:
+				case "timestamp":
 					if (column.IsNullable)
 						return "DateTime?";
 					else
 						return "DateTime";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Timestamp:
+				case "_timestamp":
 					return "DateTime[]";
 
-				case NpgsqlDbType.TimestampTz:
+				case "timestamptz":
 					if (column.IsNullable)
 						return "DateTime?";
 					else
 						return "DateTime";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.TimestampTz:
+				case "_timestamptz":
 					return "DateTime[]";
 
-				case NpgsqlDbType.Double:
+				case "double":
 					if (column.IsNullable)
 						return "double?";
 					else
 						return "double";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Double:
+				case "_double":
 					return "double[]";
 
-				case NpgsqlDbType.Real:
+				case "real":
 					if (column.IsNullable)
 						return "float?";
 					else
 						return "float";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Real:
+				case "_real":
 					return "float[]";
 
-				case NpgsqlDbType.Numeric:
-				case NpgsqlDbType.Money:
+				case "numeric":
+				case "money":
 					if (column.IsNullable)
 						return "decimal?";
 					else
 						return "decimal";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Numeric:
-				case NpgsqlDbType.Array | NpgsqlDbType.Money:
+				case "_numeric":
+				case "_money":
 					return "decimal[]";
 
-				case NpgsqlDbType.Xml:
+				case "xml":
 					return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Xml:
+				case "_xml":
 					return "string[]";
 
-				case NpgsqlDbType.Jsonb:
+				case "jsonb":
 					return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
+				case "_jsonb":
 					return "string[]";
 
-				case NpgsqlDbType.JsonPath:
+				case "jsonpath":
 					return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.JsonPath:
+				case "_jsonpath":
 					return "string[]";
 
-				case NpgsqlDbType.Inet:
+				case "inet":
 					return "IPAddress";
 
-				case NpgsqlDbType.Cidr:
+				case "cidr":
 					return "ValueTuple<IPAddress, int>";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
+				case "_inet":
 					return "IPAddress[]";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
+				case "_cidr":
 					return "ValueTuple<IPAddress, int>[]";
 
-				case NpgsqlDbType.MacAddr:
-				case NpgsqlDbType.MacAddr8:
+				case "macaddr":
+				case "macaddr8":
 					return "PhysicalAddress";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr:
-				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr8:
+				case "_macaddr":
+				case "_macaddr8":
 					return "PhysicalAddress[]";
-
-				case NpgsqlDbType.Unknown:
-                    {
-						var entity = entityMap.Maps.FirstOrDefault(e =>
-							string.Equals(e.TableName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
-
-						if (entity != null)
-							return entity.ClassName;
-                    }					
-					return StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(column.dbDataType));
 			}
 
-			return "Unknown";
+			return "";
 		}
 
 		public static string GetMySqlDataType(DBColumn column)
 		{
-			switch ((MySqlDbType)column.DataType)
+			switch (column.DBDataType.ToLower())
 			{
-				case MySqlDbType.Bit:
-					if (string.Equals(column.dbDataType, "bit(1)", StringComparison.OrdinalIgnoreCase))
-					{
-						if (column.IsNullable)
-							return "bool?";
-						else
-							return "bool";
-					}
-					else
-					{
-						if (column.IsNullable)
-							return "ulong?";
-						else
-							return "ulong";
-					}
-
-				case MySqlDbType.Byte:
+				case "bit(1)":
 					if (column.IsNullable)
-						return "sbyte?";
+						return "bool?";
 					else
-						return "sbyte";
+						return "bool";
 
-				case MySqlDbType.UByte:
-					if (column.IsNullable)
-						return "byte?";
-					else
-						return "byte";
-
-				case MySqlDbType.Int16:
-					if (column.IsNullable)
-						return "short?";
-					else
-						return "short";
-
-				case MySqlDbType.UInt16:
-					if (column.IsNullable)
-						return "ushort?";
-					else
-						return "ushort";
-
-				case MySqlDbType.Int24:
-				case MySqlDbType.Int32:
-					if (column.IsNullable)
-						return "int?";
-					else
-						return "int";
-
-				case MySqlDbType.UInt24:
-				case MySqlDbType.UInt32:
-					if (column.IsNullable)
-						return "uint?";
-					else
-						return "uint";
-
-				case MySqlDbType.Int64:
-					if (column.IsNullable)
-						return "long?";
-					else
-						return "long";
-
-				case MySqlDbType.UInt64:
+				case "bit":
 					if (column.IsNullable)
 						return "ulong?";
 					else
 						return "ulong";
 
-				case MySqlDbType.Float:
+				case "byte":
 					if (column.IsNullable)
-						return "float?";
+						return "sbyte?";
 					else
-						return "float";
+						return "sbyte";
 
-				case MySqlDbType.Double:
+				case "ubyte":
 					if (column.IsNullable)
-						return "double?";
+						return "byte?";
 					else
-						return "double";
+						return "byte";
 
-				case MySqlDbType.Decimal:
-					if (column.IsNullable)
-						return "decimal?";
-					else
-						return "decimal";
-
-				case MySqlDbType.Date:
-				case MySqlDbType.DateTime:
-				case MySqlDbType.Timestamp:
-					if (column.IsNullable)
-						return "DateTime?";
-					else
-						return "DateTime";
-
-				case MySqlDbType.Year:
+				case "int16":
 					if (column.IsNullable)
 						return "short?";
 					else
 						return "short";
 
-				case MySqlDbType.Text:
-				case MySqlDbType.MediumText:
-				case MySqlDbType.LongText:
-				case MySqlDbType.VarChar:
-				case MySqlDbType.VarString:
-				case MySqlDbType.TinyText:
+				case "uint16":
+					if (column.IsNullable)
+						return "ushort?";
+					else
+						return "ushort";
+
+				case "int24":
+				case "int32":
+					if (column.IsNullable)
+						return "int?";
+					else
+						return "int";
+
+				case "uint24":
+				case "uint32":
+					if (column.IsNullable)
+						return "uint?";
+					else
+						return "uint";
+
+				case "int64":
+					if (column.IsNullable)
+						return "long?";
+					else
+						return "long";
+
+				case "uint64":
+					if (column.IsNullable)
+						return "ulong?";
+					else
+						return "ulong";
+
+				case "float":
+					if (column.IsNullable)
+						return "float?";
+					else
+						return "float";
+
+				case "double":
+					if (column.IsNullable)
+						return "double?";
+					else
+						return "double";
+
+				case "decimal":
+					if (column.IsNullable)
+						return "decimal?";
+					else
+						return "decimal";
+
+				case "date":
+				case "datetime":
+				case "timestamp":
+					if (column.IsNullable)
+						return "DateTime?";
+					else
+						return "DateTime";
+
+				case "year":
+					if (column.IsNullable)
+						return "short?";
+					else
+						return "short";
+
+				case "text":
+				case "mediumtext":
+				case "longtext":
+				case "varchar":
+				case "varstring":
+				case "tinytext":
 					return "string";
 
-				case MySqlDbType.String:
+				case "string":
 					if (column.Length == 1)
 						return "char";
 					return "string";
 
-				case MySqlDbType.Binary:
-				case MySqlDbType.VarBinary:
-				case MySqlDbType.TinyBlob:
-				case MySqlDbType.Blob:
-				case MySqlDbType.MediumBlob:
-				case MySqlDbType.LongBlob:
+				case "binary":
+				case "varbinary":
+				case "tinyblob":
+				case "blob":
+				case "mediumblob":
+				case "longblob":
 					return "IEnumerable<byte>";
 
-				case MySqlDbType.Time:
+				case "time":
 					if (column.IsNullable)
 						return "TimeSpan?";
 					else
 						return "TimeSpan";
 
-				case MySqlDbType.Guid:
+				case "guid":
 					if (column.IsNullable)
 						return "Guid?";
 					else
 						return "Guid";
 
-				case MySqlDbType.Enum:
-				case MySqlDbType.Set:
-				case MySqlDbType.JSON:
+				case "enum":
+				case "set":
+				case "json":
 					return "string";
 			}
 
-			return "Unknown";
+			return "";
 		}
 
 		public static string GetPostgresqlResourceDataType(DBColumn column, List<ResourceModel> resourceModels)
 		{
-			switch ((NpgsqlDbType)column.DataType)
+			switch (column.DBDataType.ToLower())
 			{
-				case NpgsqlDbType.Boolean:
+				case "boolean":
 					if (column.IsNullable)
 						return "bool?";
 					else
 						return "bool";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Boolean:
+				case "_boolean":
 					return "BitArray";
 
-				case NpgsqlDbType.Bit:
-				case NpgsqlDbType.Varbit:
+				case "bit":
+				case "varbit":
 					if (column.Length == 1)
 					{
 						if (column.IsNullable)
@@ -1357,18 +1146,13 @@ namespace COFRS.Template.Common.ServiceUtilities
 					else
 						return "BitArray";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Varbit:
-				case NpgsqlDbType.Array | NpgsqlDbType.Bit:
-					if (string.Equals(column.dbDataType, "_bit", StringComparison.OrdinalIgnoreCase) ||
-						string.Equals(column.dbDataType, "_varbit", StringComparison.OrdinalIgnoreCase))
-					{
-						if (column.Length == 1)
-							return "BitArray";
-						else
-							return "BitArray[]";
-					}
+				case "_varbit":
+					if (column.Length == 1)
+						return "BitArray";
 					else
-					{
+						return "BitArray[]";
+
+				case "_bit":
 						if (column.Length == 1)
 						{
 							if (column.IsNullable)
@@ -1378,135 +1162,134 @@ namespace COFRS.Template.Common.ServiceUtilities
 						}
 						else
 							return "BitArray";
-					}
 
-				case NpgsqlDbType.Smallint:
+				case "smallint":
 					if (column.IsNullable)
 						return "short?";
 					else
 						return "short";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Smallint:
+				case "_smallint":
 					return "short[]";
 
-				case NpgsqlDbType.Integer:
+				case "integer":
 					if (column.IsNullable)
 						return "int?";
 					else
 						return "int";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Integer:
+				case "_integer":
 					return "int[]";
 
-				case NpgsqlDbType.Bigint:
+				case "bigint":
 					if (column.IsNullable)
 						return "long?";
 					else
 						return "long";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Bigint:
+				case "_bigint":
 					return "long[]";
 
-				case NpgsqlDbType.Oid:
-				case NpgsqlDbType.Xid:
-				case NpgsqlDbType.Cid:
+				case "oid":
+				case "xid":
+				case "cid":
 					if (column.IsNullable)
 						return "uint?";
 					else
 						return "uint";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Oid:
-				case NpgsqlDbType.Array | NpgsqlDbType.Xid:
-				case NpgsqlDbType.Array | NpgsqlDbType.Cid:
+				case "_oid":
+				case "_xid":
+				case "_cid":
 					return "uint[]";
 
-				case NpgsqlDbType.Point:
+				case "point":
 					if (column.IsNullable)
 						return "NpgsqlPoint?";
 					else
 						return "NpgsqlPoint";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Point:
+				case "_point":
 					return "NpgsqlPoint[]";
 
-				case NpgsqlDbType.LSeg:
+				case "lseg":
 					if (column.IsNullable)
 						return "NpgsqlLSeg?";
 					else
 						return "NpgsqlLSeg";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.LSeg:
+				case "_lseg":
 					return "NpgsqlLSeg[]";
 
-				case NpgsqlDbType.Line:
+				case "line":
 					if (column.IsNullable)
 						return "NpgsqlLine?";
 					else
 						return "NpgsqlLine";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Line:
+				case "_line":
 					return "NpgsqlLine[]";
 
-				case NpgsqlDbType.Circle:
+				case "circle":
 					if (column.IsNullable)
 						return "NpgsqlCircle?";
 					else
 						return "NpgsqlCircle";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Circle:
+				case "_circle":
 					return "NpgsqlCircle[]";
 
-				case NpgsqlDbType.Box:
+				case "box":
 					if (column.IsNullable)
 						return "NpgsqlBox?";
 					else
 						return "NpgsqlBox";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Box:
+				case "_box":
 					return "NpgsqlBox[]";
 
-				case NpgsqlDbType.Path:
+				case "path":
 					return "NpgsqlPoint[]";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Path:
+				case "_path":
 					return "NpgsqlPoint[][]";
 
-				case NpgsqlDbType.Polygon:
+				case "polygon":
 					return "NpgsqlPoint[]";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Polygon:
+				case "_polygon":
 					return "NpgsqlPoint[][]";
 
-				case NpgsqlDbType.Bytea:
+				case "bytea":
 					return "byte[]";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Bytea:
+				case "_bytea":
 					return "byte[][]";
 
-				case NpgsqlDbType.Text:
-				case NpgsqlDbType.Citext:
+				case "text":
+				case "citext":
 					return "string";
 
-				case NpgsqlDbType.Name:
-					if (string.Equals(column.dbDataType, "_name", StringComparison.OrdinalIgnoreCase))
+				case "name":
+					if (string.Equals(column.DBDataType, "_name", StringComparison.OrdinalIgnoreCase))
 						return "string[]";
 					else
 						return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Text:
-				case NpgsqlDbType.Array | NpgsqlDbType.Name:
-				case NpgsqlDbType.Array | NpgsqlDbType.Citext:
+				case "_text":
+				case "_name":
+				case "_citext":
 					return "string[]";
 
-				case NpgsqlDbType.Varchar:
-				case NpgsqlDbType.Json:
+				case "varchar":
+				case "json":
 					return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Varchar:
-				case NpgsqlDbType.Array | NpgsqlDbType.Json:
+				case "_varchar":
+				case "_json":
 					return "string[]";
 
-				case NpgsqlDbType.Char:
+				case "char":
 					if (column.Length == 1)
 					{
 						if (column.IsNullable)
@@ -1514,149 +1297,149 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							return "char";
 					}
-					else if (string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
-						return "string";
 					else
 						return "char[]";
 
+				case "bpchar":
+					return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Char:
+				case "_char":
 					return "string[]";
 
-				case NpgsqlDbType.Uuid:
+				case "uuid":
 					if (column.IsNullable)
 						return "Guid?";
 					else
 						return "Guid";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Uuid:
+				case "_uuid":
 					return "Guid[]";
 
-				case NpgsqlDbType.Date:
+				case "date":
 					if (column.IsNullable)
 						return "DateTime?";
 					else
 						return "DateTime";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Date:
+				case "_date":
 					return "DateTime[]";
 
-				case NpgsqlDbType.TimeTz:
+				case "timetz":
 					if (column.IsNullable)
 						return "DateTimeOffset?";
 					else
 						return "DateTimeOffset";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.TimeTz:
+				case "_timetz":
 					return "DateTimeOffset[]";
 
-				case NpgsqlDbType.Time:
+				case "time":
 					if (column.IsNullable)
 						return "TimeSpan?";
 					else
 						return "TimeSpan";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Time:
+				case "_time":
 					return "TimeSpan[]";
 
-				case NpgsqlDbType.Interval:
+				case "interval":
 					if (column.IsNullable)
 						return "TimeSpan?";
 					else
 						return "TimeSpan";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Interval:
+				case "_interval":
 					return "TimeSpan[]";
 
-				case NpgsqlDbType.Timestamp:
+				case "timestamp":
 					if (column.IsNullable)
 						return "DateTime?";
 					else
 						return "DateTime";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Timestamp:
+				case "_timestamp":
 					return "DateTime[]";
 
-				case NpgsqlDbType.TimestampTz:
+				case "timestamptz":
 					if (column.IsNullable)
 						return "DateTime?";
 					else
 						return "DateTime";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.TimestampTz:
+				case "_timestamptz":
 					return "DateTime[]";
 
-				case NpgsqlDbType.Double:
+				case "double":
 					if (column.IsNullable)
 						return "double?";
 					else
 						return "double";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Double:
+				case "_double":
 					return "double[]";
 
-				case NpgsqlDbType.Real:
+				case "real":
 					if (column.IsNullable)
 						return "float?";
 					else
 						return "float";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Real:
+				case "_real":
 					return "float[]";
 
-				case NpgsqlDbType.Numeric:
-				case NpgsqlDbType.Money:
+				case "numeric":
+				case "money":
 					if (column.IsNullable)
 						return "decimal?";
 					else
 						return "decimal";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Numeric:
-				case NpgsqlDbType.Array | NpgsqlDbType.Money:
+				case "_numeric":
+				case "_money":
 					return "decimal[]";
 
-				case NpgsqlDbType.Xml:
+				case "xml":
 					return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Xml:
+				case "_xml":
 					return "string[]";
 
-				case NpgsqlDbType.Jsonb:
+				case "jsonb":
 					return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Jsonb:
+				case "_jsonb":
 					return "string[]";
 
-				case NpgsqlDbType.JsonPath:
+				case "jsonpath":
 					return "string";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.JsonPath:
+				case "_jsonpath":
 					return "string[]";
 
-				case NpgsqlDbType.Inet:
+				case "inet":
 					return "IPAddress";
 
-				case NpgsqlDbType.Cidr:
+				case "cidr":
 					return "ValueTuple<IPAddress, int>";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Inet:
+				case "_inet":
 					return "IPAddress[]";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.Cidr:
+				case "_cidr":
 					return "ValueTuple<IPAddress, int>[]";
 
-				case NpgsqlDbType.MacAddr:
-				case NpgsqlDbType.MacAddr8:
+				case "macaddr":
+				case "macaddr8":
 					return "PhysicalAddress";
 
-				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr:
-				case NpgsqlDbType.Array | NpgsqlDbType.MacAddr8:
+				case "_macaddr":
+				case "_macaddr8":
 					return "PhysicalAddress[]";
 
-				case NpgsqlDbType.Unknown:
+				default:
 					{
 						var resourceModel = resourceModels.FirstOrDefault(e =>
-							string.Equals(e.EntityModel.TableName, column.dbDataType, StringComparison.OrdinalIgnoreCase));
+							string.Equals(e.EntityModel.TableName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 						if (resourceModel != null)
 							return resourceModel.ClassName;
@@ -1664,255 +1447,250 @@ namespace COFRS.Template.Common.ServiceUtilities
 					break;
 			}
 
-			return "Unknown";
+			return "";
 		}
 
 		public static string GetMySqlResourceDataType(DBColumn column)
 		{
-			switch ((MySqlDbType)column.DataType)
+			switch (column.DBDataType.ToLower())
 			{
-				case MySqlDbType.Bit:
-					if (string.Equals(column.dbDataType, "bit(1)", StringComparison.OrdinalIgnoreCase))
-					{
+				case "bit(1)":
 						if (column.IsNullable)
 							return "bool?";
 						else
 							return "bool";
-					}
-					else
-					{
+				case "bit":
 						if (column.IsNullable)
 							return "ulong?";
 						else
 							return "ulong";
-					}
 
-				case MySqlDbType.Byte:
+				case "byte":
 					if (column.IsNullable)
 						return "sbyte?";
 					else
 						return "sbyte";
 
-				case MySqlDbType.UByte:
+				case "ubyte":
 					if (column.IsNullable)
 						return "byte?";
 					else
 						return "byte";
 
-				case MySqlDbType.Int16:
+				case "int16":
 					if (column.IsNullable)
 						return "short?";
 					else
 						return "short";
 
-				case MySqlDbType.UInt16:
+				case "uint16":
 					if (column.IsNullable)
 						return "ushort?";
 					else
 						return "ushort";
 
-				case MySqlDbType.Int24:
-				case MySqlDbType.Int32:
+				case "int24":
+				case "int32":
 					if (column.IsNullable)
 						return "int?";
 					else
 						return "int";
 
-				case MySqlDbType.UInt24:
-				case MySqlDbType.UInt32:
+				case "uint24":
+				case "uint32":
 					if (column.IsNullable)
 						return "uint?";
 					else
 						return "uint";
 
-				case MySqlDbType.Int64:
+				case "int64":
 					if (column.IsNullable)
 						return "long?";
 					else
 						return "long";
 
-				case MySqlDbType.UInt64:
+				case "uint64":
 					if (column.IsNullable)
 						return "ulong?";
 					else
 						return "ulong";
 
-				case MySqlDbType.Float:
+				case "float":
 					if (column.IsNullable)
 						return "float?";
 					else
 						return "float";
 
-				case MySqlDbType.Double:
+				case "double":
 					if (column.IsNullable)
 						return "double?";
 					else
 						return "double";
 
-				case MySqlDbType.Decimal:
+				case "decimal":
 					if (column.IsNullable)
 						return "decimal?";
 					else
 						return "decimal";
 
-				case MySqlDbType.Date:
-				case MySqlDbType.DateTime:
-				case MySqlDbType.Timestamp:
+				case "date":
+				case "datetime":
+				case "timestamp":
 					if (column.IsNullable)
 						return "DateTime?";
 					else
 						return "DateTime";
 
-				case MySqlDbType.Year:
+				case "year":
 					if (column.IsNullable)
 						return "short?";
 					else
 						return "short";
 
-				case MySqlDbType.Text:
-				case MySqlDbType.MediumText:
-				case MySqlDbType.LongText:
-				case MySqlDbType.VarChar:
-				case MySqlDbType.VarString:
-				case MySqlDbType.TinyText:
+				case "text":
+				case "mediumtext":
+				case "longtext":
+				case "varchar":
+				case "varstring":
+				case "tinytext":
 					return "string";
 
-				case MySqlDbType.String:
+				case "string":
 					if (column.Length == 1)
 						return "char";
 					return "string";
 
-				case MySqlDbType.Binary:
-				case MySqlDbType.VarBinary:
-				case MySqlDbType.TinyBlob:
-				case MySqlDbType.Blob:
-				case MySqlDbType.MediumBlob:
-				case MySqlDbType.LongBlob:
+				case "binary":
+				case "varbinary":
+				case "tinyblob":
+				case "blob":
+				case "mediumblob":
+				case "longblob":
 					return "IEnumerable<byte>";
 
-				case MySqlDbType.Time:
+				case "time":
 					if (column.IsNullable)
 						return "TimeSpan?";
 					else
 						return "TimeSpan";
 
-				case MySqlDbType.Guid:
+				case "guid":
 					if (column.IsNullable)
 						return "Guid?";
 					else
 						return "Guid";
 
-				case MySqlDbType.Enum:
-				case MySqlDbType.Set:
-				case MySqlDbType.JSON:
+				case "enum":
+				case "set":
+				case "json":
 					return "string";
 			}
 
-			return "Unknown";
+			return "";
 		}
 
 		public static string GetSqlServerResourceDataType(DBColumn column)
 		{
-			switch ((SqlDbType)column.DataType)
+			switch ( column.DBDataType.ToLower())
 			{
-				case SqlDbType.Bit:
+				case "bit":
 					if (column.IsNullable)
 						return "bool?";
 					else
 						return "bool";
 
-				case SqlDbType.SmallInt:
+				case "smallint":
 					if (column.IsNullable)
 						return "short?";
 					else
 						return "short";
 
-				case SqlDbType.Int:
+				case "int":
 					if (column.IsNullable)
 						return "int?";
 					else
 						return "int";
 
-				case SqlDbType.TinyInt:
+				case "tinyint":
 					if (column.IsNullable)
 						return "byte?";
 					else
 						return "byte";
 
-				case SqlDbType.BigInt:
+				case "bigint":
 					if (column.IsNullable)
 						return "long?";
 					else
 						return "long";
 
-				case SqlDbType.Float:
+				case "float":
 					if (column.IsNullable)
 						return "double?";
 					else
 						return "double";
 
-				case SqlDbType.Decimal:
+				case "decimal":
 					if (column.IsNullable)
 						return "decimal?";
 					else
 						return "decimal";
 
-				case SqlDbType.Date:
-				case SqlDbType.DateTime:
-				case SqlDbType.SmallDateTime:
-				case SqlDbType.DateTime2:
+				case "date":
+				case "datetime":
+				case "smalldatetime":
+				case "datetime2":
 					if (column.IsNullable)
 						return "DateTime?";
 					else
 						return "DateTime";
 
-				case SqlDbType.Real:
+				case "real":
 					if (column.IsNullable)
 						return "float?";
 					else
 						return "float";
 
-				case SqlDbType.Text:
-				case SqlDbType.VarChar:
-				case SqlDbType.NText:
-				case SqlDbType.NVarChar:
+				case "text":
+				case "varchar":
+				case "ntext":
+				case "nvarchar":
 					return "string";
 
-				case SqlDbType.Char:
-				case SqlDbType.NChar:
+				case "char":
+				case "nchar":
 					if (column.Length == 1)
 						return "char";
 
 					return "string";
 
-				case SqlDbType.Binary:
-				case SqlDbType.VarBinary:
-				case SqlDbType.Timestamp:
+				case "binary":
+				case "varbinary":
+				case "timestamp":
 					return "IEnumerable<byte>";
 
-				case SqlDbType.Time:
+				case "time":
 					if (column.IsNullable)
 						return "TimeSpan?";
 					else
 						return "TimeSpan";
 
-				case SqlDbType.DateTimeOffset:
+				case "datetimeoffset":
 					if (column.IsNullable)
 						return "DateTimeOffset?";
 					else
 						return "DateTimeOffset";
 
-				case SqlDbType.Money:
-				case SqlDbType.SmallMoney:
+				case "money":
+				case "smallmoney":
 					if (column.IsNullable)
 						return "decimal?";
 					else
 						return "decimal";
 
-				case SqlDbType.Image:
+				case "image":
 					return "Image";
 
-				case SqlDbType.UniqueIdentifier:
+				case "uniqueidentifier":
 					if (column.IsNullable)
 						return "Guid?";
 					else

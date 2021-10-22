@@ -596,16 +596,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t///\t</summary>");
 			results.AppendLine($"\t[Entity(typeof({resourceModel.EntityModel.ClassName}))]");
 
-			var dataType = "";
-
-			if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.TinyInt)
-				dataType = "byte";
-			else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.SmallInt)
-				dataType = "short";
-			else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.Int)
-				dataType = "int";
-			else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.BigInt)
-				dataType = "long";
+			var dataType = resourceModel.EntityModel.Columns[0].ModelDataType;
 
 			results.AppendLine($"\tpublic enum {resourceModel.ClassName} : {dataType}");
 			results.AppendLine("\t{");
@@ -651,7 +642,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine();
                             }
 
-							if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.TinyInt)
+							if ( string.Equals(resourceModel.EntityModel.Columns[0].DBDataType, "tinyint", StringComparison.OrdinalIgnoreCase))
 							{
 								var theValue = reader.GetByte(0);
 								var name = reader.GetString(1);
@@ -661,7 +652,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine("\t\t///\t</summary>");
 								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
 							}
-							else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.SmallInt)
+							else if (string.Equals(resourceModel.EntityModel.Columns[0].DBDataType, "smallint", StringComparison.OrdinalIgnoreCase))
 							{
 								var theValue = reader.GetInt16(0);
 								var name = reader.GetString(1);
@@ -671,7 +662,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine("\t\t///\t</summary>");
 								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
 							}
-							else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.Int)
+							else if (string.Equals(resourceModel.EntityModel.Columns[0].DBDataType, "int", StringComparison.OrdinalIgnoreCase))
 							{
 								var theValue = reader.GetInt32(0);
 								var name = reader.GetString(1);
@@ -681,7 +672,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine("\t\t///\t</summary>");
 								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
 							}
-							else if (((SqlDbType)resourceModel.EntityModel.Columns[0].DataType) == SqlDbType.BigInt)
+							else if (string.Equals(resourceModel.EntityModel.Columns[0].DBDataType, "bigint", StringComparison.OrdinalIgnoreCase))
 							{
 								var theValue = reader.GetInt64(0);
 								var name = reader.GetString(1);
@@ -752,50 +743,50 @@ namespace COFRS.Template.Common.ServiceUtilities
 					var value = ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, mapFunction);
 					var resourceColumn = resourceModel.Columns.FirstOrDefault(rc => rc.ColumnName.Equals(map.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
 
-					if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(string))
+					if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(string))
 					{
 						value = $"\"{value}\"";
 					}
-					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(Uri))
+					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(Uri))
 					{
 						value = $"new Uri(\"{value}\")";
 					}
-					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(DateTime))
+					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(DateTime))
 					{
 						value = $"DateTime.Parse(\"{value}\")";
 					}
-					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(DateTimeOffset))
+					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(DateTimeOffset))
 					{
 						value = $"DateTimeOffset.Parse(\"{value}\")";
 					}
-					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(bool))
+					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(bool))
 					{
 						value = $"Boolean.Parse(\"{value}\")";
 					}
-					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(TimeSpan))
+					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(TimeSpan))
 					{
 						value = $"TimeSpan.Parse(\"{value}\")";
 					}
-					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(Guid))
+					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(Guid))
 					{
 						value = $"Guid.Parse(\"{value}\")";
 					}
-					else if (Type.GetType(resourceColumn.DataType.ToString()) == typeof(byte) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(sbyte) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(short) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(ushort) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(int) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(uint) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(long) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(ulong) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(double) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(float) ||
-							 Type.GetType(resourceColumn.DataType.ToString()) == typeof(decimal))
+					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(byte) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(sbyte) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(short) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(ushort) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(int) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(uint) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(long) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(ulong) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(double) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(float) ||
+							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(decimal))
 					{
 					}
 					else
 					{
-						throw new InvalidCastException($"Unable to translate datatype {resourceColumn.DataType.ToString()}");
+						throw new InvalidCastException($"Unable to translate datatype {resourceColumn.ModelDataType.ToString()}");
                     }
 
 					results.Append(value);
@@ -950,19 +941,19 @@ namespace COFRS.Template.Common.ServiceUtilities
 									results.AppendLine(",");
 								results.Append($"\t\"{column.ColumnName}\": ");
 
-								switch ((SqlDbType)column.DataType)
+								switch ( column.DBDataType.ToLower())
 								{
-									case SqlDbType.BigInt:
+									case "bigint":
 										{
 											var Value = reader.GetInt64(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
 										}
 										break;
 
-									case SqlDbType.Binary:
-									case SqlDbType.Image:
-									case SqlDbType.Timestamp:
-									case SqlDbType.VarBinary:
+									case "binary":
+									case "image":
+									case "timestamp":
+									case "varbinary":
 										{
 											var length = reader.GetBytes(0, -1, null, 1, 1);
 											var byteBuffer = new byte[length];
@@ -972,23 +963,23 @@ namespace COFRS.Template.Common.ServiceUtilities
 										}
 										break;
 
-									case SqlDbType.Bit:
+									case "bit":
 										{
 											var Value = reader.GetBoolean(reader.GetOrdinal(column.ColumnName));
 											results.Append(Value ? "true" : "false");
 										}
 										break;
 
-									case SqlDbType.Date:
+									case "date":
 										{
 											var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
 											results.Append("\"{date.ToShortDateString()}\"");
 										}
 										break;
 
-									case SqlDbType.DateTime:
-									case SqlDbType.DateTime2:
-									case SqlDbType.SmallDateTime:
+									case "datetime":
+									case "datetime2":
+									case "smalldatetime":
 										{
 											var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
 											var Value = date.ToString("o");
@@ -996,7 +987,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 										}
 										break;
 
-									case SqlDbType.DateTimeOffset:
+									case "datetimeoffset":
 										{
 											var date = reader.GetDateTimeOffset(reader.GetOrdinal(column.ColumnName));
 											var Value = date.ToString("o");
@@ -1004,60 +995,60 @@ namespace COFRS.Template.Common.ServiceUtilities
 										}
 										break;
 
-									case SqlDbType.Decimal:
-									case SqlDbType.Money:
+									case "decimal":
+									case "money":
 										{
 											var Value = reader.GetDecimal(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
 										}
 										break;
 
-									case SqlDbType.Float:
-									case SqlDbType.Real:
-									case SqlDbType.SmallMoney:
+									case "float":
+									case "real":
+									case "smallmoney":
 										{
 											var Value = reader.GetFloat(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
 										}
 										break;
 
-									case SqlDbType.Int:
+									case "int":
 										{
 											var Value = reader.GetInt32(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
 										}
 										break;
 
-									case SqlDbType.SmallInt:
+									case "smallint":
 										{
 											var Value = reader.GetInt16(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
 										}
 										break;
 
-									case SqlDbType.TinyInt:
+									case "tinyint":
 										{
 											var Value = reader.GetByte(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
 										}
 										break;
 
-									case SqlDbType.Time:
+									case "time":
 										{
 											var Value = reader.GetTimeSpan(reader.GetOrdinal(column.ColumnName));
 											results.Append($"\"{Value.ToString()}\"");
 										}
 										break;
 
-									case SqlDbType.Text:
-									case SqlDbType.NVarChar:
-									case SqlDbType.NText:
-									case SqlDbType.Char:
-									case SqlDbType.NChar:
-									case SqlDbType.VarChar:
-									case SqlDbType.Xml:
+									case "text":
+									case "nvarchar":
+									case "ntext":
+									case "char":
+									case "nchar":
+									case "varchar":
+									case "xml":
 										{
-											if (string.Equals(column.dbDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
+											if (string.Equals(column.DBDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
                                             {
 												var theValue = reader.GetFieldValue<object>(reader.GetOrdinal(column.ColumnName));
 												theValue = theValue.ToString().Replace("/", "-");
@@ -1072,7 +1063,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 										break;
 
 									default:
-										throw new InvalidDataException($"Unrecognized database type: {column.DataType}");
+										throw new InvalidDataException($"Unrecognized database type: {column.ModelDataType}");
 								}
 							}
                         }
@@ -1301,14 +1292,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							results.AppendLine();
 
-						string dataType = "Unknown";
-
-						if (entityClassFile.ServerType == DBServerType.MYSQL)
-							dataType = DBHelper.GetNonNullableMySqlDataType(entityColumn);
-						else if (entityClassFile.ServerType == DBServerType.POSTGRESQL)
-							dataType = DBHelper.GetNonNullablePostgresqlDataType(entityColumn);
-						else if (entityClassFile.ServerType == DBServerType.SQLSERVER)
-							dataType = DBHelper.GetNonNullableSqlServerDataType(entityColumn);
+						string dataType = entityColumn.ModelDataType;
 
 						if (ix == 0)
 							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(e => e.{member.ResourceMemberName}.GetId<{dataType}>()))");
@@ -1327,14 +1311,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							results.AppendLine();
 
-						string dataType = "Unknown";
-
-						if (entityClassFile.ServerType == DBServerType.MYSQL)
-							dataType = DBHelper.GetNonNullableMySqlDataType(entityColumn);
-						else if (entityClassFile.ServerType == DBServerType.POSTGRESQL)
-							dataType = DBHelper.GetNonNullablePostgresqlDataType(entityColumn);
-						else if (entityClassFile.ServerType == DBServerType.SQLSERVER)
-							dataType = DBHelper.GetNonNullableSqlServerDataType(entityColumn);
+						string dataType = entityColumn.ModelDataType;
 
 						if (entityColumn.IsNullable)
 						{
@@ -1538,9 +1515,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 			{
 				var entityColumn = member.EntityNames[0];
 
-				if (!string.Equals(entityColumn.EntityType, member.ResourceMemberType, StringComparison.OrdinalIgnoreCase))
+				if (!string.Equals(entityColumn.ModelDataType, member.ResourceMemberType, StringComparison.OrdinalIgnoreCase))
 				{
-					if (string.Equals(entityColumn.EntityType, "char[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "string", StringComparison.OrdinalIgnoreCase))
+					if (string.Equals(entityColumn.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "string", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1552,7 +1529,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							results.Append($"\t\t\t\t.ForMember(destination => destination.{member.ResourceMemberName}, opts => opts.MapFrom( src => new string(src.{entityColumn.EntityName})))");
 					}
-					else if (string.Equals(entityColumn.EntityType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "char[]", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "char[]", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1564,7 +1541,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							results.Append($"\t\t\t\t.ForMember(destination => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName}.ToArray()))");
 					}
-					else if (string.Equals(entityColumn.EntityType, "Image", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "byte[]", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "byte[]", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1578,7 +1555,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName}.GetBytes()))");
 					}
-					else if (string.Equals(entityColumn.EntityType, "byte[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Image", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Image", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1592,7 +1569,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => ImageEx.Parse(src.{entityColumn.EntityName})))");
 					}
-					else if (string.Equals(entityColumn.EntityType, "DateTime", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTimeOFfset", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "DateTime", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTimeOFfset", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1604,7 +1581,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new DateTimeOffset(src.{member.ResourceMemberName})))");
 					}
-					else if (string.Equals(entityColumn.EntityType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTime", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTime", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1617,7 +1594,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.DateTime))");
 					}
 				}
-				else if (string.Equals(entityColumn.EntityType, "BitArray", StringComparison.OrdinalIgnoreCase))
+				else if (string.Equals(entityColumn.ModelDataType, "BitArray", StringComparison.OrdinalIgnoreCase))
 				{
 					if (first)
 						first = false;
@@ -1651,9 +1628,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 			{
 				var entityColumn = member.EntityNames[0];
 
-				if (!string.Equals(entityColumn.EntityType, member.ResourceMemberType, StringComparison.OrdinalIgnoreCase))
+				if (!string.Equals(entityColumn.ModelDataType, member.ResourceMemberType, StringComparison.OrdinalIgnoreCase))
 				{
-					if (string.Equals(entityColumn.EntityType, "char[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "string", StringComparison.OrdinalIgnoreCase))
+					if (string.Equals(entityColumn.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "string", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1675,7 +1652,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.ToArray()))");
 						}
 					}
-					else if (string.Equals(entityColumn.EntityType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "char[]", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "char[]", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1697,7 +1674,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new string(src.{prefix}.{member.ResourceMemberName})))");
 						}
 					}
-					else if (string.Equals(entityColumn.EntityType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Uri", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Uri", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1719,7 +1696,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
 						}
 					}
-					else if (string.Equals(entityColumn.EntityType, "Image", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "byte[]", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "byte[]", StringComparison.OrdinalIgnoreCase))
 					{
 						ImageConversionRequired = true;
 						if (first)
@@ -1742,7 +1719,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => ImageEx.Parse(src.{prefix}.{member.ResourceMemberName})))");
 						}
 					}
-					else if (string.Equals(entityColumn.EntityType, "byte[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Image", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Image", StringComparison.OrdinalIgnoreCase))
 					{
 						ImageConversionRequired = true;
 						if (first)
@@ -1765,7 +1742,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.GetBytes()))");
 						}
 					}
-					else if (string.Equals(entityColumn.EntityType, "DateTime", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "DateTime", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1787,7 +1764,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.DateTime))");
 						}
 					}
-					else if (string.Equals(entityColumn.EntityType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTime", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(entityColumn.ModelDataType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTime", StringComparison.OrdinalIgnoreCase))
 					{
 						if (first)
 							first = false;
@@ -1810,7 +1787,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						}
 					}
 				}
-				else if (string.Equals(entityColumn.EntityType, "BitArray", StringComparison.OrdinalIgnoreCase))
+				else if (string.Equals(entityColumn.ModelDataType, "BitArray", StringComparison.OrdinalIgnoreCase))
 				{
 					if (first)
 						first = false;
@@ -1826,7 +1803,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix}.{member.ResourceMemberName} ?? new System.Collections.BitArray(Array.Empty<bool>())))");
 					}
 				}
-				else if (string.Equals(entityColumn.EntityType, "Uri", StringComparison.OrdinalIgnoreCase))
+				else if (string.Equals(entityColumn.ModelDataType, "Uri", StringComparison.OrdinalIgnoreCase))
 				{
 					if (first)
 						first = false;
@@ -1923,7 +1900,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						results.Append("\t\t\t\t\t ");
 					}
 
-					if (string.Equals(entityMember.EntityType, "string", StringComparison.OrdinalIgnoreCase))
+					if (string.Equals(entityMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
 					{
 						results.Append($"string.IsNullOrWhiteSpace(src.{entityMember.EntityName})");
 					}
@@ -2005,69 +1982,69 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				AppendNullable(result, column.IsNullable, ref first);
 
-				if (entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.NVarChar)
+				if (entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NVarChar", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if (entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.NChar)
+				else if (entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NChar", StringComparison.OrdinalIgnoreCase))
 				{
 					if (column.Length > 1)
 						AppendFixed(result, column.Length, true, ref first);
 				}
 
-				else if (entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.NText)
+				else if (entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NText", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendFixed(result, -1, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.VarChar) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varchar) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Name) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Varchar)) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.VarChar))
+				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "VarChar", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Varchar", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Name", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Varchar", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "VarChar", StringComparison.OrdinalIgnoreCase)))
 				{
-					if (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varchar && column.Length < 0)
+					if (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Varchar", StringComparison.OrdinalIgnoreCase) && column.Length < 0)
 						AppendFixed(result, -1, false, ref first);
 					else
 						AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Bit) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit)))
+				else if ((entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Bit", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Bit", StringComparison.OrdinalIgnoreCase)))
 				{
 					//	Insert the column definition
 					AppendFixed(result, column.Length, true, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Varbit)))
+				else if ((entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Varbit", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Varbit", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Text) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Text) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Citext) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Text)) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Text))
+				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Citext", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Text", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendFixed(result, -1, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Char) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Char) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Char)) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.String))
+				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Char", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Char", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Char", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "String", StringComparison.OrdinalIgnoreCase)))
 				{
 					//	Insert the column definition
 					if (entityModel.ServerType == DBServerType.POSTGRESQL)
 					{
-						if (string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
+						if (string.Equals(column.DBDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
 						{
 							AppendFixed(result, column.Length, true, ref first);
 						}
-						else if (string.Equals(column.dbDataType, "_bpchar", StringComparison.OrdinalIgnoreCase))
+						else if (string.Equals(column.DBDataType, "_bpchar", StringComparison.OrdinalIgnoreCase))
 						{
 							AppendFixed(result, column.Length, true, ref first);
 						}
@@ -2084,28 +2061,28 @@ namespace COFRS.Template.Common.ServiceUtilities
 					}
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.VarBinary) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Bytea) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.VarBinary))
+				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "VarBinary", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Bytea", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "VarBinary", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Binary) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Binary))
+				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Binary", StringComparison.OrdinalIgnoreCase)) ||
+						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Binary", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendFixed(result, column.Length, true, ref first);
 				}
 
-				else if (entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Timestamp)
+				else if (entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Timestamp", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendFixed(result, column.Length, true, ref first);
 					AppendAutofield(result, ref first);
 				}
 
-				if ((entityModel.ServerType == DBServerType.SQLSERVER && (SqlDbType)column.DataType == SqlDbType.Decimal) ||
-					(entityModel.ServerType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Decimal) ||
-					(entityModel.ServerType == DBServerType.POSTGRESQL && (NpgsqlDbType)column.DataType == NpgsqlDbType.Numeric))
+				if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Decimal", StringComparison.OrdinalIgnoreCase)) ||
+					(entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Decimal", StringComparison.OrdinalIgnoreCase)) ||
+					(entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Numeric", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendPrecision(result, column.NumericPrecision, column.NumericScale, ref first);
 				}
@@ -2115,57 +2092,51 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				if (entityModel.ServerType == DBServerType.POSTGRESQL)
 				{
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Inet)
+					if (string.Equals(column.DBDataType, "Inet", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$net$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Cidr)
+					if (string.Equals(column.DBDataType, "MacAddr", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$net$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr)
-						replacementsDictionary["$netinfo$"] = "true";
+					if (string.Equals(column.DBDataType, "MacAddr8", StringComparison.OrdinalIgnoreCase))
+						replacementsDictionary["$net$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr8)
-						replacementsDictionary["$netinfo$"] = "true";
-
-					if ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Boolean))
+					if (string.Equals(column.DBDataType, "_Boolean", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$barray$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit))
+					if (string.Equals(column.DBDataType, "_Bit", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$barray$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Bit && column.Length > 1)
+					if (string.Equals(column.DBDataType, "Bit", StringComparison.OrdinalIgnoreCase) && column.Length > 1)
 						replacementsDictionary["$barray$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit)
+					if (string.Equals(column.DBDataType, "Varbit", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$barray$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Point)
+					if (string.Equals(column.DBDataType, "Point", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$npgsqltypes$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.LSeg)
+					if (string.Equals(column.DBDataType, "LSeg", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$npgsqltypes$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Circle)
+					if (string.Equals(column.DBDataType, "Circle", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$npgsqltypes$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Box)
+					if (string.Equals(column.DBDataType, "Box", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$npgsqltypes$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Line)
+					if (string.Equals(column.DBDataType, "Line", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$npgsqltypes$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Path)
+					if (string.Equals(column.DBDataType, "Path", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$npgsqltypes$"] = "true";
 
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.LSeg)
-						replacementsDictionary["$npgsqltypes$"] = "true";
-
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Polygon)
+					if (string.Equals(column.DBDataType, "Polygon", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$npgsqltypes$"] = "true";
 				}
 				else if (entityModel.ServerType == DBServerType.SQLSERVER)
 				{
-					if ((SqlDbType)column.DataType == SqlDbType.Image)
+					if (string.Equals(column.DBDataType, "Image", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$image$"] = "true";
 				}
 
@@ -2174,18 +2145,18 @@ namespace COFRS.Template.Common.ServiceUtilities
 				//	Insert the column definition
 				if (entityModel.ServerType == DBServerType.POSTGRESQL)
 				{
-					column.EntityType = DBHelper.GetPostgresDataType(column, entityMap);
-					result.AppendLine($"\t\tpublic {column.EntityType} {column.ColumnName} {{ get; set; }}");
+					column.ModelDataType = column.ModelDataType;
+					result.AppendLine($"\t\tpublic {column.ModelDataType} {column.ColumnName} {{ get; set; }}");
 				}
 				else if (entityModel.ServerType == DBServerType.MYSQL)
 				{
-					column.EntityType = DBHelper.GetMySqlDataType(column);
-					result.AppendLine($"\t\tpublic {column.EntityType} {column.ColumnName} {{ get; set; }}");
+					column.ModelDataType = column.ModelDataType;
+					result.AppendLine($"\t\tpublic {column.ModelDataType} {column.ColumnName} {{ get; set; }}");
 				}
 				else if (entityModel.ServerType == DBServerType.SQLSERVER)
 				{
-					column.EntityType = DBHelper.GetSQLServerDataType(column);
-					result.AppendLine($"\t\tpublic {column.EntityType} {column.ColumnName} {{ get; set; }}");
+					column.ModelDataType = column.ModelDataType;
+					result.AppendLine($"\t\tpublic {column.ModelDataType} {column.ColumnName} {{ get; set; }}");
 				}
 			}
 
@@ -2287,7 +2258,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 						if (resourceModel.ServerType == DBServerType.SQLSERVER)
 						{
-							if ((SqlDbType)member.DataType == SqlDbType.Image)
+							if (string.Equals(member.DBDataType, "Image", StringComparison.OrdinalIgnoreCase))
 							{
 								replacementsDictionary["$resourceimage$"] = "true";
 							}
@@ -2297,42 +2268,41 @@ namespace COFRS.Template.Common.ServiceUtilities
 						}
 						else if (resourceModel.ServerType == DBServerType.POSTGRESQL)
 						{
-							if ((NpgsqlDbType)member.DataType == NpgsqlDbType.Inet ||
-								(NpgsqlDbType)member.DataType == NpgsqlDbType.Cidr ||
-								(NpgsqlDbType)member.DataType == NpgsqlDbType.MacAddr)
+							if (string.Equals(member.DBDataType, "Inet", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(member.DBDataType, "Cidr", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(member.DBDataType, "MacAddr", StringComparison.OrdinalIgnoreCase))
 							{
 								replacementsDictionary["$resourcenet$"] = "true";
 							}
 
-							else if ((NpgsqlDbType)member.DataType == NpgsqlDbType.MacAddr8)
+							else if (string.Equals(member.DBDataType, "MacAddr8", StringComparison.OrdinalIgnoreCase))
 								replacementsDictionary["$resourcenetinfo$"] = "true";
 
-							else if ((NpgsqlDbType)member.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Boolean) ||
-									 (NpgsqlDbType)member.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit) ||
-									 ((NpgsqlDbType)member.DataType == NpgsqlDbType.Bit && member.Length > 1) ||
-									 (NpgsqlDbType)member.DataType == NpgsqlDbType.Varbit)
-							{
+							else if (string.Equals(member.DBDataType, "_Boolean", StringComparison.OrdinalIgnoreCase) ||
+									 string.Equals(member.DBDataType, "_Bit", StringComparison.OrdinalIgnoreCase) ||
+									 (string.Equals(member.DBDataType, "Bit", StringComparison.OrdinalIgnoreCase) && member.Length > 1) ||
+									 string.Equals(member.DBDataType, "VarBit", StringComparison.OrdinalIgnoreCase))
+ 							{
 								replacementsDictionary["$resourcebarray$"] = "true";
 							}
-							else if ((NpgsqlDbType)member.DataType == NpgsqlDbType.Unknown ||
-									 (NpgsqlDbType)member.DataType == NpgsqlDbType.Point ||
-									 (NpgsqlDbType)member.DataType == NpgsqlDbType.LSeg ||
-									 (NpgsqlDbType)member.DataType == NpgsqlDbType.Path ||
-									 (NpgsqlDbType)member.DataType == NpgsqlDbType.Circle ||
-									 (NpgsqlDbType)member.DataType == NpgsqlDbType.Polygon ||
-									 (NpgsqlDbType)member.DataType == NpgsqlDbType.Line ||
-									 (NpgsqlDbType)member.DataType == NpgsqlDbType.Box)
+							else if (string.Equals(member.DBDataType, "Point", StringComparison.OrdinalIgnoreCase) ||
+									 string.Equals(member.DBDataType, "LSeg", StringComparison.OrdinalIgnoreCase) ||
+									 string.Equals(member.DBDataType, "Path", StringComparison.OrdinalIgnoreCase) ||
+									 string.Equals(member.DBDataType, "Circle", StringComparison.OrdinalIgnoreCase) ||
+									 string.Equals(member.DBDataType, "Polygon", StringComparison.OrdinalIgnoreCase) ||
+									 string.Equals(member.DBDataType, "Line", StringComparison.OrdinalIgnoreCase) ||
+									 string.Equals(member.DBDataType, "Box", StringComparison.OrdinalIgnoreCase))
 							{
 								replacementsDictionary["$usenpgtypes$"] = "true";
 							}
-							else if ((NpgsqlDbType)member.DataType == NpgsqlDbType.Date ||
-								(NpgsqlDbType)member.DataType == (NpgsqlDbType.Date | NpgsqlDbType.Array))
+							else if (string.Equals(member.DBDataType, "Date", StringComparison.OrdinalIgnoreCase) ||
+									 string.Equals(member.DBDataType, "_Date", StringComparison.OrdinalIgnoreCase))
 							{
 								results.AppendLine("\t\t[JsonFormat(\"yyyy-MM-dd\")]");
 								replacementsDictionary["$annotations$"] = "true";
 							}
-							else if ((NpgsqlDbType)member.DataType == NpgsqlDbType.TimeTz ||
-									(NpgsqlDbType)member.DataType == (NpgsqlDbType.TimeTz | NpgsqlDbType.Array))
+							else if (string.Equals(member.DBDataType, "TimeTz", StringComparison.OrdinalIgnoreCase) ||
+									 string.Equals(member.DBDataType, "_TimeTz", StringComparison.OrdinalIgnoreCase))
 							{
 								results.AppendLine("\t\t[JsonFormat(\"HH:mm:ss.fffffffzzz\")]");
 								replacementsDictionary["$annotations$"] = "true";
@@ -2460,28 +2430,28 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			foreach (var column in undefinedModel.Columns)
 			{
-				if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Unknown)
+				if (string.IsNullOrWhiteSpace(column.ModelDataType))
 				{
 					//	Is it already defined?
 					if (entityMap.Maps.ToList().FirstOrDefault(m =>
 						string.Equals(m.SchemaName, undefinedModel.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-						string.Equals(m.TableName, column.dbDataType, StringComparison.OrdinalIgnoreCase)) == null)
+						string.Equals(m.TableName, column.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
 					{
 						//	It's not defined. Is is already included in the undefined list?
 						if (undefinedElements.FirstOrDefault(m =>
 							string.Equals(m.SchemaName, undefinedModel.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-							string.Equals(m.TableName, column.dbDataType, StringComparison.OrdinalIgnoreCase)) == null)
+							string.Equals(m.TableName, column.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
 						{
 							//	It's not in the list. We need to add it...
 							var classFile = new EntityModel
 							{
-								ClassName = $"E{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(column.dbDataType))}",
+								ClassName = $"E{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(column.DBDataType))}",
 								SchemaName = undefinedModel.SchemaName,
-								TableName = column.dbDataType,
+								TableName = column.DBDataType,
 								Namespace = entityModelsFolder.Namespace,
 								ServerType = undefinedModel.ServerType,
-								Folder = Path.Combine(entityModelsFolder.Folder, $"E{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(column.dbDataType))}.cs"),
-								ElementType = DBHelper.GetElementType(undefinedModel.SchemaName, column.dbDataType, entityMap, connectionString),
+								Folder = Path.Combine(entityModelsFolder.Folder, $"E{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(column.DBDataType))}.cs"),
+								ElementType = DBHelper.GetElementType(undefinedModel.SchemaName, column.DBDataType, entityMap, connectionString),
 								ProjectName = undefinedModel.ProjectName
 							};
 
@@ -2536,56 +2506,52 @@ namespace COFRS.Template.Common.ServiceUtilities
 				AppendNullable(result, column.IsNullable, ref first);
 
 
-				if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Varchar) ||
-					((NpgsqlDbType)column.DataType == NpgsqlDbType.Name) ||
-					((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Varchar)))
+				if (string.Equals(column.DBDataType, "Varchar", StringComparison.OrdinalIgnoreCase) ||
+					string.Equals(column.DBDataType, "Name", StringComparison.OrdinalIgnoreCase) ||
+					string.Equals(column.DBDataType, "_Varchar", StringComparison.OrdinalIgnoreCase))
 				{
-					if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Varchar && column.Length < 0)
+					if (string.Equals(column.DBDataType, "Varchar", StringComparison.OrdinalIgnoreCase) && column.Length < 0)
 						AppendFixed(result, -1, false, ref first);
 					else
 						AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Bit) ||
-						 ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit)))
+				else if (string.Equals(column.DBDataType, "Bit", StringComparison.OrdinalIgnoreCase) ||
+					     string.Equals(column.DBDataType, "_Bit", StringComparison.OrdinalIgnoreCase))
 				{
 					//	Insert the column definition
 					AppendFixed(result, column.Length, true, ref first);
 				}
 
-				else if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit) ||
-						 ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Varbit)))
+				else if (string.Equals(column.DBDataType, "Varbit", StringComparison.OrdinalIgnoreCase) ||
+						 string.Equals(column.DBDataType, "_Varbit", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Text) ||
-						 ((NpgsqlDbType)column.DataType == NpgsqlDbType.Citext) ||
-						 ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Text)))
+				else if (string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase) ||
+						 string.Equals(column.DBDataType, "Citext", StringComparison.OrdinalIgnoreCase) ||
+					     string.Equals(column.DBDataType, "_Text", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendFixed(result, -1, false, ref first);
 				}
 
-				else if (((NpgsqlDbType)column.DataType == NpgsqlDbType.Char) ||
-						 ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Char)))
-				{
 					//	Insert the column definition
-					if (string.Equals(column.dbDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
-					{
-						AppendFixed(result, column.Length, true, ref first);
-					}
-					else if (string.Equals(column.dbDataType, "_bpchar", StringComparison.OrdinalIgnoreCase))
-					{
-						AppendFixed(result, column.Length, true, ref first);
-					}
+				else if (string.Equals(column.DBDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
+				{
+					AppendFixed(result, column.Length, true, ref first);
+				}
+				else if (string.Equals(column.DBDataType, "_bpchar", StringComparison.OrdinalIgnoreCase))
+				{
+					AppendFixed(result, column.Length, true, ref first);
 				}
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Bytea)
+				else if (string.Equals(column.DBDataType, "bytea", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Numeric)
+				else if (string.Equals(column.DBDataType, "numeric", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendPrecision(result, column.NumericPrecision, column.NumericScale, ref first);
 				}
@@ -2593,52 +2559,49 @@ namespace COFRS.Template.Common.ServiceUtilities
 				AppendDatabaseType(result, DBServerType.POSTGRESQL, column, ref first);
 				AppendEntityName(result, column, ref first);
 
-				if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Inet)
+				if (string.Equals(column.DBDataType, "INet", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$net$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Cidr)
+				else if (string.Equals(column.DBDataType, "Cidr", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$net$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr)
+				else if (string.Equals(column.DBDataType, "MacAddr", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$netinfo$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.MacAddr8)
+				else if (string.Equals(column.DBDataType, "MacAddr8", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$netinfo$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Boolean))
+				else if (string.Equals(column.DBDataType, "_Boolean", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$barray$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == (NpgsqlDbType.Array | NpgsqlDbType.Bit))
+				else if (string.Equals(column.DBDataType, "_Bit", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$barray$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Bit && column.Length > 1)
+				else if (string.Equals(column.DBDataType, "Bit", StringComparison.OrdinalIgnoreCase) && column.Length > 1)
 					replacementsDictionary["$barray$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Varbit)
+				else if (string.Equals(column.DBDataType, "varbit", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$barray$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Point)
+				else if (string.Equals(column.DBDataType, "Point", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$npgsqltypes$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.LSeg)
+				else if (string.Equals(column.DBDataType, "LSeg", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$npgsqltypes$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Circle)
+				else if (string.Equals(column.DBDataType, "Circle", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$npgsqltypes$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Box)
+				else if (string.Equals(column.DBDataType, "Box", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$npgsqltypes$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Line)
+				else if (string.Equals(column.DBDataType, "Line", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$npgsqltypes$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Path)
+				else if (string.Equals(column.DBDataType, "Path", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$npgsqltypes$"] = "true";
 
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.LSeg)
-					replacementsDictionary["$npgsqltypes$"] = "true";
-
-				else if ((NpgsqlDbType)column.DataType == NpgsqlDbType.Polygon)
+				else if (string.Equals(column.DBDataType, "Polygon", StringComparison.OrdinalIgnoreCase))
 					replacementsDictionary["$npgsqltypes$"] = "true";
 
 				result.AppendLine(")]");
@@ -2887,16 +2850,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 		{
 			AppendComma(result, ref first);
 
-			if (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.VarChar)
-				result.Append("NativeDataType=\"VarChar\"");
-			else if (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.VarBinary)
-				result.Append("NativeDataType=\"VarBinary\"");
-			else if (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.String)
-				result.Append("NativeDataType=\"char\"");
-			else if (serverType == DBServerType.MYSQL && (MySqlDbType)column.DataType == MySqlDbType.Decimal)
-				result.Append("NativeDataType=\"Decimal\"");
-			else
-				result.Append($"NativeDataType=\"{column.dbDataType}\"");
+			result.Append($"NativeDataType=\"{column.DBDataType}\"");
 		}
 
 		private void AppendFixed(StringBuilder result, long length, bool isFixed, ref bool first)
@@ -2929,7 +2883,7 @@ namespace COFRS.Template.Common.ServiceUtilities
         {
 			if (!string.IsNullOrWhiteSpace(column.EntityName) && !string.Equals(column.ColumnName, column.EntityName, StringComparison.Ordinal))
 			{
-				if (!string.Equals(column.EntityName, column.dbDataType, StringComparison.Ordinal))
+				if (!string.Equals(column.EntityName, column.DBDataType, StringComparison.Ordinal))
 				{
 					AppendComma(result, ref first);
 					result.Append($"ColumnName = \"{column.EntityName}\"");

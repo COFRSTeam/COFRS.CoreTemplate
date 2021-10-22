@@ -592,8 +592,8 @@ ORDER BY c.ORDINAL_POSITION;
 									{
 										ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
 										EntityName = reader.GetString(0),
-										DataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
-										dbDataType = reader.GetString(1),
+										ModelDataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
+										DBDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
 										NumericScale = Convert.ToInt32(reader.GetValue(4)),
@@ -669,8 +669,8 @@ select c.name as column_name,
 									{
 										ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
 										EntityName = reader.GetString(0),
-										dbDataType = reader.GetString(1),
-										DataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
+										DBDataType = reader.GetString(1),
+										ModelDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
 										NumericScale = Convert.ToInt32(reader.GetValue(4)),
@@ -683,21 +683,21 @@ select c.name as column_name,
 										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
 									};
 
-									if (string.Equals(dbColumn.dbDataType, "geometry", StringComparison.OrdinalIgnoreCase))
+									if (string.Equals(dbColumn.DBDataType, "geometry", StringComparison.OrdinalIgnoreCase))
 									{
 										_tableList.SelectedIndex = -1;
 										MessageBox.Show(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 										return;
 									}
 
-									if (string.Equals(dbColumn.dbDataType, "geography", StringComparison.OrdinalIgnoreCase))
+									if (string.Equals(dbColumn.DBDataType, "geography", StringComparison.OrdinalIgnoreCase))
 									{
 										_tableList.SelectedIndex = -1;
 										MessageBox.Show(".NET Core does not support the SQL Server geography data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 										return;
 									}
 
-									if (string.Equals(dbColumn.dbDataType, "variant", StringComparison.OrdinalIgnoreCase))
+									if (string.Equals(dbColumn.DBDataType, "variant", StringComparison.OrdinalIgnoreCase))
 									{
 										_tableList.SelectedIndex = -1;
 										MessageBox.Show("COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -721,9 +721,9 @@ select c.name as column_name,
         {
             var entityName = reader.GetString(0);
             var columnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0)));
-            NpgsqlDbType dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
+            string dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
 
-            if (dataType == NpgsqlDbType.Unknown)
+            if (string.IsNullOrWhiteSpace(dataType))
             {
 				//	See if this column type is already defined...
                 if (EntityMap.Maps.FirstOrDefault(ent =>
@@ -760,8 +760,8 @@ select c.name as column_name,
             {
                 ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
                 EntityName = entityName,
-                DataType = dataType,
-                dbDataType = reader.GetString(1),
+                ModelDataType = dataType.ToString(),
+                DBDataType = reader.GetString(1),
                 Length = Convert.ToInt64(reader.GetValue(2)),
                 NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
                 NumericScale = Convert.ToInt32(reader.GetValue(4)),
