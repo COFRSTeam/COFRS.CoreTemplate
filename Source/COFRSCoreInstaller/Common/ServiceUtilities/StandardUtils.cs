@@ -2812,18 +2812,16 @@ select a.attname as columnname,
                 if (memberElement.Kind == vsCMElement.vsCMElementProperty)
                 {
                     CodeProperty property = (CodeProperty)memberElement;
-
-                    var strCodeTypeParts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-                    var dataType = strCodeTypeParts[strCodeTypeParts.Length - 1];
+					var parts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
 
                     CodeAttribute memberAttribute = null;
                     try { memberAttribute = (CodeAttribute)memberElement.Children.Item("Member"); } catch (Exception) { }
 
-                    var dbColumn = new DBColumn
-                    {
-                        ColumnName = property.Name,
-                        EntityName = property.Name,
-                        ModelDataType = dataType
+					var dbColumn = new DBColumn
+					{
+						ColumnName = property.Name,
+						EntityName = property.Name,
+						ModelDataType = parts[parts.Count()-1]
                     };
 
                     if (memberAttribute != null)
@@ -2886,13 +2884,6 @@ select a.attname as columnname,
 							dbColumn.ForeignTableName = matchit.Groups["ForeignTableName"].Value;
 					}
 
-					if (entityModel.ServerType == DBServerType.MYSQL)
-                        dbColumn.ModelDataType = DBHelper.ConvertMySqlDataType(dbColumn.DBDataType);
-                    else if (entityModel.ServerType == DBServerType.POSTGRESQL)
-                        dbColumn.ModelDataType = DBHelper.ConvertPostgresqlDataType(dbColumn.DBDataType);
-                    else if (entityModel.ServerType == DBServerType.SQLSERVER)
-                        dbColumn.ModelDataType = DBHelper.ConvertSqlServerDataType(dbColumn.DBDataType);
-
                     columns.Add(dbColumn);
                 }
             }
@@ -2954,12 +2945,12 @@ select a.attname as columnname,
 										if (memberElement.Kind == vsCMElement.vsCMElementProperty)
 										{
 											CodeProperty property = (CodeProperty)memberElement;
-											var dataType = property.Type.AsFullName;
+											var parts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
 
 											var dbColumn = new DBColumn
 											{
 												ColumnName = property.Name,
-												ModelDataType = dataType,
+												ModelDataType = parts[parts.Count()-1],
 												IsPrimaryKey = string.Equals(property.Name, "href", StringComparison.OrdinalIgnoreCase)
 											};
 
@@ -3002,16 +2993,14 @@ select a.attname as columnname,
 										if (memberElement.Kind == vsCMElement.vsCMElementProperty)
 										{
 											CodeProperty property = (CodeProperty)memberElement;
+											var parts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
 
 											if (property.Access == vsCMAccess.vsCMAccessPublic || property.Access == vsCMAccess.vsCMAccessProtected)
 											{
-												var strCodeTypeParts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-												var dataType = strCodeTypeParts[strCodeTypeParts.Length - 1];
-
 												var dbColumn = new DBColumn
 												{
 													ColumnName = property.Name,
-													ModelDataType = dataType
+													ModelDataType = parts[parts.Count() - 1],
 												};
 
 												columns.Add(dbColumn);

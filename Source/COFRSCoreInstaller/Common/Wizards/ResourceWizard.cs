@@ -150,11 +150,12 @@ namespace COFRS.Template.Common.Wizards
 
                     if (form._GenerateAsEnum.Checked)
                         model = standardEmitter.EmitResourceEnum(resourceModel,
-                                                                    form.ServerType,
-                                                                    connectionString);
+                                                                 form.ServerType,
+                                                                 connectionString);
                     else
                         model = standardEmitter.EmitResourceModel(resourceModel,
                                                                   resourceMap,
+                                                                  entityMap,
                                                                   replacementsDictionary);
 
                     replacementsDictionary.Add("$model$", model);
