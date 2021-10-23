@@ -402,150 +402,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return "";
 		}
 
-		public static string ConvertMySqlDataType(string dataType)
-		{
-			if (string.Equals(dataType, "tinyint", StringComparison.OrdinalIgnoreCase))
-				return "sbyte";
-			else if (string.Equals(dataType, "tinyint(1)", StringComparison.OrdinalIgnoreCase))
-				return "sbyte";
-			else if (string.Equals(dataType, "tinyint unsigned", StringComparison.OrdinalIgnoreCase))
-				return "byte";
-			else if (string.Equals(dataType, "smallint", StringComparison.OrdinalIgnoreCase))
-				return "short";
-			else if (string.Equals(dataType, "smallint unsigned", StringComparison.OrdinalIgnoreCase))
-				return "ushort";
-			else if (string.Equals(dataType, "mediumint", StringComparison.OrdinalIgnoreCase))
-				return "int";
-			else if (string.Equals(dataType, "mediumint unsigned", StringComparison.OrdinalIgnoreCase))
-				return "uint";
-			else if (string.Equals(dataType, "int", StringComparison.OrdinalIgnoreCase))
-				return "int";
-			else if (string.Equals(dataType, "int unsigned", StringComparison.OrdinalIgnoreCase))
-				return "uint";
-			else if (string.Equals(dataType, "bigint", StringComparison.OrdinalIgnoreCase))
-				return "long";
-			else if (string.Equals(dataType, "bigint unsigned", StringComparison.OrdinalIgnoreCase))
-				return "ulong";
-			else if (dataType.StartsWith("decimal", StringComparison.OrdinalIgnoreCase))
-				return "decimal";
-			else if (string.Equals(dataType, "double", StringComparison.OrdinalIgnoreCase))
-				return "double";
-			else if (string.Equals(dataType, "float", StringComparison.OrdinalIgnoreCase))
-				return "float";
-			else if (dataType.StartsWith("char", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (dataType.StartsWith("bit", StringComparison.OrdinalIgnoreCase))
-				return "bool";
-			else if (string.Equals(dataType, "text", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "tinytext", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "mediumtext", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "longtext", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (dataType.StartsWith("varchar", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "timestamp", StringComparison.OrdinalIgnoreCase))
-				return "DateTime";
-			else if (string.Equals(dataType, "datetime", StringComparison.OrdinalIgnoreCase))
-				return "DateTime";
-			else if (string.Equals(dataType, "year", StringComparison.OrdinalIgnoreCase))
-				return "int";
-			else if (string.Equals(dataType, "date", StringComparison.OrdinalIgnoreCase))
-				return "DateTime";
-			else if (string.Equals(dataType, "time", StringComparison.OrdinalIgnoreCase))
-				return "TimeSpan";
-			else if (dataType.StartsWith("enum", StringComparison.OrdinalIgnoreCase))
-				return "Enum";
-			else if (dataType.StartsWith("set", StringComparison.OrdinalIgnoreCase))
-				return "set";
-			else if (dataType.StartsWith("binary", StringComparison.OrdinalIgnoreCase))
-				return "byte[]";
-			else if (dataType.StartsWith("varbinary", StringComparison.OrdinalIgnoreCase))
-				return "byte[]";
-			else if (dataType.StartsWith("tinyblob", StringComparison.OrdinalIgnoreCase))
-				return "byte[]";
-			else if (dataType.StartsWith("blob", StringComparison.OrdinalIgnoreCase))
-				return "byte[]";
-			else if (dataType.StartsWith("mediumblob", StringComparison.OrdinalIgnoreCase))
-				return "byte[]";
-			else if (dataType.StartsWith("longblob", StringComparison.OrdinalIgnoreCase))
-				return "byte[]";
-			else if (dataType.StartsWith("json", StringComparison.OrdinalIgnoreCase))
-				return "string";
-
-			throw new Exception($"Unrecognized data type: {dataType}");
-		}
-
-		public static string ConvertSqlServerDataType(string dataType)
-		{
-			if (string.Equals(dataType, "image", StringComparison.OrdinalIgnoreCase))
-				return "Image";
-			else if (string.Equals(dataType, "text", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "uniqueidentifier", StringComparison.OrdinalIgnoreCase))
-				return "Guid";
-			else if (string.Equals(dataType, "date", StringComparison.OrdinalIgnoreCase))
-				return "DateTime";
-			else if (string.Equals(dataType, "time", StringComparison.OrdinalIgnoreCase))
-				return "TimeSpan";
-			else if (string.Equals(dataType, "datetime2", StringComparison.OrdinalIgnoreCase))
-				return "DateTime";
-			else if (string.Equals(dataType, "datetimeoffset", StringComparison.OrdinalIgnoreCase))
-				return "DateTimeOffset";
-			else if (string.Equals(dataType, "tinyint", StringComparison.OrdinalIgnoreCase))
-				return "sbyte";
-			else if (string.Equals(dataType, "smallint", StringComparison.OrdinalIgnoreCase))
-				return "short";
-			else if (string.Equals(dataType, "int", StringComparison.OrdinalIgnoreCase))
-				return "int";
-			else if (string.Equals(dataType, "smalldatetime", StringComparison.OrdinalIgnoreCase))
-				return "DateTime";
-			else if (string.Equals(dataType, "real", StringComparison.OrdinalIgnoreCase))
-				return "single";
-			else if (string.Equals(dataType, "money", StringComparison.OrdinalIgnoreCase))
-				return "decimal";
-			else if (string.Equals(dataType, "datetime", StringComparison.OrdinalIgnoreCase))
-				return "DateTime";
-			else if (string.Equals(dataType, "float", StringComparison.OrdinalIgnoreCase))
-				return "single";
-			else if (string.Equals(dataType, "ntext", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "bit", StringComparison.OrdinalIgnoreCase))
-				return "bool";
-			else if (string.Equals(dataType, "decimal", StringComparison.OrdinalIgnoreCase))
-				return "decimal";
-			else if (string.Equals(dataType, "numeric", StringComparison.OrdinalIgnoreCase))
-				return "decimal";
-			else if (string.Equals(dataType, "smallmoney", StringComparison.OrdinalIgnoreCase))
-				return "decimal";
-			else if (string.Equals(dataType, "bigint", StringComparison.OrdinalIgnoreCase))
-				return "long";
-			else if (string.Equals(dataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "varbinary", StringComparison.OrdinalIgnoreCase))
-				return "byte[]";
-			else if (string.Equals(dataType, "varchar", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "binary", StringComparison.OrdinalIgnoreCase))
-				return "byte[]";
-			else if (string.Equals(dataType, "char", StringComparison.OrdinalIgnoreCase))
-				return "char";
-			else if (string.Equals(dataType, "timestamp", StringComparison.OrdinalIgnoreCase))
-				return "byte[]";
-			else if (string.Equals(dataType, "nvarchar", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "nchar", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "xml", StringComparison.OrdinalIgnoreCase))
-				return "string";
-			else if (string.Equals(dataType, "sysname", StringComparison.OrdinalIgnoreCase))
-				return "string";
-
-			throw new Exception($"Unrecognized data type: {dataType}");
-		}
-
+		/// <summary>
+		/// Returns a model type based upon the SQL Server database metadata
+		/// </summary>
+		/// <param name="column">The <see cref="DBColumn"/> that contains the database metadata</param>
+		/// <returns>The corresponding C# model type</returns>
 		public static string GetSQLServerDataType(DBColumn column)
 		{
 			switch (column.DBDataType.ToLower())
@@ -587,6 +448,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						return "double";
 
 				case "decimal":
+				case "numeric":
 					if (column.IsNullable)
 						return "decimal?";
 					else
@@ -657,7 +519,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return "";
 		}
 
-		public static string GetPostgresDataType(DBColumn column, EntityMap entityMap)
+		public static string GetPostgresDataType(DBColumn column)
 		{
 			switch (column.DBDataType.ToLower())
 			{
@@ -684,26 +546,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				case "_varbit":
 				case "_bit":
-					if (string.Equals(column.DBDataType, "_bit", StringComparison.OrdinalIgnoreCase) ||
-						string.Equals(column.DBDataType, "_varbit", StringComparison.OrdinalIgnoreCase))
-					{
-						if (column.Length == 1)
-							return "BitArray";
-						else
-							return "BitArray[]";
-					}
+					if (column.Length == 1)
+						return "BitArray";
 					else
-					{
-						if (column.Length == 1)
-						{
-							if (column.IsNullable)
-								return "bool?";
-							else
-								return "bool";
-						}
-						else
-							return "BitArray";
-					}
+						return "BitArray[]";
 
 				case "smallint":
 					if (column.IsNullable)
@@ -813,10 +659,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					return "string";
 
 				case "name":
-					if (string.Equals(column.DBDataType, "_name", StringComparison.OrdinalIgnoreCase))
-						return "string[]";
-					else
-						return "string";
+					return "string";
 
 				case "_text":
 				case "_name":
@@ -839,10 +682,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 							return "char";
 					}
-					else if (string.Equals(column.DBDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
-						return "string";
 					else
 						return "char[]";
+
+				case "bpchar":
+					return "string";
 
 				case "_char":
 					return "string[]";

@@ -465,55 +465,72 @@ namespace COFRS.Template.Common.Forms
                     //  A foreign key is commonly represented in one of two forms. Either it is a hypertext reference
                     //  (an href), in which case the resource member should be a Uri, or it is an enum.
 
-                    if (string.Equals(resourceMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
+                    //  If it is an enum, there will be a resource model of type enum, whose corresponding entity model
+                    //  will point to the foreign table.
+
+                    var enumResource = ResourceModels.FirstOrDefault(r =>
+                                       r.ResourceType == ResourceType.Enum &&
+                                       string.Equals(r.EntityModel.TableName, resourceMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
+
+                    if (enumResource != null)
                     {
-                        var nnn = new NameNormalizer(resourceMember.ColumnName);
-                        var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey &&
-                           (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
-                             string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
-
-                        var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
                         StringBuilder sourceColumns = new StringBuilder();
-
-                        foreach (var entityMember in foreignKeys)
-                        {
-                            formula.Append($"/{{source.{entityMember.ColumnName}}}");
-                            unmappedColumns.Remove(entityMember);
-
-                            if (sourceColumns.Length > 0)
-                                sourceColumns.Append(", ");
-                            sourceColumns.Append(entityMember.ColumnName);
-                        }
-
-                        formula.Append("\")");
+                        var formula = $"({enumResource.ClassName})source.{resourceMember.ColumnName}";
                         dataRow.Cells[1].Value = formula.ToString();
                         dataRow.Cells[3].Value = sourceColumns.ToString();
                     }
                     else
                     {
-                        //  This is probably an Enum. If it is, we should be able to find it in the list of 
-                        //  resource models.
-                        var referenceModel = ResourceModels.FirstOrDefault(r =>
-                                string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
-
-                        if (referenceModel != null)
+                        if (string.Equals(resourceMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (referenceModel.ResourceType == ResourceType.Enum)
+                            var nnn = new NameNormalizer(resourceMember.ColumnName);
+                            var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey &&
+                               (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
+                                 string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
+
+                            var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
+                            StringBuilder sourceColumns = new StringBuilder();
+
+                            foreach (var entityMember in foreignKeys)
                             {
-                                var nnn = new NameNormalizer(resourceMember.ColumnName);
-                                var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey &&
-                                         (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
-                                           string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
+                                formula.Append($"/{{source.{entityMember.ColumnName}}}");
+                                unmappedColumns.Remove(entityMember);
 
-                                if ( foreignKeys.Count() == 1 )
+                                if (sourceColumns.Length > 0)
+                                    sourceColumns.Append(", ");
+                                sourceColumns.Append(entityMember.ColumnName);
+                            }
+
+                            formula.Append("\")");
+                            dataRow.Cells[1].Value = formula.ToString();
+                            dataRow.Cells[3].Value = sourceColumns.ToString();
+                        }
+                        else
+                        {
+                            //  This is probably an Enum. If it is, we should be able to find it in the list of 
+                            //  resource models.
+                            var referenceModel = ResourceModels.FirstOrDefault(r =>
+                                    string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
+
+                            if (referenceModel != null)
+                            {
+                                if (referenceModel.ResourceType == ResourceType.Enum)
                                 {
-                                    var entityMember = foreignKeys[0];
+                                    var nnn = new NameNormalizer(resourceMember.ColumnName);
+                                    var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey &&
+                                             (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
+                                               string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
 
-                                    var formula = $"({referenceModel.ClassName}) source.{entityMember.ColumnName}";
-                                    dataRow.Cells[1].Value = formula.ToString();
-                                    dataRow.Cells[3].Value = entityMember.ColumnName;
+                                    if (foreignKeys.Count() == 1)
+                                    {
+                                        var entityMember = foreignKeys[0];
 
-                                    unmappedColumns.Remove(entityMember);
+                                        var formula = $"({referenceModel.ClassName}) source.{entityMember.ColumnName}";
+                                        dataRow.Cells[1].Value = formula.ToString();
+                                        dataRow.Cells[3].Value = entityMember.ColumnName;
+
+                                        unmappedColumns.Remove(entityMember);
+                                    }
                                 }
                             }
                         }

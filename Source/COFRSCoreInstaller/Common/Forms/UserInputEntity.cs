@@ -592,7 +592,6 @@ ORDER BY c.ORDINAL_POSITION;
 									{
 										ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
 										EntityName = reader.GetString(0),
-										ModelDataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
 										DBDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
@@ -606,6 +605,7 @@ ORDER BY c.ORDINAL_POSITION;
 										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
 									};
 
+									dbColumn.ModelDataType = DBHelper.GetMySqlDataType(dbColumn);
 									DatabaseColumns.Add(dbColumn);
 								}
 							}
@@ -670,7 +670,6 @@ select c.name as column_name,
 										ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
 										EntityName = reader.GetString(0),
 										DBDataType = reader.GetString(1),
-										ModelDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
 										NumericScale = Convert.ToInt32(reader.GetValue(4)),
@@ -682,6 +681,7 @@ select c.name as column_name,
 										IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
 										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
 									};
+
 
 									if (string.Equals(dbColumn.DBDataType, "geometry", StringComparison.OrdinalIgnoreCase))
 									{
@@ -704,6 +704,7 @@ select c.name as column_name,
 										return;
 									}
 
+									dbColumn.ModelDataType = DBHelper.GetSQLServerDataType(dbColumn);
 									DatabaseColumns.Add(dbColumn);
 								}
 							}
@@ -721,23 +722,41 @@ select c.name as column_name,
         {
             var entityName = reader.GetString(0);
             var columnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0)));
-            string dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
 
-            if (string.IsNullOrWhiteSpace(dataType))
+            var dbColumn = new DBColumn
             {
-				//	See if this column type is already defined...
+                ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
+                EntityName = entityName,
+                DBDataType = reader.GetString(1),
+                Length = Convert.ToInt64(reader.GetValue(2)),
+                NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+                NumericScale = Convert.ToInt32(reader.GetValue(4)),
+                IsNullable = Convert.ToBoolean(reader.GetValue(5)),
+                IsComputed = Convert.ToBoolean(reader.GetValue(6)),
+                IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
+                IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
+                IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
+                IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+                ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
+            };
+
+			dbColumn.ModelDataType = DBHelper.GetPostgresDataType(dbColumn);
+
+            if (string.IsNullOrWhiteSpace(dbColumn.ModelDataType))
+            {
+                //	See if this column type is already defined...
                 if (EntityMap.Maps.FirstOrDefault(ent =>
                    string.Equals(ent.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
-                   string.Equals(ent.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase)) == null)
+                   string.Equals(ent.TableName, dbColumn.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
                 {
-					//	It's not defined. See if it is already included in the undefined list...
+                    //	It's not defined. See if it is already included in the undefined list...
                     if (UndefinedEntityModels.FirstOrDefault(ent =>
                        string.Equals(ent.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
-                       string.Equals(ent.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase)) == null)
+                       string.Equals(ent.TableName, dbColumn.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
                     {
-						//	It's not defined, and it's not in the undefined list, so it is unknown. Let's make it known
-						//	by constructing it and including it in the undefined list.
-                        entityName = reader.GetString(1);
+                        //	It's not defined, and it's not in the undefined list, so it is unknown. Let's make it known
+                        //	by constructing it and including it in the undefined list.
+                        entityName = dbColumn.DBDataType;
                         var className = $"E{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(entityName))}";
 
                         var entity = new EntityModel()
@@ -754,25 +773,9 @@ select c.name as column_name,
                         UndefinedEntityModels.Add(entity);
                     }
                 }
-            }
 
-            var dbColumn = new DBColumn
-            {
-                ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
-                EntityName = entityName,
-                ModelDataType = dataType.ToString(),
-                DBDataType = reader.GetString(1),
-                Length = Convert.ToInt64(reader.GetValue(2)),
-                NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
-                NumericScale = Convert.ToInt32(reader.GetValue(4)),
-                IsNullable = Convert.ToBoolean(reader.GetValue(5)),
-                IsComputed = Convert.ToBoolean(reader.GetValue(6)),
-                IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
-                IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
-                IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
-                IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
-                ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
-            };
+				dbColumn.ModelDataType = dbColumn.DBDataType;
+            }
 
             DatabaseColumns.Add(dbColumn);
         }

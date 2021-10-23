@@ -804,7 +804,6 @@ ORDER BY c.ORDINAL_POSITION;
 									var dbColumn = new DBColumn
 									{
 										ColumnName = reader.GetString(0),
-										ModelDataType = DBHelper.ConvertMySqlDataType(reader.GetString(1)),
 										DBDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
@@ -818,6 +817,7 @@ ORDER BY c.ORDINAL_POSITION;
 										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
 									};
 
+									dbColumn.ModelDataType = DBHelper.GetMySqlDataType(dbColumn);
 									DatabaseColumns.Add(dbColumn);
 								}
 							}
@@ -882,7 +882,6 @@ select c.name as column_name,
 										ColumnName = reader.GetString(0),
 										EntityName = reader.GetString(0),
 										DBDataType = reader.GetString(1),
-										ModelDataType = DBHelper.ConvertSqlServerDataType(reader.GetString(1)),
 										Length = Convert.ToInt64(reader.GetValue(2)),
 										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
 										NumericScale = Convert.ToInt32(reader.GetValue(4)),
@@ -916,6 +915,7 @@ select c.name as column_name,
 										return;
 									}
 
+									dbColumn.ModelDataType = DBHelper.GetSqlServerExampleValue(dbColumn);
 									DatabaseColumns.Add(dbColumn);
 								}
 							}

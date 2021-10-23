@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace COFRS.Template.Common.ServiceUtilities
 {
@@ -538,7 +539,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 				else
 					results.AppendLine(",");
 
-				exampleModel = GetExampleModel(j+6, resourceModel, serverType, connectionString);
+				int r = j + 6;
+				exampleModel = "";
+
+				while ( string.IsNullOrWhiteSpace(exampleModel.Replace("{","").Replace("}","")))
+					exampleModel = GetExampleModel(r--, resourceModel, serverType, connectionString);
+
 				entityJson = JObject.Parse(exampleModel);
 
 				results.Append("\t\t\t\t");
@@ -739,57 +745,62 @@ namespace COFRS.Template.Common.ServiceUtilities
 				}
 				else if (map.MapFunction.StartsWith("source.", StringComparison.OrdinalIgnoreCase))
 				{
-					var mapFunction = $"{{{map.MapFunction}}}";
-					var value = ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, mapFunction);
+					var value = ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, map.MapFunction);
 					var resourceColumn = resourceModel.Columns.FirstOrDefault(rc => rc.ColumnName.Equals(map.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
 
-					if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(string))
+					if (value == null)
 					{
-						value = $"\"{value}\"";
-					}
-					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(Uri))
-					{
-						value = $"new Uri(\"{value}\")";
-					}
-					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(DateTime))
-					{
-						value = $"DateTime.Parse(\"{value}\")";
-					}
-					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(DateTimeOffset))
-					{
-						value = $"DateTimeOffset.Parse(\"{value}\")";
-					}
-					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(bool))
-					{
-						value = $"Boolean.Parse(\"{value}\")";
-					}
-					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(TimeSpan))
-					{
-						value = $"TimeSpan.Parse(\"{value}\")";
-					}
-					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(Guid))
-					{
-						value = $"Guid.Parse(\"{value}\")";
-					}
-					else if (Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(byte) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(sbyte) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(short) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(ushort) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(int) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(uint) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(long) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(ulong) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(double) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(float) ||
-							 Type.GetType(resourceColumn.ModelDataType.ToString()) == typeof(decimal))
-					{
+						results.Append("null");
 					}
 					else
 					{
-						throw new InvalidCastException($"Unable to translate datatype {resourceColumn.ModelDataType.ToString()}");
-                    }
+						if (string.Equals(resourceColumn.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
+						{
+							value = $"\"{value}\"";
+						}
+						else if (string.Equals(resourceColumn.ModelDataType, "uri", StringComparison.OrdinalIgnoreCase))
+						{
+							value = $"new Uri(\"{value}\")";
+						}
+						else if (resourceColumn.ModelDataType.StartsWith("datetime", StringComparison.OrdinalIgnoreCase))
+						{
+							value = $"DateTime.Parse(\"{value}\")";
+						}
+						else if (resourceColumn.ModelDataType.StartsWith("datetimeoffset", StringComparison.OrdinalIgnoreCase))
+						{
+							value = $"DateTimeOffset.Parse(\"{value}\")";
+						}
+						else if (resourceColumn.ModelDataType.StartsWith("bool", StringComparison.OrdinalIgnoreCase))
+						{
+							value = $"Boolean.Parse(\"{value}\")";
+						}
+						else if (resourceColumn.ModelDataType.StartsWith("timespan", StringComparison.OrdinalIgnoreCase))
+						{
+							value = $"TimeSpan.Parse(\"{value}\")";
+						}
+						else if (resourceColumn.ModelDataType.StartsWith("guid", StringComparison.OrdinalIgnoreCase))
+						{
+							value = $"Guid.Parse(\"{value}\")";
+						}
+						else if (resourceColumn.ModelDataType.StartsWith("byte", StringComparison.OrdinalIgnoreCase) ||
+								 resourceColumn.ModelDataType.StartsWith("sbyte", StringComparison.OrdinalIgnoreCase) ||
+								 resourceColumn.ModelDataType.StartsWith("short", StringComparison.OrdinalIgnoreCase) ||
+								 resourceColumn.ModelDataType.StartsWith("ushort", StringComparison.OrdinalIgnoreCase) ||
+								 resourceColumn.ModelDataType.StartsWith("int", StringComparison.OrdinalIgnoreCase) ||
+								 resourceColumn.ModelDataType.StartsWith("uint", StringComparison.OrdinalIgnoreCase) ||
+								 resourceColumn.ModelDataType.StartsWith("long", StringComparison.OrdinalIgnoreCase) ||
+								 resourceColumn.ModelDataType.StartsWith("ulong", StringComparison.OrdinalIgnoreCase) ||
+								 resourceColumn.ModelDataType.StartsWith("double", StringComparison.OrdinalIgnoreCase) ||
+								 resourceColumn.ModelDataType.StartsWith("decimal", StringComparison.OrdinalIgnoreCase))
+						{
+						}
+						else
+						{
+							throw new InvalidCastException($"Unable to translate datatype {resourceColumn.ModelDataType.ToString()}");
+						}
 
-					results.Append(value);
+						results.Append(value);
+					}
 				}
 				else
                 {
@@ -806,37 +817,34 @@ namespace COFRS.Template.Common.ServiceUtilities
             bool isDone = false;
 			var originalMapFunction = mapFunction;
 
-            while (!isDone)
-            {
-                var index = mapFunction.IndexOf('{');
+			while (!isDone)
+			{
+				var ef = Regex.Match(mapFunction, "(?<replace>[\\{]{0,1}source\\.(?<entity>[a-zA-Z0-9_]+)[\\}]{0,1})");
 
-                if (index >= 0)
-                {
-                    var lastIndex = mapFunction.IndexOf('}');
+				if (ef.Success)
+				{
+					var entityColumnReference = ef.Groups["entity"];
+					var textToReplace = ef.Groups["replace"];
+					var token = entityJson[entityColumnReference.Value];
 
-                    if (lastIndex >= 0)
-                    {
-                        var entityColumnReference = mapFunction.Substring(index + 8, lastIndex - index - 8);
-                        var token = entityJson[entityColumnReference];
+					if (token.Type == JTokenType.Integer)
+						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<int>().ToString());
+					else if (token.Type == JTokenType.String)
+						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<string>());
+					else if (token.Type == JTokenType.Date)
+						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<DateTime>().ToString());
+					else if (token.Type == JTokenType.Boolean)
+						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<bool>().ToString());
+					else if (token.Type == JTokenType.Float)
+						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<double>().ToString());
+					else if (token.Type == JTokenType.Guid)
+						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<Guid>().ToString());
+					else
+						throw new InvalidCastException();
+				}
+				else
+					isDone = true;
 
-                        if (token.Type == JTokenType.Integer)
-                        {
-                            var image = "{source." + entityColumnReference + "}";
-                            mapFunction = mapFunction.Replace(image, token.Value<int>().ToString());
-                        }
-                        else if (token.Type == JTokenType.String)
-                        {
-                            var image = "{source." + entityColumnReference + "}";
-                            mapFunction = mapFunction.Replace(image, token.Value<string>());
-                        }
-                        else
-                            throw new InvalidDataException($"invalid map function syntax: {columnName}:{originalMapFunction}");
-                    }
-                    else
-                        throw new InvalidDataException($"invalid map function syntax: {columnName}:{originalMapFunction}");
-                }
-                else
-                    isDone = true;
             }
 
             mapFunction = mapFunction.Replace("$\"", "\"");
@@ -2165,7 +2173,13 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return result.ToString();
 		}
 
-		public string EmitResourceModel(ResourceModel resourceModel, ResourceMap resourceMap, Dictionary<string, string> replacementsDictionary)
+		/// <summary>
+		/// Generates a resource model from a given entity model
+		/// </summary>
+		/// <param name="resourceModel">The <see cref="ResourceModel"/> to generate</param>
+		/// <param name="replacementsDictionary">The replacements dictionary</param>
+		/// <returns></returns>
+		public string EmitResourceModel(ResourceModel resourceModel, ResourceMap resourceMap, EntityMap entityMap, Dictionary<string, string> replacementsDictionary)
 		{
 			replacementsDictionary.Add("$resourceimage$", "false");
 			replacementsDictionary.Add("$resourcenet$", "false");
@@ -2233,19 +2247,44 @@ namespace COFRS.Template.Common.ServiceUtilities
 					}
 					else if (member.IsForeignKey)
 					{
-						if (!foreignTableList.Contains(member.ForeignTableName))
+						//	This is a foreign key reference. Normally, that is simply an href to the table.
+						//	However, there is one exception.
+						//
+						//	If the foreign table is a lookup table (i.e., consists of a numeric key/value pair) then 
+						//	the user has the option of generating its resource model as an enum. If so, we need to 
+						//	treat it as an enum here.
+
+						//	If such a resource model exists, it will have a resource type of Enum, and it's corresponding
+						//	entity model will have the same table name as the foreign table name
+						var enumResourceModel = resourceMap.Maps.FirstOrDefault(m =>
+									m.ResourceType == ResourceType.Enum &&
+									string.Equals(m.EntityModel.TableName, member.ForeignTableName, StringComparison.OrdinalIgnoreCase));
+
+						if (enumResourceModel != null)
 						{
-							var nn = new NameNormalizer(member.ForeignTableName);
-							var memberName = nn.SingleForm;
-
-							memberName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(memberName));
-
+							//	This is the enum version
 							results.AppendLine("\t\t///\t<summary>");
-							results.AppendLine($"\t\t///\tA hypertext reference that identifies the associated {memberName}");
+							results.AppendLine($"\t\t///\tThe enum for {member.ColumnName}");
 							results.AppendLine("\t\t///\t</summary>");
-							results.AppendLine($"\t\tpublic Uri {memberName} {{ get; set; }}");
+							results.AppendLine($"\t\tpublic {enumResourceModel.ClassName} {member.ColumnName} {{ get; set; }}");
+						}
+						else
+						{
+							//	This is just the plain old foreign key reference
+							if (!foreignTableList.Contains(member.ForeignTableName))
+							{
+								var nn = new NameNormalizer(member.ForeignTableName);
+								var memberName = nn.SingleForm;
 
-							foreignTableList.Add(member.ForeignTableName);
+								memberName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(memberName));
+
+								results.AppendLine("\t\t///\t<summary>");
+								results.AppendLine($"\t\t///\tA hypertext reference that identifies the associated {memberName}");
+								results.AppendLine("\t\t///\t</summary>");
+								results.AppendLine($"\t\tpublic Uri {memberName} {{ get; set; }}");
+
+								foreignTableList.Add(member.ForeignTableName);
+							}
 						}
 					}
 					else
@@ -2262,9 +2301,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 							{
 								replacementsDictionary["$resourceimage$"] = "true";
 							}
-
-							var dataType = DBHelper.GetSqlServerResourceDataType(member);
-							results.AppendLine($"\t\tpublic {dataType} {membername} {{ get; set; }}");
+							else if (string.Equals(member.DBDataType, "Date", StringComparison.OrdinalIgnoreCase))
+							{
+								results.AppendLine("\t\t[JsonFormat(\"yyyy-MM-dd\")]");
+								replacementsDictionary["$annotations$"] = "true";
+							}
 						}
 						else if (resourceModel.ServerType == DBServerType.POSTGRESQL)
 						{
@@ -2274,15 +2315,15 @@ namespace COFRS.Template.Common.ServiceUtilities
 							{
 								replacementsDictionary["$resourcenet$"] = "true";
 							}
-
 							else if (string.Equals(member.DBDataType, "MacAddr8", StringComparison.OrdinalIgnoreCase))
+							{
 								replacementsDictionary["$resourcenetinfo$"] = "true";
-
+							}
 							else if (string.Equals(member.DBDataType, "_Boolean", StringComparison.OrdinalIgnoreCase) ||
 									 string.Equals(member.DBDataType, "_Bit", StringComparison.OrdinalIgnoreCase) ||
 									 (string.Equals(member.DBDataType, "Bit", StringComparison.OrdinalIgnoreCase) && member.Length > 1) ||
 									 string.Equals(member.DBDataType, "VarBit", StringComparison.OrdinalIgnoreCase))
- 							{
+							{
 								replacementsDictionary["$resourcebarray$"] = "true";
 							}
 							else if (string.Equals(member.DBDataType, "Point", StringComparison.OrdinalIgnoreCase) ||
@@ -2307,15 +2348,17 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine("\t\t[JsonFormat(\"HH:mm:ss.fffffffzzz\")]");
 								replacementsDictionary["$annotations$"] = "true";
 							}
-
-							var dataType = DBHelper.GetPostgresqlResourceDataType(member, resourceMap.Maps.ToList());
-							results.AppendLine($"\t\tpublic {dataType} {membername} {{ get; set; }}");
 						}
 						else if (resourceModel.ServerType == DBServerType.MYSQL)
 						{
-							var dataType = DBHelper.GetMySqlResourceDataType(member);
-							results.AppendLine($"\t\tpublic {dataType} {membername} {{ get; set; }}");
+							if (string.Equals(member.DBDataType, "Date", StringComparison.OrdinalIgnoreCase))
+							{
+								results.AppendLine("\t\t[JsonFormat(\"yyyy-MM-dd\")]");
+								replacementsDictionary["$annotations$"] = "true";
+							}
 						}
+
+						results.AppendLine($"\t\tpublic {member.ModelDataType} {membername} {{ get; set; }}");
 					}
 				}
 			}
@@ -2615,7 +2658,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 				knownEntityModels.Maps = theList.ToArray();
 
 				//	Insert the column definition
-				result.AppendLine($"\t\tpublic {DBHelper.GetPostgresDataType(column, knownEntityModels)} {memberName} {{ get; set; }}");
+				result.AppendLine($"\t\tpublic {DBHelper.GetPostgresDataType(column)} {memberName} {{ get; set; }}");
 			}
 
 			result.AppendLine("\t}");
