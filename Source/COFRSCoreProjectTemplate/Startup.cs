@@ -107,7 +107,7 @@ namespace $safeprojectname$
 			}
 
 			$endif$//	Configure Swagger
-			$if$ ( $securitymodel$ == OAuth )services.UseSwagger(authorityUrl, apiOptions, scopes);$else$services.UseSwagger(apiOptions);
+			$if$ ( $securitymodel$ == OAuth )services.UseSwagger(new Uri(authorityUrl), apiOptions, scopes);$else$services.UseSwagger(apiOptions);
 
 			$endif$var supportedJsonTypes = new string[] { "application/json", "text/json", "application/vnd.$companymoniker$.v1+json" };
 
