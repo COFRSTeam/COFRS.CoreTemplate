@@ -994,6 +994,12 @@ namespace COFRS.Template.Common.Forms
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
+            {
+                ConvertSourceToUri(dataRow, sourceMember);
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
             else
             {
                 dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
@@ -1005,7 +1011,7 @@ namespace COFRS.Template.Common.Forms
         private void MapResourceDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
             if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
             {
@@ -1017,28 +1023,28 @@ namespace COFRS.Template.Common.Forms
             {
                 if (model.ResourceType == ResourceType.Enum)
                 {
-                    if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(destinationMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(destinationMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(destinationMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(destinationMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(destinationMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(destinationMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(destinationMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(destinationMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase))
                     {
-                        dataRow.Cells[1].Value = $"({model.ClassName}) source.{sourceMember.ColumnName}";
+                        dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) source.{sourceMember.ColumnName}";
                         dataRow.Cells[3].Value = sourceMember.ColumnName;
                         unmappedColumns.Remove(sourceMember);
                     }
-                    else if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(destinationMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
                     {
-                        dataRow.Cells[1].Value = $"Enum.Parse<{model.ClassName}>(source.{sourceMember.ColumnName})";
+                        dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString())";
                         dataRow.Cells[3].Value = sourceMember.ColumnName;
                         unmappedColumns.Remove(sourceMember);
                     }
                     else
                     {
-                        dataRow.Cells[1].Value = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
+                        dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
                         dataRow.Cells[1].Style.ForeColor = Color.Red;
                         dataRow.Cells[3].Value = sourceMember.ColumnName;
                         unmappedColumns.Remove(sourceMember);
@@ -1056,7 +1062,7 @@ namespace COFRS.Template.Common.Forms
                         }
                         else
                         {
-                            dataRow.Cells[1].Value = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
+                            dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
                             dataRow.Cells[1].Style.ForeColor = Color.Red;
                             dataRow.Cells[3].Value = sourceMember.ColumnName;
                             unmappedColumns.Remove(sourceMember);
@@ -1064,7 +1070,7 @@ namespace COFRS.Template.Common.Forms
                     }
                     else
                     {
-                        dataRow.Cells[1].Value = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
+                        dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
                         dataRow.Cells[1].Style.ForeColor = Color.Red;
                         dataRow.Cells[3].Value = sourceMember.ColumnName;
                         unmappedColumns.Remove(sourceMember);
@@ -1226,6 +1232,24 @@ namespace COFRS.Template.Common.Forms
             else
             {
                 dataRow.Cells[1].Value = $"(Guid) AFunc(source.{sourceMember.ColumnName})";
+                dataRow.Cells[1].Style.ForeColor = Color.Red;
+            }
+        }
+
+        /// <summary>
+        /// Converts a source <see cref="DBColumn"/> value to an <see cref="Uri"/>
+        /// </summary>
+        /// <param name="dataRow">The data row to place the mapping function</param>
+        /// <param name="sourceMember">The <see cref="DBColumn>"/> source member to convert.</param>
+        private static void ConvertSourceToUri(DataGridViewRow dataRow, DBColumn sourceMember)
+        {
+            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = $"new Uri(source.{sourceMember.ColumnName})";
+            }
+            else
+            {
+                dataRow.Cells[1].Value = $"(Uri) AFunc(source.{sourceMember.ColumnName})";
                 dataRow.Cells[1].Style.ForeColor = Color.Red;
             }
         }
