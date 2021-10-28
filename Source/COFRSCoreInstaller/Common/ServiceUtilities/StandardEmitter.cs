@@ -395,17 +395,22 @@ namespace COFRS.Template.Common.ServiceUtilities
 							results.AppendLine("\t\t\t\t\tOp = \"replace\",");
 							results.AppendLine($"\t\t\t\t\tPath = \"{property.Path}\",");
 
-							if ( property.First.Type == JTokenType.Null )
+							if (property.First.Type == JTokenType.Null)
 								results.AppendLine($"\t\t\t\t\tValue = null");
 							else if (property.First.Type == JTokenType.String ||
 									 property.First.Type == JTokenType.Date ||
 									 property.First.Type == JTokenType.Guid ||
-									 property.First.Type == JTokenType.TimeSpan )
+									 property.First.Type == JTokenType.TimeSpan)
 								results.AppendLine($"\t\t\t\t\tValue = \"{((string)property.Value<JProperty>())}\"");
 							else if (property.First.Type == JTokenType.Integer)
 								results.AppendLine($"\t\t\t\t\tValue = \"{((long)property.Value<JProperty>())}\"");
 							else if (property.First.Type == JTokenType.Float)
 								results.AppendLine($"\t\t\t\t\tValue = \"{((double)property.Value<JProperty>())}\"");
+							else if (property.First.Type == JTokenType.Boolean)
+							{
+								var theBooleanValue = (bool)property.Value<JProperty>();
+								results.AppendLine($"\t\t\t\t\tValue = {theBooleanValue.ToString().ToLower()}");
+							}
 							else
 								results.AppendLine($"\t\t\t\t\tValue = \"value\"");
 
@@ -430,6 +435,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine($"\t\t\t\t\tValue = \"{((long)property.Value<JProperty>())}\"");
 							else if (property.First.Type == JTokenType.Float)
 								results.AppendLine($"\t\t\t\t\tValue = \"{((double)property.Value<JProperty>())}\"");
+							else if (property.First.Type == JTokenType.Boolean)
+							{
+								var theBooleanValue = (bool)property.Value<JProperty>();
+								results.AppendLine($"\t\t\t\t\tValue = {theBooleanValue.ToString().ToLower()}");
+							}
 							else
 								results.AppendLine($"\t\t\t\t\tValue = \"value\"");
 
@@ -756,31 +766,33 @@ namespace COFRS.Template.Common.ServiceUtilities
 					{
 						if (string.Equals(resourceColumn.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
 						{
-							value = $"\"{value}\"";
 						}
 						else if (string.Equals(resourceColumn.ModelDataType, "uri", StringComparison.OrdinalIgnoreCase))
 						{
-							value = $"new Uri(\"{value}\")";
+							value = $"new Uri({value})";
 						}
 						else if (resourceColumn.ModelDataType.StartsWith("datetime", StringComparison.OrdinalIgnoreCase))
 						{
-							value = $"DateTime.Parse(\"{value}\")";
+							if ( !string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
+								value = $"DateTime.Parse({value})";
 						}
 						else if (resourceColumn.ModelDataType.StartsWith("datetimeoffset", StringComparison.OrdinalIgnoreCase))
 						{
-							value = $"DateTimeOffset.Parse(\"{value}\")";
+							if (!string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
+								value = $"DateTimeOffset.Parse({value})";
 						}
 						else if (resourceColumn.ModelDataType.StartsWith("bool", StringComparison.OrdinalIgnoreCase))
 						{
-							value = $"Boolean.Parse(\"{value}\")";
+							value = value.ToString().ToLower();
 						}
 						else if (resourceColumn.ModelDataType.StartsWith("timespan", StringComparison.OrdinalIgnoreCase))
 						{
-							value = $"TimeSpan.Parse(\"{value}\")";
+							if (!string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
+								value = $"TimeSpan.Parse({value})";
 						}
 						else if (resourceColumn.ModelDataType.StartsWith("guid", StringComparison.OrdinalIgnoreCase))
 						{
-							value = $"Guid.Parse(\"{value}\")";
+							value = $"Guid.Parse({value})";
 						}
 						else if (resourceColumn.ModelDataType.StartsWith("byte", StringComparison.OrdinalIgnoreCase) ||
 								 resourceColumn.ModelDataType.StartsWith("sbyte", StringComparison.OrdinalIgnoreCase) ||
@@ -827,18 +839,22 @@ namespace COFRS.Template.Common.ServiceUtilities
 					var textToReplace = ef.Groups["replace"];
 					var token = entityJson[entityColumnReference.Value];
 
-					if (token.Type == JTokenType.Integer)
+					if (token.Type == JTokenType.Null)
+						return mapFunction = "null";
+					else if (token.Type == JTokenType.Integer)
 						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<int>().ToString());
 					else if (token.Type == JTokenType.String)
-						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<string>());
+						mapFunction = mapFunction.Replace(textToReplace.Value, $"\"{token.Value<string>()}\"");
 					else if (token.Type == JTokenType.Date)
-						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<DateTime>().ToString());
+						mapFunction = mapFunction.Replace(textToReplace.Value, $"\"{token.Value<DateTime>():O}\"");
+					else if (token.Type == JTokenType.TimeSpan)
+						mapFunction = mapFunction.Replace(textToReplace.Value, $"\"{token.Value<TimeSpan>()}\"");
 					else if (token.Type == JTokenType.Boolean)
 						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<bool>().ToString());
 					else if (token.Type == JTokenType.Float)
 						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<double>().ToString());
 					else if (token.Type == JTokenType.Guid)
-						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<Guid>().ToString());
+						mapFunction = mapFunction.Replace(textToReplace.Value, $"\"{token.Value<Guid>()}\"");
 					else
 						throw new InvalidCastException();
 				}
@@ -952,6 +968,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 								switch ( column.DBDataType.ToLower())
 								{
 									case "bigint":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var Value = reader.GetInt64(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
@@ -962,6 +983,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 									case "image":
 									case "timestamp":
 									case "varbinary":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var length = reader.GetBytes(0, -1, null, 1, 1);
 											var byteBuffer = new byte[length];
@@ -972,6 +998,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 										break;
 
 									case "bit":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+											results.Append("null");
+										else
 										{
 											var Value = reader.GetBoolean(reader.GetOrdinal(column.ColumnName));
 											results.Append(Value ? "true" : "false");
@@ -979,6 +1008,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 										break;
 
 									case "date":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
 											results.Append("\"{date.ToShortDateString()}\"");
@@ -988,6 +1022,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 									case "datetime":
 									case "datetime2":
 									case "smalldatetime":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
 											var Value = date.ToString("o");
@@ -996,6 +1035,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 										break;
 
 									case "datetimeoffset":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var date = reader.GetDateTimeOffset(reader.GetOrdinal(column.ColumnName));
 											var Value = date.ToString("o");
@@ -1005,6 +1049,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 									case "decimal":
 									case "money":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var Value = reader.GetDecimal(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
@@ -1014,6 +1063,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 									case "float":
 									case "real":
 									case "smallmoney":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var Value = reader.GetFloat(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
@@ -1021,6 +1075,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 										break;
 
 									case "int":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+											results.Append("null");
+										else
 										{
 											var Value = reader.GetInt32(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
@@ -1028,6 +1085,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 										break;
 
 									case "smallint":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var Value = reader.GetInt16(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
@@ -1035,6 +1097,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 										break;
 
 									case "tinyint":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var Value = reader.GetByte(reader.GetOrdinal(column.ColumnName));
 											results.Append($"{Value}");
@@ -1042,6 +1109,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 										break;
 
 									case "time":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
 										{
 											var Value = reader.GetTimeSpan(reader.GetOrdinal(column.ColumnName));
 											results.Append($"\"{Value.ToString()}\"");
@@ -1055,18 +1127,20 @@ namespace COFRS.Template.Common.ServiceUtilities
 									case "nchar":
 									case "varchar":
 									case "xml":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+                                        {
+											results.Append("null");
+                                        }
+										else if (string.Equals(column.DBDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
+                                        {
+											var theValue = reader.GetFieldValue<object>(reader.GetOrdinal(column.ColumnName));
+											theValue = theValue.ToString().Replace("/", "-");
+											results.Append($"\"{theValue}\"");
+										}
+										else
 										{
-											if (string.Equals(column.DBDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
-                                            {
-												var theValue = reader.GetFieldValue<object>(reader.GetOrdinal(column.ColumnName));
-												theValue = theValue.ToString().Replace("/", "-");
-												results.Append($"\"{theValue}\"");
-											}
-											else
-											{
-												var Value = reader.GetString(reader.GetOrdinal(column.ColumnName));
-												results.Append($"\"{Value}\"");
-											}
+											var Value = reader.GetString(reader.GetOrdinal(column.ColumnName));
+											results.Append($"\"{Value}\"");
 										}
 										break;
 
