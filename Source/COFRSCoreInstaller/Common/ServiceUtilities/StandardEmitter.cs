@@ -484,7 +484,13 @@ namespace COFRS.Template.Common.ServiceUtilities
             results.AppendLine($"\tpublic class {resourceModel.ClassName}Example : IExamplesProvider<{resourceModel.ClassName}>");
             results.AppendLine("\t{");
 
-            results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine("\t\tprivate static R MapFrom<R>(Func<R> f)");
+			results.AppendLine("\t\t{");
+			results.AppendLine("\t\t\treturn f();");
+			results.AppendLine("\t\t}");
+			results.AppendLine();
+
+			results.AppendLine("\t\t///\t<summary>");
             if (resourceModel.ClassName.StartsWith("a", StringComparison.OrdinalIgnoreCase) ||
                 resourceModel.ClassName.StartsWith("e", StringComparison.OrdinalIgnoreCase) ||
                 resourceModel.ClassName.StartsWith("i", StringComparison.OrdinalIgnoreCase) ||
@@ -530,7 +536,13 @@ namespace COFRS.Template.Common.ServiceUtilities
             results.AppendLine($"\t\tpublic class {resourceModel.ClassName}CollectionExample : IExamplesProvider<RqlCollection<{resourceModel.ClassName}>>");
             results.AppendLine("\t{");
 
-            results.AppendLine("\t\t///\t<summary>");
+			results.AppendLine("\t\tprivate static R MapFrom<R>(Func<R> f)");
+			results.AppendLine("\t\t{");
+			results.AppendLine("\t\t\treturn f();");
+			results.AppendLine("\t\t}");
+			results.AppendLine();
+
+			results.AppendLine("\t\t///\t<summary>");
             results.AppendLine($"\t\t///\tGenerates an example model of a collection of <see cref=\"{resourceModel.ClassName}\"/> resources.");
             results.AppendLine("\t\t///\t</summary>");
             results.AppendLine($"\t\t///\t<returns>An example model of a collection of <see cref=\"{resourceModel.ClassName}\"/> resources.</returns>");
@@ -744,128 +756,699 @@ namespace COFRS.Template.Common.ServiceUtilities
                     results.AppendLine(",");
 
                 results.Append($"{prefix}\t\t\t\t{map.ResourceColumnName} = ");
-
-                if (map.MapFunction.StartsWith("new Uri(rootUrl,", StringComparison.OrdinalIgnoreCase))
-                {
-                    results.Append(ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, map.MapFunction));
-                }
-                else if ( map.MapFunction.StartsWith("new", StringComparison.OrdinalIgnoreCase))
-                {
-					results.Append(ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, map.MapFunction));
-				}
-				else if (map.MapFunction.StartsWith("source.", StringComparison.OrdinalIgnoreCase))
-				{
-					var value = ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, map.MapFunction);
-					var resourceColumn = resourceModel.Columns.FirstOrDefault(rc => rc.ColumnName.Equals(map.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
-
-					if (value == null)
-					{
-						results.Append("null");
-					}
-					else
-					{
-						if (string.Equals(resourceColumn.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-						{
-						}
-						else if (string.Equals(resourceColumn.ModelDataType, "uri", StringComparison.OrdinalIgnoreCase))
-						{
-							value = $"new Uri({value})";
-						}
-						else if (resourceColumn.ModelDataType.StartsWith("datetime", StringComparison.OrdinalIgnoreCase))
-						{
-							if ( !string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
-								value = $"DateTime.Parse({value})";
-						}
-						else if (resourceColumn.ModelDataType.StartsWith("datetimeoffset", StringComparison.OrdinalIgnoreCase))
-						{
-							if (!string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
-								value = $"DateTimeOffset.Parse({value})";
-						}
-						else if (resourceColumn.ModelDataType.StartsWith("bool", StringComparison.OrdinalIgnoreCase))
-						{
-							value = value.ToString().ToLower();
-						}
-						else if (resourceColumn.ModelDataType.StartsWith("timespan", StringComparison.OrdinalIgnoreCase))
-						{
-							if (!string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
-								value = $"TimeSpan.Parse({value})";
-						}
-						else if (resourceColumn.ModelDataType.StartsWith("guid", StringComparison.OrdinalIgnoreCase))
-						{
-							value = $"Guid.Parse({value})";
-						}
-						else if (resourceColumn.ModelDataType.StartsWith("byte", StringComparison.OrdinalIgnoreCase) ||
-								 resourceColumn.ModelDataType.StartsWith("sbyte", StringComparison.OrdinalIgnoreCase) ||
-								 resourceColumn.ModelDataType.StartsWith("short", StringComparison.OrdinalIgnoreCase) ||
-								 resourceColumn.ModelDataType.StartsWith("ushort", StringComparison.OrdinalIgnoreCase) ||
-								 resourceColumn.ModelDataType.StartsWith("int", StringComparison.OrdinalIgnoreCase) ||
-								 resourceColumn.ModelDataType.StartsWith("uint", StringComparison.OrdinalIgnoreCase) ||
-								 resourceColumn.ModelDataType.StartsWith("long", StringComparison.OrdinalIgnoreCase) ||
-								 resourceColumn.ModelDataType.StartsWith("ulong", StringComparison.OrdinalIgnoreCase) ||
-								 resourceColumn.ModelDataType.StartsWith("double", StringComparison.OrdinalIgnoreCase) ||
-								 resourceColumn.ModelDataType.StartsWith("decimal", StringComparison.OrdinalIgnoreCase))
-						{
-						}
-						else
-						{
-							throw new InvalidCastException($"Unable to translate datatype {resourceColumn.ModelDataType.ToString()}");
-						}
-
-						results.Append(value);
-					}
-				}
-				else
-                {
-					results.Append(ReplaceEntityReferences(results, entityJson, map.ResourceColumnName, map.MapFunction));
-				}
+				results.Append(ResolveMapFunction(entityJson, map.ResourceColumnName, resourceModel, map.MapFunction));
 			}
 
 			results.AppendLine();
 			results.Append($"{prefix}\t\t\t}}");
         }
 
-        private static string ReplaceEntityReferences(StringBuilder results, JObject entityJson, string columnName, string mapFunction)
+		private static string ResolveMapFunction(JObject entityJson, string columnName, ResourceModel model, string mapFunction)
         {
             bool isDone = false;
-			var originalMapFunction = mapFunction;
+            var originalMapFunction = mapFunction;
+            var valueNumber = 1;
+            List<string> valueAssignments = new List<string>();
+
+			var simpleConversion = ExtractSimpleConversion(entityJson, model, mapFunction);
+
+			if (!string.IsNullOrWhiteSpace(simpleConversion))
+				return simpleConversion;
+
+			var wellKnownConversion = ExtractWellKnownConversion(entityJson, model, mapFunction);
+
+			if (!string.IsNullOrWhiteSpace(wellKnownConversion))
+				return wellKnownConversion;
 
 			while (!isDone)
-			{
-				var ef = Regex.Match(mapFunction, "(?<replace>[\\{]{0,1}source\\.(?<entity>[a-zA-Z0-9_]+)[\\}]{0,1})");
+            {
+                var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
 
-				if (ef.Success)
-				{
-					var entityColumnReference = ef.Groups["entity"];
-					var textToReplace = ef.Groups["replace"];
-					var token = entityJson[entityColumnReference.Value];
+                if (ef.Success)
+                {
+                    var entityColumnReference = ef.Groups["entity"];
+                    var textToReplace = ef.Groups["replace"];
+                    var token = entityJson[entityColumnReference.Value];
 
-					if (token.Type == JTokenType.Null)
-						return mapFunction = "null";
-					else if (token.Type == JTokenType.Integer)
-						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<int>().ToString());
-					else if (token.Type == JTokenType.String)
-						mapFunction = mapFunction.Replace(textToReplace.Value, $"\"{token.Value<string>()}\"");
-					else if (token.Type == JTokenType.Date)
-						mapFunction = mapFunction.Replace(textToReplace.Value, $"\"{token.Value<DateTime>():O}\"");
-					else if (token.Type == JTokenType.TimeSpan)
-						mapFunction = mapFunction.Replace(textToReplace.Value, $"\"{token.Value<TimeSpan>()}\"");
-					else if (token.Type == JTokenType.Boolean)
-						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<bool>().ToString());
-					else if (token.Type == JTokenType.Float)
-						mapFunction = mapFunction.Replace(textToReplace.Value, token.Value<double>().ToString());
-					else if (token.Type == JTokenType.Guid)
-						mapFunction = mapFunction.Replace(textToReplace.Value, $"\"{token.Value<Guid>()}\"");
-					else
-						throw new InvalidCastException();
-				}
-				else
-					isDone = true;
+                    var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(entityColumnReference.Value, StringComparison.OrdinalIgnoreCase));
+                    var resourceColumn = model.Columns.FirstOrDefault(c => c.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase));
 
+                    switch (entityColumn.ModelDataType.ToLower())
+                    {
+                        case "bool":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Boolean:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = {token.Value<bool>().ToString().ToLower()};");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                default:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+                            }
+                            break;
+
+                        case "bool?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Boolean:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = {token.Value<bool>().ToString().ToLower()};");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                case JTokenType.Null:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = null;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                default:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+                            }
+                            break;
+
+                        case "int":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = {token.Value<int>()};");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                default:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}}}");
+                                    break;
+                            }
+                            break;
+
+                        case "int?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = {token.Value<int>()};");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                case JTokenType.Null:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = null;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                default:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+                            }
+                            break;
+
+                        case "string":
+                            switch (token.Type)
+                            {
+                                case JTokenType.String:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = \"{token.Value<string>()}\";");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                case JTokenType.Null:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = string.Empty;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                default:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = string.Empty;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+                            }
+                            break;
+
+                        case "datetime":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Date:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = DateTime.Parse(\"{token.Value<DateTime>():O}\");");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                default:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = string.Empty;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+                            }
+                            break;
+
+                        case "datetime?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Date:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = DateTime.Parse(\"{token.Value<DateTime>():O}\");");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                case JTokenType.Null:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = null;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+
+                                default:
+                                    valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+                                    mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+                                    break;
+                            }
+                            break;
+
+                        default:
+                            return "default";
+                    }
+
+                    valueNumber++;
+                }
+                else
+                    isDone = true;
             }
 
-            mapFunction = mapFunction.Replace("$\"", "\"");
+            StringBuilder results = new StringBuilder();
+            results.Append("MapFrom(() => {");
+            foreach (var assignment in valueAssignments)
+                results.Append($"{assignment} ");
+            results.Append($" return {mapFunction};");
+            results.Append("})");
 
-			return mapFunction;
+            return results.ToString();
+        }
+
+		private static string ExtractWellKnownConversion(JObject entityJson, ResourceModel model, string mapFunction)
+		{
+			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
+
+			if (ef.Success)
+			{
+				var token = entityJson[ef.Groups["entity"].Value];
+				var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+				var replaceText = ef.Groups["replace"].Value;
+
+				var seek = $"{replaceText}\\.HasValue[ \t]*\\?[ \t]*\\(TimeSpan\\?\\)[ \t]*TimeSpan\\.FromSeconds[ \t]*\\([ \t]*\\(double\\)[ \t]*{replaceText}[ \t]*\\)[ \t]*\\:[ \t]*null";
+
+				var sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					if (token.Type == JTokenType.Null)
+						return "null";
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "byte":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<byte>()})";
+							}
+							break;
+
+						case "sbyte":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<sbyte>()})";
+							}
+							break;
+
+						case "short":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<short>()})";
+							}
+							break;
+
+						case "ushort":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<ushort>()})";
+							}
+							break;
+
+						case "int":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<int>()})";
+							}
+							break;
+
+						case "uint":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<uint>()})";
+							}
+							break;
+
+						case "long":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<long>()})";
+							}
+							break;
+
+						case "ulong":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<ulong>()})";
+							}
+							break;
+					}
+				}
+
+				seek = $"TimeSpan\\.FromSeconds[ \t]*\\([ \t]*\\(double\\)[ \t]*{replaceText}[ \t]*\\)";
+
+				sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "byte":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<byte>()})";
+							}
+							break;
+
+						case "sbyte":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<sbyte>()})";
+							}
+							break;
+
+						case "short":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<short>()})";
+							}
+							break;
+
+						case "ushort":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<ushort>()})";
+							}
+							break;
+
+						case "int":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<int>()})";
+							}
+							break;
+
+						case "uint":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<uint>()})";
+							}
+							break;
+
+						case "long":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<long>()})";
+							}
+							break;
+
+						case "ulong":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<ulong>()})";
+							}
+							break;
+					}
+				}
+
+				seek = $"string\\.IsNullOrWhiteSpace\\({replaceText}\\)[ \t]*\\?[ \t]*null[ \t]*\\:[ \t]*new[ \t]*Uri\\({replaceText}\\)";
+
+				sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					if (token.Type == JTokenType.Null)
+						return "null";
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "string":
+							if (token.Type == JTokenType.String)
+							{
+								return $"new Uri(\"{token.Value<string>()}\")";
+							}
+							break;
+					}
+				}
+
+
+				seek = $"{replaceText}\\.HasValue[ \t]+\\?[ \t]*\\(DateTimeOffset\\?\\)[ \t]*new[ \t]+DateTimeOffset\\([ \t]*{replaceText}(\\.Value){{0,1}}[ \t]*\\)[ \t]*\\:[ \t]*null";
+
+				sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					if (token.Type == JTokenType.Null)
+						return "null";
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "DateTime?":
+							if (token.Type == JTokenType.Date)
+							{
+								var DateTimeValue = token.Value<DateTime>();
+								var DateTimeOffsetValue = new DateTimeOffset(DateTimeValue);
+								return $"DateTimeOffset.Parse({DateTimeOffsetValue.ToString():O})";
+							}
+							break;
+					}
+				}
+
+				seek = $"new[ \t]+DateTimeOffset\\([ \t]*{replaceText}[ \t]*\\)";
+
+				sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					if (token.Type == JTokenType.Null)
+						return "null";
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "datetime":
+							if (token.Type == JTokenType.Date)
+							{
+								var DateTimeValue = token.Value<DateTime>();
+								var DateTimeOffsetValue = new DateTimeOffset(DateTimeValue);
+								var dtString = DateTimeOffsetValue.ToString("O");
+								return $"DateTimeOffset.Parse(\"{dtString}\")";
+							}
+							break;
+					}
+				}
+			}
+
+			return string.Empty;
+		}
+
+		private static string ExtractSimpleConversion(JObject entityJson, ResourceModel model, string mapFunction)
+        {
+            var  ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
+
+            if (ef.Success)
+            {
+                if (mapFunction.Equals(ef.Groups["replace"].Value))
+                {
+                    var token = entityJson[ef.Groups["entity"].Value];
+                    var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+
+                    switch (entityColumn.ModelDataType.ToLower())
+                    {
+                        case "bool":
+                        case "bool?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Boolean:
+                                    return token.Value<bool>().ToString().ToLower();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "byte":
+                        case "byte?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<byte>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "sbyte":
+                        case "sbyte?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<sbyte>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "short":
+                        case "short?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<short>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "ushort":
+                        case "ushort?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<ushort>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "int":
+                        case "int?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<int>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "uint":
+                        case "uint?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<uint>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "long":
+                        case "long?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<long>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "ulong":
+                        case "ulong?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<ulong>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "float":
+                        case "float?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<float>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "double":
+                        case "double?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<double>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "decimal":
+                        case "decimal?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Integer:
+                                    return token.Value<decimal>().ToString();
+
+                                case JTokenType.Null:
+                                    return "null";
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "string":
+                            switch (token.Type)
+                            {
+                                case JTokenType.String:
+                                    return $"\"{token.Value<string>()}\"";
+
+                                case JTokenType.Null:
+                                    return "string.Empty";
+
+                                default:
+                                    return "string.Empty";
+                            }
+
+                        case "Guid":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Guid:
+                                    return $"Guid.Parse(\"{token.Value<Guid>()}\")";
+
+                                case JTokenType.Null:
+                                    return null;
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "DateTime":
+                        case "DateTime?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Date:
+                                    return $"DateTime.Parse(\"{token.Value<DateTime>().ToString():O}\")";
+
+                                case JTokenType.Null:
+                                    return null;
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "DateTimeOffset":
+                        case "DateTimeOffset?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.Date:
+                                    return $"DateTimeOffset.Parse(\"{token.Value<DateTimeOffset>().ToString():O}\")";
+
+                                case JTokenType.Null:
+                                    return null;
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "TimeSpan":
+                        case "TimeSpan?":
+                            switch (token.Type)
+                            {
+                                case JTokenType.TimeSpan:
+                                    return $"TimeSpan.Parse(\"{token.Value<TimeSpan>()}\")";
+
+                                case JTokenType.Null:
+                                    return null;
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "byte[]":
+                        case "IEnumerable<byte>":
+                            switch (token.Type)
+                            {
+                                case JTokenType.String:
+                                    return $"Convert.FromBase64String(\"{token.Value<string>()}\").ToArray()";
+
+                                case JTokenType.Bytes:
+                                    {
+                                        var theBytes = token.Value<byte[]>();
+                                        var str = Convert.ToBase64String(theBytes);
+                                        return $"Convert.FromBase64String(\"{str}\").ToArray()";
+                                    }
+
+                                case JTokenType.Null:
+                                    return null;
+
+                                default:
+                                    return "default";
+                            }
+
+                        case "List<byte>":
+                            switch (token.Type)
+                            {
+                                case JTokenType.String:
+                                    return $"Convert.FromBase64String(\"{token.Value<string>()}\").ToList()";
+
+                                case JTokenType.Bytes:
+                                    {
+                                        var theBytes = token.Value<byte[]>();
+                                        var str = Convert.ToBase64String(theBytes);
+                                        return $"Convert.FromBase64String(\"{str}\").ToList()";
+                                    }
+
+                                case JTokenType.Null:
+                                    return null;
+
+                                default:
+                                    return "default";
+                            }
+                    }
+                }
+            }
+
+			return string.Empty;
         }
 
         public string GetExampleModel(int skipRecords, ResourceModel resourceModel, DBServerType serverType, string connectionString)

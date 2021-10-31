@@ -82,7 +82,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
             if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
             {
-                return $"string.IsNullOrWhiteSpace(source.{sourceMember.ColumnName}) ? default(Uri) : new Uri(source.{sourceMember.ColumnName})";
+                return $"string.IsNullOrWhiteSpace(source.{sourceMember.ColumnName}) ? null : new Uri(source.{sourceMember.ColumnName})";
             }
             else if (string.Equals(sourceMember.ModelDataType, "Uri", StringComparison.OrdinalIgnoreCase))
             {
@@ -443,7 +443,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                      string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
                      string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase))
             {
-                return $"(TimeSpan?) TimeSpan.FromSeconds((double) source.{sourceMember.ColumnName})";
+                return $"(TimeSpan?) TimeSpan.FromSeconds((double)source.{sourceMember.ColumnName})";
             }
             else if (string.Equals(sourceMember.ModelDataType, "byte?", StringComparison.OrdinalIgnoreCase) ||
                      string.Equals(sourceMember.ModelDataType, "sbyte?", StringComparison.OrdinalIgnoreCase) ||
@@ -454,7 +454,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                      string.Equals(sourceMember.ModelDataType, "ulong?", StringComparison.OrdinalIgnoreCase) ||
                      string.Equals(sourceMember.ModelDataType, "char?", StringComparison.OrdinalIgnoreCase))
             {
-                return $"source.{sourceMember.ColumnName}.HasValue ? (TimeSpan?) TimeSpan.FromSeconds((double) source.{sourceMember.ColumnName}) : null";
+                return $"source.{sourceMember.ColumnName}.HasValue ? (TimeSpan?) TimeSpan.FromSeconds((double)source.{sourceMember.ColumnName}) : null";
             }
             else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
