@@ -470,6 +470,7 @@ namespace COFRS.Template.Common.Forms
 
                     var enumResource = ResourceModels.FirstOrDefault(r =>
                                        r.ResourceType == ResourceType.Enum &&
+                                       r.EntityModel != null && 
                                        string.Equals(r.EntityModel.TableName, resourceMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
 
                     if (enumResource != null)

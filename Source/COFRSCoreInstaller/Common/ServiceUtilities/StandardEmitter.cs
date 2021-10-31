@@ -2916,6 +2916,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						//	entity model will have the same table name as the foreign table name
 						var enumResourceModel = resourceMap.Maps.FirstOrDefault(m =>
 									m.ResourceType == ResourceType.Enum &&
+									m.EntityModel != null &&
 									string.Equals(m.EntityModel.TableName, member.ForeignTableName, StringComparison.OrdinalIgnoreCase));
 
 						if (enumResourceModel != null)
