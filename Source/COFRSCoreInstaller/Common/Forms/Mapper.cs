@@ -864,139 +864,281 @@ namespace COFRS.Template.Common.Forms
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToByte(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToByte(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableByte(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToSByte(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToSByte(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableSByte(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "short", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToShort(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToShort(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "short?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableShort(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToUShort(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToUShort(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableUShort(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "int", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToInt(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToInt(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "int?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableInt(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToUInt(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToUInt(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableUInt(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "long", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToLong(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToLong(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "long?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableLong(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToULong(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToULong(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableULong(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToDecimal(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToDecimal(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableDecimal(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "float", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToFloat(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToFloat(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "float?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableFloat(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "double", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToDouble(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToDouble(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "double?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableDouble(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToBoolean(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToBoolean(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableBoolean(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "char", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToChar(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToChar(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "char?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableChar(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToDateTime(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToDateTime(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableDateTime(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToDateTimeOffset(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToDateTimeOffset(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableDateTimeOffset(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToTimeSpan(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToTimeSpan(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableTimeSpan(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToString(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToString(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte[]", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToByteArray(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToByteArray(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToEnumerableBytes(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToEnumerableBytes(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "List<byte>", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToByteList(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToByteList(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Image", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToImage(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToImage(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToGuid(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToGuid(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableGuid(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToUri(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToUri(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
@@ -1079,133 +1221,281 @@ namespace COFRS.Template.Common.Forms
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToByte(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToByte(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableByte(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToSByte(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToSByte(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableSByte(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "short", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToShort(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToShort(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "short?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableShort(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToUShort(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToUShort(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableUShort(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "int", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToInt(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToInt(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "int?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableInt(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToUInt(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToUInt(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableUInt(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "long", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToLong(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToLong(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "long?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableLong(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToULong(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToULong(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableULong(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToDecimal(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToDecimal(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableDecimal(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "float", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToFloat(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToFloat(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "float?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableFloat(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "double", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToDouble(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToDouble(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "double?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableDouble(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToBoolean(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToBoolean(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableBoolean(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "char", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToChar(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToChar(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "char?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableChar(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToDateTime(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToDateTime(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableDateTime(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToDateTimeOffset(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToDateTimeOffset(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableDateTimeOffset(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToTimeSpan(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToTimeSpan(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableTimeSpan(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToString(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToString(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte[]", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToByteArray(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToByteArray(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToEnumerableBytes(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToEnumerableBytes(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "List<byte>", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToByteList(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToByteList(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Image", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToImage(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToImage(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
             {
-                ConvertSourceToGuid(dataRow, sourceMember);
+                dataRow.Cells[1].Value = SourceConverter.ToGuid(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid?", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToNullableGuid(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
+                dataRow.Cells[3].Value = sourceMember.ColumnName;
+                unmappedColumns.Remove(sourceMember);
+            }
+            else if (string.Equals(destinationMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
+            {
+                dataRow.Cells[1].Value = SourceConverter.ToUri(sourceMember, out bool isUndefined);
+                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
             }
@@ -1215,806 +1505,6 @@ namespace COFRS.Template.Common.Forms
                 dataRow.Cells[1].Style.ForeColor = Color.Red;
                 dataRow.Cells[3].Value = sourceMember.ColumnName;
                 unmappedColumns.Remove(sourceMember);
-            }
-        }
-
-        /// <summary>
-        /// Converts a source <see cref="DBColumn"/> value to an <see cref="Guid"/>
-        /// </summary>
-        /// <param name="dataRow">The data row to place the mapping function</param>
-        /// <param name="sourceMember">The <see cref="DBColumn>"/> source member to convert.</param>
-        private static void ConvertSourceToGuid(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Guid.Parse(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(Guid) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        /// <summary>
-        /// Converts a source <see cref="DBColumn"/> value to an <see cref="Uri"/>
-        /// </summary>
-        /// <param name="dataRow">The data row to place the mapping function</param>
-        /// <param name="sourceMember">The <see cref="DBColumn>"/> source member to convert.</param>
-        private static void ConvertSourceToUri(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"new Uri(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(Uri) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        /// <summary>
-        /// Converts a source <see cref="DBColumn"/> value to an <see cref="Image"/>
-        /// </summary>
-        /// <param name="dataRow">The data row to place the mapping function</param>
-        /// <param name="sourceMember">The <see cref="DBColumn>"/> source member to convert.</param>
-        private static void ConvertSourceToImage(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"ImageEx.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"ImageEx.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"ImageEx.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "List<byte>", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"ImageEx.Parse(source.{sourceMember.ColumnName}.ToArray())";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(Image) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToByteList(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.FromBase64String(source.{sourceMember.ColumnName}.ToList())";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.FromBase64CharArray(source.{sourceMember.ColumnName},0,source.{sourceMember.ColumnName}.Length).ToList()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? null : source.{sourceMember.ColumnName}.GetBytes().ToList()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToList()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToList()";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(List<byte>) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToEnumerableBytes(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.FromBase64String(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.FromBase64CharArray(source.{sourceMember.ColumnName},0,source.{sourceMember.ColumnName}.Length)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? null : ImageEx.Parse(source.{sourceMember.ColumnName}.GetBytes())";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "List<byte>", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToArray()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(IEnumerable<byte>) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToByteArray(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.FromBase64String(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.FromBase64CharArray(source.{sourceMember.ColumnName},0,source.{sourceMember.ColumnName}.Length)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? null : source.{sourceMember.ColumnName}.GetBytes()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "List<byte>", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToArray()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToArray()";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(byte[]) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToString(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "Guid", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "Guid?", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue() ? source.{sourceMember.ColumnName}.ToString() : string.Empty";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? string.Empty : new string(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? string.Empty : Convert.ToBase64String(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? string.Empty : Convert.ToBase64String(source.{sourceMember.ColumnName}.GetBytes())";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double?", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float?", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue ? source.{sourceMember.ColumnName}.Value.ToString() : string.Empty";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "DateTime", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString(\"o\", CultureInfo.CurrentCulture)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString(\"o\", CultureInfo.CurrentCulture)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString(@\"dd\\.hh\\:mm\\:ss\\.fffffff\")";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "DateTime?", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue ? source.{sourceMember.ColumnName}.ToString(\"o\", CultureInfo.CurrentCulture) : string.Empty";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "DateTimeOffset?", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue ? source.{sourceMember.ColumnName}.ToString(\"o\", CultureInfo.CurrentCulture) : string.Empty";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan?", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.HasValue ? source.{sourceMember.ColumnName}.ToString(@\"dd\\.hh\\:mm\\:ss\\.fffffff\") : string.Empty";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "BitArray", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName} == null ? string.Empty : source.{sourceMember.ColumnName}.ToString()";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString()";
-            }
-        }
-
-        private static void ConvertSourceToTimeSpan(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"TimeSpan.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"TimeSpan.FromMilliseconds(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"new TimeSpan(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"TimeSpan.FromMilliseconds((double) source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(TimeSpan) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToDateTimeOffset(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"DateTimeOffset.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"DateTimeOffset.FromUnixTimeMilliseconds(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"(DateTimeOffset) Convert.ToDateTime(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToDateTime(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"DateTime.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"DateTime.FromBinary(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToDateTime(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(DateTime) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToChar(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"char.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToChar(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(char) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToBoolean(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"bool.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToBoolean(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(bool) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToDouble(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"double.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.TotalMilliseconds";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToDouble(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(double) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToFloat(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"float.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToSingle(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(float) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToDecimal(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"decimal.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToDecimal(source.{sourceMember.ColumnName}.TotalMilliseconds)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToDecimal(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(decimal) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToULong(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"ulong.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToUInt64(source.{sourceMember.ColumnName}.TotalMilliseconds)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToUInt64(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(ulong) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToLong(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"long.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "DateTime", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToBinary()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToUnixTimeMilliseconds()";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.Ticks";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToInt64(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(long) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToUInt(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"uint.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToUInt32(source.{sourceMember.ColumnName}.TotalMilliseconds)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToUInt32(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(uint) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private void ConvertSourceToInt(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (sourceMember.ModelDataType == null )
-            {
-                var resourceModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
-
-                if (resourceModel != null)
-                {
-                    if (resourceModel.ResourceType == ResourceType.Enum)
-                    {
-                        dataRow.Cells[1].Value = $"Convert.ToInt32(source.{sourceMember.ColumnName})";
-                    }
-                    else
-                    {
-                        dataRow.Cells[1].Value = $"(int) AFunc(source.{sourceMember.ColumnName})";
-                        dataRow.Cells[1].Style.ForeColor = Color.Red;
-                    }
-                }
-                else
-                { 
-                    var entityModel = EntityModels.FirstOrDefault(e => string.Equals(e.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
-
-                    if (entityModel != null)
-                    {
-                        if (entityModel.ElementType == ElementType.Enum)
-                        {
-                            dataRow.Cells[1].Value = $"Convert.ToInt32(source.{sourceMember.ColumnName})";
-                        }
-                        else
-                        {
-                            dataRow.Cells[1].Value = $"(int) AFunc(source.{sourceMember.ColumnName})";
-                            dataRow.Cells[1].Style.ForeColor = Color.Red;
-                        }
-                    }
-                }
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"int.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToInt32(source.{sourceMember.ColumnName}.TotalMilliseconds)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToInt32(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(int) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToUShort(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"ushort.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToUInt16(source.{sourceMember.ColumnName}.TotalMilliseconds)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToUInt16(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(ushort) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToShort(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"short.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToInt16(source.{sourceMember.ColumnName}.TotalMilliseconds)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToInt16(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(short) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToSByte(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"sbyte.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToSByte(source.{sourceMember.ColumnName}.TotalMilliseconds)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToSByte(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(sbyte) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-            }
-        }
-
-        private static void ConvertSourceToByte(DataGridViewRow dataRow, DBColumn sourceMember)
-        {
-            if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"byte.Parse(source.{sourceMember.ColumnName})";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "TimeSpan", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToByte(source.{sourceMember.ColumnName}.TotalMilliseconds)";
-            }
-            else if (string.Equals(sourceMember.ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "char", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "decimal", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "double", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "float", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(sourceMember.ModelDataType, "object", StringComparison.OrdinalIgnoreCase))
-            {
-                dataRow.Cells[1].Value = $"Convert.ToByte(source.{sourceMember.ColumnName})";
-            }
-            else
-            {
-                dataRow.Cells[1].Value = $"(byte) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
             }
         }
 

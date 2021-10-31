@@ -1166,6 +1166,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			var ImageConversionRequired = false;
 			var results = new StringBuilder();
 			var nn = new NameNormalizer(resourceModel.ClassName);
+
 			results.AppendLine("\t//=============================================================================");
 			results.AppendLine("\t//\t*** GENERATED CODE ***");
 			results.AppendLine("\t//");
@@ -1235,7 +1236,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                 {
 					if (profileMap.ResourceProfiles[j].ResourceColumnName.CountOf('.') > 0)
                     {
-						j = GenerateChildMappings(results, j, profileMap.ResourceProfiles, profileMap.ResourceProfiles[j].ResourceColumnName.GetBaseColumn());
+						j = GenerateChildMappings(results, j, profileMap.ResourceProfiles, profileMap.ResourceProfiles[j].ResourceColumnName.GetBaseColumn(), ref ImageConversionRequired);
 
                         if (j < profileMap.ResourceProfiles.Count())
                         {
@@ -1271,7 +1272,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return results.ToString();
 		}
 
-		private int GenerateChildMappings(StringBuilder results, int j, List<ResourceProfile> resourceProfiles, string baseColumn)
+		private int GenerateChildMappings(StringBuilder results, int j, List<ResourceProfile> resourceProfiles, string baseColumn, ref bool ImageConversionRequired)
         {
 			var baseCount = baseColumn.CountOf('.');
 			var previousCount = resourceProfiles[j].ResourceColumnName.CountOf('.');
@@ -1285,7 +1286,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				if (resourceCount > previousCount)
                 {
-					j = GenerateChildMappings(results, j, resourceProfiles, resourceProfiles[j].ResourceColumnName.GetBaseColumn());
+					j = GenerateChildMappings(results, j, resourceProfiles, resourceProfiles[j].ResourceColumnName.GetBaseColumn(), ref ImageConversionRequired);
 
 					if (j < resourceProfiles.Count() - 1)
 					{

@@ -129,6 +129,7 @@
     <Compile Include="Common\Models\SnipitType.cs" />
     <Compile Include="Common\ServiceUtilities\DBHelper.cs" />
     <Compile Include="Common\ServiceUtilities\NameNormalizer.cs" />
+    <Compile Include="Common\ServiceUtilities\SourceConverter.cs" />
     <Compile Include="Common\ServiceUtilities\StandardUtils.cs" />
     <Compile Include="Common\ServiceUtilities\StandardEmitter.cs" />
     <Compile Include="Common\ServiceUtilities\StringExtensions.cs" />
