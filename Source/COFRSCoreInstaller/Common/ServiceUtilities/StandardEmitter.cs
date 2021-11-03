@@ -1537,18 +1537,18 @@ namespace COFRS.Template.Common.ServiceUtilities
 				{
 					using (var reader = command.ExecuteReader())
 					{
-						if ( reader.Read())
-                        {
+						if (reader.Read())
+						{
 							first = true;
-							foreach ( var column in resourceModel.EntityModel.Columns)
-                            {
+							foreach (var column in resourceModel.EntityModel.Columns)
+							{
 								if (first)
 									first = false;
 								else
 									results.AppendLine(",");
 								results.Append($"\t\"{column.ColumnName}\": ");
 
-								switch ( column.DBDataType.ToLower())
+								switch (column.DBDataType.ToLower())
 								{
 									case "bigint":
 										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
@@ -1711,11 +1711,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 									case "varchar":
 									case "xml":
 										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-                                        {
+										{
 											results.Append("null");
-                                        }
+										}
 										else if (string.Equals(column.DBDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
-                                        {
+										{
 											var theValue = reader.GetFieldValue<object>(reader.GetOrdinal(column.ColumnName));
 											theValue = theValue.ToString().Replace("/", "-");
 											results.Append($"\"{theValue}\"");
@@ -1731,7 +1731,107 @@ namespace COFRS.Template.Common.ServiceUtilities
 										throw new InvalidDataException($"Unrecognized database type: {column.ModelDataType}");
 								}
 							}
-                        }
+						}
+						else
+						{
+							first = true;
+							foreach (var column in resourceModel.EntityModel.Columns)
+							{
+								if (first)
+									first = false;
+								else
+									results.AppendLine(",");
+								results.Append($"\t\"{column.ColumnName}\": ");
+
+								switch (column.DBDataType.ToLower())
+								{
+									case "bigint":
+										results.Append("100");
+										break;
+
+									case "binary":
+									case "image":
+									case "timestamp":
+									case "varbinary":
+										{
+											var str = "The cow jumped over the moon";
+											var buffer = Encoding.UTF8.GetBytes(str);
+											var str2 = Convert.ToBase64String(buffer);
+											results.Append($"{str2}");
+										}
+										break;
+
+									case "bit":
+										results.Append("true");
+										break;
+
+									case "date":
+										{
+											var date = DateTime.Now; ;
+											results.Append("\"{date.ToShortDateString()}\"");
+										}
+										break;
+
+									case "datetime":
+									case "datetime2":
+									case "smalldatetime":
+										{
+											var date = DateTime.Now;
+											var Value = date.ToString("o");
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									case "datetimeoffset":
+										{ 
+											var date = DateTimeOffset.Now;
+											var Value = date.ToString("o");
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									case "decimal":
+									case "money":
+									case "float":
+									case "real":
+									case "smallmoney":
+ 										{
+											var Value = 124.32;
+											results.Append($"{Value}");
+										}
+										break;
+
+									case "int":
+									case "smallint":
+									case "tinyint":
+										results.Append("10");
+										break;
+
+									case "time":
+										{
+											var Value = TimeSpan.FromSeconds(24541);
+											results.Append($"\"{Value.ToString()}\"");
+										}
+										break;
+
+									case "text":
+									case "nvarchar":
+									case "ntext":
+									case "char":
+									case "nchar":
+									case "varchar":
+									case "xml":
+										{
+											var Value = "A string value";
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									default:
+										throw new InvalidDataException($"Unrecognized database type: {column.ModelDataType}");
+								}
+							}
+						}
 					}
 				}
 
