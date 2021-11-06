@@ -827,32 +827,6 @@ select c.name as column_name,
 		}
 
 		/// <summary>
-		/// Gets the IServiceOrchestrator code class
-		/// </summary>
-		/// <param name="solution"></param>
-		/// <returns></returns>
-		public static FileCodeModel OpenOrchestratorInterface(Solution solution)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			var projectItem = solution.FindProjectItem("IServiceOrchestrator.cs");
-			return projectItem.FileCodeModel;
-		}
-
-		/// <summary>
-		/// Gets the IServiceOrchestrator code class
-		/// </summary>
-		/// <param name="solution"></param>
-		/// <returns></returns>
-		public static FileCodeModel OpenOrchestratorCode(Solution solution)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			var projectItem = solution.FindProjectItem("ServiceOrchestrator.cs");
-			return projectItem.FileCodeModel;
-		}
-
-		/// <summary>
 		/// Find the project folder associated with the namespace
 		/// </summary>
 		/// <param name="solution">The <see cref="Solution"/> that contains the projects</param>

@@ -29,13 +29,13 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="validatorClassName">The name of the validator class</param>
 		/// <param name="validatorInterface">The output parameter returning the validator interface name.</param>
 		/// <returns>The code for the validator class in a string.</returns>
-		public string EmitValidationModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, EntityMap entityMap, string validatorClassName, out string validatorInterface)
+		public string EmitValidationModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, EntityMap entityMap, string validatorClassName)
 		{
 			//	Instantiate a string builder. We will use the string builder to construct our code.
 			var results = new StringBuilder();
 
 			//	The validator interface is nothing more than I followed by the validator class name.
-			validatorInterface = $"I{validatorClassName}";
+			var validatorInterface = $"I{validatorClassName}";
 
 			//	Define the IValidator interface. This is nothing more than an interface that is derrived from
 			//	the IValidator<T> interface. The IValidator<T> interface has all the important methods defined

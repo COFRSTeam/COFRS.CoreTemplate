@@ -169,7 +169,8 @@ namespace COFRS.Template.Common.Wizards
 						moniker,
 						replacementsDictionary["$safeitemname$"],
 						validatorInterface,
-						policy);
+						policy,
+						validationFolder.Namespace);
 
 					replacementsDictionary.Add("$model$", model);
 					Proceed = true;

@@ -9,8 +9,7 @@ namespace $safeprojectname$.Orchestration
 	///	<summary>
 	///	The ServiceOrchestrator
 	///	</summary>
-	///	<typeparam name="T">The type of repository used by the orchestration layer</typeparam>
-	public class ServiceOrchestrator<T> : BaseOrchestrator<T>, IServiceOrchestrator
+	public class ServiceOrchestrator : BaseOrchestrator, IServiceOrchestrator
 	{
 		///	<summary>
 		///	Initiates the Service Orchestrator
@@ -20,6 +19,7 @@ namespace $safeprojectname$.Orchestration
 		///	</remarks>
 		public ServiceOrchestrator(IServiceRepository repository, IRepositoryOptions options) : base(repository, options)
 		{
+
 		}
 	}
 }

@@ -167,10 +167,8 @@ namespace COFRS.Template.Common.Wizards
 					replacementsDictionary["$resourceClass$"] = resourceClassName;
 					replacementsDictionary["$mapClass$"] = mappingClassName;
 					replacementsDictionary["$validatorClass$"] = validationClassName;
+					replacementsDictionary["$exampleClass$"] = exampleClassName;
 					replacementsDictionary["$controllerClass$"] = controllerClassName;
-
-					replacementsDictionary["$genEntity"] = "false";
-					replacementsDictionary["$genResource"] = "false";
 
 					var moniker = StandardUtils.LoadMoniker(_appObject.Solution);
 					var policy = form.Policy;
@@ -342,9 +340,10 @@ namespace COFRS.Template.Common.Wizards
 						_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 						HandleMessages();
 					}
-					#endregion
+                    #endregion
 
-					if (form.ValidatorCheckBox.Checked)
+                    #region Validation Operations
+                    if (form.ValidatorCheckBox.Checked)
 					{
 						GenerateValidator = true;
 
@@ -353,7 +352,7 @@ namespace COFRS.Template.Common.Wizards
 						var orchestrationNamespace = StandardUtils.FindOrchestrationNamespace(_appObject.Solution);
 
 						//	Emit Validation Model
-						var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, validationClassName, out string validatorInterface);
+						var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, validationClassName);
 						replacementsDictionary.Add("$validationModel$", validationModel);
 						HandleMessages();
 
@@ -362,17 +361,37 @@ namespace COFRS.Template.Common.Wizards
 														  validationClassName,
 														  replacementsDictionary["$validatornamespace$"]);
 					}
+                    #endregion
 
-					//	Emit Controller
-					//var controllerModel = emitter.EmitController(entityClassFile,
-					//								   resourceClassFile,
-	    //                                               moniker,
-					//								   controllerClassName,
-	    //                                               validatorInterface,
-	    //                                               policy);
+                    #region Example Operations
+                    if (form.ExampleCheckBox.Checked)
+                    {
+						GenerateExample = true;
+						var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
+						var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
 
-					//replacementsDictionary.Add("$controllerModel$", controllerModel);
-					HandleMessages();
+						var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, resourceMap, entityMap, exampleClassName, defaultServerType, connectionString);
+						replacementsDictionary.Add("$examplemodel$", exampleModel);
+					}
+					#endregion
+
+					#region Controller Operations
+					GenerateController = true;
+					var validatorInterface = StandardUtils.FindValidatorInterface(_appObject.Solution, $"{resourceModel.Namespace}.{resourceModel.ClassName}");
+
+					var controllerModel = emitter.EmitController(
+						_appObject,
+						entityModel,
+						resourceModel,
+						moniker,
+						controllerClassName,
+						validatorInterface,
+						policy,
+						validationFolder.Namespace);
+
+					replacementsDictionary.Add("$controllerModel$", controllerModel);
+                    HandleMessages();
+					#endregion
 
 					progressDialog.Close();
 					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
