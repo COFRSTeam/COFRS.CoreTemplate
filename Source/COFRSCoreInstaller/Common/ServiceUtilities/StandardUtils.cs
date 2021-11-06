@@ -11,6 +11,7 @@ using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -570,7 +571,90 @@ select a.attname as columnname,
             }
 			else if ( entityModel.ServerType == DBServerType.SQLSERVER)
             {
-            }
+				using (var connection = new SqlConnection(connectionString))
+				{
+					connection.Open();
+
+					var query = @"
+select c.name as column_name, 
+       x.name as datatype, 
+	   case when x.name = 'nchar' then c.max_length / 2
+	        when x.name = 'nvarchar' then c.max_length / 2
+			when x.name = 'text' then -1
+			when x.name = 'ntext' then -1
+			else c.max_length 
+			end as max_length,
+       case when c.precision is null then 0 else c.precision end as precision,
+       case when c.scale is null then 0 else c.scale end as scale,
+	   c.is_nullable, 
+	   c.is_computed, 
+	   c.is_identity,
+	   case when ( select i.is_primary_key from sys.indexes as i inner join sys.index_columns as ic on ic.object_id = i.object_id and ic.index_id = i.index_id and i.is_primary_key = 1 where i.object_id = t.object_id and ic.column_id = c.column_id ) is not null  
+	        then 1 
+			else 0
+			end as is_primary_key,
+       case when ( select count(*) from sys.index_columns as ix where ix.object_id = c.object_id and ix.column_id = c.column_id ) > 0 then 1 else 0 end as is_indexed,
+	   case when ( select count(*) from sys.foreign_key_columns as f where f.parent_object_id = c.object_id and f.parent_column_id = c.column_id ) > 0 then 1 else 0 end as is_foreignkey,
+	   ( select t.name from sys.foreign_key_columns as f inner join sys.tables as t on t.object_id = f.referenced_object_id where f.parent_object_id = c.object_id and f.parent_column_id = c.column_id ) as foreigntablename
+  from sys.columns as c
+ inner join sys.tables as t on t.object_id = c.object_id
+ inner join sys.schemas as s on s.schema_id = t.schema_id
+ inner join sys.types as x on x.system_type_id = c.system_type_id and x.user_type_id = c.user_type_id
+ where t.name = @tablename
+   and s.name = @schema
+   and x.name != 'sysname'
+ order by t.name, c.column_id
+";
+
+					using (var command = new SqlCommand(query, connection))
+					{
+						command.Parameters.AddWithValue("@schema", entityModel.SchemaName);
+						command.Parameters.AddWithValue("@tablename", entityModel.TableName);
+
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
+								var dbColumn = new DBColumn
+								{
+									ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
+									EntityName = reader.GetString(0),
+									DBDataType = reader.GetString(1),
+									Length = Convert.ToInt64(reader.GetValue(2)),
+									NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+									NumericScale = Convert.ToInt32(reader.GetValue(4)),
+									IsNullable = Convert.ToBoolean(reader.GetValue(5)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(6)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+									ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
+								};
+
+
+								if (string.Equals(dbColumn.DBDataType, "geometry", StringComparison.OrdinalIgnoreCase))
+								{
+									throw new Exception(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.");
+								}
+
+								if (string.Equals(dbColumn.DBDataType, "geography", StringComparison.OrdinalIgnoreCase))
+								{
+									throw new Exception(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.");
+								}
+
+								if (string.Equals(dbColumn.DBDataType, "variant", StringComparison.OrdinalIgnoreCase))
+								{
+									throw new Exception("COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.");
+								}
+
+								dbColumn.ModelDataType = DBHelper.GetSQLServerDataType(dbColumn);
+								columns.Add(dbColumn);
+							}
+						}
+					}
+				}
+			}
 
 			entityModel.Columns = columns.ToArray();
 		}
@@ -740,6 +824,32 @@ select a.attname as columnname,
 			}
 
 			return string.Empty;
+		}
+
+		/// <summary>
+		/// Gets the IServiceOrchestrator code class
+		/// </summary>
+		/// <param name="solution"></param>
+		/// <returns></returns>
+		public static FileCodeModel OpenOrchestratorInterface(Solution solution)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var projectItem = solution.FindProjectItem("IServiceOrchestrator.cs");
+			return projectItem.FileCodeModel;
+		}
+
+		/// <summary>
+		/// Gets the IServiceOrchestrator code class
+		/// </summary>
+		/// <param name="solution"></param>
+		/// <returns></returns>
+		public static FileCodeModel OpenOrchestratorCode(Solution solution)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var projectItem = solution.FindProjectItem("ServiceOrchestrator.cs");
+			return projectItem.FileCodeModel;
 		}
 
 		/// <summary>

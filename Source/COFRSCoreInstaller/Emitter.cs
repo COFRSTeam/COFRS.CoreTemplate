@@ -1,5 +1,7 @@
 ﻿using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -20,8 +22,15 @@ namespace COFRS.Template
 		/// <param name="ValidatorInterface">The validiator interface used for validations</param>
 		/// <param name="policy">The authentication policy used by the controller</param>
 		/// <returns></returns>
-		public string EmitController(EntityModel entityClass, ResourceModel resourceClass, string moniker, string controllerClassName, string ValidatorInterface, string policy)
+		public string EmitController(DTE2 app, EntityModel entityClass, ResourceModel resourceClass, string moniker, string controllerClassName, string ValidatorInterface, string policy)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var orchestratorInterface = StandardUtils.OpenOrchestratorInterface(app.Solution);
+			var orchestratorCode = StandardUtils.OpenOrchestratorCode(app.Solution);
+
+
+
 			var results = new StringBuilder();
 			var nn = new NameNormalizer(resourceClass.ClassName);
 			var pkcolumns = resourceClass.EntityModel.Columns.Where(c => c.IsPrimaryKey);

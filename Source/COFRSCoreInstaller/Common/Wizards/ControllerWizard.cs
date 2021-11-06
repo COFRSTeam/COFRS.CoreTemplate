@@ -163,6 +163,7 @@ namespace COFRS.Template.Common.Wizards
 
 					var emitter = new Emitter();
 					var model = emitter.EmitController(
+						_appObject,
 						entityModel,
 						resourceModel,
 						moniker,
