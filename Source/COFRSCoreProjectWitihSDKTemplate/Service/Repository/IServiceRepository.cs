@@ -8,6 +8,7 @@ namespace $safeprojectname$.Repository
 	///	</summary>
     public interface IServiceRepository : ISqlServerRepository
 	{
+
 	}
 }
 $endif$$if$ ($databaseTechnology$ == Postgresql)using COFRS.Postgresql;
@@ -18,7 +19,8 @@ namespace $safeprojectname$.Repository
 	///	The IServiceRepository
 	///	</summary>
     public interface IServiceRepository : IPostgresqlRepository
-{
+	{
+
 	}
 }
 $endif$$if$ ($databaseTechnology$ == MySQL)using COFRS.MySql;
@@ -30,6 +32,7 @@ namespace $safeprojectname$.Repository
 	///	</summary>
 	public interface IServiceRepository : IMySqlRepository
 	{
+
 	}
 }
 $endif$

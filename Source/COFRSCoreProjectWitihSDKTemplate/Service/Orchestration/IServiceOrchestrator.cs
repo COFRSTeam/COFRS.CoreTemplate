@@ -10,5 +10,6 @@ namespace $safeprojectname$.Orchestration
     ///	combining the base functions, or to invent entirely new functions, as needs arise.</remarks>
 	public interface IServiceOrchestrator : IOrchestrator
 	{
+
 	}
 }

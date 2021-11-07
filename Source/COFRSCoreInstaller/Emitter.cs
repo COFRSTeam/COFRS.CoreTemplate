@@ -67,11 +67,9 @@ namespace COFRS.Template
             results.AppendLine("\t\t///\t<param name=\"logger\">A generic interface for logging where the category name is derrived from");
             results.AppendLine($"\t\t///\tthe specified <see cref=\"{controllerClassName}\"/> type name. The logger is activated from dependency injection.</param>");
             results.AppendLine("\t\t///\t<param name=\"orchestrator\">The <see cref=\"IServiceOrchestrator\"/> interface for the Orchestration layer. The orchestrator is activated from dependency injection.</param>");
-            results.AppendLine($"\t\t///\t<param name=\"validator\">The <see cref=\"{ValidatorInterface}\"/> used to validate requested actions. The validator is activated from dependency injection.</param>");
-            results.AppendLine($"\t\tpublic {controllerClassName}(ILogger<{controllerClassName}> logger, IServiceOrchestrator orchestrator, {ValidatorInterface} validator)");
+            results.AppendLine($"\t\tpublic {controllerClassName}(ILogger<{controllerClassName}> logger, IServiceOrchestrator orchestrator)");
             results.AppendLine("\t\t{");
             results.AppendLine("\t\t\tLogger = logger;");
-            results.AppendLine("\t\t\tValidator = validator;");
             results.AppendLine("\t\t\tOrchestrator = orchestrator;");
             results.AppendLine("\t\t}");
             results.AppendLine();
@@ -103,8 +101,7 @@ namespace COFRS.Template
             results.AppendLine("\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
             results.AppendLine();
 
-            results.AppendLine("\t\t\tawait Validator.ValidateForGetAsync(node);");
-            results.AppendLine($"\t\t\tvar collection = await Orchestrator.GetCollectionAsync<{resourceClass.ClassName}>(Request.QueryString.Value, node);");
+            results.AppendLine($"\t\t\tvar collection = await Orchestrator.Get{resourceClass.ClassName}CollectionAsync(Request.QueryString.Value, node, User);");
             results.AppendLine($"\t\t\treturn Ok(collection);");
             results.AppendLine("\t\t}");
 
@@ -145,8 +142,7 @@ namespace COFRS.Template
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
                 results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
-                results.AppendLine("\t\t\tawait Validator.ValidateForGetAsync(node);");
-                results.AppendLine($"\t\t\tvar item = await Orchestrator.GetSingleAsync<{resourceClass.ClassName}>(node);");
+                results.AppendLine($"\t\t\tvar item = await Orchestrator.Get{resourceClass.ClassName}>(node, User);");
                 results.AppendLine();
                 results.AppendLine("\t\t\tif (item == null)");
                 results.AppendLine("\t\t\t\treturn NotFound();");
@@ -182,8 +178,7 @@ namespace COFRS.Template
             results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
             results.AppendLine();
 
-            results.AppendLine("\t\t\tawait Validator.ValidateForAddAsync(item);");
-            results.AppendLine($"\t\t\titem = await Orchestrator.AddAsync(item);");
+            results.AppendLine($"\t\t\titem = await Orchestrator.Add{resourceClass.ClassName}Async(item, User);");
             results.AppendLine($"\t\t\treturn Created(item.HRef.AbsoluteUri, item);");
 
             results.AppendLine("\t\t}");
@@ -212,13 +207,10 @@ namespace COFRS.Template
             results.AppendLine($"\t\tpublic async Task<IActionResult> Update{resourceClass.ClassName}Async([FromBody] {resourceClass.ClassName} item)");
             results.AppendLine("\t\t{");
             results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-            results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"{{item.HRef}}\\\"\")");
-            results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
             results.AppendLine();
 
-            results.AppendLine("\t\t\tawait Validator.ValidateForUpdateAsync(item, node);");
-            results.AppendLine($"\t\t\tawait Orchestrator.UpdateAsync(item, node);");
-            results.AppendLine($"\t\t\treturn NoContent();");
+            results.AppendLine($"\t\t\titem = await Orchestrator.Update{resourceClass.ClassName}Async(item, User);");
+            results.AppendLine($"\t\t\treturn Ok(item);");
 
             results.AppendLine("\t\t}");
             results.AppendLine();
@@ -253,10 +245,8 @@ namespace COFRS.Template
                 results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
                 results.AppendLine();
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
-                results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
-                results.AppendLine("\t\t\tawait Validator.ValidateForPatchAsync(commands, node);");
-                results.AppendLine($"\t\t\tawait Orchestrator.PatchAsync<{resourceClass.ClassName}>(commands, node);");
+                results.AppendLine($"\t\t\tawait Orchestrator.Patch{resourceClass.ClassName}Async(commands, node, User);");
                 results.AppendLine($"\t\t\treturn NoContent();");
                 results.AppendLine("\t\t}");
                 results.AppendLine();
@@ -285,10 +275,8 @@ namespace COFRS.Template
                 results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
                 results.AppendLine();
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
-                results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
-                results.AppendLine("\t\t\tawait Validator.ValidateForDeleteAsync(node);");
-                results.AppendLine($"\t\t\tawait Orchestrator.DeleteAsync<{resourceClass.ClassName}>(node);");
+                results.AppendLine($"\t\t\tawait Orchestrator.Delete{resourceClass.ClassName}Async(node, User);");
                 results.AppendLine($"\t\t\treturn NoContent();");
 
                 results.AppendLine("\t\t}");

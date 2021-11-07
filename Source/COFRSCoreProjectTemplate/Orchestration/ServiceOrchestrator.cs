@@ -19,6 +19,7 @@ namespace $safeprojectname$.Orchestration
 		///	</remarks>
 		public ServiceOrchestrator(IServiceRepository repository, IRepositoryOptions options) : base(repository, options) 
 		{
+
 		}
 	}
 }
