@@ -61,6 +61,7 @@
     <Content Include="Models\EntityModels\Emodel.cs" />
     <Content Include="Models\ResourceModels\Model.cs" />
     <Content Include="Mapping\Map.cs" />
+    <None Include="Examples\Example.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

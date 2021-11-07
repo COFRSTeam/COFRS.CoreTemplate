@@ -21,6 +21,9 @@
     <Folder Name="Controllers">
       <ProjectItem ReplaceParameters="true" TargetFileName="$controllerClass$.cs" OpenInEditor="true">Controller.cs</ProjectItem>
     </Folder>
+    <Folder Name="Examples">
+      <ProjectItem ReplaceParameters="true" TargetFileName="$exampleClass$.cs">Example.cs</ProjectItem>
+    </Folder>
     <Folder Name="Validation">
       <ProjectItem ReplaceParameters="true" TargetFileName="$validatorClass$.cs">Validator.cs</ProjectItem>
     </Folder>

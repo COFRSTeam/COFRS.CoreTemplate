@@ -163,12 +163,14 @@ namespace COFRS.Template.Common.Wizards
 
 					var emitter = new Emitter();
 					var model = emitter.EmitController(
+						_appObject,
 						entityModel,
 						resourceModel,
 						moniker,
 						replacementsDictionary["$safeitemname$"],
 						validatorInterface,
-						policy);
+						policy,
+						validationFolder.Namespace);
 
 					replacementsDictionary.Add("$model$", model);
 					Proceed = true;
