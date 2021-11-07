@@ -376,21 +376,24 @@ namespace COFRS.Template.Common.Wizards
 					#endregion
 
 					#region Controller Operations
-					GenerateController = true;
-					var validatorInterface = StandardUtils.FindValidatorInterface(_appObject.Solution, $"{resourceModel.Namespace}.{resourceModel.ClassName}");
+					if (form.ControllerCheckbox.Checked)
+					{
+						GenerateController = true;
+						var validatorInterface = StandardUtils.FindValidatorInterface(_appObject.Solution, $"{resourceModel.Namespace}.{resourceModel.ClassName}");
 
-					var controllerModel = emitter.EmitController(
-						_appObject,
-						entityModel,
-						resourceModel,
-						moniker,
-						controllerClassName,
-						validatorInterface,
-						policy,
-						validationFolder.Namespace);
+						var controllerModel = emitter.EmitController(
+							_appObject,
+							entityModel,
+							resourceModel,
+							moniker,
+							controllerClassName,
+							validatorInterface,
+							policy,
+							validationFolder.Namespace);
 
-					replacementsDictionary.Add("$controllerModel$", controllerModel);
-                    HandleMessages();
+						replacementsDictionary.Add("$controllerModel$", controllerModel);
+						HandleMessages();
+					}
 					#endregion
 
 					progressDialog.Close();

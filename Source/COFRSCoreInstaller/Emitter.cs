@@ -142,7 +142,7 @@ namespace COFRS.Template
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
                 results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
 
-                results.AppendLine($"\t\t\tvar item = await Orchestrator.Get{resourceClass.ClassName}>(node, User);");
+                results.AppendLine($"\t\t\tvar item = await Orchestrator.Get{resourceClass.ClassName}Async(node, User);");
                 results.AppendLine();
                 results.AppendLine("\t\t\tif (item == null)");
                 results.AppendLine("\t\t\t\treturn NotFound();");
@@ -244,7 +244,7 @@ namespace COFRS.Template
                 results.AppendLine("\t\t{");
                 results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
                 results.AppendLine();
-                results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
+                results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\");");
 
                 results.AppendLine($"\t\t\tawait Orchestrator.Patch{resourceClass.ClassName}Async(commands, node, User);");
                 results.AppendLine($"\t\t\treturn NoContent();");
@@ -274,7 +274,7 @@ namespace COFRS.Template
                 results.AppendLine("\t\t{");
                 results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
                 results.AppendLine();
-                results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
+                results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\");");
 
                 results.AppendLine($"\t\t\tawait Orchestrator.Delete{resourceClass.ClassName}Async(node, User);");
                 results.AppendLine($"\t\t\treturn NoContent();");
@@ -338,12 +338,12 @@ namespace COFRS.Template
                             if (interfaceCode.Name.Equals("IServiceOrchestrator", StringComparison.OrdinalIgnoreCase))
                             {
                                 var primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
-                                var deleteFunctionName = $"Delete{nn.SingleForm}Async";
-                                var patchFunctionName = $"Patch{nn.SingleForm}Async";
-                                var updateFunctionName = $"Update{nn.SingleForm}Async";
-                                var addFunctionName = $"Add{nn.SingleForm}Async";
-                                var getSingleFunctionName = $"Get{nn.SingleForm}Async";
-                                var collectionFunctionName = $"Get{nn.PluralForm}Async";
+                                var deleteFunctionName = $"Delete{resourceModel.ClassName}Async";
+                                var patchFunctionName = $"Patch{resourceModel.ClassName}Async";
+                                var updateFunctionName = $"Update{resourceModel.ClassName}Async";
+                                var addFunctionName = $"Add{resourceModel.ClassName}Async";
+                                var getSingleFunctionName = $"Get{resourceModel.ClassName}Async";
+                                var collectionFunctionName = $"Get{resourceModel.ClassName}CollectionAsync";
 
                                 bool addDeleteFunction = true;
                                 bool addPatchFunction = true;
@@ -380,256 +380,25 @@ namespace COFRS.Template
 
                                 try
                                 {
-                                    #region Delete Function
-                                    if (addDeleteFunction)
-                                    {
-                                        var theDeleteFunction = (CodeFunction2)interfaceCode.AddFunction(deleteFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task");
-
-                                        theDeleteFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theDeleteFunction.AddParameter("node", "RqlNode");
-
-                                        EditPoint2 editPoint = (EditPoint2)theDeleteFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Delete an {resourceModel.ClassName} resource");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Delete a {resourceModel.ClassName} resource");
-                                        }
-
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                    }
-                                    #endregion
-
-                                    #region Patch Function
-                                    if (addPatchFunction)
-                                    {
-                                        var thePatchFunction = (CodeFunction2)interfaceCode.AddFunction(patchFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task");
-
-                                        thePatchFunction.AddParameter("User", "ClaimsPrincipal");
-                                        thePatchFunction.AddParameter("node", "RqlNode");
-                                        thePatchFunction.AddParameter("commands", "IEnumerable<PatchCommand>");
-
-                                        var editPoint = (EditPoint2)thePatchFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Update an {resourceModel.ClassName} resource using patch commands");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Update a {resourceModel.ClassName} resource using patch commands");
-                                        }
-
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        editPoint.Insert($"///	<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                    }
-                                    #endregion
-
-                                    #region Update Function
-                                    if (addUpdateFunction)
-                                    {
-                                        var theUpdateFunction = (CodeFunction2)interfaceCode.AddFunction(updateFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<{resourceModel.ClassName}>");
-
-                                        theUpdateFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theUpdateFunction.AddParameter("node", "RqlNode");
-                                        theUpdateFunction.AddParameter("item", resourceModel.ClassName);
-
-                                        var editPoint = (EditPoint2)theUpdateFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Update an {resourceModel.ClassName} resource using patch commands");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Update a {resourceModel.ClassName} resource using patch commands");
-                                        }
-
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        editPoint.Insert($"///	<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                    }
-                                    #endregion
-
-                                    #region Add Function
-                                    if (addAddFunction)
-                                    {
-                                        var theAddFunction = (CodeFunction2)interfaceCode.AddFunction(addFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<{resourceModel.ClassName}>");
-
-                                        theAddFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theAddFunction.AddParameter("item", resourceModel.ClassName);
-
-                                        var editPoint = (EditPoint2)theAddFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Add an {resourceModel.ClassName} resource");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Add a {resourceModel.ClassName} resourc");
-                                        }
-
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        editPoint.Insert($"///	<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                    }
-                                    #endregion
-
                                     #region Get Single Function
                                     if (addSingleFunction)
                                     {
                                         var theGetSingleFunction = (CodeFunction2)interfaceCode.AddFunction(getSingleFunctionName,
                                                                   vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<{resourceModel.ClassName}>");
+                                                                  $"Task<{resourceModel.ClassName}>", 
+                                                                  -1);
 
-                                        theGetSingleFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theGetSingleFunction.AddParameter("node", "RqlNode");
+                                        theGetSingleFunction.AddParameter("node", "RqlNode", -1);
+                                        theGetSingleFunction.AddParameter("User", "ClaimsPrincipal", -1);
 
-                                        var editPoint = (EditPoint2)theGetSingleFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
                                             resourceModel.ClassName.ToLower().StartsWith("e") ||
                                             resourceModel.ClassName.ToLower().StartsWith("i") ||
                                             resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Gets an {resourceModel.ClassName} resource");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Gets a {resourceModel.ClassName} resourc");
-                                        }
+                                            resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
+                                        var editPoint = (EditPoint2)theGetSingleFunction.StartPoint.CreateEditPoint();
+                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tGets {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
                                     }
                                     #endregion
 
@@ -638,37 +407,103 @@ namespace COFRS.Template
                                     {
                                         var theFunction = (CodeFunction2)interfaceCode.AddFunction(collectionFunctionName,
                                                                   vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<RqlCollection<{resourceModel.ClassName}>>");
+                                                                  $"Task<RqlCollection<{resourceModel.ClassName}>>",
+                                                                  -1);
 
-                                        theFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theFunction.AddParameter("node", "RqlNode");
-                                        theFunction.AddParameter("originalQuery", "string");
+                                        theFunction.AddParameter("originalQuery", "string", -1);
+                                        theFunction.AddParameter("node", "RqlNode", -1);
+                                        theFunction.AddParameter("User", "ClaimsPrincipal", -1);
 
                                         var editPoint = (EditPoint2)theFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	Returns a collection of {resourceModel.ClassName} resources");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	<param name=\"originalQuery\">The original query string</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent();
-                                        editPoint.Indent();
+                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tReturns a collection of {resourceModel.ClassName} resources\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"originalQuery\">The original query string</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                    }
+                                    #endregion
+
+                                    #region Add Function
+                                    if (addAddFunction)
+                                    {
+                                        var theAddFunction = (CodeFunction2)interfaceCode.AddFunction(addFunctionName,
+                                                                  vsCMFunction.vsCMFunctionFunction,
+                                                                  $"Task<{resourceModel.ClassName}>",
+                                                                  -1);
+
+                                        theAddFunction.AddParameter("item", resourceModel.ClassName, -1);
+                                        theAddFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
+
+                                        var editPoint = (EditPoint2)theAddFunction.StartPoint.CreateEditPoint();
+                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tAdd {article} {resourceModel.ClassName} resource.\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                    }
+                                    #endregion
+
+                                    #region Update Function
+                                    if (addUpdateFunction)
+                                    {
+                                        var theUpdateFunction = (CodeFunction2)interfaceCode.AddFunction(updateFunctionName,
+                                                                  vsCMFunction.vsCMFunctionFunction,
+                                                                  $"Task<{resourceModel.ClassName}>", 
+                                                                  -1);
+
+                                        theUpdateFunction.AddParameter("item", resourceModel.ClassName, -1);
+                                        theUpdateFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
+
+                                        var editPoint = (EditPoint2)theUpdateFunction.StartPoint.CreateEditPoint();
+                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource.\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                    }
+                                    #endregion
+
+                                    #region Patch Function
+                                    if (addPatchFunction)
+                                    {
+                                        var thePatchFunction = (CodeFunction2)interfaceCode.AddFunction(patchFunctionName,
+                                                                  vsCMFunction.vsCMFunctionFunction,
+                                                                  $"Task", 
+                                                                  -1);
+
+                                        thePatchFunction.AddParameter("commands", "IEnumerable<PatchCommand>", -1);
+                                        thePatchFunction.AddParameter("node", "RqlNode", -1);
+                                        thePatchFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
+
+                                        var editPoint = (EditPoint2)thePatchFunction.StartPoint.CreateEditPoint();
+                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource using patch commands\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                    }
+                                    #endregion
+
+                                    #region Delete Function
+                                    if (addDeleteFunction)
+                                    {
+                                        var theDeleteFunction = (CodeFunction2)interfaceCode.AddFunction(deleteFunctionName,
+                                                                  vsCMFunction.vsCMFunctionFunction,
+                                                                  $"Task", -1);
+
+                                        theDeleteFunction.AddParameter("node", "RqlNode", -1);
+                                        theDeleteFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                            resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
+
+                                        EditPoint2 editPoint = (EditPoint2)theDeleteFunction.StartPoint.CreateEditPoint();
+                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tDelete {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
                                     }
                                     #endregion
                                 }
@@ -753,12 +588,12 @@ namespace COFRS.Template
                             if (orchestratorClass.Name.Equals("ServiceOrchestrator", StringComparison.OrdinalIgnoreCase))
                             {
                                 var primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
-                                var deleteFunctionName = $"Delete{nn.SingleForm}Async";
-                                var patchFunctionName = $"Patch{nn.SingleForm}Async";
-                                var updateFunctionName = $"Update{nn.SingleForm}Async";
-                                var addFunctionName = $"Add{nn.SingleForm}Async";
-                                var getSingleFunctionName = $"Get{nn.SingleForm}Async";
-                                var collectionFunctionName = $"Get{nn.PluralForm}Async";
+                                var deleteFunctionName = $"Delete{resourceModel.ClassName}Async";
+                                var patchFunctionName = $"Patch{resourceModel.ClassName}Async";
+                                var updateFunctionName = $"Update{resourceModel.ClassName}Async";
+                                var addFunctionName = $"Add{resourceModel.ClassName}Async";
+                                var getSingleFunctionName = $"Get{resourceModel.ClassName}Async";
+                                var collectionFunctionName = $"Get{resourceModel.ClassName}CollectionAsync";
 
                                 bool addDeleteFunction = true;
                                 bool addPatchFunction = true;
@@ -805,76 +640,41 @@ namespace COFRS.Template
                                 {
                                     #region Constructor
                                     bool addParameter = true;
+                                    bool addVariable = true;
+
+                                    foreach ( CodeElement2 classElement in orchestratorClass.Children )
+                                    {
+                                        if ( classElement.Kind == vsCMElement.vsCMElementVariable )
+                                        {
+                                            var theVariable = (CodeVariable2)classElement;
+
+                                            if (theVariable.Name.Equals("MemberName"))
+                                                addVariable = false;
+                                        }
+                                    }
+
                                     foreach ( var parameter in constructorFunction.Parameters)
                                     {
                                         var arg = (CodeParameter2)parameter;
 
-                                        if (arg.Type.ToString().Equals(ValidatorInterface, StringComparison.OrdinalIgnoreCase))
+                                        if (arg.Type.ToString().Equals(parameterName, StringComparison.OrdinalIgnoreCase))
                                             addParameter = false;
+                                    }
+
+                                    if (addVariable)
+                                    {
+                                        var variable = (CodeVariable2)orchestratorClass.AddVariable(MemberName, ValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
+                                        variable.ConstKind = vsCMConstKind.vsCMConstKindReadOnly;
                                     }
 
                                     if (addParameter)
                                     {
-
-                                        var variable = (CodeVariable2) orchestratorClass.AddVariable(MemberName, ValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
-                                        variable.ConstKind = vsCMConstKind.vsCMConstKindReadOnly;
-
                                         constructorFunction.AddParameter(parameterName, ValidatorInterface, -1);
 
                                         var editPoint = (EditPoint2) constructorFunction.EndPoint.CreateEditPoint();
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"{MemberName} = {parameterName};");
-                                    }
-
-                                    #endregion
-
-                                    #region Get Collection Function
-                                    if (addCollectionFunction)
-                                    {
-                                        var theFunction = (CodeFunction2)orchestratorClass.AddFunction(collectionFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<RqlCollection<{resourceModel.ClassName}>>",
-                                                                  -1,
-                                                                  vsCMAccess.vsCMAccessPublic);
-
-                                        theFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theFunction.AddParameter("node", "RqlNode");
-                                        theFunction.AddParameter("originalQuery", "string");
-
-                                        var editPoint = (EditPoint2)theFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	Returns a collection of {resourceModel.ClassName} resources");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	<param name=\"originalQuery\">The original query string</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        sel.MoveToPoint(theFunction.StartPoint);
-                                        editPoint.ReplaceText(6, "public async", 0);
-
-                                        editPoint = (EditPoint2)theFunction.EndPoint.CreateEditPoint();
-                                        editPoint.LineUp();
-                                        editPoint.StartOfLine();
-                                        editPoint.Indent(null, 3);
-
-                                        editPoint.Insert($"await {MemberName}.ValidateForGetAsync(node, User);");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"return await GetCollectionAsync<{resourceModel.ClassName}>(originalQuery, node);");
+                                        editPoint.Insert($"\t\t\t{MemberName} = {parameterName};");
                                     }
                                     #endregion
 
@@ -887,53 +687,51 @@ namespace COFRS.Template
                                                                   -1,
                                                                   vsCMAccess.vsCMAccessPublic);
 
-                                        theGetSingleFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theGetSingleFunction.AddParameter("node", "RqlNode");
+                                        theGetSingleFunction.AddParameter("node", "RqlNode", -1);
+                                        theGetSingleFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                                         var editPoint = (EditPoint2)theGetSingleFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Gets an {resourceModel.ClassName} resource");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Gets a {resourceModel.ClassName} resourc");
-                                        }
-
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
+                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tGets {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
                                         sel.MoveToPoint(theGetSingleFunction.StartPoint);
                                         editPoint.ReplaceText(6, "public async", 0);
 
                                         editPoint = (EditPoint2)theGetSingleFunction.EndPoint.CreateEditPoint();
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
-                                        editPoint.Indent(null, 3);
+                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForGetAsync(node, User);\r\n\t\t\treturn await GetSingleAsync<{resourceModel.ClassName}>(node);");
+                                    }
+                                    #endregion
 
-                                        editPoint.Insert($"await {MemberName}.ValidateForGetAsync(node, User);");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"return await GetSingleAsync<{resourceModel.ClassName}>(node);");
+                                    #region Get Collection Function
+                                    if (addCollectionFunction)
+                                    {
+                                        var theFunction = (CodeFunction2)orchestratorClass.AddFunction(collectionFunctionName,
+                                                                  vsCMFunction.vsCMFunctionFunction,
+                                                                  $"Task<RqlCollection<{resourceModel.ClassName}>>",
+                                                                  -1,
+                                                                  vsCMAccess.vsCMAccessPublic);
+
+                                        theFunction.AddParameter("originalQuery", "string", -1);
+                                        theFunction.AddParameter("node", "RqlNode", -1);
+                                        theFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                        var editPoint = (EditPoint2)theFunction.StartPoint.CreateEditPoint();
+                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tReturns a collection of {resourceModel.ClassName} resources\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"originalQuery\">The original query string</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+
+                                        sel.MoveToPoint(theFunction.StartPoint);
+                                        editPoint.ReplaceText(6, "public async", 0);
+
+                                        editPoint = (EditPoint2)theFunction.EndPoint.CreateEditPoint();
+                                        editPoint.LineUp();
+                                        editPoint.StartOfLine();
+
+                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForGetAsync(node, User);\r\n\t\t\treturn await GetCollectionAsync<{resourceModel.ClassName}>(originalQuery, node);");
                                     }
                                     #endregion
 
@@ -946,40 +744,17 @@ namespace COFRS.Template
                                                                   -1,
                                                                   vsCMAccess.vsCMAccessPublic);
 
-                                        theAddFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theAddFunction.AddParameter("item", resourceModel.ClassName);
+                                        theAddFunction.AddParameter("item", resourceModel.ClassName, -1);
+                                        theAddFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                                         var editPoint = (EditPoint2)theAddFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Add an {resourceModel.ClassName} resource");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Add a {resourceModel.ClassName} resourc");
-                                        }
-
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        editPoint.Insert($"///	<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
+                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tAdd {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
 
                                         sel.MoveToPoint(theAddFunction.StartPoint);
                                         editPoint.ReplaceText(6, "public async", 0);
@@ -987,12 +762,8 @@ namespace COFRS.Template
                                         editPoint = (EditPoint2)theAddFunction.EndPoint.CreateEditPoint();
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
-                                        editPoint.Indent(null, 3);
 
-                                        editPoint.Insert($"await {MemberName}.ValidateForAddAsync(item, User);");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"return await AddAsync<{resourceModel.ClassName}>(item);");
+                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForAddAsync(item, User);\r\n\t\t\treturn await AddAsync<{resourceModel.ClassName}>(item);");
                                     }
                                     #endregion
 
@@ -1005,44 +776,17 @@ namespace COFRS.Template
                                                                   -1,
                                                                   vsCMAccess.vsCMAccessPublic);
 
-                                        theUpdateFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theUpdateFunction.AddParameter("node", "RqlNode");
-                                        theUpdateFunction.AddParameter("item", resourceModel.ClassName);
+                                        theUpdateFunction.AddParameter("item", resourceModel.ClassName, -1);
+                                        theUpdateFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                                         var editPoint = (EditPoint2)theUpdateFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Update an {resourceModel.ClassName} resource using patch commands");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Update a {resourceModel.ClassName} resource using patch commands");
-                                        }
-
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        editPoint.Insert($"///	<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
+                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
 
                                         sel.MoveToPoint(theUpdateFunction.StartPoint);
                                         editPoint.ReplaceText(6, "public async", 0);
@@ -1050,12 +794,8 @@ namespace COFRS.Template
                                         editPoint = (EditPoint2)theUpdateFunction.EndPoint.CreateEditPoint();
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
-                                        editPoint.Indent(null, 3);
 
-                                        editPoint.Insert($"await {MemberName}.ValidateForUpdateAsync(item, node, User);");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"return await UpdateAsync<{resourceModel.ClassName}>(item, node);");
+                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForUpdateAsync(item, User);\r\n\t\t\treturn await UpdateAsync<{resourceModel.ClassName}>(item);");
                                     }
                                     #endregion
 
@@ -1068,43 +808,19 @@ namespace COFRS.Template
                                                                   -1,
                                                                   vsCMAccess.vsCMAccessPublic);
 
-                                        thePatchFunction.AddParameter("User", "ClaimsPrincipal");
-                                        thePatchFunction.AddParameter("node", "RqlNode");
-                                        thePatchFunction.AddParameter("commands", "IEnumerable<PatchCommand>");
+                                        thePatchFunction.AddParameter("commands", "IEnumerable<PatchCommand>", -1);
+                                        thePatchFunction.AddParameter("node", "RqlNode", -1);
+                                        thePatchFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                                     resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                                     resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                                     resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                                     resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                                         var editPoint = (EditPoint2)thePatchFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
+                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource using patch commands\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
 
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Update an {resourceModel.ClassName} resource using patch commands");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Update a {resourceModel.ClassName} resource using patch commands");
-                                        }
-
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        editPoint.Insert($"///	<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
 
                                         sel.MoveToPoint(thePatchFunction.StartPoint);
                                         editPoint.ReplaceText(6, "public async", 0);
@@ -1112,12 +828,8 @@ namespace COFRS.Template
                                         editPoint = (EditPoint2)thePatchFunction.EndPoint.CreateEditPoint();
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
-                                        editPoint.Indent(null, 3);
 
-                                        editPoint.Insert($"await {MemberName}.ValidateForPatchAsync(commands, node, User);");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"await PatchAsync<{resourceModel.ClassName}>(commands, node);");
+                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForPatchAsync(commands, node, User);\r\n\t\t\tawait PatchAsync<{resourceModel.ClassName}>(commands, node);");
                                     }
                                     #endregion
 
@@ -1130,39 +842,17 @@ namespace COFRS.Template
                                                                   -1,
                                                                   vsCMAccess.vsCMAccessPublic);
 
-                                        theDeleteFunction.AddParameter("User", "ClaimsPrincipal");
-                                        theDeleteFunction.AddParameter("node", "RqlNode");
+                                        theDeleteFunction.AddParameter("node", "RqlNode", -1); 
+                                        theDeleteFunction.AddParameter("User", "ClaimsPrincipal", -1);
+                                        
+                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                                         EditPoint2 editPoint = (EditPoint2)theDeleteFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///	<summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        if (resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u"))
-                                        {
-                                            editPoint.Insert($"///	Delete an {resourceModel.ClassName} resource");
-                                        }
-                                        else
-                                        {
-                                            editPoint.Insert($"///	Delete a {resourceModel.ClassName} resource");
-                                        }
-
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	</summary>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-
-                                        editPoint.Insert($"///	<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
-                                        editPoint.Insert($"///	<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 2);
+                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tDelete {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
 
                                         sel.MoveToPoint(theDeleteFunction.StartPoint);
                                         editPoint.ReplaceText(6, "public async", 0);
@@ -1170,12 +860,8 @@ namespace COFRS.Template
                                         editPoint = (EditPoint2)theDeleteFunction.EndPoint.CreateEditPoint();
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
-                                        editPoint.Indent(null, 3);
 
-                                        editPoint.Insert($"await {MemberName}.ValidateForDeleteAsync(node, User);");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 3); 
-                                        editPoint.Insert($"await DeleteAsync<{resourceModel.ClassName}>(node);");
+                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForDeleteAsync(node, User);\r\n\t\t\tawait DeleteAsync<{resourceModel.ClassName}>(node);");
                                     }
                                     #endregion
                                 }
