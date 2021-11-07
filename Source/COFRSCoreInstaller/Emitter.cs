@@ -415,7 +415,7 @@ namespace COFRS.Template
                                         theFunction.AddParameter("User", "ClaimsPrincipal", -1);
 
                                         var editPoint = (EditPoint2)theFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tReturns a collection of {resourceModel.ClassName} resources\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"originalQuery\">The original query string</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tReturns a collection of {resourceModel.ClassName} resources\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"originalQuery\">The original query string</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
                                     }
                                     #endregion
 
@@ -437,7 +437,7 @@ namespace COFRS.Template
                                                       resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                                         var editPoint = (EditPoint2)theAddFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tAdd {article} {resourceModel.ClassName} resource.\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tAdd {article} {resourceModel.ClassName} resource.\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
                                     }
                                     #endregion
 
@@ -459,7 +459,7 @@ namespace COFRS.Template
                                                       resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                                         var editPoint = (EditPoint2)theUpdateFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource.\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource.\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
                                     }
                                     #endregion
 
@@ -482,7 +482,7 @@ namespace COFRS.Template
                                                       resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                                         var editPoint = (EditPoint2)thePatchFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource using patch commands\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource using patch commands\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
                                     }
                                     #endregion
 
@@ -503,7 +503,7 @@ namespace COFRS.Template
                                             resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                                         EditPoint2 editPoint = (EditPoint2)theDeleteFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n///\t<summary>\r\n\t\t///\tDelete {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tDelete {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
                                     }
                                     #endregion
                                 }

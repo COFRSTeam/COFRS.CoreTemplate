@@ -83,7 +83,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t\t//\tUn-comment out the line below if this table is large, and you want to prevent users from requesting a full table scan");
 			results.AppendLine("\t\t\t//\tRequireIndexedQuery(node, \"The query is too broad. Please specify a more refined query that will produce fewer records.\");");
 			results.AppendLine();
-			results.AppendLine("\t\t\tawait Task.CompletedTask;");
+			results.AppendLine("\t\t\tawait base.ValidateForGetAsync(node, User, parms);");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
 
@@ -121,10 +121,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\tValidation for updating existing items");
 			results.AppendLine("\t\t///\t</summary>");
 			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being updated</param>");
-			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the update</param>");
 			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
 			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceModel.ClassName} item, RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
+			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceModel.ClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, User, parms);");
 			results.AppendLine();
@@ -311,10 +310,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine();
 
 			results.AppendLine("\t\t\t//\tTo do: Add any additional code to perform any specific validations pertaining to patching an item.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask;");
+			results.AppendLine("\t\t\tawait base.ValidateForPatchAsync(patchCommands, node, User, parms);");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
-
+			
 			//------------------------------------------------------------------------------------------
 			//	Validation for DELETE
 			//------------------------------------------------------------------------------------------
@@ -328,7 +327,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine($"\t\tpublic override async Task ValidateForDeleteAsync(RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\t//\tTo do: Add any additional code to perform any specific validations pertaining to deleting an item.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask;");
+			results.AppendLine("\t\t\tawait base.ValidateForDeleteAsync(node, User, parms);");
 			results.AppendLine("\t\t}");
 			results.AppendLine("\t}");
 
@@ -2939,6 +2938,8 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <returns></returns>
 		public string EmitResourceModel(ResourceModel resourceModel, ResourceMap resourceMap, EntityMap entityMap, Dictionary<string, string> replacementsDictionary)
 		{
+			List<DBColumn> resourceColumns = new List<DBColumn>();
+
 			replacementsDictionary.Add("$resourceimage$", "false");
 			replacementsDictionary.Add("$resourcenet$", "false");
 			replacementsDictionary.Add("$resourcenetinfo$", "false");
@@ -2976,6 +2977,14 @@ namespace COFRS.Template.Common.ServiceUtilities
 					results.AppendLine($"\t\t///\t{membername}");
 					results.AppendLine("\t\t///\t</summary>");
 					results.Append($"\t\t{membername}");
+
+					var resourceColumn = new DBColumn()
+					{
+						ColumnName = membername
+					};
+
+					resourceColumns.Add(resourceColumn);
+
 				}
 			}
 			else
@@ -3002,6 +3011,22 @@ namespace COFRS.Template.Common.ServiceUtilities
 							results.AppendLine($"\t\tpublic Uri HRef {{ get; set; }}");
 							hasPrimary = true;
 						}
+
+						var resourceColumn = new DBColumn()
+						{
+							ColumnName = "HRef",
+							IsPrimaryKey = member.IsPrimaryKey,
+							IsForeignKey = member.IsForeignKey,
+							IsComputed = member.IsComputed,
+						    IsFixed = member.IsFixed,
+							IsIdentity = member.IsIdentity,
+							IsIndexed = member.IsIndexed,
+							IsNullable = member.IsNullable,
+							ModelDataType = "Uri"
+						};
+
+						resourceColumns.Add(resourceColumn);
+
 					}
 					else if (member.IsForeignKey)
 					{
@@ -3026,6 +3051,21 @@ namespace COFRS.Template.Common.ServiceUtilities
 							results.AppendLine($"\t\t///\tThe enum for {member.ColumnName}");
 							results.AppendLine("\t\t///\t</summary>");
 							results.AppendLine($"\t\tpublic {enumResourceModel.ClassName} {member.ColumnName} {{ get; set; }}");
+
+							var resourceColumn = new DBColumn()
+							{
+								ColumnName = member.ColumnName,
+								IsPrimaryKey = member.IsPrimaryKey,
+								IsForeignKey = member.IsForeignKey,
+								IsComputed = member.IsComputed,
+								IsFixed = member.IsFixed,
+								IsIdentity = member.IsIdentity,
+								IsIndexed = member.IsIndexed,
+								IsNullable = member.IsNullable,
+								ModelDataType = enumResourceModel.ClassName
+							};
+
+							resourceColumns.Add(resourceColumn);
 						}
 						else
 						{
@@ -3043,6 +3083,21 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine($"\t\tpublic Uri {memberName} {{ get; set; }}");
 
 								foreignTableList.Add(member.ForeignTableName);
+
+								var resourceColumn = new DBColumn()
+								{
+									ColumnName = memberName,
+									IsPrimaryKey = member.IsPrimaryKey,
+									IsForeignKey = member.IsForeignKey,
+									IsComputed = member.IsComputed,
+									IsFixed = member.IsFixed,
+									IsIdentity = member.IsIdentity,
+									IsIndexed = member.IsIndexed,
+									IsNullable = member.IsNullable,
+									ModelDataType = "Uri"
+								};
+
+								resourceColumns.Add(resourceColumn);
 							}
 						}
 					}
@@ -3118,11 +3173,29 @@ namespace COFRS.Template.Common.ServiceUtilities
 						}
 
 						results.AppendLine($"\t\tpublic {member.ModelDataType} {membername} {{ get; set; }}");
+
+						var resourceColumn = new DBColumn()
+						{
+							ColumnName = membername,
+							IsPrimaryKey = member.IsPrimaryKey,
+							IsForeignKey = member.IsForeignKey,
+							IsComputed = member.IsComputed,
+							IsFixed = member.IsFixed,
+							IsIdentity = member.IsIdentity,
+							IsIndexed = member.IsIndexed,
+							IsNullable = member.IsNullable,
+							ModelDataType = member.ModelDataType
+						};
+
+						resourceColumns.Add(resourceColumn);
+
 					}
 				}
 			}
 
 			results.AppendLine("\t}");
+
+			resourceModel.Columns = resourceColumns.ToArray();
 			return results.ToString();
 		}
 
