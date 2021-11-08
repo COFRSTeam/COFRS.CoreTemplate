@@ -185,7 +185,7 @@ namespace COFRS.Template.Common.Wizards
                         };
 
                         StandardUtils.GenerateEnumColumns(entityModel, form.ConnectionString);
-                        model = standardEmitter.EmitEntityEnum(entityModel, form.ConnectionString);
+                        model = standardEmitter.EmitEntityEnum(entityModel);
                         replacementsDictionary["$npgsqltypes$"] = "true";
 
                         StandardUtils.RegisterComposite(_appObject.Solution, entityModel);
