@@ -38,5 +38,6 @@
         <Asset Type="Microsoft.VisualStudio.ItemTemplate" d:Source="Project" d:ProjectName="COFRSCoreFullStackTemplate" d:TargetPath="|COFRSCoreFullStackTemplate;TemplateProjectOutputGroup|" Path="ItemTemplates" d:VsixSubPath="ItemTemplates" />
         <Asset Type="Microsoft.VisualStudio.ProjectTemplate" d:Source="Project" d:ProjectName="COFRSCoreProjectWitihSDKTemplate" d:TargetPath="|COFRSCoreProjectWitihSDKTemplate;TemplateProjectOutputGroup|" Path="ProjectTemplates" d:VsixSubPath="ProjectTemplates" />
         <Asset Type="Microsoft.VisualStudio.ItemTemplate" d:Source="Project" d:ProjectName="COFRSCoreExampleTemplate" d:TargetPath="|COFRSCoreExampleTemplate;TemplateProjectOutputGroup|" Path="ItemTemplates" d:VsixSubPath="ItemTemplates" />
+        <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="COFRSCoreCommandsPackage" Path="|COFRSCoreCommandsPackage;PkgdefProjectOutputGroup|" />
     </Assets>
 </PackageManifest>

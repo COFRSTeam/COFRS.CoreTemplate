@@ -1698,7 +1698,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 										else
 										{
 											var Value = reader.GetTimeSpan(reader.GetOrdinal(column.ColumnName));
-											results.Append($"\"{Value.ToString()}\"");
+											results.Append($"\"{Value}\"");
 										}
 										break;
 
@@ -1809,7 +1809,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 									case "time":
 										{
 											var Value = TimeSpan.FromSeconds(24541);
-											results.Append($"\"{Value.ToString()}\"");
+											results.Append($"\"{Value}\"");
 										}
 										break;
 
@@ -2936,7 +2936,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="resourceModel">The <see cref="ResourceModel"/> to generate</param>
 		/// <param name="replacementsDictionary">The replacements dictionary</param>
 		/// <returns></returns>
-		public string EmitResourceModel(ResourceModel resourceModel, ResourceMap resourceMap, EntityMap entityMap, Dictionary<string, string> replacementsDictionary)
+		public string EmitResourceModel(ResourceModel resourceModel, ResourceMap resourceMap, Dictionary<string, string> replacementsDictionary)
 		{
 			List<DBColumn> resourceColumns = new List<DBColumn>();
 
@@ -3199,7 +3199,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return results.ToString();
 		}
 
-		public string EmitEntityEnum(EntityModel entityModel, string connectionString)
+		public string EmitEntityEnum(EntityModel entityModel)
 		{
 			var nn = new NameNormalizer(entityModel.ClassName);
 			var builder = new StringBuilder();
@@ -3585,7 +3585,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						result.AppendLine();
 						result.AppendLine($"namespace {undefinedModel.Namespace}");
 						result.AppendLine("{");
-						result.Append(EmitEntityEnum(undefinedModel, connectionString));
+						result.Append(EmitEntityEnum(undefinedModel));
 						result.AppendLine("}");
 
 						//	Save the model to disk
