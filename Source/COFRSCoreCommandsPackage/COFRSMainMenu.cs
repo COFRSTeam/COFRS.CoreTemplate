@@ -10,6 +10,7 @@ using System.Linq;
 using Task = System.Threading.Tasks.Task;
 using EnvDTE80;
 using EnvDTE;
+using COFRSCoreCommandsPackage.Forms;
 
 namespace COFRSCoreCommandsPackage
 {
@@ -51,7 +52,7 @@ namespace COFRSCoreCommandsPackage
             commandService.AddCommand(menuItem);
 
             menuCommandID = new CommandID(CommandSet, AddCollectionCommandId);
-            menuItem = new OleMenuCommand(this.Execute, menuCommandID);
+            menuItem = new OleMenuCommand(this.AddCollection, menuCommandID);
             menuItem.BeforeQueryStatus += new EventHandler(OnBeforeAddingCollection);
             commandService.AddCommand(menuItem);
         }
@@ -95,6 +96,10 @@ namespace COFRSCoreCommandsPackage
             ThreadHelper.ThrowIfNotOnUIThread();
             var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
             var theActiveDocument = dte.ActiveDocument;
+
+            if (theActiveDocument == null)
+                return false;
+
             var model = theActiveDocument.ProjectItem.FileCodeModel;
 
             if (model == null)
@@ -122,6 +127,10 @@ namespace COFRSCoreCommandsPackage
             ThreadHelper.ThrowIfNotOnUIThread();
             var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
             var theActiveDocument = dte.ActiveDocument;
+
+            if (theActiveDocument == null)
+                return false;
+
             var model = theActiveDocument.ProjectItem.FileCodeModel;
 
             if (model == null)
@@ -204,33 +213,50 @@ namespace COFRSCoreCommandsPackage
         /// </summary>
         /// <param name="sender">Event sender.</param>
         /// <param name="e">Event args.</param>
-        private void Execute(object sender, EventArgs e)
+        private void AddCollection(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            var menuCommand = (MenuCommand)sender;
-
-            string message = "Hello World";
-
-            if ( menuCommand.CommandID.ID == EditMappingCommandId )
+            if (sender is OleMenuCommand myCommand)
             {
-                message = "Edit the Mapping for a Profile file";
-            }
-            else if(menuCommand.CommandID.ID == AddCollectionCommandId)
-            {
-                message = "Add a collection to a resource.";
-            }
+                if (((OleMenuCommand)sender).CommandID.ID == AddCollectionCommandId)
+                {
+                    var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
+                    var theActiveDocument = dte.ActiveDocument;
 
-            string title = "COFRS";
+                    if (theActiveDocument == null)
+                        return;
 
-            // Show a message box to prove we were here
-            VsShellUtilities.ShowMessageBox(
-                this.package,
-                message,
-                title,
-                OLEMSGICON.OLEMSGICON_INFO,
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                    var model = theActiveDocument.ProjectItem.FileCodeModel;
+                    var resourceName = string.Empty;
+
+                    if (model == null)
+                        return;
+
+                    foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
+                    {
+                        foreach (CodeClass2 classElement in namespaceElement.Children.OfType<CodeClass2>())
+                        {
+                            foreach (CodeAttribute2 attribute in classElement.Attributes.OfType<CodeAttribute2>())
+                            {
+                                if (attribute.Name.Equals("Entity", StringComparison.OrdinalIgnoreCase))
+                                    resourceName = classElement.Name;
+                            }
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(resourceName))
+                        return;
+
+                    var dialog = new AddCollectionDialog();
+                    dialog.ResourceName.Text = resourceName;
+                    dialog._dte2 = dte;
+
+                    if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                    {
+                    }
+                }
+            }
         }
     }
 }

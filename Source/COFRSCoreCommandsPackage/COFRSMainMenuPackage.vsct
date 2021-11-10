@@ -63,7 +63,8 @@
           If you do not want an image next to your command, remove the Icon node /> -->
       <Button guid="guidCOFRSMainMenuPackageCmdSet" id="AddMappingMenuId" priority="0x0100" type="Button">
         <Parent guid="guidCOFRSMainMenuPackageCmdSet" id="MyMenuGroup" />
-        <CommandFlag>TextChanges</CommandFlag>
+        <CommandFlag>TextChangesButton</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
         <Strings>
           <ButtonText>Edit Mappings...</ButtonText>
         </Strings>
@@ -71,7 +72,8 @@
       
       <Button guid="guidCOFRSMainMenuPackageCmdSet" id="AddCollectionMenuId" priority="0x0101" type="Button">
         <Parent guid="guidCOFRSMainMenuPackageCmdSet" id="MyMenuGroup" />
-        <Icon guid="guidImages" id="bmpPic1" />
+        <CommandFlag>TextChangesButton</CommandFlag>
+        <CommandFlag>DontCache</CommandFlag>
         <Strings>
           <ButtonText>Add Collection to Resource...</ButtonText>
         </Strings>

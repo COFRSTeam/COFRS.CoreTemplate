@@ -53,6 +53,26 @@
   <ItemGroup>
     <Compile Include="COFRSMainMenu.cs" />
     <Compile Include="COFRSMainMenuPackage.cs" />
+    <Compile Include="Forms\AddCollectionDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\AddCollectionDialog.Designer.cs">
+      <DependentUpon>AddCollectionDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Models\DBAuthentication.cs" />
+    <Compile Include="Models\DBColumn.cs" />
+    <Compile Include="Models\DBServer.cs" />
+    <Compile Include="Models\ElementType.cs" />
+    <Compile Include="Models\EntityMap.cs" />
+    <Compile Include="Models\EntityModel.cs" />
+    <Compile Include="Models\NameNormalizer.cs" />
+    <Compile Include="Models\ProjectFolder.cs" />
+    <Compile Include="Models\ResourceMap.cs" />
+    <Compile Include="Models\ResourceModel.cs" />
+    <Compile Include="Models\ResourceType.cs" />
+    <Compile Include="Models\ServerConfig.cs" />
+    <Compile Include="Models\DBServerType.cs" />
+    <Compile Include="Models\ProjectMapping.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -62,15 +82,14 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="16.10.31321.278" ExcludeAssets="runtime">
-      <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    <PackageReference Include="Microsoft.VisualStudio.SDK">
+      <Version>17.0.31902.203</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Validation">
       <Version>17.0.34</Version>
     </PackageReference>
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="16.11.35">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>13.0.1</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
@@ -79,6 +98,9 @@
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Forms\AddCollectionDialog.resx">
+      <DependentUpon>AddCollectionDialog.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="VSPackage.resx">
       <MergeWithCTO>true</MergeWithCTO>
       <ManifestResourceName>VSPackage</ManifestResourceName>

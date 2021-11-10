@@ -32,11 +32,11 @@ namespace COFRS.Template
 			switch (framework.SelectedIndex)
 			{
 				case 0:
-					Framework = "netcoreapp3.1";
+					Framework = "net5.0";
 					break;
 
 				case 1:
-					Framework = "net5.0";
+					Framework = "net6.0";
 					break;
 			}
 
