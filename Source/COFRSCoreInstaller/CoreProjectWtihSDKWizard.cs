@@ -208,7 +208,7 @@ namespace COFRS.Template
 					var jsonData = JsonSerializer.Serialize<ProjectMapping>(projectMapping, new JsonSerializerOptions()
 					{
 						PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-						IgnoreNullValues = true,
+						DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
 						WriteIndented = true
 					});
 

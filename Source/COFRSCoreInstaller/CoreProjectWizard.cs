@@ -103,8 +103,8 @@ namespace COFRS.Template
 					var jsonData = JsonSerializer.Serialize<ProjectMapping>(projectMapping, new JsonSerializerOptions()
 										{
 										    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-										    IgnoreNullValues = true,
-											WriteIndented = true
+											WriteIndented = true,
+											DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
 										});
 
 					var projectMappingPath = Path.Combine(projectMapPath, "ProjectMap.json");

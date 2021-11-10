@@ -155,7 +155,6 @@ namespace COFRS.Template.Common.Wizards
                     else
                         model = standardEmitter.EmitResourceModel(resourceModel,
                                                                   resourceMap,
-                                                                  entityMap,
                                                                   replacementsDictionary);
 
                     replacementsDictionary.Add("$model$", model);

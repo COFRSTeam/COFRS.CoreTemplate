@@ -103,8 +103,8 @@
             this.framework.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.framework.FormattingEnabled = true;
             this.framework.Items.AddRange(new object[] {
-            ".NET Core 3.1",
-            ".NET 5.0"});
+            ".NET 5.0",
+            ".NET 6.0"});
             this.framework.Location = new System.Drawing.Point(406, 70);
             this.framework.Name = "framework";
             this.framework.Size = new System.Drawing.Size(216, 21);
