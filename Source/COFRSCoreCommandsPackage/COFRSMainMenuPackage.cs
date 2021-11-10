@@ -33,6 +33,7 @@ namespace COFRSCoreCommandsPackage
     /// </para>
     /// </remarks>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
+    [ProvideAutoLoad(UIContextGuids80.NoSolution, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(COFRSMainMenuPackage.PackageGuidString)]
     public sealed class COFRSMainMenuPackage : AsyncPackage

@@ -69,56 +69,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return answer;
 		}
 
-		public static void EnsureFolder(Solution solution, ProjectFolder projectFolder)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			//var folderParts = folderName.Split(new char[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
-			//var project = solution.Projects.Item(1);
-			//string rootFolder = string.Empty;
-
-			//foreach (Property property in project.Properties)
-			//{
-			//	if (string.Equals(property.Name, "FullPath", StringComparison.OrdinalIgnoreCase))
-			//		rootFolder = property.Value.ToString();
-			//}
-
-			//var parentFolder = FindFolder(project, folderParts[0]);
-
-			//if (parentFolder == null)
-			//{
-			//	try
-			//	{
-			//		parentFolder = project.ProjectItems.AddFolder(folderParts[0]);
-			//	}
-			//	catch (Exception)
-			//	{
-			//		rootFolder = Path.Combine(rootFolder, folderParts[0]);
-			//		parentFolder = project.ProjectItems.AddFromDirectory(rootFolder);
-			//	}
-			//}
-
-			//for (int i = 1; i < folderParts.Length; i++)
-			//{
-			//	var childFolder = FindFolder(parentFolder, folderParts[i]);
-
-			//	if (childFolder == null)
-			//	{
-			//		try
-			//		{
-			//			childFolder = parentFolder.ProjectItems.AddFolder(folderParts[i]);
-			//		}
-			//		catch (Exception)
-			//		{
-			//			rootFolder = Path.Combine(rootFolder, folderParts[i]);
-			//			childFolder = project.ProjectItems.AddFromDirectory(rootFolder);
-			//		}
-			//	}
-
-			//	parentFolder = childFolder;
-			//}
-		}
-
 		public static string GetProjectName(Solution solution)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -143,49 +93,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return null;
         }
-
-		public static string FindValidatorNamespace(Solution solution, ResourceClassFile resourceClass, EntityClassFile entityClass, out string validatorInterface)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			validatorInterface = string.Empty;
-
-			var candidate = $"{resourceClass.ClassName}Validator.cs";
-			var projectItem = solution.FindProjectItem(candidate);
-
-			if (projectItem == null)
-			{
-				foreach (Project project in solution.Projects)
-				{
-					projectItem = FindValidator(project.ProjectItems, resourceClass, entityClass);
-				}
-			}
-
-			if (projectItem != null)
-			{
-				var code = projectItem.FileCodeModel;
-
-				foreach (CodeNamespace namespaceElement in code.CodeElements.GetTypes<CodeNamespace>())
-				{
-					foreach (CodeClass classElement in namespaceElement.Children.GetTypes<CodeClass>())
-					{
-						foreach (CodeClass baseClass in classElement.Bases.GetTypes<CodeClass>())
-						{
-							if (baseClass.FullName.Contains(resourceClass.ClassName))
-							{
-								foreach (CodeInterface childCandidate in classElement.ImplementedInterfaces.GetTypes<CodeInterface>())
-								{
-									validatorInterface = childCandidate.Name;
-								}
-
-								return namespaceElement.Name;
-							}
-						}
-					}
-				}
-			}
-
-			return "none";
-		}
 
 		private static ProjectItem FindValidator(ProjectItems projectItems, ResourceClassFile resourceClass, EntityClassFile entityClass)
 		{
@@ -659,20 +566,6 @@ select c.name as column_name,
 			entityModel.Columns = columns.ToArray();
 		}
 
-		public static bool EqualPaths(string patha, string pathb)
-        {
-			var a = Path.GetFullPath(patha).Replace('/', Path.DirectorySeparatorChar); 
-			var b = Path.GetFullPath(pathb).Replace('/', Path.DirectorySeparatorChar); 
-
-			if (a.EndsWith(Path.DirectorySeparatorChar.ToString()))
-				a = a.Substring(0, a.Length - 1);
-
-			if (b.EndsWith(Path.DirectorySeparatorChar.ToString()))
-				b = b.Substring(0, b.Length - 1);
-
-			return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
-        }
-
 		public static bool IsChildOf(string parentPath, string candidateChildPath)
         {
 			var a = Path.GetFullPath(parentPath).Replace('/', Path.DirectorySeparatorChar);
@@ -912,33 +805,6 @@ select c.name as column_name,
 			}
 
 			return projectFolderCollection;
-		}
-
-		public static string LoadPolicy(Solution solution)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			//	The first thing we need to do, is we need to load the appSettings.local.json file
-			ProjectItem settingsFile = solution.FindProjectItem("appSettings.json");
-
-			var window = settingsFile.Open(Constants.vsViewKindTextView);
-			Document doc = settingsFile.Document;
-			TextSelection sel = (TextSelection)doc.Selection;
-
-			sel.SelectAll();
-
-			var lines = sel.Text.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-			foreach (var line in lines)
-			{
-				var match = Regex.Match(line, "[ \t]*\\\"Policy\\\"\\:[ \t]\\\"(?<policy>[^\\\"]+)\\\"");
-				if (match.Success)
-					return match.Groups["policy"].Value;
-			}
-
-			window.Close();
-
-			return string.Empty;
 		}
 
 		public static string LoadMoniker(Solution solution)
@@ -1211,8 +1077,6 @@ select c.name as column_name,
 			doc.Save();
 			window.Close();
 		}
-
-
 
 		public static List<ClassMember> LoadEntityClassMembers(EntityModel entityClass)
 		{
@@ -2649,49 +2513,6 @@ select c.name as column_name,
 			}
 		}
 
-		public static EntityMap OpenEntityMap(Solution solution)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			var solutionPath = solution.Properties.Item("Path").Value.ToString();
-			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs\\EntityMap.json");
-
-			try
-			{
-				var jsonData = File.ReadAllText(mappingPath);
-
-				var projectMapping = JsonConvert.DeserializeObject<EntityMap>(jsonData, new JsonSerializerSettings()
-				{
-					NullValueHandling = NullValueHandling.Ignore,
-					Formatting = Formatting.Indented,
-					MissingMemberHandling = MissingMemberHandling.Ignore
-				});
-
-				return projectMapping;
-			}
-			catch (FileNotFoundException)
-			{
-                var entityMap = new EntityMap
-                {
-                    Maps = new EntityModel[] { }
-                };
-                return entityMap;
-			}
-			catch (DirectoryNotFoundException)
-			{
-                var entityMap = new EntityMap
-                {
-                    Maps = new EntityModel[] { }
-                };
-                return entityMap;
-			}
-			catch (Exception error)
-			{
-				Console.WriteLine(error.Message);
-				return null;
-			}
-		}
-
 		public static void SaveProjectMapping(Solution solution, ProjectMapping projectMapping)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -2708,29 +2529,6 @@ select c.name as column_name,
 
 			File.WriteAllText(mappingPath, jsonData);
 		}
-
-		public static void SaveEntityMap(Solution solution, EntityMap projectMapping)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			var solutionPath = solution.Properties.Item("Path").Value.ToString();
-			SaveEntityMap(solutionPath, projectMapping);
-		}
-
-		public static void SaveEntityMap(string solutionDirectory, EntityMap projectMapping)
-		{
-			var mappingPath = Path.Combine(solutionDirectory, ".cofrs\\EntityMap.json");
-
-			var jsonData = JsonConvert.SerializeObject(projectMapping, new JsonSerializerSettings()
-			{
-				NullValueHandling = NullValueHandling.Ignore,
-				Formatting = Formatting.Indented,
-				MissingMemberHandling = MissingMemberHandling.Ignore
-			});
-
-			File.WriteAllText(mappingPath, jsonData);
-		}
-
 
 		public static EntityMap LoadEntityModels(Solution solution, ProjectFolder entityModelsFolder)
 		{
