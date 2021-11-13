@@ -642,22 +642,15 @@ namespace COFRS.Template
                                     bool addParameter = true;
                                     bool addVariable = true;
 
-                                    foreach ( CodeElement2 classElement in orchestratorClass.Children )
+                                    foreach (CodeVariable2 theVariable in orchestratorClass.Children.OfType<CodeVariable2>() )
                                     {
-                                        if ( classElement.Kind == vsCMElement.vsCMElementVariable )
-                                        {
-                                            var theVariable = (CodeVariable2)classElement;
-
-                                            if (theVariable.Name.Equals("MemberName"))
-                                                addVariable = false;
-                                        }
+                                        if (theVariable.Name.Equals(MemberName))
+                                            addVariable = false;
                                     }
 
-                                    foreach ( var parameter in constructorFunction.Parameters)
+                                    foreach (CodeParameter2 parameter in constructorFunction.Parameters.OfType<CodeParameter2>())
                                     {
-                                        var arg = (CodeParameter2)parameter;
-
-                                        if (arg.Type.ToString().Equals(parameterName, StringComparison.OrdinalIgnoreCase))
+                                        if (parameter.Type.ToString().Equals(parameterName, StringComparison.OrdinalIgnoreCase))
                                             addParameter = false;
                                     }
 
@@ -674,7 +667,17 @@ namespace COFRS.Template
                                         var editPoint = (EditPoint2) constructorFunction.EndPoint.CreateEditPoint();
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
-                                        editPoint.Insert($"\t\t\t{MemberName} = {parameterName};");
+
+                                        var codeLine = editPoint.GetText(editPoint.LineLength);
+
+                                        if ( !string.IsNullOrWhiteSpace(codeLine))
+                                        {
+                                            editPoint.EndOfLine();
+                                            editPoint.InsertNewLine();
+                                        }
+
+                                        editPoint.Indent(null, 3);
+                                        editPoint.Insert($"{MemberName} = {parameterName};");
                                     }
                                     #endregion
 
@@ -795,7 +798,11 @@ namespace COFRS.Template
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
 
-                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForUpdateAsync(item, User);\r\n\t\t\treturn await UpdateAsync<{resourceModel.ClassName}>(item);");
+                                        editPoint.Indent(null, 3);
+                                        editPoint.Insert($"await {MemberName}.ValidateForUpdateAsync(item, User);");
+                                        editPoint.InsertNewLine();
+                                        editPoint.Indent(null, 3);
+                                        editPoint.Insert($"return await UpdateAsync<{resourceModel.ClassName}>(item);");
                                     }
                                     #endregion
 
