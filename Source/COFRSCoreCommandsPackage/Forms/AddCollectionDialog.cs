@@ -257,14 +257,15 @@ namespace COFRSCoreCommandsPackage.Forms
 							else if (aFunction.Name.Equals($"Get{sourceResourceModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
 							{
 								//	This is the get single async method.
-
 								var startPoint = aFunction.StartPoint;
-								var endPoint = aFunction.EndPoint;
 
 								//	Find were it returns the GetSingleAsync (this may or may not be there)
 								var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 
-								if (editPoint.FindPattern($"return await GetSingleAsync<{sourceResourceModel.ClassName}>(node);"))
+								bool foundit = editPoint.FindPattern($"return await GetSingleAsync<{sourceResourceModel.ClassName}>(node);");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if (foundit)
 								{
 									//	We found it, so replace it with an assignment.
 									editPoint.ReplaceText(6, "var item =", 0);
@@ -274,12 +275,13 @@ namespace COFRSCoreCommandsPackage.Forms
 									//	And return that item.
 									editPoint.Insert("\r\n\t\t\tvar subNode = RqlNode.Parse($\"Client=uri:\\\"{item.HRef.LocalPath}\\\"\");\r\n");
 									editPoint.Insert("\r\n\t\t\treturn item;");
-
-									//	And go back to the beginning of the function
-									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 								}
 
-								if (!editPoint.FindPattern("var subNode = RqlNode"))
+								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								foundit = editPoint.FindPattern("var subNode = RqlNode");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if (!foundit)
 								{
 									editPoint = (EditPoint2)aFunction.EndPoint.CreateEditPoint();
 									editPoint.LineUp();
@@ -287,8 +289,13 @@ namespace COFRSCoreCommandsPackage.Forms
 									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 								}
 
-								if (!editPoint.FindPattern($"var {memberResourceModel.ClassName}Collection = await GetCollectionAsync<{memberResourceModel.ClassName}>(null, subNode, true);"))
+								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								foundit = editPoint.FindPattern($"var {memberResourceModel.ClassName}Collection = await GetCollectionAsync<{memberResourceModel.ClassName}>(null, subNode, true);");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if (!foundit)
 								{
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 									editPoint.FindPattern("return item");
 									//	Now, just before you return the item, insert a call to get the collection of member items
 									//	and populate the source item.
@@ -305,56 +312,107 @@ namespace COFRSCoreCommandsPackage.Forms
 							else if (aFunction.Name.Equals($"Get{sourceResourceModel.ClassName}CollectionAsync"))
 							{
 								var startPoint = aFunction.StartPoint;
-								var endPoint = aFunction.EndPoint;
-
 								var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 
-								if (editPoint.FindPattern($"return await GetCollectionAsync<{sourceResourceModel.ClassName}>"))
+								bool foundit = editPoint.FindPattern($"return await GetCollectionAsync<{sourceResourceModel.ClassName}>");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if (foundit)
 								{
 									editPoint.ReplaceText(6, "var collection =", 0);
 									editPoint.EndOfLine();
 									editPoint.InsertNewLine();
-									editPoint.Insert("\t\t\treturn collection;");
-									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("return collection;");
 								}
 
-								if (!editPoint.FindPattern($"StringBuilder rqlBody = new(\"in({sourceResourceModel.ClassName}\");"))
-								{
-									editPoint.FindPattern("return collection");
-									editPoint.LineUp();
-									editPoint.InsertNewLine();
+ 								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								foundit = editPoint.FindPattern($"StringBuilder rqlBody = new(\"in({sourceResourceModel.ClassName}\");");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-									editPoint.Insert($"\r\n\t\t\tStringBuilder rqlBody = new(\"in({sourceResourceModel.ClassName}\");\r\n");
-									editPoint.Insert($"\t\t\tforeach (var item in collection.Items)\r\n");
-									editPoint.Insert($"\t\t\t{{\r\n");
-									editPoint.Insert("\t\t\t\trqlBody.Append($\", uri:\\\"{item.HRef.LocalPath}\\\"\");\r\n");
-									editPoint.Insert($"\t\t\t}}\r\n");
-									editPoint.Insert($"\t\t\trqlBody.Append(')');\r\n\r\n");
-
-									editPoint.Insert($"\t\t\tvar subNode = RqlNode.Parse(rqlBody.ToString());\r\n\r\n");
+								if (!foundit)
+                                {
 									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-								}
-
-								if (!editPoint.FindPattern($"var {memberResourceModel.ClassName}Collection = await GetCollectionAsync<{memberResourceModel.ClassName}>(null, subNode, true);"))
-								{
 									editPoint.FindPattern("return collection");
-									editPoint.LineUp();
+                                    editPoint.LineUp();
+
+                                    editPoint.InsertNewLine();
+									editPoint.Indent(null,3);
+									editPoint.Insert($"StringBuilder rqlBody = new(\"in({sourceResourceModel.ClassName}\");");
 									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"foreach (var item in collection.Items)");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("{");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert("rqlBody.Append($\", uri:\\\"{item.HRef.LocalPath}\\\"\");");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("}");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"rqlBody.Append(')');");
+									editPoint.InsertNewLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"var subNode = RqlNode.Parse(rqlBody.ToString());");
+									editPoint.InsertNewLine();
+                                }
 
-									editPoint.Insert($"\t\t\tvar {memberResourceModel.ClassName}Collection = await GetCollectionAsync<{memberResourceModel.ClassName}>(null, subNode, true);\r\n\r\n");
+								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								foundit = editPoint.FindPattern($"var {memberResourceModel.ClassName}Collection =");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-									editPoint.Insert($"\t\t\tforeach ( var item in {memberResourceModel.ClassName}Collection.Items)\r\n");
-									editPoint.Insert($"\t\t\t{{\r\n");
-									editPoint.Insert($"\t\t\t\tvar mainItem = collection.Items.FirstOrDefault(i => i.HRef == item.Client);\r\n\r\n");
-									editPoint.Insert($"\t\t\t\tif (mainItem.{nn.PluralForm} == null)\r\n");
-									editPoint.Insert($"\t\t\t\t{{\r\n");
-									editPoint.Insert($"\t\t\t\t\tmainItem.{memberName} = new {memberResourceModel.ClassName}[] {{ item }};\r\n");
-									editPoint.Insert($"\t\t\t\t}}\r\n");
-									editPoint.Insert($"\t\t\t\telse\r\n");
-									editPoint.Insert($"\t\t\t\t{{\r\n");
-									editPoint.Insert($"\t\t\t\t\tmainItem.{memberName} = new List<{memberResourceModel.ClassName}>(mainItem.{memberName}) {{ item }}.ToArray();\r\n");
-									editPoint.Insert($"\t\t\t\t}}\r\n");
-									editPoint.Insert($"\t\t\t}}\r\n\r\n");
+								if ( !foundit)
+                                {
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									editPoint.FindPattern("return collection");
+                                    editPoint.LineUp();
+                                    editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+                                    editPoint.Insert($"var {memberResourceModel.ClassName}Collection = await GetCollectionAsync<{memberResourceModel.ClassName}>(null, subNode, true);");
+									editPoint.InsertNewLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"foreach ( var item in {memberResourceModel.ClassName}Collection.Items)");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("{");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert($"var mainItem = collection.Items.FirstOrDefault(i => i.HRef == item.Client);");
+									editPoint.InsertNewLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert($"if (mainItem.{nn.PluralForm} == null)");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert("{");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 5);
+                                    editPoint.Insert($"mainItem.{memberName} = new {memberResourceModel.ClassName}[] {{ item }};");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert("}");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert("else");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert("{");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 5);
+									editPoint.Insert($"mainItem.{memberName} = new List<{memberResourceModel.ClassName}>(mainItem.{memberName}) {{ item }}.ToArray();");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert("}");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("}");
+									editPoint.InsertNewLine();
 								}
 							}
 
@@ -364,9 +422,12 @@ namespace COFRSCoreCommandsPackage.Forms
 								var startPoint = aFunction.StartPoint;
 								var endPoint = aFunction.EndPoint;
 
-								var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint(); 
+								
+								bool foundit = editPoint.FindPattern("return await AddAsync");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-								if (editPoint.FindPattern($"return await AddAsync"))
+								if (foundit)
 								{
 									editPoint.ReplaceText(6, "item =", 0);
 									editPoint.EndOfLine();
@@ -375,37 +436,50 @@ namespace COFRSCoreCommandsPackage.Forms
 									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 								}
 
-								if (!editPoint.FindPattern($"foreach ( var subitem in item.{memberName})"))
+								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								foundit = editPoint.FindPattern($"foreach ( var subitem in item.{memberName})");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if (!foundit)
 								{
-									if (editPoint.FindPattern($"await {sourceValidatorName}.ValidateForAddAsync(item, User);"))
-									{
-										editPoint.EndOfLine();
-										editPoint.InsertNewLine();
-										editPoint.InsertNewLine();
-										editPoint.Insert($"\t\t\tforeach ( var subitem in item.{memberName})\r\n");
-										editPoint.Insert($"\t\t\t{{\r\n");
-										editPoint.Insert($"\t\t\t\tawait {memberValidatorName}.ValidateForAddAsync(subitem, User);\r\n");
-										editPoint.Insert($"\t\t\t}}\r\n\r\n");
-									}
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									editPoint.FindPattern($"await {sourceValidatorName}.ValidateForAddAsync(item, User);");
+									editPoint.EndOfLine();
+									editPoint.InsertNewLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"foreach ( var subitem in item.{memberName})");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("{");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null,4);
+									editPoint.Insert($"await {memberValidatorName}.ValidateForAddAsync(subitem, User);");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("}");
+									editPoint.InsertNewLine();
 								}
 
+								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 								editPoint.FindPattern("item = await AddAsync");
+								foundit = editPoint.FindPattern($"foreach ( var subitem in item.{memberName})");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-								if (!editPoint.FindPattern($"foreach ( var subitem in item.{memberName})"))
+								if (!foundit)
 								{
-									if (editPoint.FindPattern($"return item;"))
-									{
-										editPoint.LineUp();
-										editPoint.EndOfLine();
-										editPoint.InsertNewLine();
-										editPoint.InsertNewLine();
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									editPoint.FindPattern($"return item;");
+									editPoint.LineUp();
+									editPoint.EndOfLine();
+									editPoint.InsertNewLine();
+									editPoint.InsertNewLine();
 
-										editPoint.Insert($"\t\t\tforeach ( var subitem in item.{memberName})\r\n");
-										editPoint.Insert($"\t\t\t{{\r\n");
-										editPoint.Insert($"\t\t\t\tsubitem.{sourceResourceModel.ClassName} = item.HRef;\r\n");
-										editPoint.Insert($"\t\t\t\tsubitem.HRef = (await AddAsync<{memberResourceModel.ClassName}>(subitem)).HRef;\r\n");
-										editPoint.Insert($"\t\t\t}}\r\n");
-									}
+									editPoint.Insert($"\t\t\tforeach ( var subitem in item.{memberName})\r\n");
+									editPoint.Insert($"\t\t\t{{\r\n");
+									editPoint.Insert($"\t\t\t\tsubitem.{sourceResourceModel.ClassName} = item.HRef;\r\n");
+									editPoint.Insert($"\t\t\t\tsubitem.HRef = (await AddAsync<{memberResourceModel.ClassName}>(subitem)).HRef;\r\n");
+									editPoint.Insert($"\t\t\t}}\r\n");
 								}
 							}
 
@@ -416,8 +490,10 @@ namespace COFRSCoreCommandsPackage.Forms
 								var endPoint = aFunction.EndPoint;
 
 								var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								bool foundit = editPoint.FindPattern($"return await UpdateAsync");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-								if (editPoint.FindPattern($"return await UpdateAsync"))
+								if (foundit)
 								{
 									editPoint.ReplaceText(6, "item =", 0);
 									editPoint.EndOfLine();
@@ -428,9 +504,12 @@ namespace COFRSCoreCommandsPackage.Forms
 
 								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 								editPoint.FindPattern($"await {sourceValidatorName}.ValidateForUpdateAsync");
+								foundit = editPoint.FindPattern("var subNode =");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-								if ( !editPoint.FindPattern("var subNode ="))
-                                {
+								if ( !foundit)
+								{
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 									editPoint.FindPattern($"await {sourceValidatorName}.ValidateForUpdateAsync");
 									editPoint.EndOfLine();
 									editPoint.InsertNewLine();
@@ -440,9 +519,13 @@ namespace COFRSCoreCommandsPackage.Forms
 
 								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 								editPoint.FindPattern("var subNode = ");
+								foundit = editPoint.FindPattern($"var {memberResourceModel.ClassName}Collection = await GetCollectionAsync<{memberResourceModel.ClassName}>(null, subNode, true);");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-								if (!editPoint.FindPattern($"var {memberResourceModel.ClassName}Collection = await GetCollectionAsync<{memberResourceModel.ClassName}>(null, subNode, true);"))
+								if (!foundit)
 								{
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									editPoint.FindPattern("var subNode = ");
 									editPoint.EndOfLine();
 									editPoint.InsertNewLine();
 									editPoint.Indent(null, 3);
@@ -504,9 +587,13 @@ namespace COFRSCoreCommandsPackage.Forms
 
 								editPoint = (EditPoint2) aFunction.StartPoint.CreateEditPoint();
 								editPoint.FindPattern("item = await UpdateAsync");
+								foundit = editPoint.FindPattern($"foreach (var subitem in {memberResourceModel.ClassName}Collection.Items)");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-								if (!editPoint.FindPattern($"foreach (var subitem in {memberResourceModel.ClassName}Collection.Items)"))
+								if (!foundit)
 								{
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									editPoint.FindPattern("item = await UpdateAsync");
 									editPoint.EndOfLine();
 									editPoint.InsertNewLine();
 									editPoint.InsertNewLine();
@@ -562,6 +649,88 @@ namespace COFRSCoreCommandsPackage.Forms
 									editPoint.InsertNewLine();
 									editPoint.Indent(null, 4);
 									editPoint.Insert("subitem.HRef = (await AddAsync(subitem)).HRef;");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("}");
+									editPoint.InsertNewLine();
+								}
+							}
+
+							//	Delete
+							else if (aFunction.Name.Equals($"Delete{sourceResourceModel.ClassName}Async"))
+							{
+								var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+
+								bool foundit = editPoint.FindPattern("var url = node.Value<Uri>(1);");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if ( !foundit)
+                                {
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									editPoint.LineDown();
+									editPoint.EndOfLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("var url = node.Value<Uri>(1);");
+								}
+
+								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								editPoint.FindPattern($"await {sourceValidatorName}.ValidateForDeleteAsync");
+								foundit = editPoint.FindPattern("var subNode =");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if (!foundit)
+								{
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									editPoint.FindPattern($"await {sourceValidatorName}.ValidateForDeleteAsync");
+									editPoint.EndOfLine();
+									editPoint.InsertNewLine();
+									editPoint.InsertNewLine();
+									editPoint.Insert($"\t\t\tvar subNode = RqlNode.Parse($\"Client=uri:\\\"{{url.LocalPath}}\\\"\");\r\n");
+								}
+
+								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								editPoint.FindPattern("var subNode = ");
+								foundit = editPoint.FindPattern($"var {memberResourceModel.ClassName}Collection = await GetCollectionAsync<{memberResourceModel.ClassName}>(null, subNode, true);");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if (!foundit)
+								{
+									editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									editPoint.FindPattern("var subNode = ");
+									editPoint.EndOfLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"var {memberResourceModel.ClassName}Collection = await GetCollectionAsync<{memberResourceModel.ClassName}>(null, subNode, true);");
+									editPoint.InsertNewLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"foreach (var subitem in {memberResourceModel.ClassName}Collection.Items)");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("{");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert($"await {memberValidatorName}.ValidateForDeleteAsync(dnode, User);");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("}");
+									editPoint.InsertNewLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"foreach (var subitem in {memberResourceModel.ClassName}Collection.Items)");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert("{");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 4);
+									editPoint.Insert($"await DeleteAsync<{memberResourceModel.ClassName}>(dnode);");
 									editPoint.InsertNewLine();
 									editPoint.Indent(null, 3);
 									editPoint.Insert("}");
