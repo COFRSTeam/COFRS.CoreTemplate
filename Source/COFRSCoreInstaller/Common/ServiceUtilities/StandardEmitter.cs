@@ -59,18 +59,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine($"\tpublic class {validatorClassName} : Validator<{resourceModel.ClassName}>, {validatorInterface}");
 			results.AppendLine("\t{");
 
-
-			results.AppendLine("\t\tprivate readonly IServiceOrchestrator _orchestrator;");
-			results.AppendLine();
-
-
 			//	Here is the constructor - nothing much to do here, just an empty constructor.
 			results.AppendLine("\t\t///\t<summary>");
 			results.AppendLine($"\t\t///\tInitializes the {validatorClassName}");
 			results.AppendLine("\t\t///\t</summary>");	
-			results.AppendLine($"\t\tpublic {validatorClassName}(IServiceOrchestrator orchestrator)");
+			results.AppendLine($"\t\tpublic {validatorClassName}()");
 			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\t_orchestrator = orchestrator;");
 			results.AppendLine("\t\t}");
 			results.AppendLine();
 
