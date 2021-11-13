@@ -51,5 +51,17 @@ namespace COFRSCoreCommandsPackage.Models
 
             return pf;
         }
+
+        public ProjectFolder GetValidatorFolder()
+        {
+            var pf = new ProjectFolder
+            {
+                Folder = ValidationFolder,
+                Namespace = ValidationNamespace,
+                ProjectName = ValidationProject
+            };
+
+            return pf;
+        }
     }
 }
