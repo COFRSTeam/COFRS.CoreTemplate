@@ -603,7 +603,7 @@ namespace COFRS.Template
                                 bool addCollectionFunction = true;
 
                                 var parameterName = ValidatorInterface.Substring(1, 1).ToLower() + ValidatorInterface.Substring(2);
-                                var MemberName = ValidatorInterface.Substring(1, 1).ToUpper() + ValidatorInterface.Substring(2);
+                                var validatorInterfaceMemberName = ValidatorInterface.Substring(1, 1).ToUpper() + ValidatorInterface.Substring(2);
 
                                 CodeFunction2 constructorFunction = null;
 
@@ -642,29 +642,47 @@ namespace COFRS.Template
                                     bool addParameter = true;
                                     bool addVariable = true;
 
+                                    //  Does the varialble already exist in the class?
                                     foreach (CodeVariable2 theVariable in orchestratorClass.Children.OfType<CodeVariable2>() )
                                     {
-                                        if (theVariable.Name.Equals(MemberName))
+                                        if (theVariable.Type.AsString.Contains(ValidatorInterface))
+                                        {
+                                            validatorInterfaceMemberName = theVariable.Name;
                                             addVariable = false;
+                                        }
                                     }
 
+                                    //  Does the parameter already exist in the class?
                                     foreach (CodeParameter2 parameter in constructorFunction.Parameters.OfType<CodeParameter2>())
                                     {
-                                        if (parameter.Type.ToString().Equals(parameterName, StringComparison.OrdinalIgnoreCase))
+                                        if (parameter.Type.AsString.Contains(ValidatorInterface))
+                                        {
+                                            parameterName = parameter.Name;
                                             addParameter = false;
+                                        }
                                     }
 
+                                    //  Is the variable already assigned?
+                                    var editPoint = (EditPoint2) constructorFunction.StartPoint.CreateEditPoint();
+                                    bool addAssignment = !editPoint.FindPattern($"{validatorInterfaceMemberName} = {parameterName};");
+
+                                    //  Add the new variable if we need to.
                                     if (addVariable)
                                     {
-                                        var variable = (CodeVariable2)orchestratorClass.AddVariable(MemberName, ValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
+                                        var variable = (CodeVariable2)orchestratorClass.AddVariable(validatorInterfaceMemberName, ValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
                                         variable.ConstKind = vsCMConstKind.vsCMConstKindReadOnly;
                                     }
 
+                                    //  Add the parameter if we need to.
                                     if (addParameter)
                                     {
                                         constructorFunction.AddParameter(parameterName, ValidatorInterface, -1);
+                                    }
 
-                                        var editPoint = (EditPoint2) constructorFunction.EndPoint.CreateEditPoint();
+                                    //  Add the assignment if we need to
+                                    if ( addAssignment )
+                                    { 
+                                        editPoint = (EditPoint2) constructorFunction.EndPoint.CreateEditPoint();
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
 
@@ -677,7 +695,7 @@ namespace COFRS.Template
                                         }
 
                                         editPoint.Indent(null, 3);
-                                        editPoint.Insert($"{MemberName} = {parameterName};");
+                                        editPoint.Insert($"{validatorInterfaceMemberName} = {parameterName};");
                                     }
                                     #endregion
 
@@ -699,15 +717,26 @@ namespace COFRS.Template
                                                       resourceModel.ClassName.ToLower().StartsWith("o") ||
                                                       resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
-                                        var editPoint = (EditPoint2)theGetSingleFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tGets {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
+                                        theGetSingleFunction.DocComment = $@"
+<doc>
+<summary>
+Gets {article} {resourceModel.ClassName} resource.
+</summary>
+<param name=""node"">The <see cref=""RqlNode""/> that further restricts the selection</param>
+<param name=""User"">The <see cref=""ClaimsPrincipal""/> of the actor calling the function.</param>
+</doc>";
+
                                         sel.MoveToPoint(theGetSingleFunction.StartPoint);
                                         editPoint.ReplaceText(6, "public async", 0);
 
                                         editPoint = (EditPoint2)theGetSingleFunction.EndPoint.CreateEditPoint();
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
-                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForGetAsync(node, User);\r\n\t\t\treturn await GetSingleAsync<{resourceModel.ClassName}>(node);");
+                                        editPoint.Indent(null, 3);
+                                        editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
+                                        editPoint.InsertNewLine();
+                                        editPoint.Indent(null, 3);
+                                        editPoint.Insert($"return await GetSingleAsync<{resourceModel.ClassName}>(node);");
                                     }
                                     #endregion
 
@@ -724,7 +753,7 @@ namespace COFRS.Template
                                         theFunction.AddParameter("node", "RqlNode", -1);
                                         theFunction.AddParameter("User", "ClaimsPrincipal", -1);
 
-                                        var editPoint = (EditPoint2)theFunction.StartPoint.CreateEditPoint();
+                                        editPoint = (EditPoint2)theFunction.StartPoint.CreateEditPoint();
                                         editPoint.Insert($"///\t<summary>\r\n\t\t///\tReturns a collection of {resourceModel.ClassName} resources\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"originalQuery\">The original query string</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
 
                                         sel.MoveToPoint(theFunction.StartPoint);
@@ -734,7 +763,7 @@ namespace COFRS.Template
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
 
-                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForGetAsync(node, User);\r\n\t\t\treturn await GetCollectionAsync<{resourceModel.ClassName}>(originalQuery, node);");
+                                        editPoint.Insert($"\t\t\tawait {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);\r\n\t\t\treturn await GetCollectionAsync<{resourceModel.ClassName}>(originalQuery, node);");
                                     }
                                     #endregion
 
@@ -756,7 +785,7 @@ namespace COFRS.Template
                                                       resourceModel.ClassName.ToLower().StartsWith("o") ||
                                                       resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
-                                        var editPoint = (EditPoint2)theAddFunction.StartPoint.CreateEditPoint();
+                                        editPoint = (EditPoint2)theAddFunction.StartPoint.CreateEditPoint();
                                         editPoint.Insert($"///\t<summary>\r\n\t\t///\tAdd {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
 
                                         sel.MoveToPoint(theAddFunction.StartPoint);
@@ -766,7 +795,7 @@ namespace COFRS.Template
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
 
-                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForAddAsync(item, User);\r\n\t\t\treturn await AddAsync<{resourceModel.ClassName}>(item);");
+                                        editPoint.Insert($"\t\t\tawait {validatorInterfaceMemberName}.ValidateForAddAsync(item, User);\r\n\t\t\treturn await AddAsync<{resourceModel.ClassName}>(item);");
                                     }
                                     #endregion
 
@@ -788,7 +817,7 @@ namespace COFRS.Template
                                                       resourceModel.ClassName.ToLower().StartsWith("o") ||
                                                       resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
-                                        var editPoint = (EditPoint2)theUpdateFunction.StartPoint.CreateEditPoint();
+                                        editPoint = (EditPoint2)theUpdateFunction.StartPoint.CreateEditPoint();
                                         editPoint.Insert($"///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
 
                                         sel.MoveToPoint(theUpdateFunction.StartPoint);
@@ -799,7 +828,7 @@ namespace COFRS.Template
                                         editPoint.StartOfLine();
 
                                         editPoint.Indent(null, 3);
-                                        editPoint.Insert($"await {MemberName}.ValidateForUpdateAsync(item, User);");
+                                        editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForUpdateAsync(item, User);");
                                         editPoint.InsertNewLine();
                                         editPoint.Indent(null, 3);
                                         editPoint.Insert($"return await UpdateAsync<{resourceModel.ClassName}>(item);");
@@ -825,7 +854,7 @@ namespace COFRS.Template
                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
-                                        var editPoint = (EditPoint2)thePatchFunction.StartPoint.CreateEditPoint();
+                                        editPoint = (EditPoint2)thePatchFunction.StartPoint.CreateEditPoint();
                                         editPoint.Insert($"///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource using patch commands\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
 
 
@@ -836,7 +865,7 @@ namespace COFRS.Template
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
 
-                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForPatchAsync(commands, node, User);\r\n\t\t\tawait PatchAsync<{resourceModel.ClassName}>(commands, node);");
+                                        editPoint.Insert($"\t\t\tawait {validatorInterfaceMemberName}.ValidateForPatchAsync(commands, node, User);\r\n\t\t\tawait PatchAsync<{resourceModel.ClassName}>(commands, node);");
                                     }
                                     #endregion
 
@@ -858,7 +887,7 @@ namespace COFRS.Template
                                                       resourceModel.ClassName.ToLower().StartsWith("o") ||
                                                       resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
-                                        EditPoint2 editPoint = (EditPoint2)theDeleteFunction.StartPoint.CreateEditPoint();
+                                        editPoint = (EditPoint2)theDeleteFunction.StartPoint.CreateEditPoint();
                                         editPoint.Insert($"///\t<summary>\r\n\t\t///\tDelete {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
 
                                         sel.MoveToPoint(theDeleteFunction.StartPoint);
@@ -868,7 +897,7 @@ namespace COFRS.Template
                                         editPoint.LineUp();
                                         editPoint.StartOfLine();
 
-                                        editPoint.Insert($"\t\t\tawait {MemberName}.ValidateForDeleteAsync(node, User);\r\n\t\t\tawait DeleteAsync<{resourceModel.ClassName}>(node);");
+                                        editPoint.Insert($"\t\t\tawait {validatorInterfaceMemberName}.ValidateForDeleteAsync(node, User);\r\n\t\t\tawait DeleteAsync<{resourceModel.ClassName}>(node);");
                                     }
                                     #endregion
                                 }
