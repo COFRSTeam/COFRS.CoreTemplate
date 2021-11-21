@@ -136,7 +136,7 @@ namespace COFRS.Template.Common.Wizards
 					var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
 
 					var emitter = new StandardEmitter();
-					var model = emitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, replacementsDictionary["$safeitemname$"]);
+					var model = emitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, replacementsDictionary["$safeitemname$"], out string ValidatorInterface);
 
 					var orchestrationNamespace = StandardUtils.FindOrchestrationNamespace(_appObject.Solution);
 
