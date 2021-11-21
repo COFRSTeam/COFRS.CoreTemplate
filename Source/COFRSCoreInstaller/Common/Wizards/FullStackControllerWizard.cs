@@ -339,7 +339,9 @@ namespace COFRS.Template.Common.Wizards
 						_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 						HandleMessages();
 					}
-                    #endregion
+					#endregion
+
+					var validatorInterface = string.Empty;
 
                     #region Validation Operations
                     if (form.ValidatorCheckBox.Checked)
@@ -351,7 +353,7 @@ namespace COFRS.Template.Common.Wizards
 						var orchestrationNamespace = StandardUtils.FindOrchestrationNamespace(_appObject.Solution);
 
 						//	Emit Validation Model
-						var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, validationClassName);
+						var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, validationClassName, out validatorInterface);
 						replacementsDictionary.Add("$validationModel$", validationModel);
 						HandleMessages();
 
@@ -378,7 +380,6 @@ namespace COFRS.Template.Common.Wizards
 					if (form.ControllerCheckbox.Checked)
 					{
 						GenerateController = true;
-						var validatorInterface = StandardUtils.FindValidatorInterface(_appObject.Solution, $"{resourceModel.Namespace}.{resourceModel.ClassName}");
 
 						var controllerModel = emitter.EmitController(
 							_appObject,

@@ -29,13 +29,13 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="validatorClassName">The name of the validator class</param>
 		/// <param name="validatorInterface">The output parameter returning the validator interface name.</param>
 		/// <returns>The code for the validator class in a string.</returns>
-		public string EmitValidationModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, EntityMap entityMap, string validatorClassName)
+		public string EmitValidationModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, EntityMap entityMap, string validatorClassName, out string validatorInterface)
 		{
 			//	Instantiate a string builder. We will use the string builder to construct our code.
 			var results = new StringBuilder();
 
 			//	The validator interface is nothing more than I followed by the validator class name.
-			var validatorInterface = $"I{validatorClassName}";
+			validatorInterface = $"I{validatorClassName}";
 
 			//	Define the IValidator interface. This is nothing more than an interface that is derrived from
 			//	the IValidator<T> interface. The IValidator<T> interface has all the important methods defined
@@ -532,7 +532,7 @@ namespace COFRS.Template.Common.ServiceUtilities
             results.AppendLine($"\t///\tGenerates an example model of a collection of <see cref=\"{resourceModel.ClassName}\"/> resources.");
             results.AppendLine("\t///\t</summary>");
             results.AppendLine($"\t///\t<returns>An example model of a collection of <see cref=\"{resourceModel.ClassName}\"/> resources.</returns>");
-            results.AppendLine($"\t\tpublic class {resourceModel.ClassName}CollectionExample : IExamplesProvider<RqlCollection<{resourceModel.ClassName}>>");
+            results.AppendLine($"\t\tpublic class {resourceModel.ClassName}CollectionExample : IExamplesProvider<PagedCollection<{resourceModel.ClassName}>>");
             results.AppendLine("\t{");
 
 			results.AppendLine("\t\tprivate static R MapFrom<R>(Func<R> f)");
@@ -545,7 +545,7 @@ namespace COFRS.Template.Common.ServiceUtilities
             results.AppendLine($"\t\t///\tGenerates an example model of a collection of <see cref=\"{resourceModel.ClassName}\"/> resources.");
             results.AppendLine("\t\t///\t</summary>");
             results.AppendLine($"\t\t///\t<returns>An example model of a collection of <see cref=\"{resourceModel.ClassName}\"/> resources.</returns>");
-            results.AppendLine($"\t\tpublic RqlCollection<{resourceModel.ClassName}> GetExamples()");
+            results.AppendLine($"\t\tpublic PagedCollection<{resourceModel.ClassName}> GetExamples()");
             results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tvar rootUrl = new Uri(Startup.AppConfig.GetRootUrl());");
 			results.AppendLine();
@@ -577,7 +577,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine();
 			results.AppendLine("\t\t\t};");
 			results.AppendLine();
-			results.AppendLine($"\t\t\tvar collection = new RqlCollection<{resourceModel.ClassName}>() {{");
+			results.AppendLine($"\t\t\tvar collection = new PagedCollection<{resourceModel.ClassName}>() {{");
 			results.AppendLine($"\t\t\t\tHRef = new Uri(rootUrl, \"{baseUrl}?limit(6,3)\"),");
 			results.AppendLine($"\t\t\t\tFirst = new Uri(rootUrl, \"{baseUrl}?limit(1,3)\"),");
 			results.AppendLine($"\t\t\t\tPrevious = new Uri(rootUrl, \"{baseUrl}?limit(3,3)\"),");
@@ -1098,7 +1098,15 @@ namespace COFRS.Template.Common.ServiceUtilities
 						case "string":
 							if (token.Type == JTokenType.String)
 							{
-								return $"new Uri(\"{token.Value<string>()}\")";
+								try
+                                {
+									var uri = new Uri(token.Value<string>(), UriKind.Absolute);
+									return $"new Uri(\"{token.Value<string>()}\", UriKind.Absolute)";
+								}
+								catch ( UriFormatException )
+                                {
+									return $"new Uri(\"http://somedomain.com\")";
+								}
 							}
 							break;
 					}
@@ -1943,7 +1951,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			results.AppendLine($"\t\t\t//\tCreates a mapping to transform a collection of {entityModel.ClassName} model instances (the source)");
 			results.AppendLine($"\t\t\t//\tinto a collection of {resourceModel.ClassName} model instances (the destination).");
-			results.AppendLine($"\t\t\tCreateMap<RqlCollection<{entityModel.ClassName}>, RqlCollection<{resourceModel.ClassName}>>()");
+			results.AppendLine($"\t\t\tCreateMap<PagedCollection<{entityModel.ClassName}>, PagedCollection<{resourceModel.ClassName}>>()");
 			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.HRef, opts => opts.MapFrom(source => new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{source.HRef.Query}}\")))");
 			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.First, opts => opts.MapFrom(source => source.First == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{source.First.Query}}\")))");
 			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.Next, opts => opts.MapFrom(source => source.Next == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{source.Next.Query}}\")))");
@@ -2185,7 +2193,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine();
 			#endregion
 
-			results.AppendLine($"\t\t\tCreateMap<RqlCollection<{entityClassFile.ClassName}>, RqlCollection<{resourceClassFile.ClassName}>>()");
+			results.AppendLine($"\t\t\tCreateMap<PagedCollection<{entityClassFile.ClassName}>, PagedCollection<{resourceClassFile.ClassName}>>()");
 			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Href, opts => opts.MapFrom(src => new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Href.Query}}\")))");
 			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.First, opts => opts.MapFrom(src => src.First == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.First.Query}}\")))");
 			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Next, opts => opts.MapFrom(src => src.Next == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Next.Query}}\")))");

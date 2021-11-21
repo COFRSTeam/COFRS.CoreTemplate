@@ -178,8 +178,8 @@ namespace COFRS.Template.Common.ServiceUtilities
 					return "string";
 			}
 			else if (string.Equals(column.DBDataType, "tinyint", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.DBDataType, "smallint)", StringComparison.OrdinalIgnoreCase) ||
-					 string.Equals(column.DBDataType, "int)", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "smallint", StringComparison.OrdinalIgnoreCase) ||
+					 string.Equals(column.DBDataType, "int", StringComparison.OrdinalIgnoreCase) ||
 					 string.Equals(column.DBDataType, "bigint", StringComparison.OrdinalIgnoreCase))
 			{
 				return "123";

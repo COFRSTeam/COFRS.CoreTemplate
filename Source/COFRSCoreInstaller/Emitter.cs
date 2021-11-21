@@ -29,11 +29,11 @@ namespace COFRS.Template
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            var results = new StringBuilder();
+            StringBuilder results = new StringBuilder();
             var nn = new NameNormalizer(resourceClass.ClassName);
             var pkcolumns = resourceClass.EntityModel.Columns.Where(c => c.IsPrimaryKey);
 
-            BuildControllerInterface(app, resourceClass, nn);
+            BuildControllerInterface(app, resourceClass);
             BuildControllerOrchestration(app, resourceClass, nn, ValidatorInterface, ValidationNamespace);
 
             // --------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ namespace COFRS.Template
             if (!string.IsNullOrWhiteSpace(policy))
                 results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
-            results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(RqlCollection<{resourceClass.ClassName}>))]");
+            results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(PagedCollection<{resourceClass.ClassName}>))]");
             results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({resourceClass.ClassName}CollectionExample))]");
 
             results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
@@ -120,7 +120,6 @@ namespace COFRS.Template
                 results.AppendLine("\t\t///\t<remarks>This call supports RQL. Use the RQL select clause to limit the members returned.</remarks>");
                 results.AppendLine($"\t\t///\t<response code=\"200\">Returns the specified {nn.SingleForm}.</response>");
                 results.AppendLine($"\t\t///\t<response code=\"404\">Not Found - returned when the speicifed {nn.SingleForm} does not exist in the datastore.</response>");
-                results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({resourceClass.ClassName}Example))]");
                 results.AppendLine("\t\t[HttpGet]");
                 results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
                 EmitRoute(results, nn.PluralCamelCase, pkcolumns);
@@ -129,6 +128,7 @@ namespace COFRS.Template
                     results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
                 results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.OK, Type = typeof({resourceClass.ClassName}))]");
+                results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({resourceClass.ClassName}Example))]");
 
                 results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.NotFound)]");
                 results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
@@ -161,8 +161,6 @@ namespace COFRS.Template
             results.AppendLine("\t\t///\t</summary>");
             results.AppendLine($"\t\t///\t<remarks>Add a {nn.SingleForm} to the datastore.</remarks>");
             results.AppendLine($"\t\t///\t<response code=\"201\">Created - returned when the new {nn.SingleForm} was successfully added to the datastore.</response>");
-            results.AppendLine($"\t\t[SwaggerRequestExample(typeof({resourceClass.ClassName}), typeof({resourceClass.ClassName}Example))]");
-            results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({resourceClass.ClassName}Example))]");
             results.AppendLine("\t\t[HttpPost]");
             results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
             results.AppendLine($"\t\t[Route(\"{nn.PluralCamelCase}\")]");
@@ -171,6 +169,8 @@ namespace COFRS.Template
                 results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
             results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.Created, Type = typeof({resourceClass.ClassName}))]");
+            results.AppendLine($"\t\t[SwaggerRequestExample(typeof({resourceClass.ClassName}), typeof({resourceClass.ClassName}Example))]");
+            results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.Created, typeof({resourceClass.ClassName}Example))]");
             results.AppendLine($"\t\t[Consumes(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
             results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
             results.AppendLine($"\t\tpublic async Task<IActionResult> Add{resourceClass.ClassName}Async([FromBody] {resourceClass.ClassName} item)");
@@ -191,9 +191,8 @@ namespace COFRS.Template
             results.AppendLine($"\t\t///\tUpdate a {nn.SingleForm}");
             results.AppendLine("\t\t///\t</summary>");
             results.AppendLine($"\t\t///\t<remarks>Update a {nn.SingleForm} in the datastore.</remarks>");
-            results.AppendLine($"\t\t///\t<response code=\"204\">No Content - returned when the {nn.SingleForm} was successfully updated in the datastore.</response>");
+            results.AppendLine($"\t\t///\t<response code=\"200\">OK - returned when the {nn.SingleForm} was successfully updated in the datastore.</response>");
             results.AppendLine($"\t\t///\t<response code=\"404\">Not Found - returned when the speicifed {nn.SingleForm} does not exist in the datastore.</response>");
-            results.AppendLine($"\t\t[SwaggerRequestExample(typeof({resourceClass.ClassName}), typeof({resourceClass.ClassName}Example))]");
             results.AppendLine("\t\t[HttpPut]");
             results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
             results.AppendLine($"\t\t[Route(\"{nn.PluralCamelCase}\")]");
@@ -202,7 +201,11 @@ namespace COFRS.Template
                 results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
 
+            results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.OK, Type = typeof({resourceClass.ClassName}))]");
+            results.AppendLine($"\t\t[SwaggerRequestExample(typeof({resourceClass.ClassName}), typeof({resourceClass.ClassName}Example))]");
+            results.AppendLine($"\t\t[SwaggerResponseExample((int)HttpStatusCode.OK, typeof({resourceClass.ClassName}Example))]");
             results.AppendLine($"\t\t[Consumes(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
+            results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
             results.AppendLine("\t\t[SupportRQL]");
             results.AppendLine($"\t\tpublic async Task<IActionResult> Update{resourceClass.ClassName}Async([FromBody] {resourceClass.ClassName} item)");
             results.AppendLine("\t\t{");
@@ -229,7 +232,6 @@ namespace COFRS.Template
                 results.AppendLine($"\t\t///\t<remarks>Update a {nn.SingleForm} in the datastore.</remarks>");
                 results.AppendLine($"\t\t///\t<response code=\"204\">No Content - returned when the {nn.SingleForm} was successfully updated in the datastore.</response>");
                 results.AppendLine($"\t\t///\t<response code=\"404\">Not Found - returned when the speicifed {nn.SingleForm} does not exist in the datastore.</response>");
-                results.AppendLine($"\t\t[SwaggerRequestExample(typeof(IEnumerable<PatchCommand>), typeof({resourceClass.ClassName}PatchExample))]");
                 results.AppendLine("\t\t[HttpPatch]");
                 results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
                 EmitRoute(results, nn.PluralCamelCase, pkcolumns);
@@ -237,6 +239,7 @@ namespace COFRS.Template
                 if (!string.IsNullOrWhiteSpace(policy))
                     results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
+                results.AppendLine($"\t\t[SwaggerRequestExample(typeof(IEnumerable<PatchCommand>), typeof({resourceClass.ClassName}PatchExample))]");
                 results.AppendLine($"\t\t[Consumes(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
                 results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
                 EmitEndpoint(entityClass.ServerType, resourceClass.ClassName, "Patch", results, pkcolumns);
@@ -260,7 +263,7 @@ namespace COFRS.Template
                 results.AppendLine("\t\t///\t</summary>");
                 EmitEndpointExamples(entityClass.ServerType, resourceClass.ClassName, results, pkcolumns);
                 results.AppendLine($"\t\t///\t<remarks>Deletes a {nn.SingleForm} in the datastore.</remarks>");
-                results.AppendLine($"\t\t///\t<response code=\"204\">No Content - returned when the {nn.SingleForm} was successfully updated in the datastore.</response>");
+                results.AppendLine($"\t\t///\t<response code=\"204\">No Content - returned when the {nn.SingleForm} was successfully deleted from the datastore.</response>");
                 results.AppendLine($"\t\t///\t<response code=\"404\">Not Found - returned when the speicifed {nn.SingleForm} does not exist in the datastore.</response>");
                 results.AppendLine("\t\t[HttpDelete]");
                 results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
@@ -286,250 +289,211 @@ namespace COFRS.Template
             return results.ToString();
         }
 
-        private static void BuildControllerInterface(DTE2 app, ResourceModel resourceModel, NameNormalizer nn)
+        private static void BuildControllerInterface(DTE2 app, ResourceModel resourceModel)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
             ProjectItem orchInterface = app.Solution.FindProjectItem("IServiceOrchestrator.cs");
-            bool wasOpen = orchInterface.IsOpen[Constants.vsViewKindAny];               //	Record if it was already open
+            orchInterface.Open(Constants.vsViewKindCode);
+            FileCodeModel2 fileCodeModel = (FileCodeModel2)orchInterface.FileCodeModel;
 
-            if (!wasOpen)                                                               //	If it wasn't open, open it.
-                orchInterface.Open(Constants.vsViewKindCode);
+            //  Ensure that the interface contains all the required imports
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Threading.Tasks")) == null)
+                fileCodeModel.AddImport("System.Threading.Tasks");
 
-            var window = orchInterface.Open(Constants.vsViewKindTextView);              //	Get the window (so we can close it later)
-            Document doc = orchInterface.Document;                                      //	Get the doc 
-            TextSelection sel = (TextSelection)doc.Selection;                           //	Get the current selection
-            var activePoint = sel.ActivePoint;                                          //	Get the active point
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Security.Claims")) == null)
+                fileCodeModel.AddImport("System.Security.Claims");
 
-            bool taskNamespace = false;
-            bool resourceNamespace = false;
-            bool securityNamespace = false;
-            bool collectionsNamespace = false;
-            var fileCodeModel = (FileCodeModel2)orchInterface.FileCodeModel;
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Collections.Generic")) == null)
+                fileCodeModel.AddImport("System.Collections.Generic");
 
-            foreach (CodeElement element in fileCodeModel.CodeElements)
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(resourceModel.Namespace)) == null)
+                fileCodeModel.AddImport(resourceModel.Namespace);
+
+            //  Ensure all the required functions are present
+            foreach (CodeNamespace orchestrationNamespace in fileCodeModel.CodeElements.OfType<CodeNamespace>())
             {
-                if (element.Kind == vsCMElement.vsCMElementImportStmt)
+                CodeInterface2 orchestrationInterface = orchestrationNamespace.Children
+                                                                              .OfType<CodeInterface2>()
+                                                                              .FirstOrDefault(c => c.Name.Equals("IServiceOrchestrator"));
+
+                if (orchestrationInterface != null)
                 {
-                    var usingStatement = (CodeImport)element;
-                    var name = usingStatement.Namespace;
-
-                    if (name.Equals("System.Threading.Tasks", StringComparison.OrdinalIgnoreCase))
-                        taskNamespace = true;
-
-                    if (name.Equals("System.Security.Claims", StringComparison.OrdinalIgnoreCase))
-                        securityNamespace = true;
-
-                    if (name.Equals("System.Collections.Generic", StringComparison.OrdinalIgnoreCase))
-                        collectionsNamespace = true;
-
-                    if (name.Equals(resourceModel.Namespace, StringComparison.OrdinalIgnoreCase))
-                        resourceNamespace = true;
-                }
-
-                else if (element.Kind == vsCMElement.vsCMElementNamespace)
-                {
-                    foreach (CodeElement childElement in element.Children)
+                    if (orchestrationInterface.Name.Equals("IServiceOrchestrator", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (childElement.Kind == vsCMElement.vsCMElementInterface)
+                        List<DBColumn> primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
+                        string deleteFunctionName = $"Delete{resourceModel.ClassName}Async";
+                        string patchFunctionName = $"Patch{resourceModel.ClassName}Async";
+                        string updateFunctionName = $"Update{resourceModel.ClassName}Async";
+                        string addFunctionName = $"Add{resourceModel.ClassName}Async";
+                        string getSingleFunctionName = $"Get{resourceModel.ClassName}Async";
+                        string collectionFunctionName = $"Get{resourceModel.ClassName}CollectionAsync";
+
+                        string article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                         resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                         resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                         resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                         resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
+
+                        try
                         {
-                            var interfaceCode = (CodeInterface2)childElement;
-
-                            if (interfaceCode.Name.Equals("IServiceOrchestrator", StringComparison.OrdinalIgnoreCase))
+                            #region Get Single Function
+                            if (orchestrationInterface.Children.OfType<CodeFunction2>().FirstOrDefault(c => c.Name.Equals(getSingleFunctionName)) == null)
                             {
-                                var primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
-                                var deleteFunctionName = $"Delete{resourceModel.ClassName}Async";
-                                var patchFunctionName = $"Patch{resourceModel.ClassName}Async";
-                                var updateFunctionName = $"Update{resourceModel.ClassName}Async";
-                                var addFunctionName = $"Add{resourceModel.ClassName}Async";
-                                var getSingleFunctionName = $"Get{resourceModel.ClassName}Async";
-                                var collectionFunctionName = $"Get{resourceModel.ClassName}CollectionAsync";
+                                var theGetSingleFunction = (CodeFunction2)orchestrationInterface.AddFunction(getSingleFunctionName,
+                                                          vsCMFunction.vsCMFunctionFunction,
+                                                          $"Task<{resourceModel.ClassName}>",
+                                                          -1);
 
-                                bool addDeleteFunction = true;
-                                bool addPatchFunction = true;
-                                bool addUpdateFunction = true;
-                                bool addAddFunction = true;
-                                bool addSingleFunction = true;
-                                bool addCollectionFunction = true;
+                                theGetSingleFunction.AddParameter("node", "RqlNode", -1);
+                                theGetSingleFunction.AddParameter("User", "ClaimsPrincipal", -1);
 
-                                foreach (CodeElement interfaceElement in interfaceCode.Children)
-                                {
-                                    if (interfaceElement.Kind == vsCMElement.vsCMElementFunction )
-                                    {
-                                        var functionElement = (CodeFunction2)interfaceElement;
+                                StringBuilder doc = new StringBuilder();
+                                doc.AppendLine("<doc>");
+                                doc.AppendLine("<summary>");
+                                doc.AppendLine($"Asynchronously gets {article} {resourceModel.ClassName} resource specified by the <see cref=\"RqlNode\"/>.");
+                                doc.AppendLine("</summary>");
+                                doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
+                                doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
+                                doc.AppendLine($"<returns>The specified {resourceModel.ClassName} resource.</returns>");
+                                doc.AppendLine("</doc>");
 
-                                        if (functionElement.Name.Equals(deleteFunctionName))
-                                            addDeleteFunction = false;
-
-                                        if (functionElement.Name.Equals(patchFunctionName))
-                                            addPatchFunction = false;
-
-                                        if (functionElement.Name.Equals(updateFunctionName))
-                                            addUpdateFunction = false;
-
-                                        if (functionElement.Name.Equals(addFunctionName))
-                                            addAddFunction = false;
-
-                                        if (functionElement.Name.Equals(getSingleFunctionName))
-                                            addSingleFunction = false;
-
-                                        if (functionElement.Name.Equals(collectionFunctionName))
-                                            addCollectionFunction = false;
-                                    }
-                                }
-
-                                try
-                                {
-                                    #region Get Single Function
-                                    if (addSingleFunction)
-                                    {
-                                        var theGetSingleFunction = (CodeFunction2)interfaceCode.AddFunction(getSingleFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<{resourceModel.ClassName}>", 
-                                                                  -1);
-
-                                        theGetSingleFunction.AddParameter("node", "RqlNode", -1);
-                                        theGetSingleFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        var editPoint = (EditPoint2)theGetSingleFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tGets {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-                                    }
-                                    #endregion
-
-                                    #region Get Collection Function
-                                    if (addCollectionFunction)
-                                    {
-                                        var theFunction = (CodeFunction2)interfaceCode.AddFunction(collectionFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<RqlCollection<{resourceModel.ClassName}>>",
-                                                                  -1);
-
-                                        theFunction.AddParameter("originalQuery", "string", -1);
-                                        theFunction.AddParameter("node", "RqlNode", -1);
-                                        theFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var editPoint = (EditPoint2)theFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tReturns a collection of {resourceModel.ClassName} resources\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"originalQuery\">The original query string</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-                                    }
-                                    #endregion
-
-                                    #region Add Function
-                                    if (addAddFunction)
-                                    {
-                                        var theAddFunction = (CodeFunction2)interfaceCode.AddFunction(addFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<{resourceModel.ClassName}>",
-                                                                  -1);
-
-                                        theAddFunction.AddParameter("item", resourceModel.ClassName, -1);
-                                        theAddFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        var editPoint = (EditPoint2)theAddFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tAdd {article} {resourceModel.ClassName} resource.\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-                                    }
-                                    #endregion
-
-                                    #region Update Function
-                                    if (addUpdateFunction)
-                                    {
-                                        var theUpdateFunction = (CodeFunction2)interfaceCode.AddFunction(updateFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<{resourceModel.ClassName}>", 
-                                                                  -1);
-
-                                        theUpdateFunction.AddParameter("item", resourceModel.ClassName, -1);
-                                        theUpdateFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        var editPoint = (EditPoint2)theUpdateFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource.\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-                                    }
-                                    #endregion
-
-                                    #region Patch Function
-                                    if (addPatchFunction)
-                                    {
-                                        var thePatchFunction = (CodeFunction2)interfaceCode.AddFunction(patchFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task", 
-                                                                  -1);
-
-                                        thePatchFunction.AddParameter("commands", "IEnumerable<PatchCommand>", -1);
-                                        thePatchFunction.AddParameter("node", "RqlNode", -1);
-                                        thePatchFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        var editPoint = (EditPoint2)thePatchFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource using patch commands\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-                                    }
-                                    #endregion
-
-                                    #region Delete Function
-                                    if (addDeleteFunction)
-                                    {
-                                        var theDeleteFunction = (CodeFunction2)interfaceCode.AddFunction(deleteFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task", -1);
-
-                                        theDeleteFunction.AddParameter("node", "RqlNode", -1);
-                                        theDeleteFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                            resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        EditPoint2 editPoint = (EditPoint2)theDeleteFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"\r\n\t\t///\t<summary>\r\n\t\t///\tDelete {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-                                    }
-                                    #endregion
-                                }
-                                catch (Exception)
-                                {
-                                }
+                                theGetSingleFunction.DocComment = doc.ToString();
                             }
+                            #endregion
+
+                            #region Get Collection Function
+                            if (orchestrationInterface.Children.OfType<CodeFunction2>().FirstOrDefault(c => c.Name.Equals(collectionFunctionName)) == null)
+                            {
+                                var theCollectionFunction = (CodeFunction2)orchestrationInterface.AddFunction(collectionFunctionName,
+                                                          vsCMFunction.vsCMFunctionFunction,
+                                                          $"Task<PagedCollection<{resourceModel.ClassName}>>",
+                                                          -1);
+
+                                theCollectionFunction.AddParameter("originalQuery", "string", -1);
+                                theCollectionFunction.AddParameter("node", "RqlNode", -1);
+                                theCollectionFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                StringBuilder doc = new StringBuilder();
+                                doc.AppendLine("<doc>");
+                                doc.AppendLine("<summary>");
+                                doc.AppendLine($"Asynchronously gets a collection of {resourceModel.ClassName} resources filtered by the <see cref=\"RqlNode\"/>.");
+                                doc.AppendLine("</summary>");
+                                doc.AppendLine("<param name=\"originalQuery\">The original query string.</param>");
+                                doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection.</param>");
+                                doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                                doc.AppendLine($"<returns>The collection of {resourceModel.ClassName} resources filtered by the <see cref=\"RqlNode\"/>.</returns>");
+                                doc.AppendLine("</doc>");
+
+                                theCollectionFunction.DocComment = doc.ToString();
+                            }
+                            #endregion
+
+                            #region Add Function
+                            if (orchestrationInterface.Children.OfType<CodeFunction2>().FirstOrDefault(c => c.Name.Equals(addFunctionName)) == null)
+                            {
+                                var theAddFunction = (CodeFunction2)orchestrationInterface.AddFunction(addFunctionName,
+                                                          vsCMFunction.vsCMFunctionFunction,
+                                                          $"Task<{resourceModel.ClassName}>",
+                                                          -1);
+
+                                theAddFunction.AddParameter("item", resourceModel.ClassName, -1);
+                                theAddFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                StringBuilder doc = new StringBuilder();
+                                doc.AppendLine("<doc>");
+                                doc.AppendLine("<summary>");
+                                doc.AppendLine($"Asynchronously adds {article} {resourceModel.ClassName} resource.");
+                                doc.AppendLine("</summary>");
+                                doc.AppendLine($"<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>");
+                                doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                                doc.AppendLine("<returns>The newly added resource.</returns>");
+                                doc.AppendLine("</doc>");
+
+                                theAddFunction.DocComment = doc.ToString();
+                            }
+                            #endregion
+
+                            #region Update Function
+                            if (orchestrationInterface.Children.OfType<CodeFunction2>().FirstOrDefault(c => c.Name.Equals(updateFunctionName)) == null)
+                            {
+                                var theUpdateFunction = (CodeFunction2)orchestrationInterface.AddFunction(updateFunctionName,
+                                                          vsCMFunction.vsCMFunctionFunction,
+                                                          $"Task<{resourceModel.ClassName}>",
+                                                          -1);
+
+                                theUpdateFunction.AddParameter("item", resourceModel.ClassName, -1);
+                                theUpdateFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                StringBuilder doc = new StringBuilder();
+                                doc.AppendLine("<doc>");
+                                doc.AppendLine("<summary>");
+                                doc.AppendLine($"Asynchronously updates {article} {resourceModel.ClassName} resource.");
+                                doc.AppendLine("</summary>");
+                                doc.AppendLine($"<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>");
+                                doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                                doc.AppendLine("<returns>The updated item.</returns>");
+                                doc.AppendLine("</doc>");
+
+                                theUpdateFunction.DocComment = doc.ToString();
+                            }
+                            #endregion
+
+                            #region Patch Function
+                            if (orchestrationInterface.Children.OfType<CodeFunction2>().FirstOrDefault(c => c.Name.Equals(patchFunctionName)) == null)
+                            {
+                                var thePatchFunction = (CodeFunction2)orchestrationInterface.AddFunction(patchFunctionName,
+                                                          vsCMFunction.vsCMFunctionFunction,
+                                                          $"Task",
+                                                          -1);
+
+                                thePatchFunction.AddParameter("commands", "IEnumerable<PatchCommand>", -1);
+                                thePatchFunction.AddParameter("node", "RqlNode", -1);
+                                thePatchFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                StringBuilder doc = new StringBuilder();
+                                doc.AppendLine("<doc>");
+                                doc.AppendLine("<summary>");
+                                doc.AppendLine($"Asynchronously updates {article} {resourceModel.ClassName} resource using patch commands.");
+                                doc.AppendLine("</summary>");
+                                doc.AppendLine("<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>");
+                                doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
+                                doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                                doc.AppendLine("</doc>");
+
+                                thePatchFunction.DocComment = doc.ToString();
+                            }
+                            #endregion
+
+                            #region Delete Function
+                            if (orchestrationInterface.Children.OfType<CodeFunction2>().FirstOrDefault(c => c.Name.Equals(deleteFunctionName)) == null)
+                            {
+                                var theDeleteFunction = (CodeFunction2)orchestrationInterface.AddFunction(deleteFunctionName,
+                                                          vsCMFunction.vsCMFunctionFunction,
+                                                          $"Task", -1);
+
+                                theDeleteFunction.AddParameter("node", "RqlNode", -1);
+                                theDeleteFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                                StringBuilder doc = new StringBuilder();
+                                doc.AppendLine("<doc>");
+                                doc.AppendLine("<summary>");
+                                doc.AppendLine($"Asynchronously deletes {article} {resourceModel.ClassName} resource specified by the <see cref=\"RqlNode\"/>.");
+                                doc.AppendLine("</summary>");
+                                doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection of resources to delete.</param>");
+                                doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                                doc.AppendLine("</doc>");
+
+                                theDeleteFunction.DocComment = doc.ToString();
+                            }
+                            #endregion
+                        }
+                        catch (Exception)
+                        {
                         }
                     }
                 }
             }
-
-            if (!taskNamespace)
-                fileCodeModel.AddImport("System.Threading.Tasks");
-
-            if (!securityNamespace)
-                fileCodeModel.AddImport("System.Security.Claims");
-
-            if (!collectionsNamespace)
-                fileCodeModel.AddImport("System.Collections.Generic");
-
-            if (!resourceNamespace)
-                fileCodeModel.AddImport(resourceModel.Namespace);
-
-            if (!wasOpen)
-                window.Close();
         }
 
         private static void BuildControllerOrchestration(DTE2 app, ResourceModel resourceModel, NameNormalizer nn, string ValidatorInterface, string ValidationNamespace)
@@ -537,396 +501,379 @@ namespace COFRS.Template
             ThreadHelper.ThrowIfNotOnUIThread();
 
             ProjectItem orchCode = app.Solution.FindProjectItem("ServiceOrchestrator.cs");
-            bool wasOpen = orchCode.IsOpen[Constants.vsViewKindAny];               //	Record if it was already open
-
-            if (!wasOpen)                                                               //	If it wasn't open, open it.
-                orchCode.Open(Constants.vsViewKindCode);
-
-            var window = orchCode.Open(Constants.vsViewKindTextView);              //	Get the window (so we can close it later)
-            Document doc = orchCode.Document;                                      //	Get the doc 
-            TextSelection sel = (TextSelection)doc.Selection;                           //	Get the current selection
-            var activePoint = sel.ActivePoint;                                          //	Get the active point
-
-            bool taskNamespace = false;
-            bool resourceNamespace = false;
-            bool securityNamespace = false;
-            bool collectionsNamespace = false;
-            bool validationNamespace = false;
+            orchCode.Open(Constants.vsViewKindCode);
             var fileCodeModel = (FileCodeModel2)orchCode.FileCodeModel;
 
-            foreach (CodeElement element in fileCodeModel.CodeElements)
+            //  Ensure that the interface contains all the required imports
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Threading.Tasks")) == null)
+                fileCodeModel.AddImport("System.Threading.Tasks");
+
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Security.Claims")) == null)
+                fileCodeModel.AddImport("System.Security.Claims");
+
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Collections.Generic")) == null)
+                fileCodeModel.AddImport("System.Collections.Generic");
+
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(resourceModel.Namespace)) == null)
+                fileCodeModel.AddImport(resourceModel.Namespace);
+
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(ValidationNamespace)) == null)
+                fileCodeModel.AddImport(ValidationNamespace);
+
+            //  Add all the functions
+            foreach (CodeNamespace orchestrattorNamespace in fileCodeModel.CodeElements.OfType<CodeNamespace>())
             {
-                if (element.Kind == vsCMElement.vsCMElementImportStmt)
+                CodeClass2 orchestratorClass = orchestrattorNamespace.Children
+                                                                     .OfType<CodeClass2>()
+                                                                     .FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
+
+                if (orchestratorClass != null)
                 {
-                    var usingStatement = (CodeImport)element;
-                    var name = usingStatement.Namespace;
+                    var primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
+                    var deleteFunctionName = $"Delete{resourceModel.ClassName}Async";
+                    var patchFunctionName = $"Patch{resourceModel.ClassName}Async";
+                    var updateFunctionName = $"Update{resourceModel.ClassName}Async";
+                    var addFunctionName = $"Add{resourceModel.ClassName}Async";
+                    var getSingleFunctionName = $"Get{resourceModel.ClassName}Async";
+                    var collectionFunctionName = $"Get{resourceModel.ClassName}CollectionAsync";
 
-                    if (name.Equals("System.Threading.Tasks", StringComparison.OrdinalIgnoreCase))
-                        taskNamespace = true;
+                    var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
+                                  resourceModel.ClassName.ToLower().StartsWith("e") ||
+                                  resourceModel.ClassName.ToLower().StartsWith("i") ||
+                                  resourceModel.ClassName.ToLower().StartsWith("o") ||
+                                  resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
 
-                    if (name.Equals("System.Security.Claims", StringComparison.OrdinalIgnoreCase))
-                        securityNamespace = true;
+                    var parameterName = ValidatorInterface.Substring(1, 1).ToLower() + ValidatorInterface.Substring(2);
+                    var validatorInterfaceMemberName = ValidatorInterface.Substring(1, 1).ToUpper() + ValidatorInterface.Substring(2);
 
-                    if (name.Equals("System.Collections.Generic", StringComparison.OrdinalIgnoreCase))
-                        collectionsNamespace = true;
-
-                    if (name.Equals(ValidationNamespace, StringComparison.OrdinalIgnoreCase))
-                        validationNamespace = true;
-
-                    if (name.Equals(resourceModel.Namespace, StringComparison.OrdinalIgnoreCase))
-                        resourceNamespace = true;
-                }
-
-                else if (element.Kind == vsCMElement.vsCMElementNamespace)
-                {
-                    foreach (CodeElement childElement in element.Children)
+                    try
                     {
-                        if (childElement.Kind == vsCMElement.vsCMElementClass)
+                        #region Constructor
+                        CodeFunction2 constructorFunction = orchestratorClass.Children.OfType<CodeFunction2>()
+                            .FirstOrDefault(c => c.FunctionKind == vsCMFunction.vsCMFunctionConstructor);
+
+                        if (constructorFunction == null)
                         {
-                            var orchestratorClass = (CodeClass2)childElement;
-
-                            if (orchestratorClass.Name.Equals("ServiceOrchestrator", StringComparison.OrdinalIgnoreCase))
-                            {
-                                var primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
-                                var deleteFunctionName = $"Delete{resourceModel.ClassName}Async";
-                                var patchFunctionName = $"Patch{resourceModel.ClassName}Async";
-                                var updateFunctionName = $"Update{resourceModel.ClassName}Async";
-                                var addFunctionName = $"Add{resourceModel.ClassName}Async";
-                                var getSingleFunctionName = $"Get{resourceModel.ClassName}Async";
-                                var collectionFunctionName = $"Get{resourceModel.ClassName}CollectionAsync";
-
-                                bool addDeleteFunction = true;
-                                bool addPatchFunction = true;
-                                bool addUpdateFunction = true;
-                                bool addAddFunction = true;
-                                bool addSingleFunction = true;
-                                bool addCollectionFunction = true;
-
-                                var parameterName = ValidatorInterface.Substring(1, 1).ToLower() + ValidatorInterface.Substring(2);
-                                var validatorInterfaceMemberName = ValidatorInterface.Substring(1, 1).ToUpper() + ValidatorInterface.Substring(2);
-
-                                CodeFunction2 constructorFunction = null;
-
-                                foreach (CodeElement interfaceElement in orchestratorClass.Children)
-                                {
-                                    if (interfaceElement.Kind == vsCMElement.vsCMElementFunction)
-                                    {
-                                        var functionElement = (CodeFunction2)interfaceElement;
-
-                                        if (functionElement.Name.Equals(deleteFunctionName))
-                                            addDeleteFunction = false;
-
-                                        if (functionElement.Name.Equals(patchFunctionName))
-                                            addPatchFunction = false;
-
-                                        if (functionElement.Name.Equals(updateFunctionName))
-                                            addUpdateFunction = false;
-
-                                        if (functionElement.Name.Equals(addFunctionName))
-                                            addAddFunction = false;
-
-                                        if (functionElement.Name.Equals(getSingleFunctionName))
-                                            addSingleFunction = false;
-
-                                        if (functionElement.Name.Equals(collectionFunctionName))
-                                            addCollectionFunction = false;
-
-                                        if (functionElement.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
-                                            constructorFunction = functionElement;
-                                    }
-                                }
-
-                                try
-                                {
-                                    #region Constructor
-                                    bool addParameter = true;
-                                    bool addVariable = true;
-
-                                    //  Does the varialble already exist in the class?
-                                    foreach (CodeVariable2 theVariable in orchestratorClass.Children.OfType<CodeVariable2>() )
-                                    {
-                                        if (theVariable.Type.AsString.Contains(ValidatorInterface))
-                                        {
-                                            validatorInterfaceMemberName = theVariable.Name;
-                                            addVariable = false;
-                                        }
-                                    }
-
-                                    //  Does the parameter already exist in the class?
-                                    foreach (CodeParameter2 parameter in constructorFunction.Parameters.OfType<CodeParameter2>())
-                                    {
-                                        if (parameter.Type.AsString.Contains(ValidatorInterface))
-                                        {
-                                            parameterName = parameter.Name;
-                                            addParameter = false;
-                                        }
-                                    }
-
-                                    //  Is the variable already assigned?
-                                    var editPoint = (EditPoint2) constructorFunction.StartPoint.CreateEditPoint();
-                                    bool addAssignment = !editPoint.FindPattern($"{validatorInterfaceMemberName} = {parameterName};");
-
-                                    //  Add the new variable if we need to.
-                                    if (addVariable)
-                                    {
-                                        var variable = (CodeVariable2)orchestratorClass.AddVariable(validatorInterfaceMemberName, ValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
-                                        variable.ConstKind = vsCMConstKind.vsCMConstKindReadOnly;
-                                    }
-
-                                    //  Add the parameter if we need to.
-                                    if (addParameter)
-                                    {
-                                        constructorFunction.AddParameter(parameterName, ValidatorInterface, -1);
-                                    }
-
-                                    //  Add the assignment if we need to
-                                    if ( addAssignment )
-                                    { 
-                                        editPoint = (EditPoint2) constructorFunction.EndPoint.CreateEditPoint();
-                                        editPoint.LineUp();
-                                        editPoint.StartOfLine();
-
-                                        var codeLine = editPoint.GetText(editPoint.LineLength);
-
-                                        if ( !string.IsNullOrWhiteSpace(codeLine))
-                                        {
-                                            editPoint.EndOfLine();
-                                            editPoint.InsertNewLine();
-                                        }
-
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"{validatorInterfaceMemberName} = {parameterName};");
-                                    }
-                                    #endregion
-
-                                    #region Get Single Function
-                                    if (addSingleFunction)
-                                    {
-                                        var theGetSingleFunction = (CodeFunction2)orchestratorClass.AddFunction(getSingleFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<{resourceModel.ClassName}>",
-                                                                  -1,
-                                                                  vsCMAccess.vsCMAccessPublic);
-
-                                        theGetSingleFunction.AddParameter("node", "RqlNode", -1);
-                                        theGetSingleFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        theGetSingleFunction.DocComment = $@"
-<doc>
-<summary>
-Gets {article} {resourceModel.ClassName} resource.
-</summary>
-<param name=""node"">The <see cref=""RqlNode""/> that further restricts the selection</param>
-<param name=""User"">The <see cref=""ClaimsPrincipal""/> of the actor calling the function.</param>
-</doc>";
-
-                                        sel.MoveToPoint(theGetSingleFunction.StartPoint);
-                                        editPoint.ReplaceText(6, "public async", 0);
-
-                                        editPoint = (EditPoint2)theGetSingleFunction.EndPoint.CreateEditPoint();
-                                        editPoint.LineUp();
-                                        editPoint.StartOfLine();
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"return await GetSingleAsync<{resourceModel.ClassName}>(node);");
-                                    }
-                                    #endregion
-
-                                    #region Get Collection Function
-                                    if (addCollectionFunction)
-                                    {
-                                        var theFunction = (CodeFunction2)orchestratorClass.AddFunction(collectionFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<RqlCollection<{resourceModel.ClassName}>>",
-                                                                  -1,
-                                                                  vsCMAccess.vsCMAccessPublic);
-
-                                        theFunction.AddParameter("originalQuery", "string", -1);
-                                        theFunction.AddParameter("node", "RqlNode", -1);
-                                        theFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        editPoint = (EditPoint2)theFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tReturns a collection of {resourceModel.ClassName} resources\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"originalQuery\">The original query string</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-
-                                        sel.MoveToPoint(theFunction.StartPoint);
-                                        editPoint.ReplaceText(6, "public async", 0);
-
-                                        editPoint = (EditPoint2)theFunction.EndPoint.CreateEditPoint();
-                                        editPoint.LineUp();
-                                        editPoint.StartOfLine();
-
-                                        editPoint.Insert($"\t\t\tawait {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);\r\n\t\t\treturn await GetCollectionAsync<{resourceModel.ClassName}>(originalQuery, node);");
-                                    }
-                                    #endregion
-
-                                    #region Add Function
-                                    if (addAddFunction)
-                                    {
-                                        var theAddFunction = (CodeFunction2)orchestratorClass.AddFunction(addFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<{resourceModel.ClassName}>",
-                                                                  -1,
-                                                                  vsCMAccess.vsCMAccessPublic);
-
-                                        theAddFunction.AddParameter("item", resourceModel.ClassName, -1);
-                                        theAddFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        editPoint = (EditPoint2)theAddFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tAdd {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-
-                                        sel.MoveToPoint(theAddFunction.StartPoint);
-                                        editPoint.ReplaceText(6, "public async", 0);
-
-                                        editPoint = (EditPoint2)theAddFunction.EndPoint.CreateEditPoint();
-                                        editPoint.LineUp();
-                                        editPoint.StartOfLine();
-
-                                        editPoint.Insert($"\t\t\tawait {validatorInterfaceMemberName}.ValidateForAddAsync(item, User);\r\n\t\t\treturn await AddAsync<{resourceModel.ClassName}>(item);");
-                                    }
-                                    #endregion
-
-                                    #region Update Function
-                                    if (addUpdateFunction)
-                                    {
-                                        var theUpdateFunction = (CodeFunction2)orchestratorClass.AddFunction(updateFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task<{resourceModel.ClassName}>", 
-                                                                  -1,
-                                                                  vsCMAccess.vsCMAccessPublic);
-
-                                        theUpdateFunction.AddParameter("item", resourceModel.ClassName, -1);
-                                        theUpdateFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        editPoint = (EditPoint2)theUpdateFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-
-                                        sel.MoveToPoint(theUpdateFunction.StartPoint);
-                                        editPoint.ReplaceText(6, "public async", 0);
-
-                                        editPoint = (EditPoint2)theUpdateFunction.EndPoint.CreateEditPoint();
-                                        editPoint.LineUp();
-                                        editPoint.StartOfLine();
-
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForUpdateAsync(item, User);");
-                                        editPoint.InsertNewLine();
-                                        editPoint.Indent(null, 3);
-                                        editPoint.Insert($"return await UpdateAsync<{resourceModel.ClassName}>(item);");
-                                    }
-                                    #endregion
-
-                                    #region Patch Function
-                                    if (addPatchFunction)
-                                    {
-                                        var thePatchFunction = (CodeFunction2)orchestratorClass.AddFunction(patchFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task",
-                                                                  -1,
-                                                                  vsCMAccess.vsCMAccessPublic);
-
-                                        thePatchFunction.AddParameter("commands", "IEnumerable<PatchCommand>", -1);
-                                        thePatchFunction.AddParameter("node", "RqlNode", -1);
-                                        thePatchFunction.AddParameter("User", "ClaimsPrincipal", -1);
-
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                                     resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                                     resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                                     resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                                     resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        editPoint = (EditPoint2)thePatchFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tUpdate {article} {resourceModel.ClassName} resource using patch commands\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-
-
-                                        sel.MoveToPoint(thePatchFunction.StartPoint);
-                                        editPoint.ReplaceText(6, "public async", 0);
-
-                                        editPoint = (EditPoint2)thePatchFunction.EndPoint.CreateEditPoint();
-                                        editPoint.LineUp();
-                                        editPoint.StartOfLine();
-
-                                        editPoint.Insert($"\t\t\tawait {validatorInterfaceMemberName}.ValidateForPatchAsync(commands, node, User);\r\n\t\t\tawait PatchAsync<{resourceModel.ClassName}>(commands, node);");
-                                    }
-                                    #endregion
-
-                                    #region Delete Function
-                                    if (addDeleteFunction)
-                                    {
-                                        var theDeleteFunction = (CodeFunction2)orchestratorClass.AddFunction(deleteFunctionName,
-                                                                  vsCMFunction.vsCMFunctionFunction,
-                                                                  $"Task",
-                                                                  -1,
-                                                                  vsCMAccess.vsCMAccessPublic);
-
-                                        theDeleteFunction.AddParameter("node", "RqlNode", -1); 
-                                        theDeleteFunction.AddParameter("User", "ClaimsPrincipal", -1);
-                                        
-                                        var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                                      resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
-
-                                        editPoint = (EditPoint2)theDeleteFunction.StartPoint.CreateEditPoint();
-                                        editPoint.Insert($"///\t<summary>\r\n\t\t///\tDelete {article} {resourceModel.ClassName} resource\r\n\t\t///\t</summary>\r\n\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>\r\n\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>\r\n\t\t");
-
-                                        sel.MoveToPoint(theDeleteFunction.StartPoint);
-                                        editPoint.ReplaceText(6, "public async", 0);
-
-                                        editPoint = (EditPoint2)theDeleteFunction.EndPoint.CreateEditPoint();
-                                        editPoint.LineUp();
-                                        editPoint.StartOfLine();
-
-                                        editPoint.Insert($"\t\t\tawait {validatorInterfaceMemberName}.ValidateForDeleteAsync(node, User);\r\n\t\t\tawait DeleteAsync<{resourceModel.ClassName}>(node);");
-                                    }
-                                    #endregion
-                                }
-                                catch (Exception)
-                                {
-                                }
-                            }
+                            constructorFunction = (CodeFunction2)orchestratorClass.AddFunction(orchestratorClass.Name,
+                               vsCMFunction.vsCMFunctionConstructor,
+                               $"",
+                               -1,
+                               vsCMAccess.vsCMAccessPublic);
                         }
+
+                        //  Does the varialble already exist in the class?
+                        if (orchestratorClass.Children.OfType<CodeVariable2>().FirstOrDefault(c =>
+                           {
+                               ThreadHelper.ThrowIfNotOnUIThread();
+                               var parts = c.Type.AsString.Split('.');
+                               return parts[parts.Length - 1].Equals(ValidatorInterface);
+
+                           }) != null)
+                        {
+                            validatorInterfaceMemberName = orchestratorClass.Children.OfType<CodeVariable2>().FirstOrDefault(c =>
+                            {
+                                ThreadHelper.ThrowIfNotOnUIThread();
+                                var parts = c.Type.AsString.Split('.');
+                                return parts[parts.Length - 1].Equals(ValidatorInterface);
+
+                            }).Name;
+                        }
+                        else
+                        {
+                            var variable = (CodeVariable2)orchestratorClass.AddVariable(validatorInterfaceMemberName, ValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
+                            variable.ConstKind = vsCMConstKind.vsCMConstKindReadOnly;
+                        }
+
+
+                        //  Does the parameter already exist in the class?
+                        if (constructorFunction.Children.OfType<CodeParameter2>().FirstOrDefault(c =>
+                                {
+                                    ThreadHelper.ThrowIfNotOnUIThread();
+                                    var parts = c.Type.AsString.Split('.');
+                                    return parts[parts.Length - 1].Equals(ValidatorInterface);
+                                }) != null)
+                        {
+                            parameterName = constructorFunction.Children.OfType<CodeParameter2>().FirstOrDefault(c =>
+                            {
+                                ThreadHelper.ThrowIfNotOnUIThread();
+                                var parts = c.Type.AsString.Split('.');
+                                return parts[parts.Length - 1].Equals(ValidatorInterface);
+                            }).Name;
+                        }
+                        else
+                        {
+                            constructorFunction.AddParameter(parameterName, ValidatorInterface, -1);
+                        }
+
+                        //  Is the variable already assigned?
+                        var editPoint = (EditPoint2)constructorFunction.StartPoint.CreateEditPoint();
+                        if (!editPoint.FindPattern($"{validatorInterfaceMemberName} = {parameterName};"))
+                        {
+                            editPoint = (EditPoint2)constructorFunction.EndPoint.CreateEditPoint();
+                            editPoint.LineUp();
+                            editPoint.StartOfLine();
+
+                            var codeLine = editPoint.GetText(editPoint.LineLength);
+
+                            if (!string.IsNullOrWhiteSpace(codeLine))
+                            {
+                                editPoint.EndOfLine();
+                                editPoint.InsertNewLine();
+                            }
+
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"{validatorInterfaceMemberName} = {parameterName};");
+                        }
+                        #endregion
+
+                        #region Get Single Function
+                        if (orchestratorClass.Children
+                                             .OfType<CodeFunction2>()
+                                             .FirstOrDefault(c => c.Name.Equals(getSingleFunctionName, StringComparison.OrdinalIgnoreCase)) == null)
+                        {
+                            var theGetSingleFunction = (CodeFunction2)orchestratorClass.AddFunction(getSingleFunctionName,
+                                                      vsCMFunction.vsCMFunctionFunction,
+                                                      $"Task<{resourceModel.ClassName}>",
+                                                      -1,
+                                                      vsCMAccess.vsCMAccessPublic);
+
+                            theGetSingleFunction.AddParameter("node", "RqlNode", -1);
+                            theGetSingleFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                            StringBuilder doc = new StringBuilder();
+                            doc.AppendLine("<doc>");
+                            doc.AppendLine("<summary>");
+                            doc.AppendLine($"Asynchronously gets {article} {resourceModel.ClassName} resource specified by the <see cref=\"RqlNode\"/>.");
+                            doc.AppendLine("</summary>");
+                            doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
+                            doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
+                            doc.AppendLine($"<returns>The specified {resourceModel.ClassName} resource.</returns>");
+                            doc.AppendLine("</doc>");
+
+                            theGetSingleFunction.DocComment = doc.ToString();
+
+                            editPoint = (EditPoint2)theGetSingleFunction.StartPoint.CreateEditPoint();
+                            editPoint.ReplaceText(6, "public async", 0);
+
+                            editPoint = (EditPoint2)theGetSingleFunction.EndPoint.CreateEditPoint();
+                            editPoint.LineUp();
+                            editPoint.StartOfLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"return await GetSingleAsync<{resourceModel.ClassName}>(node);");
+                        }
+                        #endregion
+
+                        #region Get Collection Function
+                        if (orchestratorClass.Children
+                                             .OfType<CodeFunction2>()
+                                             .FirstOrDefault(c => c.Name.Equals(collectionFunctionName, StringComparison.OrdinalIgnoreCase)) == null)
+                        {
+                            var theCollectionFunction = (CodeFunction2)orchestratorClass.AddFunction(collectionFunctionName,
+                                                      vsCMFunction.vsCMFunctionFunction,
+                                                      $"Task<PagedCollection<{resourceModel.ClassName}>>",
+                                                      -1,
+                                                      vsCMAccess.vsCMAccessPublic);
+
+                            theCollectionFunction.AddParameter("originalQuery", "string", -1);
+                            theCollectionFunction.AddParameter("node", "RqlNode", -1);
+                            theCollectionFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                            StringBuilder doc = new StringBuilder();
+                            doc.AppendLine("<doc>");
+                            doc.AppendLine("<summary>");
+                            doc.AppendLine($"Asynchronously gets a collection of {resourceModel.ClassName} resources filtered by the <see cref=\"RqlNode\"/>.");
+                            doc.AppendLine("</summary>");
+                            doc.AppendLine("<param name=\"originalQuery\">The original query string.</param>");
+                            doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection.</param>");
+                            doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                            doc.AppendLine($"<returns>The collection of {resourceModel.ClassName} resources filtered by the <see cref=\"RqlNode\"/>.</returns>");
+                            doc.AppendLine("</doc>");
+
+                            theCollectionFunction.DocComment = doc.ToString();
+
+                            editPoint = (EditPoint2)theCollectionFunction.StartPoint.CreateEditPoint();
+                            editPoint.ReplaceText(6, "public async", 0);
+
+                            editPoint = (EditPoint2)theCollectionFunction.EndPoint.CreateEditPoint();
+                            editPoint.LineUp();
+                            editPoint.StartOfLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"return await GetCollectionAsync<{resourceModel.ClassName}>(originalQuery, node);");
+                        }
+                        #endregion
+
+                        #region Add Function
+                        if (orchestratorClass.Children
+                                             .OfType<CodeFunction2>()
+                                             .FirstOrDefault(c => c.Name.Equals(addFunctionName, StringComparison.OrdinalIgnoreCase)) == null)
+                        {
+                            var theAddFunction = (CodeFunction2)orchestratorClass.AddFunction(addFunctionName,
+                                                      vsCMFunction.vsCMFunctionFunction,
+                                                      $"Task<{resourceModel.ClassName}>",
+                                                      -1,
+                                                      vsCMAccess.vsCMAccessPublic);
+
+                            theAddFunction.AddParameter("item", resourceModel.ClassName, -1);
+                            theAddFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                            StringBuilder doc = new StringBuilder();
+                            doc.AppendLine("<doc>");
+                            doc.AppendLine("<summary>");
+                            doc.AppendLine($"Asynchronously adds {article} {resourceModel.ClassName} resource.");
+                            doc.AppendLine("</summary>");
+                            doc.AppendLine($"<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>");
+                            doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                            doc.AppendLine("<returns>The newly added resource.</returns>");
+                            doc.AppendLine("</doc>");
+
+                            theAddFunction.DocComment = doc.ToString();
+
+                            editPoint = (EditPoint2)theAddFunction.StartPoint.CreateEditPoint();
+                            editPoint.ReplaceText(6, "public async", 0);
+
+                            editPoint = (EditPoint2)theAddFunction.EndPoint.CreateEditPoint();
+                            editPoint.LineUp();
+                            editPoint.StartOfLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForAddAsync(item, User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"return await AddAsync<{resourceModel.ClassName}>(item);");
+                        }
+                        #endregion
+
+                        #region Update Function
+                        if (orchestratorClass.Children
+                                             .OfType<CodeFunction2>()
+                                             .FirstOrDefault(c => c.Name.Equals(updateFunctionName, StringComparison.OrdinalIgnoreCase)) == null)
+                        {
+                            var theUpdateFunction = (CodeFunction2)orchestratorClass.AddFunction(updateFunctionName,
+                                                      vsCMFunction.vsCMFunctionFunction,
+                                                      $"Task<{resourceModel.ClassName}>",
+                                                      -1,
+                                                      vsCMAccess.vsCMAccessPublic);
+
+                            theUpdateFunction.AddParameter("item", resourceModel.ClassName, -1);
+                            theUpdateFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                            StringBuilder doc = new StringBuilder();
+                            doc.AppendLine("<doc>");
+                            doc.AppendLine("<summary>");
+                            doc.AppendLine($"Asynchronously updates {article} {resourceModel.ClassName} resource.");
+                            doc.AppendLine("</summary>");
+                            doc.AppendLine($"<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>");
+                            doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                            doc.AppendLine("<returns>The updated item.</returns>");
+                            doc.AppendLine("</doc>");
+
+                            theUpdateFunction.DocComment = doc.ToString();
+
+                            editPoint = (EditPoint2)theUpdateFunction.StartPoint.CreateEditPoint();
+                            editPoint.ReplaceText(6, "public async", 0);
+
+                            editPoint = (EditPoint2)theUpdateFunction.EndPoint.CreateEditPoint();
+                            editPoint.LineUp();
+                            editPoint.StartOfLine();
+
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForUpdateAsync(item, User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"return await UpdateAsync<{resourceModel.ClassName}>(item);");
+                        }
+                        #endregion
+
+                        #region Patch Function
+                        if (orchestratorClass.Children
+                                             .OfType<CodeFunction2>()
+                                             .FirstOrDefault(c => c.Name.Equals(patchFunctionName, StringComparison.OrdinalIgnoreCase)) == null)
+                        {
+                            var thePatchFunction = (CodeFunction2)orchestratorClass.AddFunction(patchFunctionName,
+                                                      vsCMFunction.vsCMFunctionFunction,
+                                                      $"Task",
+                                                      -1,
+                                                      vsCMAccess.vsCMAccessPublic);
+
+                            thePatchFunction.AddParameter("commands", "IEnumerable<PatchCommand>", -1);
+                            thePatchFunction.AddParameter("node", "RqlNode", -1);
+                            thePatchFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                            StringBuilder doc = new StringBuilder();
+                            doc.AppendLine("<doc>");
+                            doc.AppendLine("<summary>");
+                            doc.AppendLine($"Asynchronously updates {article} {resourceModel.ClassName} resource using patch commands.");
+                            doc.AppendLine("</summary>");
+                            doc.AppendLine("<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>");
+                            doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
+                            doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                            doc.AppendLine("</doc>");
+
+                            thePatchFunction.DocComment = doc.ToString();
+
+                            editPoint = (EditPoint2)thePatchFunction.StartPoint.CreateEditPoint();
+                            editPoint.ReplaceText(6, "public async", 0);
+
+                            editPoint = (EditPoint2)thePatchFunction.EndPoint.CreateEditPoint();
+                            editPoint.LineUp();
+                            editPoint.StartOfLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForPatchAsync(commands, node, User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"await PatchAsync<{resourceModel.ClassName}>(commands, node);");
+                        }
+                        #endregion
+
+                        #region Delete Function
+                        if (orchestratorClass.Children
+                                             .OfType<CodeFunction2>()
+                                             .FirstOrDefault(c => c.Name.Equals(deleteFunctionName, StringComparison.OrdinalIgnoreCase)) == null)
+                        {
+                            var theDeleteFunction = (CodeFunction2)orchestratorClass.AddFunction(deleteFunctionName,
+                                                      vsCMFunction.vsCMFunctionFunction,
+                                                      $"Task",
+                                                      -1,
+                                                      vsCMAccess.vsCMAccessPublic);
+
+                            theDeleteFunction.AddParameter("node", "RqlNode", -1);
+                            theDeleteFunction.AddParameter("User", "ClaimsPrincipal", -1);
+
+                            StringBuilder doc = new StringBuilder();
+                            doc.AppendLine("<doc>");
+                            doc.AppendLine("<summary>");
+                            doc.AppendLine($"Asynchronously deletes {article} {resourceModel.ClassName} resource specified by the <see cref=\"RqlNode\"/>.");
+                            doc.AppendLine("</summary>");
+                            doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection of resources to delete.</param>");
+                            doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
+                            doc.AppendLine("</doc>");
+
+                            theDeleteFunction.DocComment = doc.ToString();
+
+                            editPoint = (EditPoint2)theDeleteFunction.StartPoint.CreateEditPoint();
+                            editPoint.ReplaceText(6, "public async", 0);
+
+                            editPoint = (EditPoint2)theDeleteFunction.EndPoint.CreateEditPoint();
+                            editPoint.LineUp();
+                            editPoint.StartOfLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForDeleteAsync(node, User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"await DeleteAsync<{resourceModel.ClassName}>(node);");
+                        }
+                        #endregion
+                    }
+                    catch (Exception)
+                    {
                     }
                 }
             }
-
-            if (!taskNamespace)
-                fileCodeModel.AddImport("System.Threading.Tasks");
-
-            if (!securityNamespace)
-                fileCodeModel.AddImport("System.Security.Claims");
-
-            if (!collectionsNamespace)
-                fileCodeModel.AddImport("System.Collections.Generic");
-
-            if (!validationNamespace)
-                fileCodeModel.AddImport(ValidationNamespace);
-
-            if (!resourceNamespace)
-                fileCodeModel.AddImport(resourceModel.Namespace);
-
-            if (!wasOpen)
-                window.Close();
         }
 
         private void EmitEndpointExamples(DBServerType serverType, string resourceClassName, StringBuilder results, IEnumerable<DBColumn> pkcolumns)
