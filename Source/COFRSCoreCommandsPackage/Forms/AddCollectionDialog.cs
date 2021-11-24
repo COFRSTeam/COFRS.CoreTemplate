@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Data.SqlClient;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -139,31 +140,31 @@ namespace COFRSCoreCommandsPackage.Forms
 		private void OnOK(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-			
-			//	Did the user select one of the child resources?
+
+            //	Did the user select one of the child resources?
             if (ChildResourceList.SelectedIndex == -1)
             {
                 MessageBox.Show("No child resource selected. You must select a resource from the list to generate a collection in the parent resource.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-			//	Some stiff we meed
-			var projectMapping = OpenProjectMapping();                        //	Contains the names and projects where various source file exist.
+            //	Some stiff we meed
+            var projectMapping = OpenProjectMapping();                        //	Contains the names and projects where various source file exist.
 
-			//var resourceModelsFolder = projectMapping.GetResourceModelsFolder();
+            //var resourceModelsFolder = projectMapping.GetResourceModelsFolder();
 
             //	Get the child model from the resource map
             childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(ChildResourceList.SelectedItem.ToString(), StringComparison.OrdinalIgnoreCase));
 
             //	Setup the default name of our new member
             var nn = new NameNormalizer(childModel.ClassName);
-            memberName = nn.PluralForm;										// The memberName is will be the name of the new collection in the parent resource. By default, it will be
-																			// the plural of the child model class name.
+            memberName = nn.PluralForm;                                     // The memberName is will be the name of the new collection in the parent resource. By default, it will be
+                                                                            // the plural of the child model class name.
 
             parentValidatorInterface = FindValidatorInterface(parentModel.ClassName);
             childValidatorInterface = FindValidatorInterface(childModel.ClassName);
 
-			//	Now that we have all the information we need, add the collection member to the parent resource
+            //	Now that we have all the information we need, add the collection member to the parent resource
             AddCollectionToResource();
 
             //	Now that we've added a new collection, we need to alter the orchestration layer to handle that new collection...
@@ -172,89 +173,340 @@ namespace COFRSCoreCommandsPackage.Forms
             orchestrator.Open(Constants.vsViewKindCode);
             FileCodeModel2 codeModel = (FileCodeModel2)orchestrator.FileCodeModel;
 
-			//	The orchestration layer is going to need "using System.Linq", ensure that it it does
-			if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Linq")) == null)
-				codeModel.AddImport("System.Linq", -1);
+            //	The orchestration layer is going to need "using System.Linq", ensure that it it does
+            if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Linq")) == null)
+                codeModel.AddImport("System.Linq", -1);
 
-			//	The orchestration layer is going to need "using System.Text", ensure that it it does
-			if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text")) == null)
-				codeModel.AddImport("System.Text", -1);
+            //	The orchestration layer is going to need "using System.Text", ensure that it it does
+            if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text")) == null)
+                codeModel.AddImport("System.Text", -1);
 
-			//	We're going to need a validator for the new members. To get it, we will use dependency injection in the 
-			//	constructor, which means we will need a class variable. That variable is going to need a name. Create 
-			//	the default name for this vairable as the class name of the new member followed by "Validator".
-			//
-			//	i.e., if the new member class is Foo, then the variable name will be FooValidator.
+            //	We're going to need a validator for the new members. To get it, we will use dependency injection in the 
+            //	constructor, which means we will need a class variable. That variable is going to need a name. Create 
+            //	the default name for this vairable as the class name of the new member followed by "Validator".
+            //
+            //	i.e., if the new member class is Foo, then the variable name will be FooValidator.
 
-			childValidatorName = $"{childModel.ClassName}Validator";
+            childValidatorName = $"{childModel.ClassName}Validator";
 
-			//	Find the namespace...
-			foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
-			{
-				CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
+            //	Find the namespace...
+            foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
+            {
+                CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
 
-				//	The new collection of child items will need to be validated for the various operations.
-				//	Add a validator the for the child items 
-				AddChildValidatorInterfaceMember(classElement);
+                //	The new collection of child items will need to be validated for the various operations.
+                //	Add a validator the for the child items 
+                AddChildValidatorInterfaceMember(classElement);
 
-				//	Now, let's go though all the functions...
-				foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
-				{
-					//	Constructor
-					if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
-					{
-						ModifyConstructor(aFunction);
-					}
+                //	Now, let's go though all the functions...
+                foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
+                {
+                    //	Constructor
+                    if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
+                    {
+                        ModifyConstructor(aFunction);
+                    }
 
-					//	Get Single
-					else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
-					{
-						ModifyGetSingle(aFunction);
-					}
+                    //	Get Single
+                    else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ModifyGetSingle(aFunction);
+                    }
 
-					//	Get Collection
-					else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
-					{
-						ModifyGetCollection(aFunction);
-					}
+                    //	Get Collection
+                    else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
+                    {
+                        ModifyGetCollection(aFunction);
+                    }
 
-					//	Add
-					else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
-					{
-						ModifyAdd(aFunction);
-					}
+                    //	Add
+                    else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
+                    {
+                        ModifyAdd(aFunction);
+                    }
 
-					//	Update
-					else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
-					{
-						ModifyUpdate(aFunction);
-					}
+                    //	Update
+                    else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
+                    {
+                        ModifyUpdate(aFunction);
+                    }
 
-					//	Update
-					else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
-					{
-						ModifyPatch(aFunction);
-					}
+                    //	Update
+                    else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
+                    {
+                        ModifyPatch(aFunction);
+                    }
 
-					//	Delete
-					else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
-					{
-						ModifyDelete(aFunction);
-					}
-				}
-			}
+                    //	Delete
+                    else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
+                    {
+                        ModifyDelete(aFunction);
+                    }
+                }
+            }
+
+            AddSingleExample();
+            AddCollectionExample();
 
             DialogResult = DialogResult.OK;
             Close();
         }
 
+		private void AddCollectionExample()
+		{
+			var collectionExampleClass = FindCollectionExampleCode(parentModel.ClassName);
+
+			if (collectionExampleClass != null)
+			{
+				var getExampleFunction = collectionExampleClass.Children
+															   .OfType<CodeFunction2>()
+															   .FirstOrDefault(c => c.Name.Equals("GetExamples", StringComparison.OrdinalIgnoreCase));
+
+				if (getExampleFunction != null)
+				{
+					EditPoint2 nextClassStart;
+					EditPoint2 classStart = (EditPoint2)getExampleFunction.StartPoint.CreateEditPoint();
+					bool foundit = classStart.FindPattern($"new {parentModel.ClassName} {{");
+					foundit = foundit && classStart.LessThan(getExampleFunction.EndPoint);
+
+					if (foundit)
+					{
+						while (foundit)
+						{
+							nextClassStart = (EditPoint2)classStart.CreateEditPoint();
+							nextClassStart.LineDown();
+							foundit = nextClassStart.FindPattern($"new {parentModel.ClassName} {{");
+							foundit = foundit && nextClassStart.LessThan(getExampleFunction.EndPoint);
+
+							if (foundit)
+							{
+								EditPoint2 AssignPoint = (EditPoint2)classStart.CreateEditPoint();
+								bool alreadyAssigned = AssignPoint.FindPattern($"{memberName} = new {childModel.ClassName}[]");
+								alreadyAssigned = alreadyAssigned && AssignPoint.LessThan(nextClassStart);
+
+								if (!alreadyAssigned)
+								{
+									classStart = (EditPoint2)nextClassStart.CreateEditPoint();
+									nextClassStart.LineUp();
+									nextClassStart.LineUp();
+									nextClassStart.EndOfLine();
+									nextClassStart.Insert(",");
+									nextClassStart.InsertNewLine();
+									nextClassStart.Indent(null, 5);
+									nextClassStart.Insert($"{memberName} = new {childModel.ClassName}[]");
+									nextClassStart.InsertNewLine();
+									nextClassStart.Indent(null, 5);
+									nextClassStart.Insert("{");
+									nextClassStart.InsertNewLine();
+									nextClassStart.Indent(null, 6);
+									nextClassStart.Insert($"new {childModel.ClassName}");
+									nextClassStart.InsertNewLine();
+									nextClassStart.Indent(null, 6);
+									nextClassStart.Insert("{");
+
+									var connectionString = GetConnectionString();
+									var serverType = GetDefaultServerType(connectionString);
+
+									var exampleModel = GetExampleModel(0, childModel, serverType, connectionString);
+									var entityJson = JObject.Parse(exampleModel);
+									var solutionPath = _dte2.Solution.Properties.Item("Path").Value.ToString();
+									var profileMap = LoadMapping(solutionPath, childModel, childModel.EntityModel);
+
+									bool first = true;
+
+									foreach (var map in profileMap.ResourceProfiles)
+									{
+										if (first)
+										{
+											first = false;
+										}
+										else
+										{
+											nextClassStart.Insert(",");
+										}
+
+										nextClassStart.InsertNewLine();
+										nextClassStart.Indent(null, 7);
+										nextClassStart.Insert($"{map.ResourceColumnName} = ");
+										nextClassStart.Insert(ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
+									}
+
+									nextClassStart.InsertNewLine();
+									nextClassStart.Indent(null, 6);
+									nextClassStart.Insert("}");
+									nextClassStart.InsertNewLine();
+									nextClassStart.Indent(null, 5);
+									nextClassStart.Insert("}");
+								}
+							}
+						}
+					}
+
+					nextClassStart = (EditPoint2)classStart.CreateEditPoint();
+					nextClassStart.LineDown();
+					foundit = nextClassStart.FindPattern("};");
+					foundit = foundit && nextClassStart.LessThan(getExampleFunction.EndPoint);
+
+					if (foundit)
+					{
+						EditPoint2 AssignPoint = (EditPoint2)classStart.CreateEditPoint();
+						bool alreadyAssigned = AssignPoint.FindPattern($"{memberName} = new {childModel.ClassName}[]");
+						alreadyAssigned = alreadyAssigned && AssignPoint.LessThan(nextClassStart);
+
+						if (!alreadyAssigned)
+						{
+							nextClassStart.LineUp();
+							nextClassStart.LineUp();
+							nextClassStart.EndOfLine();
+							nextClassStart.Insert(",");
+							nextClassStart.InsertNewLine();
+							nextClassStart.Indent(null, 5);
+							nextClassStart.Insert($"{memberName} = new {childModel.ClassName}[]");
+							nextClassStart.InsertNewLine();
+							nextClassStart.Indent(null, 5);
+							nextClassStart.Insert("{");
+							nextClassStart.InsertNewLine();
+							nextClassStart.Indent(null, 6);
+							nextClassStart.Insert($"new {childModel.ClassName}");
+							nextClassStart.InsertNewLine();
+							nextClassStart.Indent(null, 6);
+							nextClassStart.Insert("{");
+
+							var connectionString = GetConnectionString();
+							var serverType = GetDefaultServerType(connectionString);
+
+							var exampleModel = GetExampleModel(0, childModel, serverType, connectionString);
+							var entityJson = JObject.Parse(exampleModel);
+							var solutionPath = _dte2.Solution.Properties.Item("Path").Value.ToString();
+							var profileMap = LoadMapping(solutionPath, childModel, childModel.EntityModel);
+
+							bool first = true;
+
+							foreach (var map in profileMap.ResourceProfiles)
+							{
+								if (first)
+								{
+									first = false;
+								}
+								else
+								{
+									nextClassStart.Insert(",");
+								}
+
+								nextClassStart.InsertNewLine();
+								nextClassStart.Indent(null, 7);
+								nextClassStart.Insert($"{map.ResourceColumnName} = ");
+								nextClassStart.Insert(ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
+							}
+
+							nextClassStart.InsertNewLine();
+							nextClassStart.Indent(null, 6);
+							nextClassStart.Insert("}");
+							nextClassStart.InsertNewLine();
+							nextClassStart.Indent(null, 5);
+							nextClassStart.Insert("}");
+						}
+					}
+				}
+			}
+		}
+
+		private void AddSingleExample()
+        {
+            var singleExampleClass = FindExampleCode(parentModel.ClassName);
+
+			if (singleExampleClass != null)
+			{
+				var getExampleFunction = singleExampleClass.Children
+														   .OfType<CodeFunction2>()
+														   .FirstOrDefault(c => c.Name.Equals("GetExamples", StringComparison.OrdinalIgnoreCase));
+
+				if (getExampleFunction != null)
+				{
+					EditPoint2 editPoint = (EditPoint2)getExampleFunction.StartPoint.CreateEditPoint();
+					bool foundit = editPoint.FindPattern($"{memberName} = new {childModel.ClassName}[]");
+					foundit = foundit && editPoint.LessThan(getExampleFunction.EndPoint);
+
+					if (!foundit)
+					{
+						editPoint = (EditPoint2)getExampleFunction.StartPoint.CreateEditPoint();
+						foundit = editPoint.FindPattern($"return singleExample;");
+						foundit = foundit && editPoint.LessThan(getExampleFunction.EndPoint);
+
+						if (foundit)
+						{
+							foundit = false;
+							while (!foundit)
+							{
+								editPoint.LineUp();
+								var editPoint2 = editPoint.CreateEditPoint();
+
+								foundit = editPoint2.FindPattern("};");
+								foundit = foundit && editPoint2.LessThan(getExampleFunction.EndPoint);
+							}
+
+							editPoint.LineUp();
+							editPoint.EndOfLine();
+							editPoint.Insert(",");
+							editPoint.InsertNewLine();
+							editPoint.Indent(null, 4);
+							editPoint.Insert($"{memberName} = new {childModel.ClassName}[]");
+							editPoint.InsertNewLine();
+							editPoint.Indent(null, 4);
+							editPoint.Insert("{");
+							editPoint.InsertNewLine();
+							editPoint.Indent(null, 5);
+							editPoint.Insert($"new {childModel.ClassName}");
+							editPoint.InsertNewLine();
+							editPoint.Indent(null, 5);
+							editPoint.Insert("{");
+
+							var connectionString = GetConnectionString();
+							var serverType = GetDefaultServerType(connectionString);
+
+							var exampleModel = GetExampleModel(0, childModel, serverType, connectionString);
+							var entityJson = JObject.Parse(exampleModel);
+							var solutionPath = _dte2.Solution.Properties.Item("Path").Value.ToString();
+							var profileMap = LoadMapping(solutionPath, childModel, childModel.EntityModel);
+
+							bool first = true;
+
+							foreach (var map in profileMap.ResourceProfiles)
+							{
+								if (first)
+								{
+									first = false;
+								}
+								else
+								{
+									editPoint.Insert(",");
+								}
+
+								editPoint.InsertNewLine();
+								editPoint.Indent(null, 6);
+								editPoint.Insert($"{map.ResourceColumnName} = ");
+								editPoint.Insert(ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
+							}
+
+							editPoint.InsertNewLine();
+							editPoint.Indent(null, 5);
+							editPoint.Insert("}");
+							editPoint.InsertNewLine();
+							editPoint.Indent(null, 4);
+							editPoint.Insert("}");
+						}
+					}
+				}
+			}
+        }
+
 
 
         #region Helper Functions
-		/// <summary>
-		/// Adds a class property for the child class validator
-		/// </summary>
-		/// <param name="classElement"></param>
+        /// <summary>
+        /// Adds a class property for the child class validator
+        /// </summary>
+        /// <param name="classElement"></param>
         private void AddChildValidatorInterfaceMember(CodeClass2 classElement)
         {
             //	Okay, we will need a validator for our new child resources. To get one, we will use dependency injection
@@ -298,75 +550,178 @@ namespace COFRSCoreCommandsPackage.Forms
             }
         }
 
-        /// <summary>
-        /// Adds the new collection member to the parent resource
-        /// </summary>
-        private void AddCollectionToResource()
-        {
+		/// <summary>
+		/// Adds the new collection member to the parent resource
+		/// </summary>
+		private void AddCollectionToResource()
+		{
 			//	First we need to open the code file for the parent resource
-            var fileName = Path.GetFileName(parentModel.Folder);
-            ProjectItem resourceCodeFile = _dte2.Solution.FindProjectItem(fileName);
+			var fileName = Path.GetFileName(parentModel.Folder);
+			ProjectItem resourceCodeFile = _dte2.Solution.FindProjectItem(fileName);
+			EditPoint2 editPoint;
 
 			//	Now we have the code file for our main resource.
 			//	First, find the namespace with this file...
-            foreach (CodeNamespace namespaceElement in resourceCodeFile.FileCodeModel.CodeElements.OfType<CodeNamespace>())
-            {
-				//	We're in the namespace, now find the class...
-                foreach (CodeClass2 classElement in namespaceElement.Children.OfType<CodeClass2>())
-                {
+			foreach (CodeNamespace namespaceElement in resourceCodeFile.FileCodeModel.CodeElements.OfType<CodeNamespace>())
+			{
+				CodeClass2 resourceClass = namespaceElement.Children
+														   .OfType<CodeClass2>()
+														   .FirstOrDefault(c => c.Name.Equals(parentModel.ClassName));
+
+				if (resourceClass != null)
+				{
+					CodeFunction2 constructor = resourceClass.Children
+															 .OfType<CodeFunction2>()
+															 .FirstOrDefault(c => c.FunctionKind == vsCMFunction.vsCMFunctionConstructor);
+
+					if (constructor == null)
+					{
+						constructor = (CodeFunction2)resourceClass.AddFunction(resourceClass.Name, vsCMFunction.vsCMFunctionConstructor, "", -1);
+
+						StringBuilder doc = new StringBuilder();
+						doc.AppendLine("<doc>");
+						doc.AppendLine("<summary>");
+						doc.AppendLine($"Constructor for the resource.");
+						doc.AppendLine("</summary>");
+						doc.AppendLine("</doc>");
+
+						constructor.DocComment = doc.ToString();
+					}
+
 					//	We're in the class. Now we need to add a new property of type IEnumerable<childClass>
 					//	However, this may not be the first time the user has done this, and they may have already added the member.
 					//	So, we need to determine if such a member already exists...
-                    var addMember = true;
 
-                    foreach (CodeProperty2 property in classElement.Members.OfType<CodeProperty2>())
-                    {
-						if (property.Type.AsString.Contains("IEnumerable") && property.Type.AsString.Contains(childModel.ClassName))
+					CodeProperty2 enumerableChild = resourceClass.Members
+																 .OfType<CodeProperty2>()
+																 .FirstOrDefault(c =>
+																 {
+																	 var parts = c.Type.AsString.Split('.');
+																	 if (parts.Contains("IEnumerable"))
+																	 {
+																		 if (parts[parts.Length - 1].Equals(childModel.ClassName))
+																			 return true;
+																	 }
+
+																	 return false;
+																 });
+
+					if (enumerableChild != null)
+					{
+						memberName = enumerableChild.Name;
+						memberType = $"IEnumerable<{childModel.ClassName}>";
+
+						editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+						if (!editPoint.FindPattern($"{memberName} = Array.Empty<{childModel.ClassName}>();"))
 						{
-							//	A property of type IEnumerable<childClass> already exists. 
-							//	All we need to do is to set the memberName to the actual property name. (it's probably just the plural of the child class
-							//	name, but you never know. The user may have changed it.)
-							addMember = false;
-							memberName = property.Name;
-							memberType = $"IEnumerable<{childModel.ClassName}>";
-							break;
-						}
-						else if (property.Type.AsString.Contains("List") && property.Type.AsString.Contains(childModel.ClassName))
-						{
-							//	A property of type List<childClass> already exists. 
-							//	All we need to do is to set the memberName to the actual property name. (it's probably just the plural of the child class
-							//	name, but you never know. The user may have changed it.)
-							addMember = false;
-							memberName = property.Name;
-							memberType = $"List<{childModel.ClassName}>";
-							break;
-						}
-						else if (property.Type.AsString.Contains($"{childModel.ClassName}[]"))
-						{
-							//	A property of type childClass[] already exists. 
-							//	All we need to do is to set the memberName to the actual property name. (it's probably just the plural of the child class
-							//	name, but you never know. The user may have changed it.)
-							addMember = false;
-							memberName = property.Name;
-							memberType = $"{childModel.ClassName}[]";
-							break;
+							editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
+							editPoint.LineUp();
+							editPoint.EndOfLine();
+							editPoint.InsertNewLine();
+							editPoint.Indent(null, 3);
+							editPoint.Insert($"{memberName} = Array.Empty<{childModel.ClassName}>();");
 						}
 					}
+					else
+					{
+						CodeProperty2 listChild = resourceClass.Members
+																	 .OfType<CodeProperty2>()
+																	 .FirstOrDefault(c =>
+																	 {
+																		 var parts = c.Type.AsString.Split('.');
+																		 if (parts.Contains("List"))
+																		 {
+																			 if (parts[parts.Length - 1].Equals(childModel.ClassName))
+																				 return true;
+																		 }
 
-					//	We didn't find any property of type childProperty[], or any of its variants, so we need to add one
-					if (addMember)
-                    {
-                        var property = classElement.AddProperty(memberName, memberName, $"{childModel.ClassName}[]", -1, vsCMAccess.vsCMAccessPublic, null);
-                        property.DocComment = $"<doc>\r\n<summary>\r\nGets or sets the collection of <see cref=\"{childModel.ClassName}\"/> resources.\r\n</summary>\r\n</doc>";
-						memberType = $"{childModel.ClassName}[]";
+																		 return false;
+																	 });
 
-						var editPoint = property.StartPoint.CreateEditPoint();
-                        editPoint.EndOfLine();
-                        editPoint.ReplaceText(property.EndPoint, " { get; set; }", 0);
-                    }
-                }
-            }
-        }
+						if (listChild != null)
+						{
+							memberName = listChild.Name;
+							memberType = $"List<{childModel.ClassName}>";
+							editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+
+							if (!editPoint.FindPattern($"{memberName} = new List<{childModel.ClassName}>();"))
+							{
+								editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
+								editPoint.LineUp();
+								editPoint.EndOfLine();
+								editPoint.InsertNewLine();
+								editPoint.Indent(null, 3);
+								editPoint.Insert($"{memberName} = new List<{childModel.ClassName}>();");
+							}
+						}
+						else
+						{
+							CodeProperty2 arrayChild = resourceClass.Members
+																		 .OfType<CodeProperty2>()
+																		 .FirstOrDefault(c =>
+																		 {
+																			 var parts = c.Type.AsString.Split('.');
+																			 if (parts[parts.Length - 1].Equals($"{childModel.ClassName}[]"))
+																				 return true;
+
+																			 return false;
+																		 });
+
+							if (arrayChild != null)
+							{
+								memberName = arrayChild.Name;
+								memberType = $"{childModel.ClassName}[]";
+								editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+
+								if (!editPoint.FindPattern($"{memberName} = Array.Empty<{childModel.ClassName}>();"))
+								{
+									editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
+									editPoint.LineUp();
+									editPoint.EndOfLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"{memberName} = Array.Empty<{childModel.ClassName}>();");
+								}
+							}
+							else
+							{
+								var count = resourceClass.Children.OfType<CodeProperty>().Count();
+
+								var property = resourceClass.AddProperty(memberName, memberName, 
+									                                     $"{childModel.ClassName}[]",
+																		 count,
+																		 vsCMAccess.vsCMAccessPublic, null);
+
+								StringBuilder doc = new StringBuilder();
+								doc.AppendLine("<doc>");
+								doc.AppendLine("<summary>");
+								doc.AppendLine($"Gets or sets the collection of <see cref=\"{childModel.ClassName}\"/> resources.");
+								doc.AppendLine("</summary>");
+								doc.AppendLine("</doc>");
+
+								property.DocComment = doc.ToString();
+								memberType = $"{childModel.ClassName}[]";
+
+								editPoint = (EditPoint2)property.StartPoint.CreateEditPoint();
+								editPoint.EndOfLine();
+								editPoint.ReplaceText(property.EndPoint, " { get; set; }", 0);
+								editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+
+								if (!editPoint.FindPattern($"{memberName} = Array.Empty<{childModel.ClassName}>();"))
+								{
+									editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
+									editPoint.LineUp();
+									editPoint.EndOfLine();
+									editPoint.InsertNewLine();
+									editPoint.Indent(null, 3);
+									editPoint.Insert($"{memberName} = Array.Empty<{childModel.ClassName}>();");
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 
         /// <summary>
         /// Modify the delete function to accomodate the new collection
@@ -758,7 +1113,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert("{");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 7);
-				editPoint.Insert($"if (sections[0].Equals(\"{ memberName}\"))");
+				editPoint.Insert($"if (sections[0].Equals(\"{memberName}\"))");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 7);
 				editPoint.Insert("{");
@@ -767,7 +1122,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert($"var childNode = RqlNode.Parse($\"HRef=uri:\\\"{{{childModel.ClassName}Array[index].HRef}}\\\"\");");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 8);
-				editPoint.Insert("StringBuilder newPath = new StringBuilder();");
+				editPoint.Insert("StringBuilder newPath = new();");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 8);
 				editPoint.Insert("bool first = true;");
@@ -1059,7 +1414,10 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint.InsertNewLine(2);
                 editPoint.Indent(null, 3);
                 editPoint.Insert($"var subNode = RqlNode.Parse(rqlBody.ToString());");
-                editPoint.InsertNewLine();
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert($"var selectNode = node.ExtractSelectClause();");
+				editPoint.InsertNewLine();
             }
 
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1071,48 +1429,57 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
                 editPoint.FindPattern("return collection");
                 editPoint.LineUp();
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
-                editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
-                editPoint.InsertNewLine(2);
-                editPoint.Indent(null, 3);
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert($"if (selectNode == null || selectNode.SelectContains(\"{memberName}\"))");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert("{");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 4);
+				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+				editPoint.InsertNewLine(2);
+                editPoint.Indent(null, 4);
                 editPoint.Insert($"foreach ( var item in {childModel.ClassName}Collection.Items)");
                 editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
+                editPoint.Indent(null, 4);
                 editPoint.Insert("{");
                 editPoint.InsertNewLine();
-                editPoint.Indent(null, 4);
+                editPoint.Indent(null, 5);
                 editPoint.Insert($"var mainItem = collection.Items.FirstOrDefault(i => i.HRef == item.Client);");
                 editPoint.InsertNewLine(2);
-                editPoint.Indent(null, 4);
+                editPoint.Indent(null, 5);
                 editPoint.Insert($"if (mainItem.{memberName} == null)");
                 editPoint.InsertNewLine();
-                editPoint.Indent(null, 4);
+                editPoint.Indent(null, 5);
                 editPoint.Insert("{");
                 editPoint.InsertNewLine();
-                editPoint.Indent(null, 5);
+                editPoint.Indent(null, 6);
                 editPoint.Insert($"mainItem.{memberName} = new {childModel.ClassName}[] {{ item }};");
                 editPoint.InsertNewLine();
-                editPoint.Indent(null, 4);
+                editPoint.Indent(null, 5);
                 editPoint.Insert("}");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 4);
-                editPoint.Insert("else");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 4);
-                editPoint.Insert("{");
                 editPoint.InsertNewLine();
                 editPoint.Indent(null, 5);
+                editPoint.Insert("else");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 5);
+                editPoint.Insert("{");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 6);
                 editPoint.Insert($"mainItem.{memberName} = new List<{childModel.ClassName}>(mainItem.{memberName}) {{ item }}.ToArray();");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 5);
+                editPoint.Insert("}");
                 editPoint.InsertNewLine();
                 editPoint.Indent(null, 4);
                 editPoint.Insert("}");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
-                editPoint.Insert("}");
-                editPoint.InsertNewLine();
-            }
-        }
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert("}");
+				editPoint.InsertNewLine();
+			}
+		}
 
 		/// <summary>
 		/// Modify the Get Single function to populate the new collection
@@ -1137,6 +1504,9 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
                 editPoint.Insert("var subNode = RqlNode.Parse($\"Client=uri:\\\"{item.HRef.LocalPath}\\\"\");");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert("var selectNode = node.ExtractSelectClause();");
 				editPoint.InsertNewLine(2);
 				editPoint.Indent(null, 3);
 				editPoint.Insert("return item;");
@@ -1152,6 +1522,9 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint.LineUp();
 				editPoint.Indent(null, 3);
                 editPoint.Insert("var subNode = RqlNode.Parse($\"Client=uri:\\\"{item.HRef.LocalPath}\\\"\");");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert("var selectNode = node.ExtractSelectClause();");
 				editPoint.InsertNewLine(2);
             }
 
@@ -1169,16 +1542,25 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint.EndOfLine();
                 editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
-                editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+				editPoint.Insert($"if (selectNode == null || selectNode.SelectContains(\"{memberName}\"))");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
+				editPoint.Insert("{");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 4);
+				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 4);
 
 				if (memberType.StartsWith("List"))
 					editPoint.Insert($"item.{memberName} = {childModel.ClassName}Collection.Items.ToList();");
 				else if (memberType.EndsWith("[]"))
-					editPoint.Insert($"item.{memberName} = {childModel.ClassName}Collection.Items.ToArray();");
+					editPoint.Insert($"item.{memberName} = {childModel.ClassName}Collection.Items;");
 				else
 					editPoint.Insert($"item.{memberName} = {childModel.ClassName}Collection.Items;");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert("}");
 
 				editPoint.InsertNewLine();
 			}
@@ -1494,7 +1876,7 @@ namespace COFRSCoreCommandsPackage.Forms
 					if (!string.IsNullOrWhiteSpace(validatorClass))
 						return validatorClass;
 				}
-				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile && projectItem.FileCodeModel != null )
+				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile && projectItem.FileCodeModel != null)
 				{
 					FileCodeModel2 codeModel = (FileCodeModel2)projectItem.FileCodeModel;
 
@@ -1504,15 +1886,15 @@ namespace COFRSCoreCommandsPackage.Forms
 						{
 							foreach (CodeInterface2 codeBase in codeClass.Bases.OfType<CodeInterface2>())
 							{
-								var parts = codeBase.FullName.Split(new char[] { '<', '>'}, StringSplitOptions.RemoveEmptyEntries);
+								var parts = codeBase.FullName.Split(new char[] { '<', '>' }, StringSplitOptions.RemoveEmptyEntries);
 
 								if (parts.Length == 2)
 								{
 									var interfaceParts = parts[0].Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
 									var classParts = parts[1].Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
 
-									if ( interfaceParts[interfaceParts.Length-1].Equals("IValidator") &&
-										 classParts[classParts.Length-1].Equals(resourceClassName))
+									if (interfaceParts[interfaceParts.Length - 1].Equals("IValidator") &&
+										 classParts[classParts.Length - 1].Equals(resourceClassName))
 									{
 										return codeClass.Name;
 									}
@@ -1524,6 +1906,104 @@ namespace COFRSCoreCommandsPackage.Forms
 			}
 
 			return string.Empty;
+		}
+
+		/// <summary>
+		/// Get the validator interface name for a resource
+		/// </summary>
+		/// <param name="resourceClassName">The resource class whos validator is to be found</param>
+		/// <param name="folder">The folder to search</param>
+		/// <returns>The name of the interface for the validator of the resource.</returns>
+		private CodeClass2 FindExampleCode(string resourceClassName, string folder = "")
+		{
+			var projectMapping = OpenProjectMapping();                        //	Contains the names and projects where various source file exist.
+			var ExamplesFolder = projectMapping.GetExamplesFolder();
+
+			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? _dte2.Solution.FindProjectItem(ExamplesFolder.Folder) :
+																	  _dte2.Solution.FindProjectItem(folder);
+
+			foreach (ProjectItem projectItem in validatorFolder.ProjectItems)
+			{
+				if (projectItem.Kind == Constants.vsProjectItemKindVirtualFolder ||
+					projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder)
+				{
+					CodeClass2 codeFile = FindExampleCode(resourceClassName, projectItem.Name);
+
+					if (codeFile != null)
+						return codeFile;
+				}
+				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile && projectItem.FileCodeModel != null)
+				{
+					FileCodeModel2 codeModel = (FileCodeModel2)projectItem.FileCodeModel;
+
+					foreach (CodeNamespace codeNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
+					{
+						foreach (CodeClass2 codeClass in codeNamespace.Children.OfType<CodeClass2>())
+						{
+							EditPoint2 editPoint = (EditPoint2) codeClass.StartPoint.CreateEditPoint();
+
+							bool foundit = editPoint.FindPattern($"IExamplesProvider<{parentModel.ClassName}>");
+							foundit = foundit && editPoint.LessThan(codeClass.EndPoint);
+
+							if ( foundit )
+                            {
+								return codeClass;
+                            }
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
+		/// <summary>
+		/// Get the validator interface name for a resource
+		/// </summary>
+		/// <param name="resourceClassName">The resource class whos validator is to be found</param>
+		/// <param name="folder">The folder to search</param>
+		/// <returns>The name of the interface for the validator of the resource.</returns>
+		private CodeClass2 FindCollectionExampleCode(string resourceClassName, string folder = "")
+		{
+			var projectMapping = OpenProjectMapping();                        //	Contains the names and projects where various source file exist.
+			var ExamplesFolder = projectMapping.GetExamplesFolder();
+
+			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? _dte2.Solution.FindProjectItem(ExamplesFolder.Folder) :
+																	  _dte2.Solution.FindProjectItem(folder);
+
+			foreach (ProjectItem projectItem in validatorFolder.ProjectItems)
+			{
+				if (projectItem.Kind == Constants.vsProjectItemKindVirtualFolder ||
+					projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder)
+				{
+					CodeClass2 codeFile = FindCollectionExampleCode(resourceClassName, projectItem.Name);
+
+					if (codeFile != null)
+						return codeFile;
+				}
+				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile && projectItem.FileCodeModel != null)
+				{
+					FileCodeModel2 codeModel = (FileCodeModel2)projectItem.FileCodeModel;
+
+					foreach (CodeNamespace codeNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
+					{
+						foreach (CodeClass2 codeClass in codeNamespace.Children.OfType<CodeClass2>())
+						{
+							EditPoint2 editPoint = (EditPoint2)codeClass.StartPoint.CreateEditPoint();
+
+							bool foundit = editPoint.FindPattern($"IExamplesProvider<PagedCollection<{parentModel.ClassName}>>");
+							foundit = foundit && editPoint.LessThan(codeClass.EndPoint);
+
+							if (foundit)
+							{
+								return codeClass;
+							}
+						}
+					}
+				}
+			}
+
+			return null;
 		}
 
 		/// <summary>
@@ -1864,6 +2344,1101 @@ namespace COFRSCoreCommandsPackage.Forms
 			}
 
 			return new ResourceMap() { Maps = map.ToArray() };
+		}
+
+		public string GetExampleModel(int skipRecords, ResourceModel resourceModel, DBServerType serverType, string connectionString)
+		{
+			if (serverType == DBServerType.MYSQL)
+				return GetMySqlExampleModel(skipRecords, resourceModel, connectionString);
+			else if (serverType == DBServerType.POSTGRESQL)
+				return GetPostgresExampleModel(skipRecords, resourceModel, connectionString);
+			else if (serverType == DBServerType.SQLSERVER)
+				return GetSQLServerExampleModel(skipRecords, resourceModel, connectionString);
+
+			throw new ArgumentException("Invalid or unrecognized DBServerType", "serverType");
+		}
+
+		public string GetMySqlExampleModel(int skipRecords, ResourceModel resourceModel, string connectionString)
+		{
+			throw new NotImplementedException();
+		}
+
+		public string GetPostgresExampleModel(int skipRecords, ResourceModel resourceModel, string connectionString)
+		{
+			throw new NotImplementedException();
+		}
+
+		public string GetSQLServerExampleModel(int skipRecords, ResourceModel resourceModel, string connectionString)
+		{
+			StringBuilder results = new StringBuilder();
+
+			using (var connection = new SqlConnection(connectionString))
+			{
+				connection.Open();
+
+				var query = new StringBuilder();
+				query.Append("select ");
+
+				bool first = true;
+				foreach (var column in resourceModel.EntityModel.Columns)
+				{
+					if (first)
+					{
+						first = false;
+					}
+					else
+					{
+						query.Append(',');
+					}
+
+					query.Append($"[{column.ColumnName}]");
+				}
+
+				if (string.IsNullOrWhiteSpace(resourceModel.EntityModel.SchemaName))
+				{
+					query.Append($" from [{resourceModel.EntityModel.TableName}]");
+				}
+				else
+				{
+					query.Append($" from [{resourceModel.EntityModel.SchemaName}].[{resourceModel.EntityModel.TableName}]");
+				}
+
+				query.Append(" order by ");
+
+				first = true;
+				foreach (var column in resourceModel.EntityModel.Columns)
+				{
+					if (column.IsPrimaryKey)
+					{
+						if (first)
+						{
+							first = false;
+						}
+						else
+						{
+							query.Append(',');
+						}
+
+						query.Append($"[{column.ColumnName}]");
+					}
+				}
+
+				query.Append($" OFFSET {skipRecords} ROWS");
+				query.Append(" FETCH NEXT 1 ROWS ONLY;");
+
+				results.AppendLine("{");
+
+				using (var command = new SqlCommand(query.ToString(), connection))
+				{
+					using (var reader = command.ExecuteReader())
+					{
+						if (reader.Read())
+						{
+							first = true;
+							foreach (var column in resourceModel.EntityModel.Columns)
+							{
+								if (first)
+									first = false;
+								else
+									results.AppendLine(",");
+								results.Append($"\t\"{column.ColumnName}\": ");
+
+								switch (column.DBDataType.ToLower())
+								{
+									case "bigint":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var Value = reader.GetInt64(reader.GetOrdinal(column.ColumnName));
+											results.Append($"{Value}");
+										}
+										break;
+
+									case "binary":
+									case "image":
+									case "timestamp":
+									case "varbinary":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var length = reader.GetBytes(0, -1, null, 1, 1);
+											var byteBuffer = new byte[length];
+											reader.GetBytes(0, 0, byteBuffer, 0, (int)length);
+											var Value = Convert.ToBase64String(byteBuffer);
+											results.Append($"{Value}");
+										}
+										break;
+
+									case "bit":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+											results.Append("null");
+										else
+										{
+											var Value = reader.GetBoolean(reader.GetOrdinal(column.ColumnName));
+											results.Append(Value ? "true" : "false");
+										}
+										break;
+
+									case "date":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
+											results.Append("\"{date.ToShortDateString()}\"");
+										}
+										break;
+
+									case "datetime":
+									case "datetime2":
+									case "smalldatetime":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
+											var Value = date.ToString("o");
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									case "datetimeoffset":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var date = reader.GetDateTimeOffset(reader.GetOrdinal(column.ColumnName));
+											var Value = date.ToString("o");
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									case "decimal":
+									case "money":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var Value = reader.GetDecimal(reader.GetOrdinal(column.ColumnName));
+											results.Append($"{Value}");
+										}
+										break;
+
+									case "float":
+									case "real":
+									case "smallmoney":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var Value = reader.GetFloat(reader.GetOrdinal(column.ColumnName));
+											results.Append($"{Value}");
+										}
+										break;
+
+									case "int":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+											results.Append("null");
+										else
+										{
+											var Value = reader.GetInt32(reader.GetOrdinal(column.ColumnName));
+											results.Append($"{Value}");
+										}
+										break;
+
+									case "smallint":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var Value = reader.GetInt16(reader.GetOrdinal(column.ColumnName));
+											results.Append($"{Value}");
+										}
+										break;
+
+									case "tinyint":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var Value = reader.GetByte(reader.GetOrdinal(column.ColumnName));
+											results.Append($"{Value}");
+										}
+										break;
+
+									case "time":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else
+										{
+											var Value = reader.GetTimeSpan(reader.GetOrdinal(column.ColumnName));
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									case "text":
+									case "nvarchar":
+									case "ntext":
+									case "char":
+									case "nchar":
+									case "varchar":
+									case "xml":
+										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+										{
+											results.Append("null");
+										}
+										else if (string.Equals(column.DBDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
+										{
+											var theValue = reader.GetFieldValue<object>(reader.GetOrdinal(column.ColumnName));
+											theValue = theValue.ToString().Replace("/", "-");
+											results.Append($"\"{theValue}\"");
+										}
+										else
+										{
+											var Value = reader.GetString(reader.GetOrdinal(column.ColumnName));
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									default:
+										throw new InvalidDataException($"Unrecognized database type: {column.ModelDataType}");
+								}
+							}
+						}
+						else
+						{
+							first = true;
+							foreach (var column in resourceModel.EntityModel.Columns)
+							{
+								if (first)
+									first = false;
+								else
+									results.AppendLine(",");
+								results.Append($"\t\"{column.ColumnName}\": ");
+
+								switch (column.DBDataType.ToLower())
+								{
+									case "bigint":
+										results.Append("100");
+										break;
+
+									case "binary":
+									case "image":
+									case "timestamp":
+									case "varbinary":
+										{
+											var str = "The cow jumped over the moon";
+											var buffer = Encoding.UTF8.GetBytes(str);
+											var str2 = Convert.ToBase64String(buffer);
+											results.Append($"{str2}");
+										}
+										break;
+
+									case "bit":
+										results.Append("true");
+										break;
+
+									case "date":
+										{
+											var date = DateTime.Now; ;
+											results.Append("\"{date.ToShortDateString()}\"");
+										}
+										break;
+
+									case "datetime":
+									case "datetime2":
+									case "smalldatetime":
+										{
+											var date = DateTime.Now;
+											var Value = date.ToString("o");
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									case "datetimeoffset":
+										{
+											var date = DateTimeOffset.Now;
+											var Value = date.ToString("o");
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									case "decimal":
+									case "money":
+									case "float":
+									case "real":
+									case "smallmoney":
+										{
+											var Value = 124.32;
+											results.Append($"{Value}");
+										}
+										break;
+
+									case "int":
+									case "smallint":
+									case "tinyint":
+										results.Append("10");
+										break;
+
+									case "time":
+										{
+											var Value = TimeSpan.FromSeconds(24541);
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									case "text":
+									case "nvarchar":
+									case "ntext":
+									case "char":
+									case "nchar":
+									case "varchar":
+									case "xml":
+										{
+											var Value = "A string value";
+											results.Append($"\"{Value}\"");
+										}
+										break;
+
+									default:
+										throw new InvalidDataException($"Unrecognized database type: {column.ModelDataType}");
+								}
+							}
+						}
+					}
+				}
+
+				results.AppendLine();
+				results.AppendLine("}");
+
+			}
+
+			return results.ToString();
+		}
+		private ProfileMap LoadMapping(string solutionPath, ResourceModel resourceModel, EntityModel entityModel)
+		{
+			var filePath = Path.Combine(Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs"), $"{resourceModel.ClassName}.{entityModel.ClassName}.json");
+			var jsonValue = File.ReadAllText(filePath);
+
+			return JsonConvert.DeserializeObject<ProfileMap>(jsonValue);
+		}
+
+		private static string ResolveMapFunction(JObject entityJson, string columnName, ResourceModel model, string mapFunction)
+		{
+			bool isDone = false;
+			var originalMapFunction = mapFunction;
+			var valueNumber = 1;
+			List<string> valueAssignments = new List<string>();
+
+			var simpleConversion = ExtractSimpleConversion(entityJson, model, mapFunction);
+
+			if (!string.IsNullOrWhiteSpace(simpleConversion))
+				return simpleConversion;
+
+			var wellKnownConversion = ExtractWellKnownConversion(entityJson, model, mapFunction);
+
+			if (!string.IsNullOrWhiteSpace(wellKnownConversion))
+				return wellKnownConversion;
+
+			while (!isDone)
+			{
+				var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
+
+				if (ef.Success)
+				{
+					var entityColumnReference = ef.Groups["entity"];
+					var textToReplace = ef.Groups["replace"];
+					var token = entityJson[entityColumnReference.Value];
+
+					var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(entityColumnReference.Value, StringComparison.OrdinalIgnoreCase));
+					var resourceColumn = model.Columns.FirstOrDefault(c => c.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase));
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "bool":
+							switch (token.Type)
+							{
+								case JTokenType.Boolean:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = {token.Value<bool>().ToString().ToLower()};");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								default:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+							}
+							break;
+
+						case "bool?":
+							switch (token.Type)
+							{
+								case JTokenType.Boolean:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = {token.Value<bool>().ToString().ToLower()};");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								case JTokenType.Null:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = null;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								default:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+							}
+							break;
+
+						case "int":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = {token.Value<int>()};");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								default:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}}}");
+									break;
+							}
+							break;
+
+						case "int?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = {token.Value<int>()};");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								case JTokenType.Null:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = null;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								default:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+							}
+							break;
+
+						case "string":
+							switch (token.Type)
+							{
+								case JTokenType.String:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = \"{token.Value<string>()}\";");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								case JTokenType.Null:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = string.Empty;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								default:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = string.Empty;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+							}
+							break;
+
+						case "datetime":
+							switch (token.Type)
+							{
+								case JTokenType.Date:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = DateTime.Parse(\"{token.Value<DateTime>():O}\");");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								default:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = string.Empty;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+							}
+							break;
+
+						case "datetime?":
+							switch (token.Type)
+							{
+								case JTokenType.Date:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = DateTime.Parse(\"{token.Value<DateTime>():O}\");");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								case JTokenType.Null:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = null;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+
+								default:
+									valueAssignments.Add($"{entityColumn.ModelDataType} Value{valueNumber} = default;");
+									mapFunction = mapFunction.Replace(textToReplace.Value, $"Value{valueNumber}");
+									break;
+							}
+							break;
+
+						default:
+							return "default";
+					}
+
+					valueNumber++;
+				}
+				else
+					isDone = true;
+			}
+
+			StringBuilder results = new StringBuilder();
+			results.Append("MapFrom(() => {");
+			foreach (var assignment in valueAssignments)
+				results.Append($"{assignment} ");
+			results.Append($" return {mapFunction};");
+			results.Append("})");
+
+			return results.ToString();
+		}
+
+		private static string ExtractWellKnownConversion(JObject entityJson, ResourceModel model, string mapFunction)
+		{
+			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
+
+			if (ef.Success)
+			{
+				var token = entityJson[ef.Groups["entity"].Value];
+				var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+				var replaceText = ef.Groups["replace"].Value;
+
+				var seek = $"{replaceText}\\.HasValue[ \t]*\\?[ \t]*\\(TimeSpan\\?\\)[ \t]*TimeSpan\\.FromSeconds[ \t]*\\([ \t]*\\(double\\)[ \t]*{replaceText}[ \t]*\\)[ \t]*\\:[ \t]*null";
+
+				var sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					if (token.Type == JTokenType.Null)
+						return "null";
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "byte":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<byte>()})";
+							}
+							break;
+
+						case "sbyte":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<sbyte>()})";
+							}
+							break;
+
+						case "short":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<short>()})";
+							}
+							break;
+
+						case "ushort":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<ushort>()})";
+							}
+							break;
+
+						case "int":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<int>()})";
+							}
+							break;
+
+						case "uint":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<uint>()})";
+							}
+							break;
+
+						case "long":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<long>()})";
+							}
+							break;
+
+						case "ulong":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<ulong>()})";
+							}
+							break;
+					}
+				}
+
+				seek = $"TimeSpan\\.FromSeconds[ \t]*\\([ \t]*\\(double\\)[ \t]*{replaceText}[ \t]*\\)";
+
+				sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "byte":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<byte>()})";
+							}
+							break;
+
+						case "sbyte":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<sbyte>()})";
+							}
+							break;
+
+						case "short":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<short>()})";
+							}
+							break;
+
+						case "ushort":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<ushort>()})";
+							}
+							break;
+
+						case "int":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<int>()})";
+							}
+							break;
+
+						case "uint":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<uint>()})";
+							}
+							break;
+
+						case "long":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<long>()})";
+							}
+							break;
+
+						case "ulong":
+							if (token.Type == JTokenType.Integer)
+							{
+								return $"TimeSpan.FromSeconds({token.Value<ulong>()})";
+							}
+							break;
+					}
+				}
+
+				seek = $"string\\.IsNullOrWhiteSpace\\({replaceText}\\)[ \t]*\\?[ \t]*null[ \t]*\\:[ \t]*new[ \t]*Uri\\({replaceText}\\)";
+
+				sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					if (token.Type == JTokenType.Null)
+						return "null";
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "string":
+							if (token.Type == JTokenType.String)
+							{
+								try
+								{
+									var uri = new Uri(token.Value<string>(), UriKind.Absolute);
+									return $"new Uri(\"{token.Value<string>()}\", UriKind.Absolute)";
+								}
+								catch (UriFormatException)
+								{
+									return $"new Uri(\"http://somedomain.com\")";
+								}
+							}
+							break;
+					}
+				}
+
+
+				seek = $"{replaceText}\\.HasValue[ \t]+\\?[ \t]*\\(DateTimeOffset\\?\\)[ \t]*new[ \t]+DateTimeOffset\\([ \t]*{replaceText}(\\.Value){{0,1}}[ \t]*\\)[ \t]*\\:[ \t]*null";
+
+				sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					if (token.Type == JTokenType.Null)
+						return "null";
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "DateTime?":
+							if (token.Type == JTokenType.Date)
+							{
+								var DateTimeValue = token.Value<DateTime>();
+								var DateTimeOffsetValue = new DateTimeOffset(DateTimeValue);
+								return $"DateTimeOffset.Parse({DateTimeOffsetValue.ToString():O})";
+							}
+							break;
+					}
+				}
+
+				seek = $"new[ \t]+DateTimeOffset\\([ \t]*{replaceText}[ \t]*\\)";
+
+				sf = Regex.Match(mapFunction, seek);
+
+				if (sf.Success)
+				{
+					if (token.Type == JTokenType.Null)
+						return "null";
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "datetime":
+							if (token.Type == JTokenType.Date)
+							{
+								var DateTimeValue = token.Value<DateTime>();
+								var DateTimeOffsetValue = new DateTimeOffset(DateTimeValue);
+								var dtString = DateTimeOffsetValue.ToString("O");
+								return $"DateTimeOffset.Parse(\"{dtString}\")";
+							}
+							break;
+					}
+				}
+			}
+
+			return string.Empty;
+		}
+
+		private static string ExtractSimpleConversion(JObject entityJson, ResourceModel model, string mapFunction)
+		{
+			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
+
+			if (ef.Success)
+			{
+				if (mapFunction.Equals(ef.Groups["replace"].Value))
+				{
+					var token = entityJson[ef.Groups["entity"].Value];
+					var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "bool":
+						case "bool?":
+							switch (token.Type)
+							{
+								case JTokenType.Boolean:
+									return token.Value<bool>().ToString().ToLower();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "byte":
+						case "byte?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<byte>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "sbyte":
+						case "sbyte?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<sbyte>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "short":
+						case "short?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<short>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "ushort":
+						case "ushort?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<ushort>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "int":
+						case "int?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<int>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "uint":
+						case "uint?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<uint>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "long":
+						case "long?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<long>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "ulong":
+						case "ulong?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<ulong>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "float":
+						case "float?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<float>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "double":
+						case "double?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<double>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "decimal":
+						case "decimal?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<decimal>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "string":
+							switch (token.Type)
+							{
+								case JTokenType.String:
+									return $"\"{token.Value<string>()}\"";
+
+								case JTokenType.Null:
+									return "string.Empty";
+
+								default:
+									return "string.Empty";
+							}
+
+						case "Guid":
+							switch (token.Type)
+							{
+								case JTokenType.Guid:
+									return $"Guid.Parse(\"{token.Value<Guid>()}\")";
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "DateTime":
+						case "DateTime?":
+							switch (token.Type)
+							{
+								case JTokenType.Date:
+									return $"DateTime.Parse(\"{token.Value<DateTime>().ToString():O}\")";
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "DateTimeOffset":
+						case "DateTimeOffset?":
+							switch (token.Type)
+							{
+								case JTokenType.Date:
+									return $"DateTimeOffset.Parse(\"{token.Value<DateTimeOffset>().ToString():O}\")";
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "TimeSpan":
+						case "TimeSpan?":
+							switch (token.Type)
+							{
+								case JTokenType.TimeSpan:
+									return $"TimeSpan.Parse(\"{token.Value<TimeSpan>()}\")";
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "byte[]":
+						case "IEnumerable<byte>":
+							switch (token.Type)
+							{
+								case JTokenType.String:
+									return $"Convert.FromBase64String(\"{token.Value<string>()}\").ToArray()";
+
+								case JTokenType.Bytes:
+									{
+										var theBytes = token.Value<byte[]>();
+										var str = Convert.ToBase64String(theBytes);
+										return $"Convert.FromBase64String(\"{str}\").ToArray()";
+									}
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "List<byte>":
+							switch (token.Type)
+							{
+								case JTokenType.String:
+									return $"Convert.FromBase64String(\"{token.Value<string>()}\").ToList()";
+
+								case JTokenType.Bytes:
+									{
+										var theBytes = token.Value<byte[]>();
+										var str = Convert.ToBase64String(theBytes);
+										return $"Convert.FromBase64String(\"{str}\").ToList()";
+									}
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+					}
+				}
+			}
+
+			return string.Empty;
 		}
 		#endregion
 	}

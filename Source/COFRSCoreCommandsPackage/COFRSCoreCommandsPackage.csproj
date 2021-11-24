@@ -65,10 +65,13 @@
     <Compile Include="Models\ElementType.cs" />
     <Compile Include="Models\EntityMap.cs" />
     <Compile Include="Models\EntityModel.cs" />
+    <Compile Include="Models\EntityProfile.cs" />
     <Compile Include="Models\NameNormalizer.cs" />
+    <Compile Include="Models\ProfileMap.cs" />
     <Compile Include="Models\ProjectFolder.cs" />
     <Compile Include="Models\ResourceMap.cs" />
     <Compile Include="Models\ResourceModel.cs" />
+    <Compile Include="Models\ResourceProfile.cs" />
     <Compile Include="Models\ResourceType.cs" />
     <Compile Include="Models\ServerConfig.cs" />
     <Compile Include="Models\DBServerType.cs" />

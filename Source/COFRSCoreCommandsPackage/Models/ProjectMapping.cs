@@ -63,5 +63,17 @@ namespace COFRSCoreCommandsPackage.Models
 
             return pf;
         }
+
+        public ProjectFolder GetExamplesFolder()
+        {
+            var pf = new ProjectFolder
+            {
+                Folder = ExampleFolder,
+                Namespace = ExampleNamespace,
+                ProjectName = ExampleProject
+            };
+
+            return pf;
+        }
     }
 }
