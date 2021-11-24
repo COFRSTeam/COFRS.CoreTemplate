@@ -11,6 +11,7 @@ using Task = System.Threading.Tasks.Task;
 using EnvDTE80;
 using EnvDTE;
 using COFRSCoreCommandsPackage.Forms;
+using Microsoft.VisualStudio.CommandBars;
 
 namespace COFRSCoreCommandsPackage
 {
@@ -43,9 +44,6 @@ namespace COFRSCoreCommandsPackage
         /// <param name="commandService">Command service to add command to, not null.</param>
         private COFRSMainMenu(AsyncPackage package, OleMenuCommandService commandService)
         {
-            this.package = package ?? throw new ArgumentNullException(nameof(package));
-            commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
-
             var menuCommandID = new CommandID(CommandSet, EditMappingCommandId);
             var menuItem = new OleMenuCommand(this.EditMapping, menuCommandID);
             menuItem.BeforeQueryStatus += new EventHandler(OnBeforeEditMapping);
@@ -89,6 +87,13 @@ namespace COFRSCoreCommandsPackage
 
             OleMenuCommandService commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
             Instance = new COFRSMainMenu(package, commandService);
+
+            var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
+            CommandBars cBars = (CommandBars)dte.CommandBars;
+
+
+            CommandBar editorCommandBar = (CommandBar)cBars["Editor Context Menus"];
+            CommandBarPopup editPopUp = (CommandBarPopup)editorCommandBar.Controls["Solution Explorer"];
         }
 
         private bool ShouldShowMappingEditor()
@@ -107,15 +112,12 @@ namespace COFRSCoreCommandsPackage
 
             foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
             {
-                foreach (CodeClass2 classElement in namespaceElement.Children.OfType<CodeClass2>())
+                CodeClass2 profileClass = namespaceElement.Children.OfType<CodeClass2>().First();
+                if ( profileClass != null)
                 {
-                    foreach (var parent in classElement.Bases.OfType<CodeClass2>())
-                    {
-                        if (parent.Name.Equals("Profile", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return true;
-                        }
-                    }
+                    CodeClass2 baseClass = profileClass.Bases.OfType<CodeClass2>().First();
+                    if (baseClass != null)
+                        return baseClass.Name.Equals("Profile");
                 }
             }
 
@@ -136,15 +138,15 @@ namespace COFRSCoreCommandsPackage
             if (model == null)
                 return false;
 
-            foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
+            CodeNamespace theNamespace = model.CodeElements.OfType<CodeNamespace>().First();
+            if ( theNamespace != null)
             {
-                foreach (CodeClass2 classElement in namespaceElement.Children.OfType<CodeClass2>())
+                CodeClass2 resourceClass = theNamespace.Children.OfType<CodeClass2>().First();
+                if (resourceClass != null)
                 {
-                    foreach ( CodeAttribute2 attribute in classElement.Attributes.OfType<CodeAttribute2>())
-                    {
-                        if (attribute.Name.Equals("Entity", StringComparison.OrdinalIgnoreCase))
-                            return true;
-                    }
+                    CodeAttribute2 attribute = resourceClass.Attributes.OfType<CodeAttribute2>().FirstOrDefault(c => c.Name.Equals("Entity"));
+                    if (attribute != null)
+                        return true;
                 }
             }
 
