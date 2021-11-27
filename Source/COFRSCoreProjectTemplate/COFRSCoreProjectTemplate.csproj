@@ -52,18 +52,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Models\SwaggerExamples\HeartbeatExample.cs" />
     <None Include="Properties\launchSettings.json" />
     <None Include="Repository\IServiceRepository.cs" />
     <None Include="Repository\ServiceRepository.cs" />
     <None Include="Program.cs" />
-    <None Include="App_Start\ServiceConfig.cs" />
+    <None Include="App_Start\ServicesConfig.cs" />
     <None Include="App_Start\SwaggerConfig.cs" />
-    <None Include="Controllers\HeartbeatController.cs" />
+    <None Include="Controllers\HealthCheckController.cs" />
     <None Include="Orchestration\IServiceOrchestrator.cs" />
     <None Include="Orchestration\ServiceOrchestrator.cs" />
-    <None Include="Models\ResourceModels\Heartbeat.cs" />
-    <None Include="Models\SwaggerExamples\PatchExample.cs" />
+    <None Include="Models\ResourceModels\HealthCheck.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="Startup.cs" />
   </ItemGroup>
@@ -83,15 +81,14 @@
     <Content Include="COFRS.Common.xml" />
     <Content Include="COFRS.ico" />
     <Content Include="COFRS.xml" />
+    <Content Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.VSSDK.BuildTools">
-      <Version>16.8.3038</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    <Folder Include="Examples\" />
+    <Folder Include="Mapping\" />
+    <Folder Include="Models\EntityModels\" />
+    <Folder Include="Validation\" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

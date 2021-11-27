@@ -1,0 +1,116 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>
+    </ApplicationIcon>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectTypeGuids>{82b43b9b-a64c-4715-b499-d71e9ca2bd60};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <ProjectGuid>{AB8D0DF0-0A8A-40FC-8850-4B0524A1B103}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>COFRSCoreProjectWitihSDKTemplate</RootNamespace>
+    <AssemblyName>COFRSCoreProjectWitihSDKTemplate</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <GeneratePkgDefFile>false</GeneratePkgDefFile>
+    <IncludeAssemblyInVSIXContainer>false</IncludeAssemblyInVSIXContainer>
+    <IncludeDebugSymbolsInVSIXContainer>false</IncludeDebugSymbolsInVSIXContainer>
+    <IncludeDebugSymbolsInLocalVSIXDeployment>false</IncludeDebugSymbolsInLocalVSIXDeployment>
+    <CreateVsixContainer>false</CreateVsixContainer>
+    <DeployExtension>false</DeployExtension>
+    <DeployVSTemplates>false</DeployVSTemplates>
+    <CopyVsixManifestToOutput>false</CopyVsixManifestToOutput>
+    <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
+    <CopyOutputSymbolsToOutputDirectory>false</CopyOutputSymbolsToOutputDirectory>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <None Include="Service\Properties\launchSettings.json" />
+    <None Include="Service\Repository\ServiceRepository.cs" />
+    <None Include="Service\Repository\IServiceRepository.cs" />
+    <None Include="Service\Orchestration\ServiceOrchestrator.cs" />
+    <None Include="Service\Orchestration\IServiceOrchestrator.cs" />
+    <None Include="Service\Controllers\HealthCheckController.cs" />
+    <None Include="Service\appSettings.Development.json" />
+    <None Include="Service\appSettings.json" />
+    <None Include="Service\appSettings.Local.json" />
+    <None Include="Service\appSettings.Production.json" />
+    <None Include="Service\appSettings.QA.json" />
+    <None Include="Service\appSettings.Staging.json" />
+    <None Include="Service\App_Start\SwaggerConfig.cs" />
+    <None Include="Service\App_Start\ServicesConfig.cs" />
+    <None Include="SDK\Utilities\SDKOptions.cs" />
+    <None Include="SDK\Facades\HealthCheck.cs" />
+    <None Include="SDK\Contracts\IHealthCheck.cs" />
+    <None Include="SDK\Utilities\ServiceExtensions.cs" />
+    <None Include="SDK\Utilities\JsonConversion.cs" />
+    <None Include="SDK\Utilities\COFRSStreamReaderFactory.cs" />
+    <None Include="SDK\Utilities\COFRSHttpRequest.cs" />
+    <None Include="SDK\Utilities\COFRSHttpContext.cs" />
+    <None Include="Models\ResourceModels\HealthCheck.cs" />
+    <None Include="Models\ProjectTemplate.csproj" />
+    <None Include="SDK\ProjectTemplate.csproj" />
+    <None Include="Service\Startup.cs" />
+    <None Include="Service\Program.cs" />
+    <None Include="Service\ProjectTemplate.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="COFRS.ico" />
+    <VSTemplate Include="COFRSCoreProjectWitihSDKTemplate.vstemplate" />
+    <VSTemplate Include="Models\Models.vstemplate" />
+    <VSTemplate Include="SDK\SDK.vstemplate" />
+    <Content Include="Models\COFRS.ico" />
+    <Content Include="SDK\COFRS.ico" />
+    <Content Include="Service\COFRS.Common.xml" />
+    <Content Include="Service\COFRS.ico" />
+    <Content Include="Service\COFRS.xml" />
+    <Content Include="Service\ReadMe.txt" />
+    <VSTemplate Include="Service\Service.vstemplate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Models\EntityModels\" />
+    <Folder Include="Service\Examples\" />
+    <Folder Include="Service\Mapping\" />
+    <Folder Include="Service\Validation\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

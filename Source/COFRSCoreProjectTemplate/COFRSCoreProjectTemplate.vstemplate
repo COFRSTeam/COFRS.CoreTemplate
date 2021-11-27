@@ -20,6 +20,7 @@
     <Project File="ProjectTemplate.csproj" TargetFileName="$safeprojectname$.csproj" ReplaceParameters="true">
       <ProjectItem>COFRS.xml</ProjectItem>
       <ProjectItem>COFRS.Common.xml</ProjectItem>
+      <ProjectItem ReplaceParameters="true" OpenInEditor="true">ReadMe.txt</ProjectItem>
       <ProjectItem ReplaceParameters="true">Startup.cs</ProjectItem>
       <ProjectItem ReplaceParameters="true">Program.cs</ProjectItem>
       <ProjectItem ReplaceParameters="true">appSettings.json</ProjectItem>
@@ -29,20 +30,17 @@
       <ProjectItem ReplaceParameters="true">appSettings.Staging.json</ProjectItem>
       <ProjectItem ReplaceParameters="true">appSettings.Production.json</ProjectItem>
       <Folder Name="App_Start">
-        <ProjectItem ReplaceParameters="true">ServiceConfig.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true">ServicesConfig.cs</ProjectItem>
         <ProjectItem ReplaceParameters="true">SwaggerConfig.cs</ProjectItem>
       </Folder>
       <Folder Name="Controllers">
-        <ProjectItem ReplaceParameters="true">HeartbeatController.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true">HealthCheckController.cs</ProjectItem>
       </Folder>
       <Folder Name="Models">
         <Folder Name="ResourceModels">
-          <ProjectItem ReplaceParameters="true">Heartbeat.cs</ProjectItem>
+          <ProjectItem ReplaceParameters="true">HealthCheck.cs</ProjectItem>
         </Folder>
-        <Folder Name="SwaggerExamples">
-          <ProjectItem ReplaceParameters="true">HeartbeatExample.cs</ProjectItem>
-          <ProjectItem ReplaceParameters="true">PatchExample.cs</ProjectItem>
-        </Folder>
+        <Folder Name="EntityModels"></Folder>
       </Folder>
       <Folder Name="Orchestration">
         <ProjectItem ReplaceParameters="true">IServiceOrchestrator.cs</ProjectItem>
@@ -55,10 +53,13 @@
       <Folder Name="Properties">
         <ProjectItem ReplaceParameters="true" >launchSettings.json</ProjectItem>
       </Folder>
+      <Folder Name ="Mapping"></Folder>
+      <Folder Name ="Validation"></Folder>
+      <Folder Name ="Examples"></Folder>
     </Project>
   </TemplateContent>
   <WizardExtension>
     <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
-    <FullClassName>COFRSCoreInstaller.CoreProjectWizard</FullClassName>
+    <FullClassName>COFRS.Template.CoreProjectWizard</FullClassName>
   </WizardExtension>
 </VSTemplate>

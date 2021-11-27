@@ -10,7 +10,7 @@
     <NumberOfParentCategoriesToRollUp>2</NumberOfParentCategoriesToRollUp>
     <ShowByDefault>false</ShowByDefault>
     <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
-    <DefaultName>ValuesController.cs</DefaultName>
+    <DefaultName>ResourceName</DefaultName>
   </TemplateData>
   <TemplateContent>
     <References>
@@ -21,26 +21,26 @@
     <Folder Name="Controllers">
       <ProjectItem ReplaceParameters="true" TargetFileName="$controllerClass$.cs" OpenInEditor="true">Controller.cs</ProjectItem>
     </Folder>
+    <Folder Name="Examples">
+      <ProjectItem ReplaceParameters="true" TargetFileName="$exampleClass$.cs">Example.cs</ProjectItem>
+    </Folder>
     <Folder Name="Validation">
-      <ProjectItem ReplaceParameters="true" TargetFileName="$validatorClass$.cs" OpenInEditor="true">Validator.cs</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="$validatorClass$.cs">Validator.cs</ProjectItem>
+    </Folder>
+    <Folder Name="Mapping">
+      <ProjectItem ReplaceParameters="true" TargetFileName="$mapClass$.cs">Map.cs</ProjectItem>
     </Folder>
     <Folder Name="Models">
       <Folder Name="EntityModels">
-        <ProjectItem ReplaceParameters="true" TargetFileName="$entityClass$.cs" OpenInEditor="true">Emodel.cs</ProjectItem>
-      </Folder>
-      <Folder Name="Mapping">
-        <ProjectItem ReplaceParameters="true" TargetFileName="$mapClass$.cs" OpenInEditor="true">Map.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true" TargetFileName="$entityClass$.cs">Emodel.cs</ProjectItem>
       </Folder>
       <Folder Name="ResourceModels">
-        <ProjectItem ReplaceParameters="true" TargetFileName="$resourceClass$.cs" OpenInEditor="true">Model.cs</ProjectItem>
-      </Folder>
-      <Folder Name="SwaggerExamples">
-        <ProjectItem ReplaceParameters="true" TargetFileName="$swaggerClass$.cs" OpenInEditor="true">Swagger.cs</ProjectItem>
+        <ProjectItem ReplaceParameters="true" TargetFileName="$resourceClass$.cs">Model.cs</ProjectItem>
       </Folder>
     </Folder>
   </TemplateContent>
   <WizardExtension>
     <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
-    <FullClassName>COFRSCoreInstaller.FullStackControllerWizard</FullClassName>
+    <FullClassName>COFRS.Template.Common.Wizards.FullStackControllerWizard</FullClassName>
   </WizardExtension>
 </VSTemplate>

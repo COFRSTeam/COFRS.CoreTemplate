@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="ProjectGroup" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
+  <TemplateData>
+    <Name>COFRS REST Service with SDK (.NET Core)</Name>
+    <Description>Create a RESTful Web Service that includes an SDK to call it, with the COFRS Library.</Description>
+    <Icon>COFRS.ico</Icon>
+    <ProjectType>CSharp</ProjectType>
+    <ProjectSubType>Web</ProjectSubType>
+    <LanguageTag>C#</LanguageTag>
+    <ProjectTypeTag>Web</ProjectTypeTag>
+    <PlatformTag>Windows</PlatformTag>
+    <SortOrder>1</SortOrder>
+    <TemplateID>ba948324-6b82-4b71-acb8-1f2e58c176d8</TemplateID>
+    <CreateNewFolder>false</CreateNewFolder>
+    <DefaultName>WebService</DefaultName>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <CreateInPlace>true</CreateInPlace>
+  </TemplateData>
+  <TemplateContent>
+    <ProjectCollection>
+      <ProjectTemplateLink ProjectName="$safeprojectname$" CopyParameters="true">
+        Service\Service.vstemplate
+      </ProjectTemplateLink>
+      <ProjectTemplateLink ProjectName="$safeprojectname$.Models" CopyParameters="true">
+        Models\Models.vstemplate
+      </ProjectTemplateLink>
+      <ProjectTemplateLink ProjectName="$safeprojectname$.SDK" CopyParameters="true">
+        SDK\SDK.vstemplate
+      </ProjectTemplateLink>
+    </ProjectCollection>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>COFRSCoreInstaller, Version=1.1.0.0, Culture=neutral, PublicKeyToken=30c6b8c877a78138</Assembly>
+    <FullClassName>COFRS.Template.CoreProjectWithSDKWizard</FullClassName>
+  </WizardExtension>
+</VSTemplate>

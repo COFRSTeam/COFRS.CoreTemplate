@@ -24,7 +24,7 @@ namespace $safeprojectname$.App_Start
 		$if$ ($securitymodel$ == OAuth)///	<param name="authorityUrl">The base Url for the identity server</param> 
 		///	<param name="scopes">The scopes allowed by this service</param>
 		$endif$/// <returns></returns>
-		$if$ ($securitymodel$ == OAuth)public static IServiceCollection UseSwagger(this IServiceCollection services, string authorityUrl, IApiOptions options, List<Scope> scopes)$else$public static IServiceCollection UseSwagger(this IServiceCollection services, IApiOptions options)$endif$
+		$if$ ($securitymodel$ == OAuth)public static IServiceCollection UseSwagger(this IServiceCollection services, Uri authorityUrl, IApiOptions options, List<Scope> scopes)$else$public static IServiceCollection UseSwagger(this IServiceCollection services, IApiOptions options)$endif$
 		{
 			$if$ ($securitymodel$ == OAuth)var tokenEndpoint = AuthenticationServices.GetTokenEndpoint(authorityUrl).GetAwaiter().GetResult();
 			var authorizationEndpoint = AuthenticationServices.GetAuthorizationEndpoint(authorityUrl).GetAwaiter().GetResult();$endif$
@@ -75,10 +75,10 @@ should be visually appealing as well.</p>"
 				{
 					ClientCredentials = new OpenApiOAuthFlow
 					{
-						AuthorizationUrl = new Uri(authorizationEndpoint),
-						RefreshUrl = new Uri(tokenEndpoint),
+						AuthorizationUrl = authorizationEndpoint,
+						RefreshUrl = tokenEndpoint,
 						Scopes = scopesDict,
-						TokenUrl = new Uri(tokenEndpoint)
+						TokenUrl = tokenEndpoint
 					}
 				};
 
@@ -89,10 +89,10 @@ should be visually appealing as well.</p>"
 					{
 						ClientCredentials = new OpenApiOAuthFlow
 						{
-							AuthorizationUrl = new Uri(authorizationEndpoint),
-							RefreshUrl = new Uri(tokenEndpoint),
+							AuthorizationUrl = authorizationEndpoint,
+							RefreshUrl = tokenEndpoint,
 							Scopes = scopesDict,
-							TokenUrl = new Uri(tokenEndpoint)
+							TokenUrl = tokenEndpoint
 						}
 					},
 					Description = "OAuth2 Client Credentials Flow"

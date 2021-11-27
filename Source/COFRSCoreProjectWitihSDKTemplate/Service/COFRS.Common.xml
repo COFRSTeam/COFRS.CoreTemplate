@@ -1,0 +1,517 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>COFRS.Common</name>
+    </assembly>
+    <members>
+        <member name="T:COFRS.Entity">
+            <summary>
+            The Entity Attribute assigns an entity model to a domain model
+            </summary>
+        </member>
+        <member name="M:COFRS.Entity.#ctor(System.Type)">
+            <summary>
+            Member attribute constructor
+            </summary>
+        </member>
+        <member name="P:COFRS.Entity.EntityType">
+            <summary>
+            The type of entity model associated with the domain model
+            </summary>
+        </member>
+        <member name="T:COFRS.ApiEnumConverterFactory">
+            <summary>
+            DictionaryTKeyEnumTValueConverter
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiEnumConverterFactory.CanConvert(System.Type)">
+            <summary>
+            Can Convert
+            </summary>
+            <param name="typeToConvert"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ApiEnumConverterFactory.CreateConverter(System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Create Converter
+            </summary>
+            <param name="type"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.ApiJsonBitArrayConverter">
+            <summary>
+            Api Json BitArray Converter
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiJsonBitArrayConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Read BitArray
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ApiJsonBitArrayConverter.Write(System.Text.Json.Utf8JsonWriter,System.Collections.BitArray,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Write BitArray
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
+        <member name="T:COFRS.ApiJsonTimeSpanConverter">
+            <summary>
+            Api Json TimeSpan Converter
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiJsonTimeSpanConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Read BitArray
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ApiJsonTimeSpanConverter.Write(System.Text.Json.Utf8JsonWriter,System.TimeSpan,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Write BitArray
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
+        <member name="T:COFRS.ApiJsonPhysicalAddressConverter">
+            <summary>
+            Api Json BitArray Converter
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiJsonPhysicalAddressConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Read BitArray
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ApiJsonPhysicalAddressConverter.Write(System.Text.Json.Utf8JsonWriter,System.Net.NetworkInformation.PhysicalAddress,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Write BitArray
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
+        <member name="T:COFRS.ApiJsonIPAddressConverter">
+            <summary>
+            Api Json BitArray Converter
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiJsonIPAddressConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Read BitArray
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ApiJsonIPAddressConverter.Write(System.Text.Json.Utf8JsonWriter,System.Net.IPAddress,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Write BitArray
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
+        <member name="T:COFRS.ApiJsonIPEndPointConverter">
+            <summary>
+            Api Json BitArray Converter
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiJsonIPEndPointConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Read BitArray
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ApiJsonIPEndPointConverter.Write(System.Text.Json.Utf8JsonWriter,System.Net.IPEndPoint,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Write BitArray
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
+        <member name="T:COFRS.ApiJsonByteArrayConverter">
+            <summary>
+            Api Json BitArray Converter
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiJsonByteArrayConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Read BitArray
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ApiJsonByteArrayConverter.Write(System.Text.Json.Utf8JsonWriter,System.Byte[],System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Write BitArray
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
+        <member name="T:COFRS.ApiJsonImageConverter">
+            <summary>
+            Api Json Image Converter
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiJsonImageConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Read BitArray
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ApiJsonImageConverter.Write(System.Text.Json.Utf8JsonWriter,System.Drawing.Image,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Write BitArray
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
+        <member name="T:COFRS.ApiJsonBitmapConverter">
+            <summary>
+            Api Json Bitmap Converter
+            </summary>
+        </member>
+        <member name="M:COFRS.ApiJsonBitmapConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Read BitArray
+            </summary>
+            <param name="reader"></param>
+            <param name="typeToConvert"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ApiJsonBitmapConverter.Write(System.Text.Json.Utf8JsonWriter,System.Drawing.Bitmap,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Write BitArray
+            </summary>
+            <param name="writer"></param>
+            <param name="value"></param>
+            <param name="options"></param>
+        </member>
+        <member name="T:COFRS.HttpException">
+            <summary>
+            Represents errors that occur during application execution of a COFRS REST Service.
+            </summary>
+        </member>
+        <member name="P:COFRS.HttpException.StatusCode">
+            <summary>
+            The HTTP status code to be used in the response to this error.
+            </summary>
+        </member>
+        <member name="M:COFRS.HttpException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.HttpException"/> class.
+            </summary>
+        </member>
+        <member name="M:COFRS.HttpException.#ctor(System.Int32,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.HttpException"/> class contaning a specified
+            status code with a standard status code message, and an optional list of parameters.
+            </summary>
+            <param name="statusCode">The <see cref="T:System.Net.HttpStatusCode"/> that the service will return.</param>
+            <param name="message">The message that describes the error.</param>
+        </member>
+        <member name="M:COFRS.HttpException.#ctor(System.Int32,System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.HttpException"/> class containg a specified
+            status code with a standard status code message, and an optional list of parameters.
+            </summary>
+            <param name="statusCode">The <see cref="T:System.Net.HttpStatusCode"/> that the service will return.</param>
+            <param name="message">The message that describes the error.</param>
+            <param name="innerException">The exception that is the cause of the current exception, or a null reference
+            (Nothing in Visual Basic) if no inner exception is specified.</param>
+        </member>
+        <member name="M:COFRS.HttpException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.HttpException"/> class with serialized data.
+            </summary>
+            <param name="info">The SerializationInfo that holds the serialized object data about the exception being thrown.</param>
+            <param name="context">The StreamingContext that contains contextual information about the source or destination.</param>
+        </member>
+        <member name="M:COFRS.HttpException.GetObjectData(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Sets the SerializationInfo with information about the exception.
+            </summary>
+            <param name="info">Stores all the data needed to serialize or deserialize an object.</param>
+            <param name="context">Describes the source and destination of a given serialized stream, and
+            provides an additional caller-defined context.</param>
+        </member>
+        <member name="M:COFRS.HttpException.GetHttpCode">
+            <summary>
+            Returns the HttpStatusCode for the exception
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.RQLFormatException">
+            <summary>
+            The exception that is thrown when the contents of a string do not form a valid
+            RQL query, or the query is malformed.
+            </summary>
+        </member>
+        <member name="M:COFRS.RQLFormatException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.RQLFormatException"/> class.
+            </summary>
+        </member>
+        <member name="M:COFRS.RQLFormatException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.RQLFormatException"/> class with a specified
+            error message.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+        </member>
+        <member name="M:COFRS.RQLFormatException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.RQLFormatException"/> class with a specified
+            error message and a reference to the inner exception that is the cause of this
+            exception.
+            </summary>
+            <param name="message">The error message that explains the reason for the exception.</param>
+            <param name="innerException">The exception that is the cause of the current exception. If 
+            the innerException parameter is not a null reference (Nothing in Visual Basic), the 
+            current exception is raised in a catch block that handles the inner exception.</param>
+        </member>
+        <member name="M:COFRS.RQLFormatException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:COFRS.RQLFormatException"/> class with serialized
+            data.
+            </summary>
+            <param name="info">The object that holds the serialized object data.</param>
+            <param name="context">The contextual information about the source or destination.</param>
+        </member>
+        <member name="T:COFRS.BitArrayExt">
+            <summary>
+            A set of helper function for manipulating <see cref="T:System.Collections.BitArray"/> objects
+            </summary>
+        </member>
+        <member name="M:COFRS.BitArrayExt.Parse(System.String)">
+            <summary>
+            Converts a string of 0's and 1's into a <see cref="T:System.Collections.BitArray"/> object
+            </summary>
+            <param name="value">A string containing only 0's and 1's</param>
+            <returns>The <see cref="T:System.Collections.BitArray"/> representation of the string</returns>
+        </member>
+        <member name="M:COFRS.BitArrayExt.Extract(System.Collections.BitArray)">
+            <summary>
+            Converts a <see cref="T:System.Collections.BitArray"/> to a string representation
+            </summary>
+            <param name="array">The <see cref="T:System.Collections.BitArray"/> to convert</param>
+            <returns>A string containing only 0's and 1's, that represents the value of the <see cref="T:System.Collections.BitArray"/></returns>
+        </member>
+        <member name="T:COFRS.ImageExtensions">
+            <summary>
+            Image Extensions
+            </summary>
+        </member>
+        <member name="M:COFRS.ImageExtensions.GetBytes(System.Drawing.Image)">
+            <summary>
+            Get the bytes from the image
+            </summary>
+            <param name="image">The image</param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.ImageEx">
+            <summary>
+            Let's try a partial class, shall we
+            </summary>
+        </member>
+        <member name="M:COFRS.ImageEx.Parse(System.String)">
+            <summary>
+            Converts a base64 string to an image
+            </summary>
+            <param name="source"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.ImageEx.Parse(System.Byte[])">
+            <summary>
+            Converts a base64 string to an image
+            </summary>
+            <param name="source"></param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.IPEndPointExt">
+            <summary>
+            IPEndPoint Extensions
+            </summary>
+        </member>
+        <member name="M:COFRS.IPEndPointExt.Parse(System.String)">
+            <summary>
+            Returns teh IPEndPoint represented by the string value
+            </summary>
+            <param name="value">The standard notation string that represents an IP End Point address</param>
+            <returns>The <see cref="T:System.Net.IPEndPoint"/> that respresents the address.</returns>
+        </member>
+        <member name="T:COFRS.UriExtensions">
+            <summary>
+            URI Extensions class
+            </summary>
+        </member>
+        <member name="M:COFRS.UriExtensions.GetId``1(System.Uri)">
+            <summary>
+            Returns the ID of the url
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="uri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:COFRS.UriExtensions.GetId``1(System.Uri,System.Int32)">
+            <summary>
+            Returns the Id of a specific key within the Url
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="uri"></param>
+            <param name="position"></param>
+            <returns></returns>
+        </member>
+        <member name="T:COFRS.BulkAction">
+            <summary>
+            Rql Bulk Action
+            </summary>
+        </member>
+        <member name="F:COFRS.BulkAction.NoAction">
+            <summary>
+            No action performed
+            </summary>
+        </member>
+        <member name="F:COFRS.BulkAction.Add">
+            <summary>
+            Add an entity
+            </summary>
+        </member>
+        <member name="F:COFRS.BulkAction.Delete">
+            <summary>
+            Delete an entity
+            </summary>
+        </member>
+        <member name="F:COFRS.BulkAction.Update">
+            <summary>
+            Update an entity
+            </summary>
+        </member>
+        <member name="T:COFRS.BulkItem`1">
+            <summary>
+            Represents an item in a collection of items to be submitted to a bulk action.
+            </summary>
+            <typeparam name="T">The type of item on which to perform the action</typeparam>
+        </member>
+        <member name="P:COFRS.BulkItem`1.Action">
+            <summary>
+            The action to perform on this item.
+            </summary>
+        </member>
+        <member name="P:COFRS.BulkItem`1.Item">
+            <summary>
+            The item to perform the action on.
+            </summary>
+        </member>
+        <member name="P:COFRS.BulkItem`1.Success">
+            <summary>
+            Returned as true if the action was successful; false otherwise.
+            </summary>
+        </member>
+        <member name="P:COFRS.BulkItem`1.Errors">
+            <summary>
+            The list of errors (if any) that occured while trying to perform the action.
+            </summary>
+        </member>
+        <member name="T:COFRS.BulkRequest`1">
+            <summary>
+            A request to perform a series of actions on a collection of items.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="P:COFRS.BulkRequest`1.Items">
+            <summary>
+            The list of items and the actions to perform
+            </summary>
+        </member>
+        <member name="T:COFRS.PatchCommand">
+            <summary>
+            Represents a command to be executed as part of a PATCH request.
+            </summary>
+        </member>
+        <member name="P:COFRS.PatchCommand.Op">
+            <summary>
+            The operation of the patch (replace, remove or add).
+            </summary>
+        </member>
+        <member name="P:COFRS.PatchCommand.Path">
+            <summary>
+            The attribute of the object to be operated upon.
+            </summary>
+        </member>
+        <member name="P:COFRS.PatchCommand.Value">
+            <summary>
+            For add or replace, the value to set the specified attribute to.
+            </summary>
+        </member>
+        <member name="T:COFRS.RqlCollection`1">
+            <summary>
+            Represents a collection of items.
+            </summary>
+            <typeparam name="T">Represents the type of items in the collection</typeparam>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.Href">
+            <summary>
+            The hypertext reference to this batch of the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.Next">
+            <summary>
+            The hypertext reference to the next batch in the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.First">
+            <summary>
+            The hypertext reference to the first batch in the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.Previous">
+            <summary>
+            The hypertext reference to the previous batch in the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.Count">
+            <summary>
+            The total number of items in the collection
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.Limit">
+            <summary>
+            The number of items in the current batch
+            </summary>
+        </member>
+        <member name="P:COFRS.RqlCollection`1.Items">
+            <summary>
+            The collection of items of type T
+            </summary>
+        </member>
+    </members>
+</doc>
