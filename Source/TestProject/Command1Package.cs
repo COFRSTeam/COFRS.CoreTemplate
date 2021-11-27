@@ -1,7 +1,4 @@
-﻿using EnvDTE;
-using EnvDTE80;
-using Microsoft.VisualStudio;
-using Microsoft.VisualStudio.CommandBars;
+﻿using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -16,7 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
 
-namespace COFRSCoreCommandsPackage
+namespace TestProject
 {
     /// <summary>
     /// This is the class that implements the package exposed by this assembly.
@@ -36,20 +33,20 @@ namespace COFRSCoreCommandsPackage
     /// </para>
     /// </remarks>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [ProvideAutoLoad(UIContextGuids80.NoSolution, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [Guid(COFRSMainMenuPackage.PackageGuidString)]
-    public sealed class COFRSMainMenuPackage : AsyncPackage
+    [Guid(Command1Package.PackageGuidString)]
+    [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "pkgdef, VS and vsixmanifest are valid VS terms")]
+    public sealed class Command1Package : AsyncPackage
     {
         /// <summary>
-        /// COFRSMainMenuPackage GUID string.
+        /// Command1Package GUID string.
         /// </summary>
-        public const string PackageGuidString = "c3ed88c2-6789-4d14-aba8-9de5a458982d";
+        public const string PackageGuidString = "9bda1d30-1467-4f29-9688-08caf2a5ba03";
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="COFRSMainMenuPackage"/> class.
+        /// Initializes a new instance of the <see cref="Command1Package"/> class.
         /// </summary>
-        public COFRSMainMenuPackage()
+        public Command1Package()
         {
             // Inside this method you can place any initialization code that does not require
             // any Visual Studio service because at this point the package object is created but
@@ -71,7 +68,7 @@ namespace COFRSCoreCommandsPackage
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            await COFRSMainMenu.InitializeAsync(this);
+            await Command1.InitializeAsync(this);
         }
 
         #endregion
