@@ -1,7 +1,4 @@
-﻿using EnvDTE;
-using EnvDTE80;
-using Microsoft.VisualStudio;
-using Microsoft.VisualStudio.CommandBars;
+﻿using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -36,20 +33,24 @@ namespace COFRSCoreCommandsPackage
     /// </para>
     /// </remarks>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [ProvideAutoLoad(UIContextGuids80.NoSolution, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [Guid(COFRSMainMenuPackage.PackageGuidString)]
-    public sealed class COFRSMainMenuPackage : AsyncPackage
+    [Guid(COFRSMenuPackage.PackageGuidString)]
+    [ProvideAutoLoad(UIContextGuids80.NoSolution, PackageAutoLoadFlags.BackgroundLoad)]
+    [ProvideAutoLoad(UIContextGuids80.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
+    [ProvideAutoLoad(UIContextGuids80.SolutionHasSingleProject, PackageAutoLoadFlags.BackgroundLoad)]
+    [ProvideAutoLoad(UIContextGuids80.SolutionHasMultipleProjects, PackageAutoLoadFlags.BackgroundLoad)]
+    [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "pkgdef, VS and vsixmanifest are valid VS terms")]
+    public sealed class COFRSMenuPackage : AsyncPackage
     {
         /// <summary>
-        /// COFRSMainMenuPackage GUID string.
+        /// COFRSMenuPackage GUID string.
         /// </summary>
-        public const string PackageGuidString = "c3ed88c2-6789-4d14-aba8-9de5a458982d";
+        public const string PackageGuidString = "25bfd88d-576d-494e-b2dd-3201b0a75090";
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="COFRSMainMenuPackage"/> class.
+        /// Initializes a new instance of the <see cref="COFRSMenuPackage"/> class.
         /// </summary>
-        public COFRSMainMenuPackage()
+        public COFRSMenuPackage()
         {
             // Inside this method you can place any initialization code that does not require
             // any Visual Studio service because at this point the package object is created but
@@ -71,9 +72,11 @@ namespace COFRSCoreCommandsPackage
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            await COFRSMainMenu.InitializeAsync(this);
+            await COFRSMenu.InitializeAsync(this);
         }
+
 
         #endregion
     }
 }
+
