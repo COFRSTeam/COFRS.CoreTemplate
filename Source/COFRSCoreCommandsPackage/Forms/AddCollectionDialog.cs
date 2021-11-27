@@ -83,8 +83,8 @@ namespace COFRSCoreCommandsPackage.Forms
 	//		Delete => delete any child objects in the array before deleting the source resource.
 	//--------------------------------------------------------------------------------------------------------------------------------
 	public partial class AddCollectionDialog : Form
-    {
-        public DTE2 _dte2;
+	{
+		public DTE2 _dte2;
 		private ResourceMap resourceMap;
 		private ResourceModel parentModel;
 		private ResourceModel childModel;
@@ -96,9 +96,9 @@ namespace COFRSCoreCommandsPackage.Forms
 		private string memberType;
 
 		public AddCollectionDialog()
-        {
-            InitializeComponent();
-        }
+		{
+			InitializeComponent();
+		}
 
 		/// <summary>
 		/// Here we find all the resources that reference the source Resource (the one named in the ResourceName label control), and present them
@@ -106,32 +106,32 @@ namespace COFRSCoreCommandsPackage.Forms
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
-        private void OnLoad(object sender, EventArgs e)
-        {
+		private void OnLoad(object sender, EventArgs e)
+		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			resourceMap = StandardUtils.LoadResourceMap(_dte2);			//	The resource map contains all the resource classes in the project.
+			resourceMap = StandardUtils.LoadResourceMap(_dte2);         //	The resource map contains all the resource classes in the project.
 
 			//	The parent resource is the resource selected by the user. This is the resource we will be adding the collection to.
 			//	Get the resource model for the parent resource.
 			parentModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(ResourceName.Text, StringComparison.OrdinalIgnoreCase));
 
 			//	Now scan all the resource models in the resource map
-			foreach ( var resourceModel in resourceMap.Maps )
-            {
+			foreach (var resourceModel in resourceMap.Maps)
+			{
 				//	SKip the parent resource, it can't reference itself.
-				if ( !resourceModel.ClassName.Equals(parentModel.ClassName, StringComparison.OrdinalIgnoreCase) && resourceModel.EntityModel != null )
-                {
+				if (!resourceModel.ClassName.Equals(parentModel.ClassName, StringComparison.OrdinalIgnoreCase) && resourceModel.EntityModel != null)
+				{
 					//	See if there is a member in this resource that references the parent resource
 					var referenceColumn = resourceModel.EntityModel.Columns.FirstOrDefault(c => c.IsForeignKey && c.ForeignTableName.Equals(parentModel.EntityModel.TableName, StringComparison.OrdinalIgnoreCase));
 
-					if (referenceColumn != null )
+					if (referenceColumn != null)
 					{
 						//	Ther is, so add it to the child resource list
 						ChildResourceList.Items.Add(resourceModel.ClassName);
 					}
 				}
-            }
-        }
+			}
+		}
 
 		/// <summary>
 		/// Called when the user presses the OK button. 
@@ -139,123 +139,121 @@ namespace COFRSCoreCommandsPackage.Forms
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
 		private void OnOK(object sender, EventArgs e)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
 
-            //	Did the user select one of the child resources?
-            if (ChildResourceList.SelectedIndex == -1)
-            {
-                MessageBox.Show("No child resource selected. You must select a resource from the list to generate a collection in the parent resource.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+			//	Did the user select one of the child resources?
+			if (ChildResourceList.SelectedIndex == -1)
+			{
+				MessageBox.Show("No child resource selected. You must select a resource from the list to generate a collection in the parent resource.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
 
-            //	Some stiff we meed
-            var projectMapping = StandardUtils.OpenProjectMapping(_dte2);                        //	Contains the names and projects where various source file exist.
+			//	Some stiff we meed
+			var projectMapping = StandardUtils.OpenProjectMapping(_dte2);  //	Contains the names and projects where various source file exist.
 
-            //	Get the child model from the resource map
-            childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(ChildResourceList.SelectedItem.ToString(), StringComparison.OrdinalIgnoreCase));
+			//	Get the child model from the resource map
+			childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(ChildResourceList.SelectedItem.ToString(), StringComparison.OrdinalIgnoreCase));
 
-            //	Setup the default name of our new member
-            var nn = new NameNormalizer(childModel.ClassName);
-            memberName = nn.PluralForm;                                     // The memberName is will be the name of the new collection in the parent resource. By default, it will be
-                                                                            // the plural of the child model class name.
+			//	Setup the default name of our new member
+			var nn = new NameNormalizer(childModel.ClassName);
+			memberName = nn.PluralForm;                                     // The memberName is will be the name of the new collection in the parent resource. By default, it will be
+																			// the plural of the child model class name.
 
-            parentValidatorInterface = StandardUtils.FindValidatorInterface(_dte2, parentModel.ClassName);
-            childValidatorInterface = StandardUtils.FindValidatorInterface(_dte2, childModel.ClassName);
+			parentValidatorInterface = StandardUtils.FindValidatorInterface(_dte2, parentModel.ClassName);
+			childValidatorInterface = StandardUtils.FindValidatorInterface(_dte2, childModel.ClassName);
 
-            //	Now that we have all the information we need, add the collection member to the parent resource
-            AddCollectionToResource();
+			//	Now that we have all the information we need, add the collection member to the parent resource
+			AddCollectionToResource();
 
-            //	Now that we've added a new collection, we need to alter the orchestration layer to handle that new collection...
+			//	Now that we've added a new collection, we need to alter the orchestration layer to handle that new collection...
 
-            ProjectItem orchestrator = _dte2.Solution.FindProjectItem("ServiceOrchestrator.cs");
-            orchestrator.Open(Constants.vsViewKindCode);
-            FileCodeModel2 codeModel = (FileCodeModel2)orchestrator.FileCodeModel;
-				var activePoint = sel.ActivePoint;										//	Get the active point
-            //	The orchestration layer is going to need "using System.Linq", ensure that it it does
-            if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Linq")) == null)
-                codeModel.AddImport("System.Linq", -1);
+			ProjectItem orchestrator = _dte2.Solution.FindProjectItem("ServiceOrchestrator.cs");
+			FileCodeModel2 codeModel = (FileCodeModel2)orchestrator.FileCodeModel;
 
-            //	The orchestration layer is going to need "using System.Text", ensure that it it does
-            if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text")) == null)
-                codeModel.AddImport("System.Text", -1);
+			//	The orchestration layer is going to need "using System.Linq", ensure that it it does
+			if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Linq")) == null)
+				codeModel.AddImport("System.Linq", -1);
 
-            //	We're going to need a validator for the new members. To get it, we will use dependency injection in the 
-            //	constructor, which means we will need a class variable. That variable is going to need a name. Create 
-            //	the default name for this vairable as the class name of the new member followed by "Validator".
-            //
-            //	i.e., if the new member class is Foo, then the variable name will be FooValidator.
+			//	The orchestration layer is going to need "using System.Text", ensure that it it does
+			if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text")) == null)
+				codeModel.AddImport("System.Text", -1);
 
-            childValidatorName = $"{childModel.ClassName}Validator";
+			//	We're going to need a validator for the new members. To get it, we will use dependency injection in the 
+			//	constructor, which means we will need a class variable. That variable is going to need a name. Create 
+			//	the default name for this vairable as the class name of the new member followed by "Validator".
+			//
+			//	i.e., if the new member class is Foo, then the variable name will be FooValidator.
 
-            //	Find the namespace...
-            foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
-            {
-                CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
+			childValidatorName = $"{childModel.ClassName}Validator";
 
-                //	The new collection of child items will need to be validated for the various operations.
-                //	Add a validator the for the child items 
-                AddChildValidatorInterfaceMember(classElement);
+			//	Find the namespace...
+			foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
+			{
+				CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
 
-                //	Now, let's go though all the functions...
-                foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
-                {
-                    //	Constructor
-                    if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
-                    {
-                        ModifyConstructor(aFunction);
-                    }
-						var addMember = true;
+				//	The new collection of child items will need to be validated for the various operations.
+				//	Add a validator the for the child items 
+				AddChildValidatorInterfaceMember(classElement);
 
-                    //	Get Single
-                    else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ModifyGetSingle(aFunction);
-                    }
+				//	Now, let's go though all the functions...
+				foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
+				{
+					//	Constructor
+					if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
+					{
+						ModifyConstructor(aFunction);
+					}
 
-                    //	Get Collection
-                    else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
-                    {
-                        ModifyGetCollection(aFunction);
-                    }
+					//	Get Single
+					else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
+					{
+						ModifyGetSingle(aFunction);
+					}
 
-                    //	Add
-                    else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
-                    {
-                        ModifyAdd(aFunction);
-                    }
+					//	Get Collection
+					else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
+					{
+						ModifyGetCollection(aFunction);
+					}
 
-                    //	Update
-                    else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
-                    {
-                        ModifyUpdate(aFunction);
-                    }
+					//	Add
+					else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
+					{
+						ModifyAdd(aFunction);
+					}
 
-                    //	Update
-                    else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
-                    {
-                        ModifyPatch(aFunction);
-                    }
+					//	Update
+					else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
+					{
+						ModifyUpdate(aFunction);
+					}
 
-                    //	Delete
-                    else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
-                    {
-                        ModifyDelete(aFunction);
-                    }
-                }
-            }
+					//	Update
+					else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
+					{
+						ModifyPatch(aFunction);
+					}
 
-            AddSingleExample();
-            AddCollectionExample();
+					//	Delete
+					else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
+					{
+						ModifyDelete(aFunction);
+					}
+				}
+			}
 
-            DialogResult = DialogResult.OK;
-            Close();
-        }
-        #region Helper Functions
- 		private void AddCollectionExample()
+			AddSingleExample();
+			AddCollectionExample();
+
+			DialogResult = DialogResult.OK;
+			Close();
+		}
+
+		#region Helper Functions
+		private void AddCollectionExample()
 		{
 			var collectionExampleClass = StandardUtils.FindCollectionExampleCode(_dte2, parentModel);
-				bool wasOrchestratorOpen = sourceResource.IsOpen[Constants.vsViewKindAny];		//	Record if it was already open
 
 			if (collectionExampleClass != null)
 			{
@@ -323,7 +321,6 @@ namespace COFRSCoreCommandsPackage.Forms
 										{
 											nextClassStart.Insert(",");
 										}
-				}
 										nextClassStart.InsertNewLine();
 										nextClassStart.Indent(null, 7);
 										nextClassStart.Insert($"{map.ResourceColumnName} = ");
@@ -392,13 +389,12 @@ namespace COFRSCoreCommandsPackage.Forms
 								{
 									nextClassStart.Insert(",");
 								}
-				}
 								nextClassStart.InsertNewLine();
 								nextClassStart.Indent(null, 7);
 								nextClassStart.Insert($"{map.ResourceColumnName} = ");
 								nextClassStart.Insert(StandardUtils.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
 							}
-				//	i.e., if the new member class is Foo, then the variable name will be FooValidator.
+
 							nextClassStart.InsertNewLine();
 							nextClassStart.Indent(null, 6);
 							nextClassStart.Insert("}");
@@ -410,10 +406,10 @@ namespace COFRSCoreCommandsPackage.Forms
 				}
 			}
 		}
-				memberValidatorName = $"{memberResourceModel.ClassName}Validator";
+
 		private void AddSingleExample()
-        {
-            var singleExampleClass = StandardUtils.FindExampleCode(_dte2, parentModel);
+		{
+			var singleExampleClass = StandardUtils.FindExampleCode(_dte2, parentModel);
 
 			if (singleExampleClass != null)
 			{
@@ -497,54 +493,54 @@ namespace COFRSCoreCommandsPackage.Forms
 					}
 				}
 			}
-        }
-       /// <summary>
-        /// Adds a class property for the child class validator
-        /// </summary>
-        /// <param name="classElement"></param>
-        private void AddChildValidatorInterfaceMember(CodeClass2 classElement)
-        {
-            //	Okay, we will need a validator for our new child resources. To get one, we will use dependency injection
-            //	in the constructor. That means, we need a class member variable to hold it.
-            //
-            //	And, by the way, we're going to need to know the name of the source class validator. While we're
-            //	muking around with the variables, find and store that name.
-						//	muking around with the variables, find and store that name.
+		}
+		/// <summary>
+		/// Adds a class property for the child class validator
+		/// </summary>
+		/// <param name="classElement"></param>
+		private void AddChildValidatorInterfaceMember(CodeClass2 classElement)
+		{
+			//	Okay, we will need a validator for our new child resources. To get one, we will use dependency injection
+			//	in the constructor. That means, we need a class member variable to hold it.
+			//
+			//	And, by the way, we're going to need to know the name of the source class validator. While we're
+			//	muking around with the variables, find and store that name.
+			//	muking around with the variables, find and store that name.
 
-            //	So, do we already have that variable? If so, use it. If not, create it.
-            //	We start by assuming we're going to create it.
-            var shouldAddValidator = true;
+			//	So, do we already have that variable? If so, use it. If not, create it.
+			//	We start by assuming we're going to create it.
+			var shouldAddValidator = true;
 
-            //	Look at all our class variables.
-            //	The variable we are looking for will have a type of validator interface for the class. Fortunately,
-            //	we know those names for both our source class and our new member class.
-            foreach (CodeVariable2 variableElement in classElement.Children.OfType<CodeVariable2>())
-            {
-				var parts = variableElement.Type.AsFullName.Split(new char[] { '.'}, StringSplitOptions.RemoveEmptyEntries);
+			//	Look at all our class variables.
+			//	The variable we are looking for will have a type of validator interface for the class. Fortunately,
+			//	we know those names for both our source class and our new member class.
+			foreach (CodeVariable2 variableElement in classElement.Children.OfType<CodeVariable2>())
+			{
+				var parts = variableElement.Type.AsFullName.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
 
-                if (parts[parts.Length-1].Equals(parentValidatorInterface, StringComparison.OrdinalIgnoreCase))
-                {
-                    //	This is a member variable that has a type of the Interface for the source class. Remember it's name.
-                    parentValidatorName = variableElement.Name;
-                }
-                else if (parts[parts.Length - 1].Equals(childValidatorInterface, StringComparison.OrdinalIgnoreCase))
-                {
-                    //	This is a member variable that has a type of the interface for the member class. It may (or may not)
-                    //	have the name we used as the default. No matter, whatever name it is using, remember it. Also, mark
-                    //	the flag to say we don't need to create one.
-                    childValidatorName = variableElement.Name;
-                    shouldAddValidator = false;
-                }
-            }
+				if (parts[parts.Length - 1].Equals(parentValidatorInterface, StringComparison.OrdinalIgnoreCase))
+				{
+					//	This is a member variable that has a type of the Interface for the source class. Remember it's name.
+					parentValidatorName = variableElement.Name;
+				}
+				else if (parts[parts.Length - 1].Equals(childValidatorInterface, StringComparison.OrdinalIgnoreCase))
+				{
+					//	This is a member variable that has a type of the interface for the member class. It may (or may not)
+					//	have the name we used as the default. No matter, whatever name it is using, remember it. Also, mark
+					//	the flag to say we don't need to create one.
+					childValidatorName = variableElement.Name;
+					shouldAddValidator = false;
+				}
+			}
 
-            //	Did we find it?
-            if (shouldAddValidator)
-            {
-                //	Nope, didn't find it. Create it using that default variable name we created.
-                var variable = (CodeVariable2)classElement.AddVariable(childValidatorName, childValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
-                variable.ConstKind = vsCMConstKind.vsCMConstKindReadOnly;
-            }
-        }
+			//	Did we find it?
+			if (shouldAddValidator)
+			{
+				//	Nope, didn't find it. Create it using that default variable name we created.
+				var variable = (CodeVariable2)classElement.AddVariable(childValidatorName, childValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
+				variable.ConstKind = vsCMConstKind.vsCMConstKindReadOnly;
+			}
+		}
 
 		/// <summary>
 		/// Adds the new collection member to the parent resource
@@ -683,8 +679,8 @@ namespace COFRSCoreCommandsPackage.Forms
 							{
 								var count = resourceClass.Children.OfType<CodeProperty>().Count();
 
-								var property = resourceClass.AddProperty(memberName, memberName, 
-									                                     $"{childModel.ClassName}[]",
+								var property = resourceClass.AddProperty(memberName, memberName,
+																		 $"{childModel.ClassName}[]",
 																		 count,
 																		 vsCMAccess.vsCMAccessPublic, null);
 
@@ -719,36 +715,38 @@ namespace COFRSCoreCommandsPackage.Forms
 			}
 		}
 
-        /// <summary>
-        /// Modify the delete function to accomodate the new collection
-        /// </summary>
-        /// <param name="aFunction">The <see cref="CodeFunction2"/> instance of the delete function.</param>
-        private void ModifyDelete(CodeFunction2 aFunction)
-        {
-            var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+		/// <summary>
+		/// Modify the delete function to accomodate the new collection
+		/// </summary>
+		/// <param name="aFunction">The <see cref="CodeFunction2"/> instance of the delete function.</param>
+		private void ModifyDelete(CodeFunction2 aFunction)
+		{
+			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 
-            bool foundit = editPoint.FindPattern("var url = node.Value<Uri>(1);");
-            foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+			bool foundit = editPoint.FindPattern("var url = node.Value<Uri>(1);");
+			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-            if (!foundit)
-            {
-                editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-                editPoint.LineDown();
-                editPoint.EndOfLine();
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
-                editPoint.Insert("var url = node.Value<Uri>(1);");
-            }
+			if (!foundit)
+			{
+				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+				editPoint.LineDown();
+				editPoint.EndOfLine();
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert("var url = node.Value<Uri>(1);");
+			}
 
-            editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-            editPoint.FindPattern($"await {parentValidatorName}.ValidateForDeleteAsync");
-            foundit = editPoint.FindPattern("var subNode =");
-            foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-            if (!foundit)
-            {
-                editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+			editPoint.FindPattern($"await {parentValidatorName}.ValidateForDeleteAsync");
+
+			foundit = editPoint.FindPattern("var subNode =");
+			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+			if (!foundit)
+			{
+				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 				string searchText = $"await {parentValidatorName}.ValidateForDeleteAsync";
-                                    editPoint.LineUp();
+
 				if (editPoint.FindPattern(searchText))
 				{
 					editPoint.EndOfLine();
@@ -758,66 +756,65 @@ namespace COFRSCoreCommandsPackage.Forms
 					editPoint.InsertNewLine(2);
 				}
 			}
-                                }
-            editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-            editPoint.FindPattern("var subNode = ");
-            foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
-            foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-            if (!foundit)
-            {
-                editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-                editPoint.FindPattern("var subNode = ");
-                editPoint.EndOfLine();
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
-                editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
-                editPoint.InsertNewLine(2);
-                editPoint.Indent(null, 3);
-                editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
-                editPoint.Insert("{");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 4);
-                editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 4);
-                editPoint.Insert($"await {childValidatorName}.ValidateForDeleteAsync(dnode, User);");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
-                editPoint.Insert("}");
-                editPoint.InsertNewLine();
 
-                editPoint = (EditPoint2)aFunction.EndPoint.CreateEditPoint();
+			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+			editPoint.FindPattern("var subNode = ");
+			foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+			if (!foundit)
+			{
+				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+				editPoint.FindPattern("var subNode = ");
+				editPoint.EndOfLine();
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+				editPoint.InsertNewLine(2);
+				editPoint.Indent(null, 3);
+				editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert("{");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 4);
+				editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 4);
+				editPoint.Insert($"await {childValidatorName}.ValidateForDeleteAsync(dnode, User);");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 3);
+				editPoint.Insert("}");
+				editPoint.InsertNewLine();
+
+				editPoint = (EditPoint2)aFunction.EndPoint.CreateEditPoint();
 				editPoint.LineUp(3);
 				editPoint.StartOfLine();
-                var theLine = editPoint.GetText(editPoint.LineLength);
+				var theLine = editPoint.GetText(editPoint.LineLength);
 
-                if (!string.IsNullOrWhiteSpace(theLine))
-                {
-                    editPoint.EndOfLine();
-                }
-								}
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
-                editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
-                editPoint.Insert("{");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 4);
-                editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 4);
-                editPoint.Insert($"await DeleteAsync<{childModel.ClassName}>(dnode);");
-                editPoint.InsertNewLine();
-                editPoint.Indent(null, 3);
-                editPoint.Insert("}");
-				editPoint.InsertNewLine();
+				if (!string.IsNullOrWhiteSpace(theLine))
+				{
+					editPoint.EndOfLine();
+				}
 			}
+			editPoint.InsertNewLine();
+			editPoint.Indent(null, 3);
+			editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
+			editPoint.InsertNewLine();
+			editPoint.Indent(null, 3);
+			editPoint.Insert("{");
+			editPoint.InsertNewLine();
+			editPoint.Indent(null, 4);
+			editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
+			editPoint.InsertNewLine();
+			editPoint.Indent(null, 4);
+			editPoint.Insert($"await DeleteAsync<{childModel.ClassName}>(dnode);");
+			editPoint.InsertNewLine();
+			editPoint.Indent(null, 3);
+			editPoint.Insert("}");
+			editPoint.InsertNewLine();
 		}
-							}
+
 		/// <summary>
 		/// Modify the update function to accomodate the new collection
 		/// </summary>
@@ -827,7 +824,7 @@ namespace COFRSCoreCommandsPackage.Forms
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			bool foundit = editPoint.FindPattern($"return await UpdateAsync");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
 			if (foundit)
 			{
 				editPoint.ReplaceText(6, "item =", 0);
@@ -836,12 +833,12 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Indent(null, 3);
 				editPoint.Insert("return item;");
 			}
-								}
+
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			editPoint.FindPattern($"await {parentValidatorName}.ValidateForUpdateAsync");
 			foundit = editPoint.FindPattern("var subNode =");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -851,12 +848,12 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Indent(null, 3);
 				editPoint.Insert($"var subNode = RqlNode.Parse($\"Client=uri:\\\"{{item.HRef.LocalPath}}\\\"\");\r\n");
 			}
-                                }
+
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			editPoint.FindPattern("var subNode = ");
 			foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -917,12 +914,12 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Indent(null, 3);
 				editPoint.Insert("}");
 			}
-								}
+
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			editPoint.FindPattern("item = await UpdateAsync");
 			foundit = editPoint.FindPattern($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -986,7 +983,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.InsertNewLine();
 			}
 		}
-							}
+
 		/// <summary>
 		/// Modify teh patch function to accomodate the new collection
 		/// </summary>
@@ -994,10 +991,9 @@ namespace COFRSCoreCommandsPackage.Forms
 		private void ModifyPatch(CodeFunction2 aFunction)
 		{
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-								var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			bool foundit = editPoint.FindPattern("var baseCommands = new List<PatchCommand>();");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1044,7 +1040,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.FindPattern("commands");
 				editPoint.ReplaceText(8, "baseCommands", 0);
 			}
-								}
+
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			foundit = editPoint.FindPattern($"await PatchAsync<{parentModel.ClassName}>(commands, node);");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
@@ -1056,11 +1052,11 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.FindPattern("commands");
 				editPoint.ReplaceText(8, "baseCommands", 0);
 			}
-								}
+
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = ");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1279,18 +1275,16 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert("}");
 			}
 		}
-			}
+
 		/// <summary>
 		/// Modify the add function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
 		private void ModifyAdd(CodeFunction2 aFunction)
-		public static ProjectMapping OpenProjectMapping(Solution solution)
-		{
+        {
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			bool foundit = editPoint.FindPattern("return await AddAsync");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs\\ProjectMap.json");
 
 			if (foundit)
 			{
@@ -1303,10 +1297,9 @@ namespace COFRSCoreCommandsPackage.Forms
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			foundit = editPoint.FindPattern($"foreach ( var subitem in item.{memberName})");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-			ThreadHelper.ThrowIfNotOnUIThread();
+
 			if (!foundit)
-			else
-			{
+			{ 
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 				editPoint.FindPattern($"await {parentValidatorName}.ValidateForAddAsync(item, User);");
 				editPoint.EndOfLine();
@@ -1353,7 +1346,6 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert("}");
 			}
 		}
-			}
 
 		/// <summary>
 		/// Modify the get collection function to accomodate the new collection
@@ -1383,7 +1375,6 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
                 editPoint.FindPattern("return collection");
                 editPoint.LineUp();
-			var map = new List<EntityModel>();
                 editPoint.InsertNewLine();
                 editPoint.Indent(null, 3);
                 editPoint.Insert($"StringBuilder rqlBody = new(\"in({parentModel.ClassName}\");");
@@ -1410,11 +1401,11 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert($"var selectNode = node.ExtractSelectClause();");
 				editPoint.InsertNewLine();
             }
-								}
+
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
             foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection =");
             foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-								};
+
             if (!foundit)
             {
                 editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1471,7 +1462,6 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.InsertNewLine();
 			}
 		}
-						}
 
 		/// <summary>
 		/// Modify the Get Single function to populate the new collection
@@ -1506,7 +1496,6 @@ namespace COFRSCoreCommandsPackage.Forms
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
             foundit = editPoint.FindPattern("var subNode = RqlNode");
             foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-								};
 
             if (!foundit)
             {
@@ -1522,7 +1511,7 @@ namespace COFRSCoreCommandsPackage.Forms
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
             foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
             foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-			Project project = FindProject(solution, projectFolder);
+
             if (!foundit)
             {
                 editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1542,21 +1531,21 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 4);
-				ProjectItem folder = null;
+
 				if (memberType.StartsWith("List"))
 					editPoint.Insert($"item.{memberName} = {childModel.ClassName}Collection.Items.ToList();");
 				else if (memberType.EndsWith("[]"))
 					editPoint.Insert($"item.{memberName} = {childModel.ClassName}Collection.Items;");
 				else
 					editPoint.Insert($"item.{memberName} = {childModel.ClassName}Collection.Items;");
+
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
 				editPoint.Insert("}");
-				}
 				editPoint.InsertNewLine();
 			}
-			return null;
 		}
+
 		/// <summary>
 		/// Modify the consructor to add and assign the needed validator for the child items
 		/// </summary>
@@ -1573,7 +1562,7 @@ namespace COFRSCoreCommandsPackage.Forms
             var shouldAddArgument = true;
             var parameterName = childValidatorName;
             parameterName = parameterName.Substring(0, 1).ToLower() + parameterName.Substring(1);
-											var parts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+
             //	Look at each argument...
             foreach (CodeParameter2 arg in aFunction.Parameters.OfType<CodeParameter2>())
             {
@@ -1586,14 +1575,14 @@ namespace COFRSCoreCommandsPackage.Forms
                     shouldAddArgument = false;
                 }
             }
-									var columns = new List<DBColumn>();
+
             //	Did we find it?
             if (shouldAddArgument)
             {
                 //	Nope, create it
                 aFunction.AddParameter(parameterName, childValidatorInterface, -1);
             }
-									};
+
             var editPoint = (EditPoint2) aFunction.StartPoint.CreateEditPoint();
 									var columns = new List<DBColumn>();
             if (!editPoint.FindPattern($"{childValidatorName} ="))
@@ -1607,8 +1596,7 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint.Insert($"{childValidatorName} = {parameterName};");
             }
         }
-			}
-		}
 		#endregion
 	}
 }
+
