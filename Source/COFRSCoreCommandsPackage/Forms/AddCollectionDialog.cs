@@ -171,7 +171,7 @@ namespace COFRSCoreCommandsPackage.Forms
             ProjectItem orchestrator = _dte2.Solution.FindProjectItem("ServiceOrchestrator.cs");
             orchestrator.Open(Constants.vsViewKindCode);
             FileCodeModel2 codeModel = (FileCodeModel2)orchestrator.FileCodeModel;
-
+				var activePoint = sel.ActivePoint;										//	Get the active point
             //	The orchestration layer is going to need "using System.Linq", ensure that it it does
             if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Linq")) == null)
                 codeModel.AddImport("System.Linq", -1);
@@ -205,6 +205,7 @@ namespace COFRSCoreCommandsPackage.Forms
                     {
                         ModifyConstructor(aFunction);
                     }
+						var addMember = true;
 
                     //	Get Single
                     else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
@@ -250,11 +251,11 @@ namespace COFRSCoreCommandsPackage.Forms
             DialogResult = DialogResult.OK;
             Close();
         }
-
         #region Helper Functions
  		private void AddCollectionExample()
 		{
 			var collectionExampleClass = StandardUtils.FindCollectionExampleCode(_dte2, parentModel);
+				bool wasOrchestratorOpen = sourceResource.IsOpen[Constants.vsViewKindAny];		//	Record if it was already open
 
 			if (collectionExampleClass != null)
 			{
@@ -283,7 +284,6 @@ namespace COFRSCoreCommandsPackage.Forms
 								EditPoint2 AssignPoint = (EditPoint2)classStart.CreateEditPoint();
 								bool alreadyAssigned = AssignPoint.FindPattern($"{memberName} = new {childModel.ClassName}[]");
 								alreadyAssigned = alreadyAssigned && AssignPoint.LessThan(nextClassStart);
-
 								if (!alreadyAssigned)
 								{
 									classStart = (EditPoint2)nextClassStart.CreateEditPoint();
@@ -323,7 +323,7 @@ namespace COFRSCoreCommandsPackage.Forms
 										{
 											nextClassStart.Insert(",");
 										}
-
+				}
 										nextClassStart.InsertNewLine();
 										nextClassStart.Indent(null, 7);
 										nextClassStart.Insert($"{map.ResourceColumnName} = ");
@@ -392,13 +392,13 @@ namespace COFRSCoreCommandsPackage.Forms
 								{
 									nextClassStart.Insert(",");
 								}
-
+				}
 								nextClassStart.InsertNewLine();
 								nextClassStart.Indent(null, 7);
 								nextClassStart.Insert($"{map.ResourceColumnName} = ");
 								nextClassStart.Insert(StandardUtils.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
 							}
-
+				//	i.e., if the new member class is Foo, then the variable name will be FooValidator.
 							nextClassStart.InsertNewLine();
 							nextClassStart.Indent(null, 6);
 							nextClassStart.Insert("}");
@@ -410,7 +410,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				}
 			}
 		}
-
+				memberValidatorName = $"{memberResourceModel.ClassName}Validator";
 		private void AddSingleExample()
         {
             var singleExampleClass = StandardUtils.FindExampleCode(_dte2, parentModel);
@@ -509,6 +509,7 @@ namespace COFRSCoreCommandsPackage.Forms
             //
             //	And, by the way, we're going to need to know the name of the source class validator. While we're
             //	muking around with the variables, find and store that name.
+						//	muking around with the variables, find and store that name.
 
             //	So, do we already have that variable? If so, use it. If not, create it.
             //	We start by assuming we're going to create it.
@@ -743,12 +744,11 @@ namespace COFRSCoreCommandsPackage.Forms
             editPoint.FindPattern($"await {parentValidatorName}.ValidateForDeleteAsync");
             foundit = editPoint.FindPattern("var subNode =");
             foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
             if (!foundit)
             {
                 editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 				string searchText = $"await {parentValidatorName}.ValidateForDeleteAsync";
-
+                                    editPoint.LineUp();
 				if (editPoint.FindPattern(searchText))
 				{
 					editPoint.EndOfLine();
@@ -758,12 +758,12 @@ namespace COFRSCoreCommandsPackage.Forms
 					editPoint.InsertNewLine(2);
 				}
 			}
-
+                                }
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
             editPoint.FindPattern("var subNode = ");
             foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
             foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
             if (!foundit)
             {
                 editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -798,7 +798,7 @@ namespace COFRSCoreCommandsPackage.Forms
                 {
                     editPoint.EndOfLine();
                 }
-
+								}
                 editPoint.InsertNewLine();
                 editPoint.Indent(null, 3);
                 editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
@@ -817,7 +817,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.InsertNewLine();
 			}
 		}
-
+							}
 		/// <summary>
 		/// Modify the update function to accomodate the new collection
 		/// </summary>
@@ -827,7 +827,7 @@ namespace COFRSCoreCommandsPackage.Forms
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			bool foundit = editPoint.FindPattern($"return await UpdateAsync");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 			if (foundit)
 			{
 				editPoint.ReplaceText(6, "item =", 0);
@@ -836,12 +836,12 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Indent(null, 3);
 				editPoint.Insert("return item;");
 			}
-
+								}
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			editPoint.FindPattern($"await {parentValidatorName}.ValidateForUpdateAsync");
 			foundit = editPoint.FindPattern("var subNode =");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -851,12 +851,12 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Indent(null, 3);
 				editPoint.Insert($"var subNode = RqlNode.Parse($\"Client=uri:\\\"{{item.HRef.LocalPath}}\\\"\");\r\n");
 			}
-
+                                }
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			editPoint.FindPattern("var subNode = ");
 			foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -917,12 +917,12 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Indent(null, 3);
 				editPoint.Insert("}");
 			}
-
+								}
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			editPoint.FindPattern("item = await UpdateAsync");
 			foundit = editPoint.FindPattern($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -986,7 +986,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.InsertNewLine();
 			}
 		}
-
+							}
 		/// <summary>
 		/// Modify teh patch function to accomodate the new collection
 		/// </summary>
@@ -994,10 +994,10 @@ namespace COFRSCoreCommandsPackage.Forms
 		private void ModifyPatch(CodeFunction2 aFunction)
 		{
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-
+								var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			bool foundit = editPoint.FindPattern("var baseCommands = new List<PatchCommand>();");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1044,11 +1044,11 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.FindPattern("commands");
 				editPoint.ReplaceText(8, "baseCommands", 0);
 			}
-
+								}
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			foundit = editPoint.FindPattern($"await PatchAsync<{parentModel.ClassName}>(commands, node);");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 			if (foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1056,11 +1056,11 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.FindPattern("commands");
 				editPoint.ReplaceText(8, "baseCommands", 0);
 			}
-
+								}
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = ");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1279,17 +1279,18 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert("}");
 			}
 		}
-
+			}
 		/// <summary>
 		/// Modify the add function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
 		private void ModifyAdd(CodeFunction2 aFunction)
+		public static ProjectMapping OpenProjectMapping(Solution solution)
 		{
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-
 			bool foundit = editPoint.FindPattern("return await AddAsync");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs\\ProjectMap.json");
 
 			if (foundit)
 			{
@@ -1299,12 +1300,12 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Indent(null, 3);
 				editPoint.Insert("return item;");
 			}
-
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			foundit = editPoint.FindPattern($"foreach ( var subitem in item.{memberName})");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+			ThreadHelper.ThrowIfNotOnUIThread();
 			if (!foundit)
+			else
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 				editPoint.FindPattern($"await {parentValidatorName}.ValidateForAddAsync(item, User);");
@@ -1328,7 +1329,6 @@ namespace COFRSCoreCommandsPackage.Forms
 			editPoint.FindPattern("item = await AddAsync");
 			foundit = editPoint.FindPattern($"foreach ( var subitem in item.{memberName})");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1353,6 +1353,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert("}");
 			}
 		}
+			}
 
 		/// <summary>
 		/// Modify the get collection function to accomodate the new collection
@@ -1377,13 +1378,12 @@ namespace COFRSCoreCommandsPackage.Forms
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
             foundit = editPoint.FindPattern($"StringBuilder rqlBody = new(\"in({parentModel.ClassName}\");");
             foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
             if (!foundit)
             {
                 editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
                 editPoint.FindPattern("return collection");
                 editPoint.LineUp();
-
+			var map = new List<EntityModel>();
                 editPoint.InsertNewLine();
                 editPoint.Indent(null, 3);
                 editPoint.Insert($"StringBuilder rqlBody = new(\"in({parentModel.ClassName}\");");
@@ -1410,11 +1410,11 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert($"var selectNode = node.ExtractSelectClause();");
 				editPoint.InsertNewLine();
             }
-
+								}
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
             foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection =");
             foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+								};
             if (!foundit)
             {
                 editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1471,6 +1471,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.InsertNewLine();
 			}
 		}
+						}
 
 		/// <summary>
 		/// Modify the Get Single function to populate the new collection
@@ -1502,10 +1503,10 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Indent(null, 3);
 				editPoint.Insert("return item;");
             }
-
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
             foundit = editPoint.FindPattern("var subNode = RqlNode");
             foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+								};
 
             if (!foundit)
             {
@@ -1518,11 +1519,10 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert("var selectNode = node.ExtractSelectClause();");
 				editPoint.InsertNewLine(2);
             }
-
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
             foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
             foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
+			Project project = FindProject(solution, projectFolder);
             if (!foundit)
             {
                 editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1542,7 +1542,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 4);
-
+				ProjectItem folder = null;
 				if (memberType.StartsWith("List"))
 					editPoint.Insert($"item.{memberName} = {childModel.ClassName}Collection.Items.ToList();");
 				else if (memberType.EndsWith("[]"))
@@ -1552,11 +1552,11 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
 				editPoint.Insert("}");
-
+				}
 				editPoint.InsertNewLine();
 			}
+			return null;
 		}
-
 		/// <summary>
 		/// Modify the consructor to add and assign the needed validator for the child items
 		/// </summary>
@@ -1573,7 +1573,7 @@ namespace COFRSCoreCommandsPackage.Forms
             var shouldAddArgument = true;
             var parameterName = childValidatorName;
             parameterName = parameterName.Substring(0, 1).ToLower() + parameterName.Substring(1);
-
+											var parts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
             //	Look at each argument...
             foreach (CodeParameter2 arg in aFunction.Parameters.OfType<CodeParameter2>())
             {
@@ -1586,16 +1586,16 @@ namespace COFRSCoreCommandsPackage.Forms
                     shouldAddArgument = false;
                 }
             }
-
+									var columns = new List<DBColumn>();
             //	Did we find it?
             if (shouldAddArgument)
             {
                 //	Nope, create it
                 aFunction.AddParameter(parameterName, childValidatorInterface, -1);
             }
-
+									};
             var editPoint = (EditPoint2) aFunction.StartPoint.CreateEditPoint();
-
+									var columns = new List<DBColumn>();
             if (!editPoint.FindPattern($"{childValidatorName} ="))
             {
                 //	Now, within the function, add the assignment.
@@ -1607,7 +1607,8 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint.Insert($"{childValidatorName} = {parameterName};");
             }
         }
-
+			}
+		}
 		#endregion
 	}
 }
