@@ -22,7 +22,7 @@
 
   <!--The Commands section is where commands, menus, and menu groups are defined.
       This section uses a Guid to identify the package that provides the command defined inside it. -->
-  <Commands package="guidCOFRSMainMenuPackage">
+  <Commands package="guidCommand1Package">
     <!-- Inside this section we have different sub-sections: one for the menus, another
     for the menu groups, one for the buttons (the actual commands), one for the combos
     and the last one for the bitmaps used. Each element is identified by a command id that
@@ -31,22 +31,13 @@
     group; your package should define its own command set in order to avoid collisions
     with command ids defined by other packages. -->
 
-    <Menus>
-      <Menu guid="guidCOFRSMainMenuPackageCmdSet" id="TopLevelMenu" priority="0x700" type="Menu">
-        <Parent guid="guidSHLMainMenu" id="IDG_VS_MM_TOOLSADDINS" />
-        <Strings>
-          <ButtonText>COFRS</ButtonText>
-        </Strings>
-      </Menu>
-    </Menus>
-
     <!-- In this section you can define new menu groups. A menu group is a container for
          other menus or buttons (commands); from a visual point of view you can see the
          group as the part of a menu contained between two lines. The parent of a group
          must be a menu. -->
     <Groups>
-      <Group guid="guidCOFRSMainMenuPackageCmdSet" id="MyMenuGroup" priority="0x0600">
-        <Parent guid="guidCOFRSMainMenuPackageCmdSet" id="TopLevelMenu"/>
+      <Group guid="guidCommand1PackageCmdSet" id="MyMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
       </Group>
     </Groups>
 
@@ -61,21 +52,11 @@
               <CommandFlag>DefaultInvisible</CommandFlag>
               <CommandFlag>DynamicVisibility</CommandFlag>
           If you do not want an image next to your command, remove the Icon node /> -->
-      <Button guid="guidCOFRSMainMenuPackageCmdSet" id="AddMappingMenuId" priority="0x0100" type="Button">
-        <Parent guid="guidCOFRSMainMenuPackageCmdSet" id="MyMenuGroup" />
-        <CommandFlag>TextChangesButton</CommandFlag>
-        <CommandFlag>DontCache</CommandFlag>
+      <Button guid="guidCommand1PackageCmdSet" id="Command1Id" priority="0x0100" type="Button">
+        <Parent guid="guidCommand1PackageCmdSet" id="MyMenuGroup" />
+        <Icon guid="guidImages" id="bmpPic1" />
         <Strings>
-          <ButtonText>Edit Mappings...</ButtonText>
-        </Strings>
-      </Button>
-      
-      <Button guid="guidCOFRSMainMenuPackageCmdSet" id="AddCollectionMenuId" priority="0x0101" type="Button">
-        <Parent guid="guidCOFRSMainMenuPackageCmdSet" id="MyMenuGroup" />
-        <CommandFlag>TextChangesButton</CommandFlag>
-        <CommandFlag>DontCache</CommandFlag>
-        <Strings>
-          <ButtonText>Add Collection to Resource...</ButtonText>
+          <ButtonText>Invoke Command1</ButtonText>
         </Strings>
       </Button>
     </Buttons>
@@ -87,23 +68,21 @@
             bitmap strip containing the bitmaps and then there are the numeric ids of the elements used
             inside a button definition. An important aspect of this declaration is that the element id
             must be the actual index (1-based) of the bitmap inside the bitmap strip. -->
-      <Bitmap guid="guidImages" href="Resources\COFRSMainMenu.png" usedList="bmpPic1, bmpPic2, bmpPicSearch, bmpPicX, bmpPicArrows, bmpPicStrikethrough"/>
+      <Bitmap guid="guidImages" href="Resources\Command1.png" usedList="bmpPic1, bmpPic2, bmpPicSearch, bmpPicX, bmpPicArrows, bmpPicStrikethrough"/>
     </Bitmaps>
   </Commands>
 
   <Symbols>
     <!-- This is the package guid. -->
-    <GuidSymbol name="guidCOFRSMainMenuPackage" value="{c3ed88c2-6789-4d14-aba8-9de5a458982d}" />
+    <GuidSymbol name="guidCommand1Package" value="{9bda1d30-1467-4f29-9688-08caf2a5ba03}" />
 
     <!-- This is the guid used to group the menu commands together -->
-    <GuidSymbol name="guidCOFRSMainMenuPackageCmdSet" value="{094544da-4d1f-4d27-aab7-50face2d5016}">
-      <IDSymbol name="TopLevelMenu" value="0x1021"/>
+    <GuidSymbol name="guidCommand1PackageCmdSet" value="{67857f71-e68b-48e7-bf4a-36bc2fd3bfa5}">
       <IDSymbol name="MyMenuGroup" value="0x1020" />
-      <IDSymbol name="AddMappingMenuId" value="0x0100" />
-      <IDSymbol name="AddCollectionMenuId" value="0x0101" />
+      <IDSymbol name="Command1Id" value="0x0100" />
     </GuidSymbol>
 
-    <GuidSymbol name="guidImages" value="{7c22d960-cbc7-4695-b78a-1ed8bff81090}" >
+    <GuidSymbol name="guidImages" value="{b0415ace-89c0-486d-9aff-80aba123ad92}" >
       <IDSymbol name="bmpPic1" value="1" />
       <IDSymbol name="bmpPic2" value="2" />
       <IDSymbol name="bmpPicSearch" value="3" />
