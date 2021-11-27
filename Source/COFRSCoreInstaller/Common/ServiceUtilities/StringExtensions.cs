@@ -33,5 +33,23 @@ namespace COFRS.Template.Common.ServiceUtilities
 
             return theBase.ToString();
         }
+
+        public static string ToCSV(this string[] input)
+        {
+            StringBuilder result = new StringBuilder();
+            bool first = true;
+
+            foreach (var str in input)
+            {
+                if (first)
+                    first = false;
+                else
+                    result.Append(',');
+
+                result.Append(str);
+            }
+
+            return result.ToString();
+        }
     }
 }

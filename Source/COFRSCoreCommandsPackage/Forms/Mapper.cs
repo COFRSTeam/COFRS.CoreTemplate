@@ -1,6 +1,6 @@
-﻿using COFRS.Template.Common.Models;
-using COFRS.Template.Common.ServiceUtilities;
-using COFRS.Template.Common.Wizards;
+﻿
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using System;
@@ -11,14 +11,15 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
-namespace COFRS.Template.Common.Forms
+namespace COFRSCoreCommandsPackage.Forms
 {
     public partial class Mapper : Form
     {
-        public ResourceModel ResourceModel { get; set; }
-        public List<ResourceModel> ResourceModels { get; set; }
-        public List<EntityModel> EntityModels { get; set; }
-        public ProfileMap ProfileMap { get; set; }
+        public ResourceModel resourceModel { get; set; }
+        public List<ResourceModel> resourceModels { get; set; }
+        public List<EntityModel> entityModels { get; set; }
+        public ProfileMap profileMap { get; set; }
+        public DTE2 _dte2 { get; set; }
 
         public Mapper()
         {
@@ -29,21 +30,109 @@ namespace COFRS.Template.Common.Forms
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             OnResize(sender, e);
-            ResourceClass_Lablel.Text = ResourceModel.ClassName;
-            EntityClass_Label.Text = ResourceModel.EntityModel.ClassName;
+            ResourceClass_Lablel.Text = resourceModel.ClassName;
+            EntityClass_Label.Text = resourceModel.EntityModel.ClassName;
 
-            var nn = new NameNormalizer(ResourceModel.ClassName);
+            entityModels = StandardUtils.LoadEntityModels(_dte2).Maps.ToList();
 
-            ProfileMap = new ProfileMap
+            var nn = new NameNormalizer(resourceModel.ClassName);
+
+            profileMap = LoadProfileMap();
+
+            if ( profileMap == null)
+                profileMap = GenerateProfileMap(nn);
+        }
+
+        private ProfileMap LoadProfileMap()
+        {
+            var unmappedColumns = new List<DBColumn>();
+            foreach (var entityColumn in resourceModel.EntityModel.Columns)
             {
-                ResourceClassName = ResourceModel.ClassName,
-                EntityClassName = ResourceModel.EntityModel.ClassName,
+                unmappedColumns.Add(entityColumn);
+            }
+
+            profileMap = StandardUtils.LoadResourceMapping(_dte2, resourceModel);
+
+            if (profileMap != null)
+            {
+                foreach (ResourceProfile resourceProfile in profileMap.ResourceProfiles)
+                {
+                    var dataRowIndex = resourceGrid.Rows.Add();
+                    var dataRow = resourceGrid.Rows[dataRowIndex];
+
+                    dataRow.Cells[0].Value = resourceProfile.ResourceColumnName;
+                    dataRow.Cells[1].Value = resourceProfile.MapFunction;
+                    dataRow.Cells[3].Value = resourceProfile.EntityColumnNames?.ToCSV();
+
+                    if (resourceProfile.EntityColumnNames != null)
+                    {
+                        foreach (var entityColumn in resourceProfile.EntityColumnNames)
+                        {
+                            var ec = unmappedColumns.FirstOrDefault(c => c.ColumnName.Equals(entityColumn));
+
+                            if (ec != null)
+                                unmappedColumns.Remove(ec);
+                        }
+                    }
+                }
+
+                foreach ( var entityColumn in unmappedColumns)
+                {
+                    EntityList.Items.Add(entityColumn.ColumnName);
+                }
+
+                unmappedColumns.Clear();
+                foreach (var entityColumn in resourceModel.Columns)
+                {
+                    unmappedColumns.Add(entityColumn);
+                }
+
+                foreach (EntityProfile entityProfile in profileMap.EntityProfiles)
+                {
+                    var dataRowIndex = EntityGrid.Rows.Add();
+                    var dataRow = EntityGrid.Rows[dataRowIndex];
+
+                    dataRow.Cells[0].Value = entityProfile.EntityColumnName;
+                    dataRow.Cells[1].Value = entityProfile.MapFunction;
+                    dataRow.Cells[3].Value = entityProfile.ResourceColumns?.ToCSV();
+
+                    if (entityProfile.ResourceColumns != null)
+                    {
+                        foreach (var resourceColumn in entityProfile.ResourceColumns)
+                        {
+                            var ec = unmappedColumns.FirstOrDefault(c => c.ColumnName.Equals(resourceColumn));
+
+                            if (ec != null)
+                                unmappedColumns.Remove(ec);
+                        }
+                    }
+                }
+                foreach (var resourceColumn in unmappedColumns)
+                {
+                    ResourceList.Items.Add(resourceColumn.ColumnName);
+                }
+
+            }
+
+            return profileMap;
+        }
+
+        private ProfileMap GenerateProfileMap(NameNormalizer nn)
+        {
+            var unmappedColumns = new List<DBColumn>();
+            foreach (var entityColumn in resourceModel.EntityModel.Columns)
+            {
+                unmappedColumns.Add(entityColumn);
+            }
+            profileMap = new ProfileMap
+            {
+                ResourceClassName = resourceModel.ClassName,
+                EntityClassName = resourceModel.EntityModel.ClassName,
                 ResourceProfiles = new List<ResourceProfile>(),
                 EntityProfiles = new List<EntityProfile>()
             };
 
-            var unmappedColumns = new List<DBColumn>();
-            GetEntityModelList(ResourceModel.EntityModel, string.Empty, unmappedColumns);
+
             GenerateResourceFromEntityMapping(nn, unmappedColumns);
 
             foreach (DataGridViewRow row in resourceGrid.Rows)
@@ -57,12 +146,12 @@ namespace COFRS.Template.Common.Forms
                     MapFunction = mappingFunction
                 };
 
-                ProfileMap.ResourceProfiles.Add(profile);
+                profileMap.ResourceProfiles.Add(profile);
             }
 
             unmappedColumns.Clear();
-            GetResourceModelList(ResourceModel, string.Empty, unmappedColumns);
-            GenerateEntityFromResourceMapping(unmappedColumns, ResourceModel);
+            GetResourceModelList(resourceModel, string.Empty, unmappedColumns);
+            GenerateEntityFromResourceMapping(unmappedColumns, resourceModel);
 
             foreach (DataGridViewRow row in EntityGrid.Rows)
             {
@@ -75,15 +164,17 @@ namespace COFRS.Template.Common.Forms
                     MapFunction = mappingFunction
                 };
 
-                ProfileMap.EntityProfiles.Add(profile);
+                profileMap.EntityProfiles.Add(profile);
             }
+
+            return profileMap;
         }
 
         private void GetResourceModelList(ResourceModel source, string ParentName, List<DBColumn> unmappedColumns)
         {
             foreach (var column in source.Columns)
             {
-                var resourceModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                var resourceModel = resourceModels.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                 if (resourceModel != null && resourceModel.ResourceType != ResourceType.Enum)
                 {
@@ -105,31 +196,7 @@ namespace COFRS.Template.Common.Forms
                 }
             }
         }
-        private void GetEntityModelList(EntityModel source, string ParentName, List<DBColumn> unmappedColumns)
-        {
-            foreach (var column in source.Columns)
-            {
-                var entityModel = EntityModels.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
-                if (entityModel != null && entityModel.ElementType != ElementType.Enum)
-                {
-                    string newParent = string.Empty;
-
-                    if (string.IsNullOrWhiteSpace(ParentName))
-                        newParent = column.ColumnName;
-                    else
-                        newParent = $"{ParentName}.{column.ColumnName}";
-
-                    GetEntityModelList(entityModel, newParent, unmappedColumns);
-                }
-                else 
-                { 
-                    if (!string.IsNullOrWhiteSpace(ParentName))
-                        column.ColumnName = $"{ParentName}.{column.ColumnName}";
-                    unmappedColumns.Add(column);
-                }
-            }
-        }
 
         /// <summary>
         /// Generates a mapping to construct the entity member from the corresponding resource members
@@ -141,7 +208,7 @@ namespace COFRS.Template.Common.Forms
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
 
             //  Let's create a mapping for each entity member
-            foreach (var entityMember in ResourceModel.EntityModel.Columns)
+            foreach (var entityMember in this.resourceModel.EntityModel.Columns)
             {
                 //  Construct a data row for this entity member, and populate the column name
                 var dataRowIndex = EntityGrid.Rows.Add();
@@ -170,19 +237,21 @@ namespace COFRS.Template.Common.Forms
 
                     //  We need the list of all the primary keys in the entity model, so that we know the
                     //  position of this member.
-                    var primaryKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
+                    var primaryKeys = this.resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
 
                     if (primaryKeys.Count() == 1)
                     {
+                        var primaryKey = primaryKeys.First();
                         //  There is only one primary key element, so we don't need to bother with the count.
                         var formula = new StringBuilder($"source.HRef == null ? default : source.HRef.GetId<{dataType}>()");
                         dataRow.Cells[1].Value = formula.ToString();
-                        dataRow.Cells[3].Value = "HRef";
+                        dataRow.Cells[3].Value = primaryKey.ColumnName;
                     }
                     else
                     {
                         var formula = new StringBuilder($"source.HRef == null ? default : source.HRef.GetId<{dataType}>(");
-
+                        var primaryKeyList = new StringBuilder();
+                        bool first = true;
                         //  Compute the index and append it to the above formula.
                         if (primaryKeys.Count() > 1)
                         {
@@ -190,6 +259,13 @@ namespace COFRS.Template.Common.Forms
 
                             foreach (var pk in primaryKeys)
                             {
+                                if (first)
+                                    first = false;
+                                else
+                                    primaryKeyList.Append(',');
+
+                                primaryKeyList.Append(primaryKeys.ToList()[index].ColumnName);
+
                                 if (pk == entityMember)
                                     formula.Append(index.ToString());
                                 else
@@ -200,7 +276,7 @@ namespace COFRS.Template.Common.Forms
                         //  Close the formula
                         formula.Append(")");
                         dataRow.Cells[1].Value = formula.ToString();
-                        dataRow.Cells[3].Value = "HRef";
+                        dataRow.Cells[3].Value = primaryKeyList.ToString();
                     }
 
                     var resourceMember = unmappedColumns.FirstOrDefault(u =>
@@ -218,7 +294,7 @@ namespace COFRS.Template.Common.Forms
                     var nnx = new NameNormalizer(entityMember.ForeignTableName);
                     DBColumn resourceMember = null;
 
-                    foreach ( DataGridViewRow resourceMap in resourceGrid.Rows )
+                    foreach (DataGridViewRow resourceMap in resourceGrid.Rows )
                     {
                         var entityColumnsUsed = resourceMap.Cells[3].Value.ToString().Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -259,21 +335,17 @@ namespace COFRS.Template.Common.Forms
                             //  This is an href. Very much like the primary key, there can be more than one single 
                             //  element in this href. 
 
-                            var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+                            var foreignKeys = this.resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
                                                 string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
 
                             if (foreignKeys.Count() == 1)
                             {
-                                var foreignKey = foreignKeys.First();
                                 var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>()");
                                 dataRow.Cells[1].Value = formula.ToString();
-                                dataRow.Cells[3].Value = foreignKey.ColumnName;
                             }
                             else
                             {
                                 var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>(");
-                                var foreignKeyList = new StringBuilder();
-                                var first = true;
 
                                 if (foreignKeys.Count() > 1)
                                 {
@@ -281,13 +353,6 @@ namespace COFRS.Template.Common.Forms
 
                                     foreach (var pk in foreignKeys)
                                     {
-                                        var foreignKey = foreignKeys.ToList()[index];
-                                        if (first)
-                                            first = false;
-                                        else
-                                            foreignKeyList.Append(',');
-                                        foreignKeyList.Append(foreignKey.ColumnName);
-
                                         if (pk == entityMember)
                                             formula.Append(index.ToString());
                                         else
@@ -297,7 +362,6 @@ namespace COFRS.Template.Common.Forms
 
                                 formula.Append(")");
                                 dataRow.Cells[1].Value = formula.ToString();
-                                dataRow.Cells[3].Value = foreignKeyList.ToString();
                                 unmappedColumns.Remove(resourceMember);
                             }
                         }
@@ -306,14 +370,14 @@ namespace COFRS.Template.Common.Forms
                             //  The resource member is not a URI. It should be an enum. If it is, we sould be able to
                             //  find it in our resource models list.
 
-                            var referenceModel = ResourceModels.FirstOrDefault(r =>
+                            var referenceModel = resourceModels.FirstOrDefault(r =>
                                             string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
 
                             if ( referenceModel != null )
                             {
                                 if ( referenceModel.ResourceType == ResourceType.Enum )
                                 { 
-                                    var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+                                    var foreignKeys = this.resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
                                         string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
 
                                     //  If the resource member is an enum that represents the value of the primary key of a foreign table,
@@ -347,7 +411,7 @@ namespace COFRS.Template.Common.Forms
                     }
                     else
                     {
-                        var rp = ProfileMap.ResourceProfiles.FirstOrDefault(c => c.MapFunction.IndexOf(entityMember.ColumnName, 0, StringComparison.CurrentCultureIgnoreCase) != -1);
+                        var rp = profileMap.ResourceProfiles.FirstOrDefault(c => c.MapFunction.IndexOf(entityMember.ColumnName, 0, StringComparison.CurrentCultureIgnoreCase) != -1);
 
                         if (rp != null)
                         {
@@ -358,7 +422,7 @@ namespace COFRS.Template.Common.Forms
                                 StringBuilder parent = new StringBuilder("");
                                 string NullValue = "null";
 
-                                var parentModel = GetParentModel(ResourceModel, parts);
+                                var parentModel = StandardUtils.GetParentModel(resourceModels, this.resourceModel, parts);
 
                                 if (parentModel != null)
                                 {
@@ -440,7 +504,7 @@ namespace COFRS.Template.Common.Forms
         private void GenerateResourceFromEntityMapping(NameNormalizer nn, List<DBColumn> unmappedColumns)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            foreach (var resourceMember in ResourceModel.Columns)
+            foreach (var resourceMember in resourceModel.Columns)
             {
                 var dataRowIndex = resourceGrid.Rows.Add();
                 var dataRow = resourceGrid.Rows[dataRowIndex];
@@ -481,7 +545,7 @@ namespace COFRS.Template.Common.Forms
                     //  If it is an enum, there will be a resource model of type enum, whose corresponding entity model
                     //  will point to the foreign table.
 
-                    var enumResource = ResourceModels.FirstOrDefault(r =>
+                    var enumResource = resourceModels.FirstOrDefault(r =>
                                        r.ResourceType == ResourceType.Enum &&
                                        r.EntityModel != null && 
                                        string.Equals(r.EntityModel.TableName, resourceMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
@@ -523,7 +587,7 @@ namespace COFRS.Template.Common.Forms
                         {
                             //  This is probably an Enum. If it is, we should be able to find it in the list of 
                             //  resource models.
-                            var referenceModel = ResourceModels.FirstOrDefault(r =>
+                            var referenceModel = resourceModels.FirstOrDefault(r =>
                                     string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
 
                             if (referenceModel != null)
@@ -564,7 +628,7 @@ namespace COFRS.Template.Common.Forms
                     else
                     {
                         //  Is this resource member a class?
-                        var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                        var model = resourceModels.FirstOrDefault(r => string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                         if (model != null)
                         {
@@ -672,10 +736,10 @@ namespace COFRS.Template.Common.Forms
 
         private void OnOK(object sender, EventArgs e)
         {
-            ProfileMap = new ProfileMap
+            profileMap = new ProfileMap
             {
-                ResourceClassName = ResourceModel.ClassName,
-                EntityClassName = ResourceModel.EntityModel.ClassName,
+                ResourceClassName = resourceModel.ClassName,
+                EntityClassName = resourceModel.EntityModel.ClassName,
                 ResourceProfiles = new List<ResourceProfile>(),
                 EntityProfiles = new List<EntityProfile>()
             };
@@ -684,16 +748,16 @@ namespace COFRS.Template.Common.Forms
             {
                 var columnName = (row.Cells[0] as DataGridViewTextBoxCell).Value.ToString();
                 var mappingFunction = (row.Cells[1] as DataGridViewTextBoxCell).Value?.ToString();
-                var entityColumnName = (row.Cells[3] as DataGridViewTextBoxCell).Value?.ToString();
+                var entityColumns = (row.Cells[3] as DataGridViewTextBoxCell).Value?.ToString();
 
                 var profile = new ResourceProfile()
                 {
                     ResourceColumnName = columnName,
                     MapFunction = mappingFunction,
-                    EntityColumnNames = entityColumnName?.Split(',')
+                    EntityColumnNames = entityColumns?.Split(',')
                 };
 
-                ProfileMap.ResourceProfiles.Add(profile);
+                profileMap.ResourceProfiles.Add(profile);
             }
 
             foreach (DataGridViewRow row in EntityGrid.Rows)
@@ -709,7 +773,7 @@ namespace COFRS.Template.Common.Forms
                     ResourceColumns = resourceColumns?.Split(',')
                 };
 
-                ProfileMap.EntityProfiles.Add(profile);
+                profileMap.EntityProfiles.Add(profile);
             }
 
             DialogResult = DialogResult.OK;
@@ -723,23 +787,6 @@ namespace COFRS.Template.Common.Forms
         }
 
         #region Mapping Helper Functions
-        private ResourceModel GetParentModel(ResourceModel parent, string[] parts)
-        {
-            ResourceModel result = parent;
-
-            for (int i = 0; i < parts.Count() - 1; i++)
-            {
-                var column = result.Columns.FirstOrDefault(c => string.Equals(c.ColumnName, parts[i], StringComparison.OrdinalIgnoreCase));
-
-                if (column != null)
-                {
-                    result = ResourceModels.FirstOrDefault(p => string.Equals(p.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
-                }
-            }
-
-            return result;
-        }
-
         private void MapResourceChildMembers(List<DBColumn> unmappedColumns, DBColumn member, ResourceModel model, string parent)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
@@ -765,7 +812,7 @@ namespace COFRS.Template.Common.Forms
                 }
                 else
                 {
-                    var childModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                    var childModel = resourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                     if (model != null)
                     {
@@ -800,7 +847,7 @@ namespace COFRS.Template.Common.Forms
                 }
                 else
                 {
-                    var childModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                    var childModel = resourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                     if (model != null)
                     {
@@ -814,7 +861,7 @@ namespace COFRS.Template.Common.Forms
         private void MapEntityDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+            var model = resourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
             if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
             {
@@ -1171,7 +1218,7 @@ namespace COFRS.Template.Common.Forms
         private void MapResourceDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+            var model = resourceModels.FirstOrDefault(r => string.Equals(r.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
             if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
             {

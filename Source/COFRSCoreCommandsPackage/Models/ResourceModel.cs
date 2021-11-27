@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace COFRSCoreCommandsPackage.Models
+namespace COFRSCoreCommon.Models
 {
     public class ResourceModel
     {
