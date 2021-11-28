@@ -1,10 +1,8 @@
-﻿using COFRS.Template.Common.Models;
-using COFRS.Template.Common.ServiceUtilities;
+﻿using COFRSCoreCommon.Models;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
-using NpgsqlTypes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,12 +14,11 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Forms
 {
-	public partial class UserInputGeneral : Form
+    public partial class UserInputGeneral : Form
 	{
 		#region variables
 		private ServerConfig _serverConfig;
@@ -763,14 +760,14 @@ select s.name, t.name
 			{
 				if (_resourceModelList.SelectedIndex != -1 && !Populating)
 				{
-					var resourceClassFile = (ResourceClassFile)_resourceModelList.SelectedItem;
+					var resourceClassFile = (ResourceModel)_resourceModelList.SelectedItem;
 					var foundIt = false;
 
 					for (int index = 0; index < _entityModelList.Items.Count; index++)
 					{
-						var entityClassFile = (EntityClassFile)_entityModelList.Items[index];
+						var entityClassFile = (EntityModel)_entityModelList.Items[index];
 
-						if (string.Equals(resourceClassFile.EntityClass, entityClassFile.ClassName, StringComparison.OrdinalIgnoreCase))
+						if (string.Equals(resourceClassFile.EntityModel.ClassName, entityClassFile.ClassName, StringComparison.OrdinalIgnoreCase))
 						{
 							foundIt = true;
 							_entityModelList.SelectedIndex = index;
@@ -787,7 +784,7 @@ select s.name, t.name
 						return;
 					}
 
-					var entity = _entityModelList.SelectedItem as EntityClassFile;
+					var entity = _entityModelList.SelectedItem as EntityModel;
 					foundIt = false;
 
 					for (int index = 0; index < _tableList.Items.Count; index++)
@@ -824,7 +821,7 @@ select s.name, t.name
 			{
 				if (_entityModelList.SelectedIndex != -1 && !Populating)
 				{
-					var classFile = (EntityClassFile)_entityModelList.SelectedItem;
+					var classFile = (EntityModel)_entityModelList.SelectedItem;
 					var foundIt = false;
 
 					for (int index = 0; index < _tableList.Items.Count; index++)
@@ -852,9 +849,9 @@ select s.name, t.name
 
 					for (int index = 0; index < _resourceModelList.Items.Count; index++)
 					{
-						var resourceClassFile = (ResourceClassFile)_resourceModelList.Items[index];
+						var resourceClassFile = (ResourceModel)_resourceModelList.Items[index];
 
-						if (string.Equals(resourceClassFile.EntityClass, classFile.ClassName, StringComparison.OrdinalIgnoreCase))
+						if (string.Equals(resourceClassFile.EntityModel.ClassName, classFile.ClassName, StringComparison.OrdinalIgnoreCase))
 						{
 							foundIt = true;
 							_resourceModelList.SelectedIndex = index;
@@ -1536,15 +1533,15 @@ select name
 			Populating = false;
 		}
 
-		private int ReadComposite(NpgsqlDataReader reader, DBColumn column, int ordinal, List<EntityClassFile> classList, JObject values)
+		private int ReadComposite(NpgsqlDataReader reader, DBColumn column, int ordinal, EntityMap entityMap, JObject values)
 		{
-			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
+			var cl = entityMap.Maps.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 			foreach (var member in cl.Columns)
 			{
 				if (string.IsNullOrWhiteSpace(member.ModelDataType))
 				{
-					var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, member.DBDataType, StringComparison.OrdinalIgnoreCase));
+					var ch = entityMap.Maps.FirstOrDefault(c => string.Equals(c.ClassName, member.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 					if (ch.ElementType == ElementType.Enum)
 					{
@@ -1556,7 +1553,7 @@ select name
 					{
 						var jObject = new JObject();
 
-						ordinal = ReadComposite(reader, member, ordinal, classList, jObject);
+						ordinal = ReadComposite(reader, member, ordinal, entityMap, jObject);
 
 						values.Add(member.ColumnName, jObject);
 					}
@@ -1654,9 +1651,9 @@ select name
 			return ordinal;
 		}
 
-		private bool DeconstructComposite(string parent, DBColumn column, List<EntityClassFile> classList, StringBuilder query, bool firstColumn)
+		private bool DeconstructComposite(string parent, DBColumn column, EntityMap entityMap, StringBuilder query, bool firstColumn)
 		{
-			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
+			var cl = entityMap.Maps.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 			if (cl != null)
 			{
@@ -1664,7 +1661,7 @@ select name
 				{
 					if (string.IsNullOrWhiteSpace(childmember.ModelDataType))
 					{
-						var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, childmember.DBDataType, StringComparison.OrdinalIgnoreCase));
+						var ch = entityMap.Maps.FirstOrDefault(c => string.Equals(c.ClassName, childmember.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 						if (ch.ElementType == ElementType.Enum)
 						{
@@ -1674,7 +1671,7 @@ select name
 						else
 						{
 							var newparent = $"({parent}).\"{childmember.EntityName}\"";
-							firstColumn = DeconstructComposite(newparent, childmember, classList, query, firstColumn);
+							firstColumn = DeconstructComposite(newparent, childmember, entityMap, query, firstColumn);
 						}
 					}
 					else

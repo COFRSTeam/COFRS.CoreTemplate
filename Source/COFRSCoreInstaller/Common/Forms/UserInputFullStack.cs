@@ -1,5 +1,6 @@
-﻿using COFRS.Template.Common.Models;
-using COFRS.Template.Common.ServiceUtilities;
+﻿using COFRS.Template.Common.ServiceUtilities;
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
@@ -45,7 +46,6 @@ namespace COFRS.Template.Common.Forms
 		public List<string> Policies;
 		public List<EntityModel> UndefinedClassList = new List<EntityModel>();
 		public DBServerType ServerType { get; set; }
-		public Dictionary<string, MemberInfo> Members { get; set; }
 		public EntityMap EntityMap { get; set; }
 
 		public string Policy
@@ -703,7 +703,7 @@ select a.attname as columnname,
 								while (reader.Read())
 								{
 									var entityName = reader.GetString(0);
-									var columnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0)));
+									var columnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0)));
 
 									string dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
 
@@ -716,7 +716,7 @@ select a.attname as columnname,
 										if (entity == null)
 										{
 											entityName = reader.GetString(1);
-											var className = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(entityName));
+											var className = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(entityName));
 
 											entity = new EntityModel()
 											{
@@ -947,7 +947,7 @@ select c.name as column_name,
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
-				UndefinedClassList = StandardUtils.GenerateEntityClassList(UndefinedClassList, 
+				UndefinedClassList = DBHelper.GenerateEntityClassList(UndefinedClassList, 
 					                                                       EntityMap, 
 																		   EntityModelsFolder.Folder, 
 																		   ConnectionString);
@@ -2662,9 +2662,9 @@ select name
 		//	return query.ToString();
 		//}
 
-		private bool DeconstructComposite(string parent, DBColumn column, List<EntityClassFile> classList, StringBuilder query, bool firstColumn)
+		private bool DeconstructComposite(string parent, DBColumn column, EntityMap entityMap, StringBuilder query, bool firstColumn)
 		{
-			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
+			var cl = entityMap.Maps.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 			if (cl != null)
 			{
@@ -2672,7 +2672,7 @@ select name
 				{
 					if (string.IsNullOrWhiteSpace(childmember.ModelDataType))
 					{
-						var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, childmember.DBDataType, StringComparison.OrdinalIgnoreCase));
+						var ch = entityMap.Maps.FirstOrDefault(c => string.Equals(c.ClassName, childmember.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 						if (ch.ElementType == ElementType.Enum)
 						{
@@ -2682,7 +2682,7 @@ select name
 						else
 						{
 							var newparent = $"({parent}).\"{childmember.EntityName}\"";
-							firstColumn = DeconstructComposite(newparent, childmember, classList, query, firstColumn);
+							firstColumn = DeconstructComposite(newparent, childmember, entityMap, query, firstColumn);
 						}
 					}
 					else
@@ -2706,15 +2706,15 @@ select name
 			return firstColumn;
 		}
 
-		private int ReadComposite(NpgsqlDataReader reader, DBColumn column, int ordinal, List<EntityClassFile> classList, JObject values)
+		private int ReadComposite(NpgsqlDataReader reader, DBColumn column, int ordinal, EntityMap entityMap, JObject values)
 		{
-			var cl = classList.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
+			var cl = entityMap.Maps.FirstOrDefault(c => string.Equals(c.ClassName, column.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 			foreach (var member in cl.Columns)
 			{
 				if (string.IsNullOrWhiteSpace(member.ModelDataType))
 				{
-					var ch = classList.FirstOrDefault(c => string.Equals(c.ClassName, member.DBDataType, StringComparison.OrdinalIgnoreCase));
+					var ch = entityMap.Maps.FirstOrDefault(c => string.Equals(c.ClassName, member.DBDataType, StringComparison.OrdinalIgnoreCase));
 
 					if (ch.ElementType == ElementType.Enum)
 					{
@@ -2726,7 +2726,7 @@ select name
 					{
 						var jObject = new JObject();
 
-						ordinal = ReadComposite(reader, member, ordinal, classList, jObject);
+						ordinal = ReadComposite(reader, member, ordinal, entityMap, jObject);
 
 						values.Add(member.ColumnName, jObject);
 					}

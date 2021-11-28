@@ -1,16 +1,15 @@
-﻿using COFRS.Template.Common.Models;
+﻿using COFRSCoreCommon.Models;
 using EnvDTE;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.AccessControl;
 using System.Text.Json;
 using System.Windows.Forms;
 
 namespace COFRS.Template
 {
-	public class CoreProjectWizard : IWizard
+    public class CoreProjectWizard : IWizard
 	{
 		private bool Proceed;
 		private UserInputProject inputForm;

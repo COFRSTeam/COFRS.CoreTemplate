@@ -1,6 +1,7 @@
-﻿using COFRS.Template.Common.Models;
-using COFRS.Template.Common.ServiceUtilities;
+﻿using COFRS.Template.Common.ServiceUtilities;
 using COFRS.Template.Common.Wizards;
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using System;

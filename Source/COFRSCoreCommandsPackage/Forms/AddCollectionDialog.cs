@@ -109,7 +109,7 @@ namespace COFRSCoreCommandsPackage.Forms
 		private void OnLoad(object sender, EventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			resourceMap = StandardUtils.LoadResourceMap(_dte2);         //	The resource map contains all the resource classes in the project.
+			resourceMap = COFRSCommonUtilities.LoadResourceMap(_dte2);         //	The resource map contains all the resource classes in the project.
 
 			//	The parent resource is the resource selected by the user. This is the resource we will be adding the collection to.
 			//	Get the resource model for the parent resource.
@@ -150,7 +150,7 @@ namespace COFRSCoreCommandsPackage.Forms
 			}
 
 			//	Some stiff we meed
-			var projectMapping = StandardUtils.OpenProjectMapping(_dte2);  //	Contains the names and projects where various source file exist.
+			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(_dte2);  //	Contains the names and projects where various source file exist.
 
 			//	Get the child model from the resource map
 			childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(ChildResourceList.SelectedItem.ToString(), StringComparison.OrdinalIgnoreCase));
@@ -160,9 +160,9 @@ namespace COFRSCoreCommandsPackage.Forms
 			memberName = nn.PluralForm;                                     // The memberName is will be the name of the new collection in the parent resource. By default, it will be
 																			// the plural of the child model class name.
 
-			parentValidatorInterface = StandardUtils.FindValidatorInterface(_dte2, parentModel.ClassName);
-			childValidatorInterface = StandardUtils.FindValidatorInterface(_dte2, childModel.ClassName);
-
+			parentValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(_dte2, parentModel.ClassName);
+			childValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(_dte2, childModel.ClassName);
+			
 			//	Now that we have all the information we need, add the collection member to the parent resource
 			AddCollectionToResource();
 
@@ -253,7 +253,7 @@ namespace COFRSCoreCommandsPackage.Forms
 		#region Helper Functions
 		private void AddCollectionExample()
 		{
-			var collectionExampleClass = StandardUtils.FindCollectionExampleCode(_dte2, parentModel);
+			var collectionExampleClass = COFRSCommonUtilities.FindCollectionExampleCode(_dte2, parentModel);
 
 			if (collectionExampleClass != null)
 			{
@@ -302,12 +302,12 @@ namespace COFRSCoreCommandsPackage.Forms
 									nextClassStart.Indent(null, 6);
 									nextClassStart.Insert("{");
 
-									var connectionString = StandardUtils.GetConnectionString(_dte2);
-									var serverType = StandardUtils.GetDefaultServerType(connectionString);
+									var serverType = COFRSCommonUtilities.GetDefaultServerType(_dte2);
+									var connectionString = COFRSCommonUtilities.GetConnectionString(_dte2);	
 
-									var exampleModel = StandardUtils.GetExampleModel(0, childModel, serverType, connectionString);
+									var exampleModel = COFRSCommonUtilities.GetExampleModel(0, childModel, serverType, connectionString);
 									var entityJson = JObject.Parse(exampleModel);
-									var profileMap = StandardUtils.LoadResourceMapping(_dte2, childModel);
+									var profileMap = COFRSCommonUtilities.LoadResourceMapping(_dte2, childModel);
 
 									bool first = true;
 
@@ -324,7 +324,7 @@ namespace COFRSCoreCommandsPackage.Forms
 										nextClassStart.InsertNewLine();
 										nextClassStart.Indent(null, 7);
 										nextClassStart.Insert($"{map.ResourceColumnName} = ");
-										nextClassStart.Insert(StandardUtils.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
+										nextClassStart.Insert(COFRSCommonUtilities.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
 									}
 
 									nextClassStart.InsertNewLine();
@@ -370,12 +370,12 @@ namespace COFRSCoreCommandsPackage.Forms
 							nextClassStart.Indent(null, 6);
 							nextClassStart.Insert("{");
 
-							var connectionString = StandardUtils.GetConnectionString(_dte2);
-							var serverType = StandardUtils.GetDefaultServerType(connectionString);
+							var serverType = COFRSCommonUtilities.GetDefaultServerType(_dte2);
+							var connectionString = COFRSCommonUtilities.GetConnectionString(_dte2);
 
-							var exampleModel = StandardUtils.GetExampleModel(0, childModel, serverType, connectionString);
+							var exampleModel = COFRSCommonUtilities.GetExampleModel(0, childModel, serverType, connectionString);
 							var entityJson = JObject.Parse(exampleModel);
-							var profileMap = StandardUtils.LoadResourceMapping(_dte2, childModel);
+							var profileMap = COFRSCommonUtilities.LoadResourceMapping(_dte2, childModel);
 
 							bool first = true;
 
@@ -392,7 +392,7 @@ namespace COFRSCoreCommandsPackage.Forms
 								nextClassStart.InsertNewLine();
 								nextClassStart.Indent(null, 7);
 								nextClassStart.Insert($"{map.ResourceColumnName} = ");
-								nextClassStart.Insert(StandardUtils.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
+								nextClassStart.Insert(COFRSCommonUtilities.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
 							}
 
 							nextClassStart.InsertNewLine();
@@ -409,7 +409,7 @@ namespace COFRSCoreCommandsPackage.Forms
 
 		private void AddSingleExample()
 		{
-			var singleExampleClass = StandardUtils.FindExampleCode(_dte2, parentModel);
+			var singleExampleClass = COFRSCommonUtilities.FindExampleCode(_dte2, parentModel);
 
 			if (singleExampleClass != null)
 			{
@@ -457,12 +457,12 @@ namespace COFRSCoreCommandsPackage.Forms
 							editPoint.Indent(null, 5);
 							editPoint.Insert("{");
 
-							var connectionString = StandardUtils.GetConnectionString(_dte2);
-							var serverType = StandardUtils.GetDefaultServerType(connectionString);
+							var serverType = COFRSCommonUtilities.GetDefaultServerType(_dte2);
+							var connectionString = COFRSCommonUtilities.GetConnectionString(_dte2);	
 
-							var exampleModel = StandardUtils.GetExampleModel(0, childModel, serverType, connectionString);
+							var exampleModel = COFRSCommonUtilities.GetExampleModel(0, childModel, serverType, connectionString);
 							var entityJson = JObject.Parse(exampleModel);
-							var profileMap = StandardUtils.LoadResourceMapping(_dte2, childModel);
+							var profileMap = COFRSCommonUtilities.LoadResourceMapping(_dte2, childModel);
 
 							bool first = true;
 
@@ -480,7 +480,7 @@ namespace COFRSCoreCommandsPackage.Forms
 								editPoint.InsertNewLine();
 								editPoint.Indent(null, 6);
 								editPoint.Insert($"{map.ResourceColumnName} = ");
-								editPoint.Insert(StandardUtils.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
+								editPoint.Insert(COFRSCommonUtilities.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
 							}
 
 							editPoint.InsertNewLine();
@@ -1584,7 +1584,7 @@ namespace COFRSCoreCommandsPackage.Forms
             }
 
             var editPoint = (EditPoint2) aFunction.StartPoint.CreateEditPoint();
-									var columns = new List<DBColumn>();
+
             if (!editPoint.FindPattern($"{childValidatorName} ="))
             {
                 //	Now, within the function, add the assignment.

@@ -1,19 +1,293 @@
-﻿using COFRS.Template.Common.Models;
-using MySql.Data.MySqlClient;
+﻿using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using Npgsql;
-using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
-using System.Text.RegularExpressions;
 
 namespace COFRS.Template.Common.ServiceUtilities
 {
-	public static class DBHelper
+    public static class DBHelper
 	{
+		public static List<EntityModel> GenerateEntityClassList(List<EntityModel> UndefinedClassList, EntityMap entityMap, string baseFolder, string connectionString)
+		{
+			List<EntityModel> resultList = new List<EntityModel>();
+
+			foreach (var classFile in UndefinedClassList)
+			{
+				var newClassFile = GenerateEntityClass(classFile, connectionString);
+				resultList.Add(newClassFile);
+
+				if (newClassFile.ElementType != ElementType.Enum)
+				{
+					foreach (var column in newClassFile.Columns)
+					{
+						if (string.IsNullOrWhiteSpace(column.ModelDataType))
+						{
+							if (UndefinedClassList.FirstOrDefault(c => string.Equals(c.TableName, column.EntityName, StringComparison.OrdinalIgnoreCase)) == null)
+							{
+								var aList = new List<EntityModel>();
+								var bList = new List<EntityModel>();
+								var className = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.ColumnName))}";
+
+								var elementType = DBHelper.GetElementType(classFile.SchemaName, column.DBDataType, entityMap, connectionString);
+
+								var aClassFile = new EntityModel()
+								{
+									ClassName = className,
+									TableName = column.DBDataType,
+									SchemaName = classFile.SchemaName,
+									ProjectName = classFile.ProjectName,
+									Folder = Path.Combine(baseFolder, $"{className}.cs"),
+									Namespace = classFile.Namespace,
+									ElementType = elementType,
+									ServerType = DBServerType.POSTGRESQL
+								};
+
+								aList.Add(aClassFile);
+								bList.AddRange(entityMap.Maps);
+								bList.AddRange(UndefinedClassList);
+
+								var theMap = new EntityMap() { Maps = bList.ToArray() };
+
+								resultList.AddRange(GenerateEntityClassList(aList, theMap, baseFolder, connectionString));
+							}
+						}
+					}
+				}
+				else
+					GenerateEnumColumns(newClassFile, connectionString);
+			}
+
+			return resultList;
+		}
+
+		private static EntityModel GenerateEntityClass(EntityModel classFile, string connectionString)
+		{
+			if (classFile.ElementType == ElementType.Enum)
+				GenerateEnumColumns(classFile, connectionString);
+			else
+				GenerateColumns(classFile, connectionString);
+
+			return classFile;
+		}
+
+		public static void GenerateEnumColumns(EntityModel entityModel, string connectionString)
+		{
+			var columns = new List<DBColumn>();
+
+			string query = @"
+select e.enumlabel as enum_value
+from pg_type t 
+   join pg_enum e on t.oid = e.enumtypid  
+   join pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+where t.typname = @dataType
+  and n.nspname = @schema";
+
+			using (var connection = new NpgsqlConnection(connectionString))
+			{
+				connection.Open();
+				using (var command = new NpgsqlCommand(query, connection))
+				{
+					command.Parameters.AddWithValue("@dataType", entityModel.TableName);
+					command.Parameters.AddWithValue("@schema", entityModel.SchemaName);
+
+					using (var reader = command.ExecuteReader())
+					{
+						while (reader.Read())
+						{
+							var element = reader.GetString(0);
+							var elementName = COFRSCommonUtilities.NormalizeClassName(element);
+
+							var column = new DBColumn()
+							{
+								ColumnName = elementName,
+								EntityName = element
+							};
+
+							columns.Add(column);
+						}
+
+					}
+				}
+			}
+
+			entityModel.Columns = columns.ToArray();
+		}
+
+		public static void GenerateColumns(EntityModel entityModel, string connectionString)
+		{
+			var columns = new List<DBColumn>();
+
+			if (entityModel.ServerType == DBServerType.POSTGRESQL)
+			{
+				using (var connection = new NpgsqlConnection(connectionString))
+				{
+					connection.Open();
+
+					var query = @"
+select a.attname as columnname,
+	   t.typname as datatype,
+	   case when t.typname = 'varchar' then a.atttypmod-4
+	        when t.typname = 'bpchar' then a.atttypmod-4
+			when t.typname = '_varchar' then a.atttypmod-4
+			when t.typname = '_bpchar' then a.atttypmod-4
+	        when a.atttypmod > -1 then a.atttypmod
+	        else a.attlen end as max_len,
+	   not a.attnotnull as is_nullable,
+
+	   case when ( a.attgenerated = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
+                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
+                 || '''::regclass)')
+	        then true else false end as is_computed,
+
+	   case when ( a.attidentity = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
+                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
+                 || '''::regclass)')
+	        then true else false end as is_identity,
+
+	   case when (select indrelid from pg_index as px where px.indisprimary = true and px.indrelid = c.oid and a.attnum = ANY(px.indkey)) = c.oid then true else false end as is_primary,
+	   case when (select indrelid from pg_index as ix where ix.indrelid = c.oid and a.attnum = ANY(ix.indkey)) = c.oid then true else false end as is_indexed,
+	   case when (select conrelid from pg_constraint as cx where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) = c.oid then true else false end as is_foreignkey,
+       (  select cc.relname from pg_constraint as cx inner join pg_class as cc on cc.oid = cx.confrelid where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) as foeigntablename
+  from pg_class as c
+  inner join pg_namespace as ns on ns.oid = c.relnamespace
+  inner join pg_attribute as a on a.attrelid = c.oid and not a.attisdropped and attnum > 0
+  inner join pg_type as t on t.oid = a.atttypid
+  left outer join pg_attrdef as ad on ad.adrelid = a.attrelid and ad.adnum = a.attnum 
+  where ns.nspname = @schema
+    and c.relname = @tablename
+ order by a.attnum
+";
+
+					using (var command = new NpgsqlCommand(query, connection))
+					{
+						command.Parameters.AddWithValue("@schema", entityModel.SchemaName);
+						command.Parameters.AddWithValue("@tablename", entityModel.TableName);
+
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
+								var dbColumn = new DBColumn
+								{
+									EntityName = reader.GetString(0),
+									ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
+									ModelDataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
+									DBDataType = reader.GetString(1),
+									Length = Convert.ToInt64(reader.GetValue(2)),
+									IsNullable = Convert.ToBoolean(reader.GetValue(3)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(4)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(5)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(6)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(7)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(8)),
+									ForeignTableName = reader.IsDBNull(9) ? string.Empty : reader.GetString(9)
+								};
+
+								columns.Add(dbColumn);
+							}
+						}
+					}
+				}
+			}
+			else if (entityModel.ServerType == DBServerType.MYSQL)
+			{
+
+			}
+			else if (entityModel.ServerType == DBServerType.SQLSERVER)
+			{
+				using (var connection = new SqlConnection(connectionString))
+				{
+					connection.Open();
+
+					var query = @"
+select c.name as column_name, 
+       x.name as datatype, 
+	   case when x.name = 'nchar' then c.max_length / 2
+	        when x.name = 'nvarchar' then c.max_length / 2
+			when x.name = 'text' then -1
+			when x.name = 'ntext' then -1
+			else c.max_length 
+			end as max_length,
+       case when c.precision is null then 0 else c.precision end as precision,
+       case when c.scale is null then 0 else c.scale end as scale,
+	   c.is_nullable, 
+	   c.is_computed, 
+	   c.is_identity,
+	   case when ( select i.is_primary_key from sys.indexes as i inner join sys.index_columns as ic on ic.object_id = i.object_id and ic.index_id = i.index_id and i.is_primary_key = 1 where i.object_id = t.object_id and ic.column_id = c.column_id ) is not null  
+	        then 1 
+			else 0
+			end as is_primary_key,
+       case when ( select count(*) from sys.index_columns as ix where ix.object_id = c.object_id and ix.column_id = c.column_id ) > 0 then 1 else 0 end as is_indexed,
+	   case when ( select count(*) from sys.foreign_key_columns as f where f.parent_object_id = c.object_id and f.parent_column_id = c.column_id ) > 0 then 1 else 0 end as is_foreignkey,
+	   ( select t.name from sys.foreign_key_columns as f inner join sys.tables as t on t.object_id = f.referenced_object_id where f.parent_object_id = c.object_id and f.parent_column_id = c.column_id ) as foreigntablename
+  from sys.columns as c
+ inner join sys.tables as t on t.object_id = c.object_id
+ inner join sys.schemas as s on s.schema_id = t.schema_id
+ inner join sys.types as x on x.system_type_id = c.system_type_id and x.user_type_id = c.user_type_id
+ where t.name = @tablename
+   and s.name = @schema
+   and x.name != 'sysname'
+ order by t.name, c.column_id
+";
+
+					using (var command = new SqlCommand(query, connection))
+					{
+						command.Parameters.AddWithValue("@schema", entityModel.SchemaName);
+						command.Parameters.AddWithValue("@tablename", entityModel.TableName);
+
+						using (var reader = command.ExecuteReader())
+						{
+							while (reader.Read())
+							{
+								var dbColumn = new DBColumn
+								{
+									ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
+									EntityName = reader.GetString(0),
+									DBDataType = reader.GetString(1),
+									Length = Convert.ToInt64(reader.GetValue(2)),
+									NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+									NumericScale = Convert.ToInt32(reader.GetValue(4)),
+									IsNullable = Convert.ToBoolean(reader.GetValue(5)),
+									IsComputed = Convert.ToBoolean(reader.GetValue(6)),
+									IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
+									IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
+									IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
+									IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+									ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
+								};
+
+
+								if (string.Equals(dbColumn.DBDataType, "geometry", StringComparison.OrdinalIgnoreCase))
+								{
+									throw new Exception(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.");
+								}
+
+								if (string.Equals(dbColumn.DBDataType, "geography", StringComparison.OrdinalIgnoreCase))
+								{
+									throw new Exception(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.");
+								}
+
+								if (string.Equals(dbColumn.DBDataType, "variant", StringComparison.OrdinalIgnoreCase))
+								{
+									throw new Exception("COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.");
+								}
+
+								dbColumn.ModelDataType = DBHelper.GetSQLServerDataType(dbColumn);
+								columns.Add(dbColumn);
+							}
+						}
+					}
+				}
+			}
+
+			entityModel.Columns = columns.ToArray();
+		}
+
 		public static MemoryCache _cache = new MemoryCache("ClassCache");
 
 		public static string GetPostgresqlExampleValue(DBColumn column)

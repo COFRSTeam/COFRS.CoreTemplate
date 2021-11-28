@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace COFRS.Template.Common.ServiceUtilities
+namespace COFRSCoreCommon.Utilities
 {
     public static class StringExtensions
     {

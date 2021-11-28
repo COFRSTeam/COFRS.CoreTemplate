@@ -42,7 +42,7 @@
             this._okButton = new System.Windows.Forms.Button();
             this._rememberPassword = new System.Windows.Forms.CheckBox();
             this.label9 = new System.Windows.Forms.Label();
-            this._entityClassList = new System.Windows.Forms.ComboBox();
+            this._entityModelList = new System.Windows.Forms.ComboBox();
             this.label10 = new System.Windows.Forms.Label();
             this.label11 = new System.Windows.Forms.Label();
             this._cancelButton = new System.Windows.Forms.Button();
@@ -193,12 +193,12 @@
             // 
             // _entityClassList
             // 
-            this._entityClassList.FormattingEnabled = true;
-            this._entityClassList.Location = new System.Drawing.Point(93, 215);
-            this._entityClassList.Name = "_entityClassList";
-            this._entityClassList.Size = new System.Drawing.Size(356, 21);
-            this._entityClassList.TabIndex = 14;
-            this._entityClassList.SelectedIndexChanged += new System.EventHandler(this.OnEntityClassFileChanged);
+            this._entityModelList.FormattingEnabled = true;
+            this._entityModelList.Location = new System.Drawing.Point(93, 215);
+            this._entityModelList.Name = "_entityClassList";
+            this._entityModelList.Size = new System.Drawing.Size(356, 21);
+            this._entityModelList.TabIndex = 14;
+            this._entityModelList.SelectedIndexChanged += new System.EventHandler(this.OnEntityClassFileChanged);
             // 
             // label10
             // 
@@ -357,7 +357,7 @@
             this.Controls.Add(this.label11);
             this.Controls.Add(this.label10);
             this.Controls.Add(this.pictureBox2);
-            this.Controls.Add(this._entityClassList);
+            this.Controls.Add(this._entityModelList);
             this.Controls.Add(this.label9);
             this.Controls.Add(this._rememberPassword);
             this.Controls.Add(this.label5);
@@ -402,7 +402,7 @@
 		private System.Windows.Forms.Label label10;
 		private System.Windows.Forms.Label label11;
 		private System.Windows.Forms.Button _cancelButton;
-		public System.Windows.Forms.ComboBox _entityClassList;
+		public System.Windows.Forms.ComboBox _entityModelList;
 		private System.Windows.Forms.Button _addServer;
 		private System.Windows.Forms.Label _authenticationLabel;
 		private System.Windows.Forms.ComboBox _authenticationList;

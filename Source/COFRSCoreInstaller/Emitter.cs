@@ -1,5 +1,6 @@
-﻿using COFRS.Template.Common.Models;
-using COFRS.Template.Common.ServiceUtilities;
+﻿using COFRS.Template.Common.ServiceUtilities;
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
@@ -8,8 +9,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace COFRS.Template
 {
@@ -34,7 +33,7 @@ namespace COFRS.Template
             var pkcolumns = resourceClass.EntityModel.Columns.Where(c => c.IsPrimaryKey);
 
             BuildControllerInterface(app, resourceClass);
-            BuildControllerOrchestration(app, resourceClass, nn, ValidatorInterface, ValidationNamespace);
+            BuildControllerOrchestration(app, resourceClass, ValidatorInterface, ValidationNamespace);
 
             // --------------------------------------------------------------------------------
             //	Class
@@ -496,7 +495,7 @@ namespace COFRS.Template
             }
         }
 
-        private static void BuildControllerOrchestration(DTE2 app, ResourceModel resourceModel, NameNormalizer nn, string ValidatorInterface, string ValidationNamespace)
+        private static void BuildControllerOrchestration(DTE2 app, ResourceModel resourceModel, string ValidatorInterface, string ValidationNamespace)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 

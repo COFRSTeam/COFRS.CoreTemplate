@@ -54,7 +54,6 @@
   <ItemGroup>
     <Compile Include="COFRSModelsProjectWizard.cs" />
     <Compile Include="COFRSSDKProjectWizard.cs" />
-    <Compile Include="Common\Extensions\CodeElementsExtensions.cs" />
     <Compile Include="Common\Forms\AddConnection.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -97,42 +96,9 @@
     <Compile Include="Common\Forms\UserInputResource.Designer.cs">
       <DependentUpon>UserInputResource.cs</DependentUpon>
     </Compile>
-    <Compile Include="Common\Forms\UserInputValidation.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputValidation.Designer.cs">
-      <DependentUpon>UserInputValidation.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Common\Models\ClassFile.cs" />
-    <Compile Include="Common\Models\ClassMember.cs" />
-    <Compile Include="Common\Models\DBAuthentication.cs" />
-    <Compile Include="Common\Models\DBColumn.cs" />
-    <Compile Include="Common\Models\DBServer.cs" />
-    <Compile Include="Common\Models\DBServerType.cs" />
-    <Compile Include="Common\Models\DBTable.cs" />
-    <Compile Include="Common\Models\ElementType.cs" />
-    <Compile Include="Common\Models\EntityClassFile.cs" />
-    <Compile Include="Common\Models\EntityMap.cs" />
-    <Compile Include="Common\Models\EntityModel.cs" />
-    <Compile Include="Common\Models\EntityProfile.cs" />
-    <Compile Include="Common\Models\MemberInfo.cs" />
-    <Compile Include="Common\Models\ProfileMap.cs" />
-    <Compile Include="Common\Models\ProjectMapping.cs" />
-    <Compile Include="Common\Models\ProjectFolder.cs" />
-    <Compile Include="Common\Models\ResourceClassFile.cs" />
-    <Compile Include="Common\Models\ResourceMap.cs" />
-    <Compile Include="Common\Models\ResourceModel.cs" />
-    <Compile Include="Common\Models\ResourceProfile.cs" />
-    <Compile Include="Common\Models\ResourceType.cs" />
-    <Compile Include="Common\Models\ServerConfig.cs" />
-    <Compile Include="Common\Models\Snipit.cs" />
-    <Compile Include="Common\Models\SnipitType.cs" />
     <Compile Include="Common\ServiceUtilities\DBHelper.cs" />
-    <Compile Include="Common\ServiceUtilities\NameNormalizer.cs" />
     <Compile Include="Common\ServiceUtilities\SourceConverter.cs" />
-    <Compile Include="Common\ServiceUtilities\StandardUtils.cs" />
     <Compile Include="Common\ServiceUtilities\StandardEmitter.cs" />
-    <Compile Include="Common\ServiceUtilities\StringExtensions.cs" />
     <Compile Include="Common\ServiceUtilities\WindowClass.cs" />
     <Compile Include="Common\ServiceUtilities\WinNative.cs" />
     <Compile Include="Common\Wizards\ControllerWizard.cs" />
@@ -280,9 +246,6 @@
     <EmbeddedResource Include="Common\Forms\UserInputResource.resx">
       <DependentUpon>UserInputResource.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\UserInputValidation.resx">
-      <DependentUpon>UserInputValidation.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Common\Forms\MapEditor.resx">
       <DependentUpon>MapEditor.cs</DependentUpon>
     </EmbeddedResource>
@@ -300,6 +263,10 @@
       <Name>COFRSCoreCommandsPackage</Name>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3bPkgdefProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
+    </ProjectReference>
+    <ProjectReference Include="..\COFRSCoreCommon\COFRSCoreCommon.csproj">
+      <Project>{12185790-2236-4648-A212-F1200F30788B}</Project>
+      <Name>COFRSCoreCommon</Name>
     </ProjectReference>
     <ProjectReference Include="..\COFRSCoreControllerTemplate\COFRSCoreControllerTemplate.csproj">
       <Project>{D7E7E13E-DC23-49AE-9FE2-A71483170879}</Project>
@@ -364,6 +331,9 @@
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Common\Extensions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />

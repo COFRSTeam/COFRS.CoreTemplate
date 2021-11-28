@@ -1,9 +1,5 @@
-﻿using COFRS.Template.Common.Models;
+﻿using COFRSCoreCommon.Models;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace COFRS.Template.Common.ServiceUtilities
 {
