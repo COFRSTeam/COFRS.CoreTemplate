@@ -1,4 +1,4 @@
-﻿using COFRS.Template.Common.Models;
+﻿using COFRSCoreCommon.Models;
 using MySql.Data.MySqlClient;
 using Npgsql;
 using System;
@@ -8,7 +8,7 @@ using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Forms
 {
-	public partial class AddConnection : Form
+    public partial class AddConnection : Form
 	{
 		public DBServer Server { get; set; }
 		public DBServer LastServerUsed { get; set; }

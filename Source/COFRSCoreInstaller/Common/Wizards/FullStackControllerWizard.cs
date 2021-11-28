@@ -1,6 +1,7 @@
 ﻿using COFRS.Template.Common.Forms;
-using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
@@ -58,7 +59,7 @@ namespace COFRS.Template.Common.Wizards
 			try
 			{
 				//	Full stack must start at the root namespace. Insure that we do...
-				if (!StandardUtils.IsRootNamespace(_appObject.Solution, replacementsDictionary["$rootnamespace$"]))
+				if (!COFRSCommonUtilities.IsRootNamespace(_appObject, replacementsDictionary["$rootnamespace$"]))
 				{
 					MessageBox.Show("The COFRS Controller Full Stack should be placed at the project root. It will add the appropriate components in the appropriate folders.", "COFRS", MessageBoxButtons.OK, MessageBoxIcon.Error);
 					Proceed = false;
@@ -76,44 +77,33 @@ namespace COFRS.Template.Common.Wizards
 				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 				//  Load the project mapping information
-				var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
+				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(_appObject);
 				HandleMessages();
 
-				var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
+				var installationFolder = COFRSCommonUtilities.GetInstallationFolder(_appObject);
 				HandleMessages();
 
-				projectMapping = StandardUtils.LoadProjectMapping(_appObject,
-													projectMapping,
-													installationFolder,
-													out ProjectFolder entityModelsFolder,
-													out ProjectFolder resourceModelsFolder,
-													out ProjectFolder mappingFolder,
-													out ProjectFolder validationFolder,
-													out ProjectFolder exampleFolder,
-													out ProjectFolder controllersFolder);
+				var connectionString = COFRSCommonUtilities.GetConnectionString(_appObject);
 				HandleMessages();
 
-				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
+				var entityMap = COFRSCommonUtilities.LoadEntityMap(_appObject);
 				HandleMessages();
 
-				var entityMap = StandardUtils.LoadEntityModels(_appObject.Solution, entityModelsFolder);
+				var defaultServerType = COFRSCommonUtilities.GetDefaultServerType(_appObject);
+				var resourceMap = COFRSCommonUtilities.LoadResourceMap(_appObject);
 				HandleMessages();
 
-				var defaultServerType = StandardUtils.GetDefaultServerType(connectionString);
-				var resourceMap = StandardUtils.LoadResourceModels(_appObject.Solution, entityMap, resourceModelsFolder, defaultServerType);
-				HandleMessages();
-
-				var policies = StandardUtils.LoadPolicies(_appObject.Solution);
+				var policies = COFRSCommonUtilities.LoadPolicies(_appObject);
 				HandleMessages();
 
 				//	Get folders and namespaces
 				var rootNamespace = replacementsDictionary["$rootnamespace$"];
-				replacementsDictionary["$entitynamespace$"] = entityModelsFolder.Namespace;
-				replacementsDictionary["$resourcenamespace$"] = resourceModelsFolder.Namespace;
-				replacementsDictionary["$mappingnamespace$"] = mappingFolder.Namespace;
+				replacementsDictionary["$entitynamespace$"] = projectMapping.EntityNamespace;
+				replacementsDictionary["$resourcenamespace$"] = projectMapping.ResourceNamespace;
+				replacementsDictionary["$mappingnamespace$"] = projectMapping.MappingNamespace;
 				replacementsDictionary["$orchestrationnamespace$"] = $"{rootNamespace}.Orchestration";
-				replacementsDictionary["$validatornamespace$"] = validationFolder.Namespace;
-				replacementsDictionary["$validationnamespace$"] = validationFolder.Namespace;
+				replacementsDictionary["$validatornamespace$"] = projectMapping.ValidationNamespace;
+				replacementsDictionary["$validationnamespace$"] = projectMapping.ValidationNamespace;
 
 				var candidateName = replacementsDictionary["$safeitemname$"];
 
@@ -131,7 +121,7 @@ namespace COFRS.Template.Common.Wizards
 					RootNamespace = rootNamespace,
 					ReplacementsDictionary = replacementsDictionary,
 					EntityMap = entityMap,
-					EntityModelsFolder = entityModelsFolder,
+					EntityModelsFolder = projectMapping.GetEntityModelsFolder(),
 					Policies = policies,
 					DefaultConnectionString = connectionString
 				};
@@ -149,11 +139,10 @@ namespace COFRS.Template.Common.Wizards
 					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 					HandleMessages();
-					var projectName = StandardUtils.GetProjectName(_appObject.Solution);
-					connectionString = $"{form.ConnectionString}Application Name={projectName}";
+					connectionString = $"{form.ConnectionString}Application Name={projectMapping.ControllersProject}";
 
 					//	Replace the ConnectionString
-					StandardUtils.ReplaceConnectionString(_appObject.Solution, connectionString);
+					COFRSCommonUtilities.ReplaceConnectionString(_appObject, connectionString);
 					HandleMessages();
 
 					var entityClassName = $"E{form.SingularResourceName}";
@@ -170,7 +159,7 @@ namespace COFRS.Template.Common.Wizards
 					replacementsDictionary["$exampleClass$"] = exampleClassName;
 					replacementsDictionary["$controllerClass$"] = controllerClassName;
 
-					var moniker = StandardUtils.LoadMoniker(_appObject.Solution);
+					var moniker = COFRSCommonUtilities.LoadMoniker(_appObject);
 					var policy = form.Policy;
 					HandleMessages();
 
@@ -200,12 +189,12 @@ namespace COFRS.Template.Common.Wizards
 							var definedList = new List<EntityModel>();
 							definedList.AddRange(undefinedModels);
 
-							standardEmitter.GenerateComposites(_appObject.Solution,
+							standardEmitter.GenerateComposites(_appObject,
 															   undefinedModels,
 															   form.ConnectionString,
 															   replacementsDictionary,
 															   entityMap,
-															   entityModelsFolder);
+															   projectMapping.GetEntityModelsFolder());
 							HandleMessages();
 
 							foreach (var composite in undefinedModels)
@@ -214,7 +203,7 @@ namespace COFRS.Template.Common.Wizards
 								var pj = (VSProject)_appObject.Solution.Projects.Item(1).Object;
 								pj.Project.ProjectItems.AddFromFile(composite.Folder);
 
-								StandardUtils.RegisterComposite(_appObject.Solution, composite);
+								COFRSCommonUtilities.RegisterComposite(_appObject, composite);
 							}
 
 						}
@@ -227,10 +216,10 @@ namespace COFRS.Template.Common.Wizards
 							TableName = form.DatabaseTable.Table,
 							Namespace = replacementsDictionary["$rootnamespace$"],
 							ElementType = ElementType.Composite,
-							Folder = Path.Combine(entityModelsFolder.Folder, replacementsDictionary["$safeitemname$"])
+							Folder = Path.Combine(projectMapping.EntityFolder, replacementsDictionary["$safeitemname$"])
 						};
 
-						StandardUtils.GenerateColumns(entityModel, form.ConnectionString);
+						DBHelper.GenerateColumns(entityModel, form.ConnectionString);
 
 						var emodel = standardEmitter.EmitEntityModel(entityModel,
 																entityMap,
@@ -238,15 +227,13 @@ namespace COFRS.Template.Common.Wizards
 
 						var existingEntities = entityMap.Maps.ToList();
 
-						entityModel.Folder = Path.Combine(entityModelsFolder.Folder, $"{entityModel.ClassName}.cs");
+						entityModel.Folder = Path.Combine(projectMapping.EntityFolder, $"{entityModel.ClassName}.cs");
 
 						existingEntities.Add(entityModel);
 						entityMap.Maps = existingEntities.ToArray();
 
 						replacementsDictionary.Add("$entityModel$", emodel);
 						HandleMessages();
-
-						var classMembers = StandardUtils.LoadEntityClassMembers(entityModel);
 					}
 					else
                     {
@@ -275,9 +262,9 @@ namespace COFRS.Template.Common.Wizards
 
 						resourceModel = new ResourceModel()
 						{
-							ProjectName = resourceModelsFolder.ProjectName,
-							Namespace = resourceModelsFolder.Namespace,
-							Folder = Path.Combine(resourceModelsFolder.Folder, $"{resourceClassName}.cs"),
+							ProjectName = projectMapping.ResourceProject,
+							Namespace = projectMapping.ResourceNamespace,
+							Folder = Path.Combine(projectMapping.ResourceFolder, $"{resourceClassName}.cs"),
 							ClassName = resourceClassName,
 							EntityModel = entityModel,
 							ServerType = form.ServerType
@@ -290,7 +277,7 @@ namespace COFRS.Template.Common.Wizards
 
 						var existingResources = resourceMap.Maps.ToList();
 
-						resourceModel.Folder = Path.Combine(resourceModelsFolder.Folder, $"{resourceModel.ClassName}.cs");
+						resourceModel.Folder = Path.Combine(projectMapping.ResourceFolder, $"{resourceModel.ClassName}.cs");
 
 						existingResources.Add(resourceModel);
 						resourceMap.Maps = existingResources.ToArray();
@@ -325,7 +312,7 @@ namespace COFRS.Template.Common.Wizards
 
 						if (mapperDialog.ShowDialog() == DialogResult.OK)
 						{
-							StandardUtils.SaveProfileMap(_appObject.Solution, mapperDialog.ProfileMap);
+							COFRSCommonUtilities.SaveProfileMap(_appObject, mapperDialog.ProfileMap);
 
 							var mappingModel = standardEmitter.EmitMappingModel(resourceModel, resourceModel.EntityModel, mapperDialog.ProfileMap, mappingClassName, replacementsDictionary);
 
@@ -350,7 +337,7 @@ namespace COFRS.Template.Common.Wizards
 
 						var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
 						var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
-						var orchestrationNamespace = StandardUtils.FindOrchestrationNamespace(_appObject.Solution);
+						var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(_appObject);
 
 						//	Emit Validation Model
 						var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, validationClassName, out validatorInterface);
@@ -358,7 +345,7 @@ namespace COFRS.Template.Common.Wizards
 						HandleMessages();
 
 						//	Register the validation model
-						StandardUtils.RegisterValidationModel(_appObject.Solution, 
+						COFRSCommonUtilities.RegisterValidationModel(_appObject, 
 														  validationClassName,
 														  replacementsDictionary["$validatornamespace$"]);
 					}
@@ -371,7 +358,7 @@ namespace COFRS.Template.Common.Wizards
 						var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
 						var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
 
-						var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, resourceMap, entityMap, exampleClassName, defaultServerType, connectionString);
+						var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, entityMap, exampleClassName, defaultServerType, connectionString);
 						replacementsDictionary.Add("$examplemodel$", exampleModel);
 					}
 					#endregion
@@ -389,7 +376,7 @@ namespace COFRS.Template.Common.Wizards
 							controllerClassName,
 							validatorInterface,
 							policy,
-							validationFolder.Namespace);
+							projectMapping.ControllersNamespace);
 
 						replacementsDictionary.Add("$controllerModel$", controllerModel);
 						HandleMessages();

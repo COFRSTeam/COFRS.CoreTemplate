@@ -1,13 +1,13 @@
 ﻿using COFRS.Template.Common.Forms;
-using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -47,35 +47,25 @@ namespace COFRS.Template.Common.Wizards
 				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 				//  Load the project mapping information
-				var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
+				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(_appObject);
+				HandleMessages();
+				
+				var installationFolder = COFRSCommonUtilities.GetInstallationFolder(_appObject);
 				HandleMessages();
 
-				var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
-				HandleMessages();
-
-				projectMapping = StandardUtils.LoadProjectMapping(_appObject,
-													projectMapping,
-													installationFolder,
-													out ProjectFolder entityModelsFolder,
-													out ProjectFolder resourceModelsFolder,
-													out ProjectFolder mappingFolder,
-													out ProjectFolder validationFolder,
-													out ProjectFolder exampleFolder,
-													out ProjectFolder controllersFolder);
-				HandleMessages();
-
-				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
+				var connectionString = COFRSCommonUtilities.GetConnectionString(_appObject);
 				HandleMessages();
 
 				//  Make sure we are where we're supposed to be
-				if (!StandardUtils.IsChildOf(mappingFolder.Folder, installationFolder.Folder))
+				if (!COFRSCommonUtilities.IsChildOf(projectMapping.MappingFolder, installationFolder.Folder))
 				{
 					HandleMessages();
 
 					progressDialog.Close();
 					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+					var mappingFolder = projectMapping.GetMappingFolder();
 
-					var result = MessageBox.Show($"You are attempting to install a resource/entity mapping model into {StandardUtils.GetRelativeFolder(_appObject.Solution, installationFolder)}. Typically, resource/entity mapping models reside in {StandardUtils.GetRelativeFolder(_appObject.Solution, mappingFolder)}.\r\n\r\nDo you wish to place the new resource/entity mapping model in this non-standard location?",
+					var result = MessageBox.Show($"You are attempting to install a resource/entity mapping model into {COFRSCommonUtilities.GetRelativeFolder(_appObject, installationFolder)}. Typically, resource/entity mapping models reside in {COFRSCommonUtilities.GetRelativeFolder(_appObject, mappingFolder)}.\r\n\r\nDo you wish to place the new resource/entity mapping model in this non-standard location?",
 						"Warning: Non-Standard Location",
 						MessageBoxButtons.YesNo,
 						MessageBoxIcon.Warning);
@@ -91,21 +81,19 @@ namespace COFRS.Template.Common.Wizards
 					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 					HandleMessages();
 
-					mappingFolder = installationFolder;
+					projectMapping.MappingFolder = installationFolder.Folder;
+					projectMapping.MappingNamespace = installationFolder.Namespace;
+					projectMapping.MappingProject = installationFolder.ProjectName;
 
-					projectMapping.MappingFolder = mappingFolder.Folder;
-					projectMapping.MappingNamespace = mappingFolder.Namespace;
-					projectMapping.MappingProject = mappingFolder.ProjectName;
-
-					StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+					COFRSCommonUtilities.SaveProjectMapping(_appObject, projectMapping);
 				}
 
-				var entityMap = StandardUtils.LoadEntityModels(_appObject.Solution, entityModelsFolder);
+				var entityMap = COFRSCommonUtilities.LoadEntityMap(_appObject);	
 				HandleMessages();
 
-				var defultServerType = StandardUtils.GetDefaultServerType(connectionString);
+				var defultServerType = COFRSCommonUtilities.GetDefaultServerType(_appObject);
 
-				var resourceMap = StandardUtils.LoadResourceModels(_appObject.Solution, entityMap, resourceModelsFolder, defultServerType);
+				var resourceMap = COFRSCommonUtilities.LoadResourceMap(_appObject);
 				HandleMessages();
 
 				var form = new UserInputGeneral()
@@ -132,7 +120,7 @@ namespace COFRS.Template.Common.Wizards
 
 					if (mapperDialog.ShowDialog() == DialogResult.OK)
 					{
-						StandardUtils.SaveProfileMap(_appObject.Solution, mapperDialog.ProfileMap);
+						COFRSCommonUtilities.SaveProfileMap(_appObject, mapperDialog.ProfileMap);
 
 						var emitter = new StandardEmitter();
 						var model = emitter.EmitMappingModel(resourceModel, resourceModel.EntityModel, mapperDialog.ProfileMap, replacementsDictionary["$safeitemname$"], replacementsDictionary);

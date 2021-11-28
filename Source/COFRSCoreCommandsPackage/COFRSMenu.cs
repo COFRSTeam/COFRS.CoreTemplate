@@ -224,7 +224,7 @@ namespace COFRSCoreCommandsPackage
 
                     if (theClass != null)
                     {
-                        var resourceMap = StandardUtils.LoadResourceMap(dte2);
+                        var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte2);
 
                         var constructor = theClass.Children
                                                   .OfType<CodeFunction2>()

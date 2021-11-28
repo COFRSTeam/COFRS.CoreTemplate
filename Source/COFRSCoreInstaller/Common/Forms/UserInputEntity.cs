@@ -1,9 +1,9 @@
-﻿using COFRS.Template.Common.Models;
-using COFRS.Template.Common.ServiceUtilities;
+﻿using COFRS.Template.Common.ServiceUtilities;
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Npgsql;
-using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -590,7 +590,7 @@ ORDER BY c.ORDINAL_POSITION;
 
 									var dbColumn = new DBColumn
 									{
-										ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
+										ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
 										EntityName = reader.GetString(0),
 										DBDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
@@ -667,7 +667,7 @@ select c.name as column_name,
 								{
 									var dbColumn = new DBColumn
 									{
-										ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
+										ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
 										EntityName = reader.GetString(0),
 										DBDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
@@ -721,11 +721,11 @@ select c.name as column_name,
         private void ConstructPostgresqlColumn(DBTable table, NpgsqlDataReader reader)
         {
             var entityName = reader.GetString(0);
-            var columnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0)));
+            var columnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0)));
 
             var dbColumn = new DBColumn
             {
-                ColumnName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(reader.GetString(0))),
+                ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
                 EntityName = entityName,
                 DBDataType = reader.GetString(1),
                 Length = Convert.ToInt64(reader.GetValue(2)),
@@ -757,7 +757,7 @@ select c.name as column_name,
                         //	It's not defined, and it's not in the undefined list, so it is unknown. Let's make it known
                         //	by constructing it and including it in the undefined list.
                         entityName = dbColumn.DBDataType;
-                        var className = $"E{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(entityName))}";
+                        var className = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(entityName))}";
 
                         var entity = new EntityModel()
                         {
@@ -1127,7 +1127,7 @@ select c.name as column_name,
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
-				UndefinedEntityModels = StandardUtils.GenerateEntityClassList(UndefinedEntityModels, 
+				UndefinedEntityModels = DBHelper.GenerateEntityClassList(UndefinedEntityModels, 
 					                                                       EntityMap,
 																		   EntityModelsFolder.Folder, 
 																		   ConnectionString);

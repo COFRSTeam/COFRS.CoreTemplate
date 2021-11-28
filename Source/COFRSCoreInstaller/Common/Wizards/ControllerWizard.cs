@@ -1,25 +1,18 @@
 ﻿using COFRS.Template.Common.Forms;
-using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TemplateWizard;
-using MySql.Data.MySqlClient;
-using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
 {
-	public class ControllerWizard : IWizard
+    public class ControllerWizard : IWizard
 	{
 		private bool Proceed = false;
 
@@ -50,46 +43,39 @@ namespace COFRS.Template.Common.Wizards
 			WizardRunKind runKind, object[] customParams)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
+			DTE2 dte2 = Package.GetGlobalService(typeof(DTE)) as DTE2;
 			ProgressDialog progressDialog = new ProgressDialog("Loading classes and preparing project...");
 
 			try
 			{
 				//	Show the user that we are busy doing things...
-				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
-				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+				progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
+				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-				var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
+				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);
 				HandleMessages();
 
-				var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
+				var solutionPath = dte2.Solution.Properties.Item("Path").Value.ToString();
 
-				var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
+				var installationFolder = COFRSCommonUtilities.GetInstallationFolder(dte2);
 				HandleMessages();
 
-				projectMapping = StandardUtils.LoadProjectMapping(_appObject,
-													projectMapping,
-													installationFolder,
-													out ProjectFolder entityModelsFolder,
-													out ProjectFolder resourceModelsFolder,
-													out ProjectFolder mappingFolder,
-													out ProjectFolder validationFolder,
-													out ProjectFolder exampleFolder,
-													out ProjectFolder controllersFolder);
+				projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);
 				HandleMessages();
 
-				var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
+				var connectionString = COFRSCommonUtilities.GetConnectionString(dte2);
 				HandleMessages();
 
 				//  Make sure we are where we're supposed to be
-				if (!StandardUtils.IsChildOf(controllersFolder.Folder, installationFolder.Folder))
+				if (!COFRSCommonUtilities.IsChildOf(projectMapping.ControllersFolder, installationFolder.Folder))
 				{
 					HandleMessages();
 
 					progressDialog.Close();
-					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+					dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+					var controllersFolder = projectMapping.GetControllersFolder();
 
-					var result = MessageBox.Show($"You are attempting to install a controller model into {StandardUtils.GetRelativeFolder(_appObject.Solution, installationFolder)}. Typically, controller models reside in {StandardUtils.GetRelativeFolder(_appObject.Solution, controllersFolder)}.\r\n\r\nDo you wish to place the new controller model in this non-standard location?",
+					var result = MessageBox.Show($"You are attempting to install a controller model into {COFRSCommonUtilities.GetRelativeFolder(dte2, installationFolder)}. Typically, controller models reside in {COFRSCommonUtilities.GetRelativeFolder(dte2, controllersFolder)}.\r\n\r\nDo you wish to place the new controller model in this non-standard location?",
 						"Warning: Non-Standard Location",
 						MessageBoxButtons.YesNo,
 						MessageBoxIcon.Warning);
@@ -101,8 +87,8 @@ namespace COFRS.Template.Common.Wizards
 					}
 
 					progressDialog = new ProgressDialog("Loading classes and preparing project...");
-					progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
-					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+					progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
+					dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 					HandleMessages();
 
 					controllersFolder = installationFolder;
@@ -111,15 +97,15 @@ namespace COFRS.Template.Common.Wizards
 					projectMapping.ControllersNamespace = controllersFolder.Namespace;
 					projectMapping.ControllersProject = controllersFolder.ProjectName;
 
-					StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+					COFRSCommonUtilities.SaveProjectMapping(dte2, projectMapping);
 				}
 
-				var entityMap = StandardUtils.LoadEntityModels(_appObject.Solution, entityModelsFolder);
+				var entityMap = COFRSCommonUtilities.LoadEntityMap(dte2);
 				HandleMessages();
 
-				var defultServerType = StandardUtils.GetDefaultServerType(connectionString);
+				var defultServerType = COFRSCommonUtilities.GetDefaultServerType(dte2);
 
-				var resourceMap = StandardUtils.LoadResourceModels(_appObject.Solution, entityMap, resourceModelsFolder, defultServerType);
+				var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte2);
 				HandleMessages();
 
 				var form = new UserInputGeneral()
@@ -133,22 +119,22 @@ namespace COFRS.Template.Common.Wizards
 				HandleMessages();
 
 				progressDialog.Close();
-				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 				progressDialog = null;
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
 					var entityModel = (EntityModel)form._entityModelList.SelectedItem;
 					var resourceModel = (ResourceModel)form._resourceModelList.SelectedItem;
-					var moniker = StandardUtils.LoadMoniker(_appObject.Solution);
+					var moniker = COFRSCommonUtilities.LoadMoniker(dte2);
 					string policy = string.Empty;
 
 					if ( form.policyCombo.Items.Count > 0 )
 						policy = form.policyCombo.SelectedItem.ToString();
 					
-					var orchestrationNamespace = StandardUtils.FindOrchestrationNamespace(_appObject.Solution);
+					var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(dte2);
 
-					var validatorInterface = StandardUtils.FindValidatorInterface(_appObject.Solution, $"{resourceModel.Namespace}.{resourceModel.ClassName}");
+					var validatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte2, resourceModel.ClassName);
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
@@ -156,21 +142,19 @@ namespace COFRS.Template.Common.Wizards
 					replacementsDictionary.Add("$entitynamespace$", entityModel.Namespace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
 					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
-					replacementsDictionary.Add("$validationnamespace$", validationFolder.Namespace);
-					replacementsDictionary.Add("$examplesnamespace$", exampleFolder.Namespace);
-
-					var columns = new List<ClassMember>();
+					replacementsDictionary.Add("$validationnamespace$", projectMapping.ValidationNamespace);
+					replacementsDictionary.Add("$examplesnamespace$", projectMapping.ExampleNamespace);
 
 					var emitter = new Emitter();
 					var model = emitter.EmitController(
-						_appObject,
+						dte2,
 						entityModel,
 						resourceModel,
 						moniker,
 						replacementsDictionary["$safeitemname$"],
 						validatorInterface,
 						policy,
-						validationFolder.Namespace);
+						projectMapping.ValidationNamespace);
 
 					replacementsDictionary.Add("$model$", model);
 					Proceed = true;
@@ -184,7 +168,7 @@ namespace COFRS.Template.Common.Wizards
 					if (progressDialog.IsHandleCreated)
 						progressDialog.Close();
 
-				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				Proceed = false;
 			}

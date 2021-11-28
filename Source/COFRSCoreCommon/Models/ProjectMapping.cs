@@ -75,5 +75,29 @@ namespace COFRSCoreCommon.Models
 
             return pf;
         }
+
+        public ProjectFolder GetMappingFolder()
+        {
+            var pf = new ProjectFolder
+            {
+                Folder = MappingFolder,
+                Namespace = MappingNamespace,
+                ProjectName = MappingProject
+            };
+
+            return pf;
+        }
+
+        public ProjectFolder GetControllersFolder()
+        {
+            var pf = new ProjectFolder
+            {
+                Folder = ControllersFolder,
+                Namespace = ControllersNamespace,
+                ProjectName = ControllersProject
+            };
+
+            return pf;
+        }
     }
 }
