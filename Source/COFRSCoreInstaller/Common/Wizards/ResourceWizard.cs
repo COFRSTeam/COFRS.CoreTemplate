@@ -1,6 +1,7 @@
 ﻿using COFRS.Template.Common.Forms;
-using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
@@ -45,37 +46,25 @@ namespace COFRS.Template.Common.Wizards
                 progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
                 _appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-                var projectMapping = StandardUtils.OpenProjectMapping(_appObject.Solution);
+                var projectMapping = COFRSCommonUtilities.OpenProjectMapping(_appObject);
                 HandleMessages();
 
-                var installationFolder = StandardUtils.GetInstallationFolder(_appObject);
+                var installationFolder = COFRSCommonUtilities.GetInstallationFolder(_appObject);
                 HandleMessages();
 
-                //  Load the project mapping information
-                projectMapping = StandardUtils.LoadProjectMapping(_appObject,
-                                                    projectMapping,
-                                                    installationFolder,
-                                                    out ProjectFolder entityModelsFolder,
-                                                    out ProjectFolder resourceModelsFolder,
-                                                    out ProjectFolder mappingFolder,
-                                                    out ProjectFolder validationFolder,
-                                                    out ProjectFolder exampleFolder,
-                                                    out ProjectFolder controllersFolder);
-
-                HandleMessages();
-
-                var connectionString = StandardUtils.GetConnectionString(_appObject.Solution);
+                var connectionString = COFRSCommonUtilities.GetConnectionString(_appObject);
                 HandleMessages();
 
                 //  Make sure we are where we're supposed to be
-                if (!StandardUtils.IsChildOf(resourceModelsFolder.Folder, installationFolder.Folder))
+                if (!COFRSCommonUtilities.IsChildOf(projectMapping.ResourceFolder, installationFolder.Folder))
                 {
                     HandleMessages();
 
                     progressDialog.Close();
                     _appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+                    var resourceModelsFolder = projectMapping.GetResourceModelsFolder();
 
-                    var result = MessageBox.Show($"You are attempting to install a resource model into {StandardUtils.GetRelativeFolder(_appObject.Solution, installationFolder)}. Typically, resource models reside in {StandardUtils.GetRelativeFolder(_appObject.Solution, resourceModelsFolder)}.\r\n\r\nDo you wish to place the new resource model in this non-standard location?",
+                    var result = MessageBox.Show($"You are attempting to install a resource model into {COFRSCommonUtilities.GetRelativeFolder(_appObject, installationFolder)}. Typically, resource models reside in {COFRSCommonUtilities.GetRelativeFolder(_appObject, resourceModelsFolder)}.\r\n\r\nDo you wish to place the new resource model in this non-standard location?",
                         "Warning: Non-Standard Location",
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Warning);
@@ -93,20 +82,20 @@ namespace COFRS.Template.Common.Wizards
 
                     resourceModelsFolder = installationFolder;
 
-                    projectMapping.ResourceFolder = resourceModelsFolder.Folder;
-                    projectMapping.ResourceNamespace = resourceModelsFolder.Namespace;
-                    projectMapping.ResourceProject = resourceModelsFolder.ProjectName;
+                    projectMapping.ResourceFolder = installationFolder.Folder;
+                    projectMapping.ResourceNamespace = installationFolder.Namespace;
+                    projectMapping.ResourceProject = installationFolder.ProjectName;
 
-                    StandardUtils.SaveProjectMapping(_appObject.Solution, projectMapping);
+                    COFRSCommonUtilities.SaveProjectMapping(_appObject, projectMapping);
                 }
 
 
-                var entityMap = StandardUtils.LoadEntityModels(_appObject.Solution, entityModelsFolder);
+                var entityMap = COFRSCommonUtilities.LoadEntityMap(_appObject);
                 HandleMessages();
 
-                var defaultServerType = StandardUtils.GetDefaultServerType(connectionString);
+                var defaultServerType = COFRSCommonUtilities.GetDefaultServerType(_appObject);
 
-                var resourceMap = StandardUtils.LoadResourceModels(_appObject.Solution, entityMap, resourceModelsFolder, defaultServerType);
+                var resourceMap = COFRSCommonUtilities.LoadResourceMap(_appObject);
                 HandleMessages();
 
                 var form = new UserInputResource()
@@ -114,7 +103,7 @@ namespace COFRS.Template.Common.Wizards
                     EntityMap = entityMap,
                     ResourceMap = resourceMap,
                     DefaultConnectionString = connectionString,
-                    ResourceModelsFolder = resourceModelsFolder
+                    ResourceModelsFolder = projectMapping.GetResourceModelsFolder()
                 };
 
                 HandleMessages();
@@ -127,20 +116,20 @@ namespace COFRS.Template.Common.Wizards
                     var standardEmitter = new StandardEmitter();
                     var undefinedModels = form.UndefinedResources;
 
-                    standardEmitter.GenerateResourceComposites(_appObject.Solution,
+                    standardEmitter.GenerateResourceComposites(_appObject,
                                                                 undefinedModels,
-                                                                resourceModelsFolder,
+                                                                projectMapping.GetResourceModelsFolder(),
                                                                 entityMap,
                                                                 resourceMap);
 
-                    var entityModel = (EntityModel)form._entityClassList.SelectedItem;
+                    var entityModel = (EntityModel)form._entityModelList.SelectedItem;
                     var resourceClassName = replacementsDictionary["$safeitemname$"];
 
                     var resourceModel = new ResourceModel()
                     {
-                        ProjectName = resourceModelsFolder.ProjectName,
-                        Namespace = resourceModelsFolder.Namespace,
-                        Folder = Path.Combine(resourceModelsFolder.Folder, $"{resourceClassName}.cs"),
+                        ProjectName = projectMapping.ResourceProject,
+                        Namespace = projectMapping.ResourceNamespace,
+                        Folder = Path.Combine(projectMapping.ResourceFolder, $"{resourceClassName}.cs"),
                         ClassName = resourceClassName,
                         EntityModel = entityModel,
                         ServerType = form.ServerType

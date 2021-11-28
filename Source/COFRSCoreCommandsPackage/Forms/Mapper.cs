@@ -33,7 +33,7 @@ namespace COFRSCoreCommandsPackage.Forms
             ResourceClass_Lablel.Text = resourceModel.ClassName;
             EntityClass_Label.Text = resourceModel.EntityModel.ClassName;
 
-            entityModels = StandardUtils.LoadEntityModels(_dte2).Maps.ToList();
+            entityModels = COFRSCommonUtilities.LoadEntityMap(_dte2).Maps.ToList();
 
             var nn = new NameNormalizer(resourceModel.ClassName);
 
@@ -51,7 +51,7 @@ namespace COFRSCoreCommandsPackage.Forms
                 unmappedColumns.Add(entityColumn);
             }
 
-            profileMap = StandardUtils.LoadResourceMapping(_dte2, resourceModel);
+            profileMap = COFRSCommonUtilities.LoadResourceMapping(_dte2, resourceModel);
 
             if (profileMap != null)
             {
@@ -422,7 +422,7 @@ namespace COFRSCoreCommandsPackage.Forms
                                 StringBuilder parent = new StringBuilder("");
                                 string NullValue = "null";
 
-                                var parentModel = StandardUtils.GetParentModel(resourceModels, this.resourceModel, parts);
+                                var parentModel = COFRSCommonUtilities.GetParentModel(resourceModels, this.resourceModel, parts);
 
                                 if (parentModel != null)
                                 {

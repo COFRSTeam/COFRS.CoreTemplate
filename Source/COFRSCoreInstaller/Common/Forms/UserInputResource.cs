@@ -1,5 +1,5 @@
-﻿using COFRS.Template.Common.Models;
-using COFRS.Template.Common.ServiceUtilities;
+﻿using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Npgsql;
@@ -10,12 +10,11 @@ using System.Data.SqlClient;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Forms
 {
-	public partial class UserInputResource : Form
+    public partial class UserInputResource : Form
 	{
 		#region Variables
 		private ServerConfig _serverConfig;
@@ -61,7 +60,7 @@ namespace COFRS.Template.Common.Forms
 
 			foreach ( var entityModel in entityModelList )
             {
-				_entityClassList.Items.Add(entityModel);
+				_entityModelList.Items.Add(entityModel);
 			}
 
 			OnServerChanged(this, new EventArgs());
@@ -384,13 +383,13 @@ select s.name, t.name
 
 				bool foundit = false;
 
-				for (int i = 0; i < _entityClassList.Items.Count; i++)
+				for (int i = 0; i < _entityModelList.Items.Count; i++)
 				{
-					var entity = (EntityModel)_entityClassList.Items[i];
+					var entity = (EntityModel)_entityModelList.Items[i];
 
 					if (string.Equals(entity.TableName, table.Table, StringComparison.OrdinalIgnoreCase))
 					{
-						_entityClassList.SelectedIndex = i;
+						_entityModelList.SelectedIndex = i;
 						foundit = true;
 						break;
 					}
@@ -398,13 +397,13 @@ select s.name, t.name
 
 				if (!foundit)
 				{
-					_entityClassList.SelectedIndex = -1;
+					_entityModelList.SelectedIndex = -1;
 					MessageBox.Show("No matching entity class found. You will not be able to create a resource model without a matching entity model.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 					_tableList.SelectedIndex = -1;
 				}
 				else
 				{
-					EntityModel entityModel = _entityClassList.SelectedItem as EntityModel;
+					EntityModel entityModel = _entityModelList.SelectedItem as EntityModel;
 					UndefinedResources.Clear();
 
 					foreach ( var column in entityModel.Columns)
@@ -423,7 +422,7 @@ select s.name, t.name
 
 								if ( resourceModel == null )
                                 {
-									var className = $"{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(childEntityModel.TableName))}";
+									var className = $"{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(childEntityModel.TableName))}";
 
 									resourceModel = new ResourceModel()
 									{
@@ -450,7 +449,7 @@ select s.name, t.name
 
 					if ( UndefinedResources.Count() > 0 )
                     {
-						var className = $"{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(entityModel.TableName))}";
+						var className = $"{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(entityModel.TableName))}";
 						if ( MessageBox.Show($"The class {className} contains references to composits or enumerations for which therer is no defined resource model.\r\n\r\nWould you like COFRS to generate the missing resource models as part of generating this model?", 
 							"Warning: Missing Resource Model", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
                         {
@@ -636,9 +635,9 @@ select s.name, t.name
 
 		private void OnEntityClassFileChanged(object sender, EventArgs e)
 		{
-			if (_entityClassList.SelectedIndex != -1 && !Populating)
+			if (_entityModelList.SelectedIndex != -1 && !Populating)
 			{
-				var classFile = (EntityClassFile)_entityClassList.SelectedItem;
+				var classFile = (EntityModel)_entityModelList.SelectedItem;
 				var foundIt = false;
 				int index = 0;
 
@@ -657,7 +656,7 @@ select s.name, t.name
 				if (!foundIt)
 				{
 					MessageBox.Show("No corresponding table for this entity was found in the selected database. Please select the server and database that contains this table.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					_entityClassList.SelectedIndex = -1;
+					_entityModelList.SelectedIndex = -1;
 					return;
 				}
 			}
@@ -770,7 +769,7 @@ select s.name, t.name
 			Save();
 			DatabaseTable = (DBTable)_tableList.SelectedItem;
 
-			if (_entityClassList.SelectedIndex == -1)
+			if (_entityModelList.SelectedIndex == -1)
 			{
 				MessageBox.Show("No corresponding entity class found.\r\n\r\nYou must first create an entity class that represents\r\nthe entity as it exists in the database, before you\r\ncan create a resource class.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}

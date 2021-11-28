@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace COFRSCoreCommon.Models
+namespace COFRSCoreCommon.Utilities
 {
 	public class NameNormalizer
 	{

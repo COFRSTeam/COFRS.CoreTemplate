@@ -1,4 +1,4 @@
-﻿using COFRS.Template.Common.Models;
+﻿using COFRSCoreCommon.Models;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
 using MySql.Data.MySqlClient;
@@ -15,6 +15,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using COFRSCoreCommon.Utilities;
+using EnvDTE80;
 
 namespace COFRS.Template.Common.ServiceUtilities
 {
@@ -24,7 +26,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// Generates a validation model for the specified resource
 		/// </summary>
 		/// <param name="resourceModel">The resource model for the resource being validated.</param>
-		/// <param name="entityModel">The corresponding entity model for the resource being validated.</param>
 		/// <param name="profileMap">The profile map between the resource and entity models.</param>
 		/// <param name="validatorClassName">The name of the validator class</param>
 		/// <param name="validatorInterface">The output parameter returning the validator interface name.</param>
@@ -334,7 +335,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return results.ToString();
 		}
 
-		public string EmitExampleModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, EntityMap entityMap, string exampleClassName, DBServerType serverType, string connectionString)
+		public string EmitExampleModel(ResourceModel resourceModel, ProfileMap profileMap, EntityMap entityMap, string exampleClassName, DBServerType serverType, string connectionString)
         {
             var results = new StringBuilder();          
 			
@@ -2016,16 +2017,15 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// Emits the mapping model
 		/// </summary>
 		/// <param name="serverType"></param>
-		/// <param name="resourceClassFile"></param>
-		/// <param name="entityClassFile"></param>
+		/// <param name="resourceModel"></param>
+		/// <param name="entityModel"></param>
 		/// <param name="mappingClassName"></param>
 		/// <param name="replacementsDictionary"></param>
 		/// <returns></returns>
-		public string EmitMappingModel(EntityClassFile entityClassFile, ResourceClassFile resourceClassFile, string mappingClassName, Dictionary<string, string> replacementsDictionary)
+		public string EmitMappingModel(ProfileMap resourceMap, string mappingClassName, Dictionary<string, string> replacementsDictionary)
 		{
-			var ImageConversionRequired = false;
 			var results = new StringBuilder();
-			var nn = new NameNormalizer(resourceClassFile.ClassName);
+			var nn = new NameNormalizer(resourceMap.ResourceClassName);
 
 			results.AppendLine("\t///\t<summary>");
 			results.AppendLine($"\t///\t{nn.SingleForm} Profile for AutoMapper");
@@ -2043,649 +2043,54 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			#region Create the Resource to Entity Mapping
 			results.AppendLine();
-			results.AppendLine($"\t\t\tCreateMap<{resourceClassFile.ClassName}, {entityClassFile.ClassName}>()");
+			results.AppendLine($"\t\t\tCreateMap<{resourceMap.ResourceClassName}, {resourceMap.EntityClassName}>()");
 
 			bool first = true;
 
 			//	Emit known mappings
-			foreach (var member in resourceClassFile.Members)
+			foreach (var entityColumn in resourceMap.EntityProfiles)
 			{
-				if (string.IsNullOrWhiteSpace(member.ResourceMemberName))
-				{
-				}
-				else if (member.ChildMembers.Count == 0 && member.EntityNames.Count == 0)
-				{
-				}
-				else if (string.Equals(member.ResourceMemberName, "Href", StringComparison.OrdinalIgnoreCase))
-				{
-					int ix = 0 - member.EntityNames.Count + 1;
-					foreach (var entityColumn in member.EntityNames)
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						string dataType = entityColumn.ModelDataType;
-
-						if (ix == 0)
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(e => e.{member.ResourceMemberName}.GetId<{dataType}>()))");
-						else
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(e => e.{member.ResourceMemberName}.GetId<{dataType}>({ix})))");
-						ix++;
-					}
-				}
-				else if (member.EntityNames.Count > 0 && member.EntityNames[0].IsForeignKey)
-				{
-					int ix = 0 - member.EntityNames.Count + 1;
-					foreach (var entityColumn in member.EntityNames)
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						string dataType = entityColumn.ModelDataType;
-
-						if (entityColumn.IsNullable)
-						{
-							if (ix == 0)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? ({dataType}?) null : src.{member.ResourceMemberName}.GetId<{dataType}>()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? ({dataType}?) null : src.{member.ResourceMemberName}.GetId<{dataType}>({ix})))");
-						}
-						else
-						{
-							if (ix == 0)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.GetId<{dataType}>()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.GetId<{dataType}>({ix})))");
-						}
-						ix++;
-					}
-				}
+				if (first)
+					first = false;
 				else
-				{
-					EmitResourceToEntityMapping(results, member, "", ref first, ref ImageConversionRequired);
-				}
+					results.AppendLine();
+
+				results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityColumnName}, opts => opts.MapFrom(e => {entityColumn.MapFunction})");
 			}
+
 			results.AppendLine(";");
 
-			//	Emit To Do for unknown mappings
-			foreach (var member in resourceClassFile.Members)
-			{
-				if (string.IsNullOrWhiteSpace(member.ResourceMemberName))
-				{
-					foreach (var entityMember in member.EntityNames)
-					{
-						results.AppendLine($"\t\t\t\t//\tTo do: Write mapping for {entityMember.EntityName}");
-					}
-				}
-			}
 			results.AppendLine();
 			#endregion
 
 			#region Create Entity to Resource Mapping
-			results.AppendLine($"\t\t\tCreateMap<{entityClassFile.ClassName}, {resourceClassFile.ClassName}>()");
+			results.AppendLine($"\t\t\tCreateMap<{resourceMap.EntityClassName}, {resourceMap.ResourceClassName}>()");
 
 			//	Emit known mappings
 			first = true;
-			var activeDomainMembers = resourceClassFile.Members.Where(m => !string.IsNullOrWhiteSpace(m.ResourceMemberName) && CheckMapping(m));
 
-			foreach (var member in activeDomainMembers)
+			foreach (var resourceMember in resourceMap.ResourceProfiles)
 			{
-				if (member.EntityNames.Count > 0 && member.EntityNames[0].IsPrimaryKey)
-				{
-					if (first)
-						first = false;
-					else
-						results.AppendLine();
-
-					results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(e => new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}/id");
-					foreach (var entityColumn in member.EntityNames)
-					{
-						results.Append($"/{{e.{entityColumn.ColumnName}}}");
-					}
-					results.Append("\")))");
-				}
-				else if (member.EntityNames.Count > 0 && member.EntityNames[0].IsForeignKey)
-				{
-					var nf = new NameNormalizer(member.EntityNames[0].ForeignTableName);
-					var isNullable = member.EntityNames.Where(c => c.IsNullable).Count() > 0;
-
-					if (first)
-						first = false;
-					else
-						results.AppendLine();
-
-					if (isNullable)
-					{
-						results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => src.{member.EntityNames[0].EntityName} == null ? (Uri) null : new Uri($\"{{rootUrl}}/{nf.PluralCamelCase}/id");
-						foreach (var entityColumn in member.EntityNames)
-						{
-							results.Append($"/{{src.{entityColumn.ColumnName}}}");
-						}
-						results.Append("\")))");
-					}
-					else
-					{
-						results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => new Uri($\"{{rootUrl}}/{nf.PluralCamelCase}/id");
-						foreach (var entityColumn in member.EntityNames)
-						{
-							results.Append($"/{{src.{entityColumn.EntityName}}}");
-						}
-						results.Append("\")))");
-					}
-				}
+				if (first)
+					first = false;
 				else
-				{
-					EmitEntityToResourceMapping(results, member, ref first, ref ImageConversionRequired);
-				}
+					results.AppendLine();
+
+				results.Append($"\t\t\t\t.ForMember(dest => dest.{resourceMember.ResourceColumnName}, opts => opts.MapFrom(e => {resourceMember.MapFunction})");
 			}
 			results.AppendLine(";");
-
-			var inactiveDomainMembers = resourceClassFile.Members.Where(m => !string.IsNullOrWhiteSpace(m.ResourceMemberName) && !CheckMapping(m));
-
-			//	Emit To Do for unknown Mappings
-			foreach (var member in inactiveDomainMembers)
-			{
-				results.AppendLine($"\t\t\t\t//\tTo do: Write mapping for {member.ResourceMemberName}");
-			}
-			results.AppendLine();
 			#endregion
 
-			results.AppendLine($"\t\t\tCreateMap<PagedCollection<{entityClassFile.ClassName}>, PagedCollection<{resourceClassFile.ClassName}>>()");
+			results.AppendLine($"\t\t\tCreateMap<PagedCollection<{resourceMap.EntityClassName}>, PagedCollection<{resourceMap.ResourceClassName}>>()");
 			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Href, opts => opts.MapFrom(src => new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Href.Query}}\")))");
 			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.First, opts => opts.MapFrom(src => src.First == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.First.Query}}\")))");
 			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Next, opts => opts.MapFrom(src => src.Next == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Next.Query}}\")))");
 			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Previous, opts => opts.MapFrom(src => src.Previous == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Previous.Query}}\")));");
 			results.AppendLine("\t\t}");
 			results.AppendLine("\t}");
-
+			
 			return results.ToString();
 		}
-
-		private bool CheckMapping(ClassMember member)
-		{
-			if (member.EntityNames.Count > 0)
-				return true;
-
-			bool HasMapping = false;
-
-			foreach (var childMember in member.ChildMembers)
-			{
-				HasMapping |= CheckMapping(childMember);
-			}
-
-			return HasMapping;
-		}
-
-		private void EmitEntityToResourceMapping(StringBuilder results, ClassMember member, ref bool first, ref bool ImageConversionRequired)
-		{
-			if (member.ChildMembers.Count > 0)
-			{
-				bool isNullable = IsNullable(member);
-
-				if (isNullable)
-				{
-					if (first)
-						first = false;
-					else
-						results.AppendLine();
-
-					results.AppendLine($"\t\t\t\t.ForMember(destination => destination.{member.ResourceMemberName}, opts => opts.MapFrom(source =>");
-					results.Append("\t\t\t\t\t(");
-					bool subFirst = true;
-
-					foreach (var childMember in member.ChildMembers)
-					{
-						EmitNullTest(results, childMember, ref subFirst);
-					}
-
-					results.Append($") ? null : new {member.ResourceMemberType}() {{");
-
-					subFirst = true;
-					foreach (var childMember in member.ChildMembers)
-					{
-						EmitChildSet(results, childMember, ref subFirst);
-					}
-
-					results.Append("}))");
-				}
-				else
-				{
-					bool doThis = true;
-
-					foreach (var childMember in member.ChildMembers)
-					{
-						if (childMember.ChildMembers.Count == 0 &&
-							 childMember.EntityNames.Count == 0)
-						{
-							doThis = false;
-						}
-					}
-
-					if (doThis)
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						results.AppendLine($"\t\t\t\t.ForMember(destination => destination.{member.ResourceMemberName}, opts => opts.MapFrom(source =>");
-						results.AppendLine($"\t\t\t\t\tnew {member.ResourceMemberType}() {{");
-
-						bool subFirst = true;
-						foreach (var childMember in member.ChildMembers)
-						{
-							EmitChildSet(results, childMember, ref subFirst);
-						}
-
-						results.Append($"}}))");
-					}
-				}
-			}
-			else
-			{
-				var entityColumn = member.EntityNames[0];
-
-				if (!string.Equals(entityColumn.ModelDataType, member.ResourceMemberType, StringComparison.OrdinalIgnoreCase))
-				{
-					if (string.Equals(entityColumn.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "string", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (entityColumn.IsNullable)
-							results.Append($"\t\t\t\t.ForMember(destination => destination.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName} == null ? null : new string(src.{entityColumn.EntityName})))");
-						else
-							results.Append($"\t\t\t\t.ForMember(destination => destination.{member.ResourceMemberName}, opts => opts.MapFrom( src => new string(src.{entityColumn.EntityName})))");
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "char[]", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (entityColumn.IsNullable)
-							results.Append($"\t\t\t\t.ForMember(destination => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName} == null ? null : src.{entityColumn.EntityName}.ToArray()))");
-						else
-							results.Append($"\t\t\t\t.ForMember(destination => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName}.ToArray()))");
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "byte[]", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						ImageConversionRequired = true;
-
-						if (entityColumn.IsNullable)
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName} == null ? null : src.{entityColumn.EntityName}.GetBytes()))");
-						else
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName}.GetBytes()))");
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Image", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						ImageConversionRequired = true;
-
-						if (entityColumn.IsNullable)
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => src.{entityColumn.EntityName} == null ? null : ImageEx.Parse(src.{entityColumn.EntityName})))");
-						else
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom( src => ImageEx.Parse(src.{entityColumn.EntityName})))");
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "DateTime", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTimeOFfset", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (entityColumn.IsNullable)
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.HasValue ? new DateTimeOffset(src.{member.ResourceMemberName}.Value) : (DateTimeOffset?) null))");
-						else
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new DateTimeOffset(src.{member.ResourceMemberName})))");
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTime", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (entityColumn.IsNullable)
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.HasValue ? src.{member.ResourceMemberName}.Value.DateTime : (DateTime?) null))");
-						else
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.DateTime))");
-					}
-				}
-				else if (string.Equals(entityColumn.ModelDataType, "BitArray", StringComparison.OrdinalIgnoreCase))
-				{
-					if (first)
-						first = false;
-					else
-						results.AppendLine();
-
-					results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => src.{entityColumn.EntityName} ?? new System.Collections.BitArray(Array.Empty<bool>())))");
-				}
-				else if (!string.Equals(member.ResourceMemberName, member.EntityNames[0].ColumnName, StringComparison.OrdinalIgnoreCase))
-				{
-					if (first)
-						first = false;
-					else
-						results.AppendLine();
-
-					results.Append($"\t\t\t\t.ForMember(dest => dest.{member.ResourceMemberName}, opts => opts.MapFrom(src => src.{entityColumn.EntityName}))");
-				}
-			}
-		}
-
-		private void EmitResourceToEntityMapping(StringBuilder results, ClassMember member, string prefix, ref bool first, ref bool ImageConversionRequired)
-		{
-			if (member.ChildMembers.Count > 0)
-			{
-				foreach (var childMember in member.ChildMembers)
-				{
-					EmitResourceToEntityMapping(results, childMember, $"{prefix}{member.ResourceMemberName}", ref first, ref ImageConversionRequired);
-				}
-			}
-			else if (member.EntityNames.Count > 0)
-			{
-				var entityColumn = member.EntityNames[0];
-
-				if (!string.Equals(entityColumn.ModelDataType, member.ResourceMemberType, StringComparison.OrdinalIgnoreCase))
-				{
-					if (string.Equals(entityColumn.ModelDataType, "char[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "string", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (string.IsNullOrWhiteSpace(prefix))
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName} == null ? null : src.{prefix}.{member.ResourceMemberName}.ToArray()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.ToArray()))");
-						}
-						else
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName} == null ? null : src.{prefix}{member.ResourceMemberName}.ToArray()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.ToArray()))");
-						}
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "char[]", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (string.IsNullOrWhiteSpace(prefix))
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName} == null ? null : new string(src.{prefix}.{member.ResourceMemberName})))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new string(src.{prefix}.{member.ResourceMemberName})))");
-						}
-						else
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName} == null ? null : new string(src.{prefix}{member.ResourceMemberName})))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new string(src.{prefix}.{member.ResourceMemberName})))");
-						}
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "string", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Uri", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (string.IsNullOrWhiteSpace(prefix))
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? (string) null : src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())).ToString()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())).ToString()))");
-						}
-						else
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (string) null : {prefix}.{member.ResourceMemberName} == null ? (string) null : src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName}.ToString() : (new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())).ToString()))");
-						}
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "Image", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "byte[]", StringComparison.OrdinalIgnoreCase))
-					{
-						ImageConversionRequired = true;
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (string.IsNullOrWhiteSpace(prefix))
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName} == null ? null : ImageEx.Parse(src.{member.ResourceMemberName})))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => ImageEx.Parse(src.{member.ResourceMemberName})))");
-						}
-						else
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName} == null ? null : ImageEx.Parse(src.{prefix}{member.ResourceMemberName})))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => ImageEx.Parse(src.{prefix}.{member.ResourceMemberName})))");
-						}
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "byte[]", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "Image", StringComparison.OrdinalIgnoreCase))
-					{
-						ImageConversionRequired = true;
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (string.IsNullOrWhiteSpace(prefix))
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName} == null ? null : src.{member.ResourceMemberName}.GetBytes()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.GetBytes()))");
-						}
-						else
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName} == null ? null : src.{prefix}{member.ResourceMemberName}.GetBytes()))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.GetBytes()))");
-						}
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "DateTime", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (string.IsNullOrWhiteSpace(prefix))
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.HasValue ? src.{member.ResourceMemberName}.Value.DateTime : (DateTime?) null))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.DateTime))");
-						}
-						else
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName}.HasValue ? src.{prefix}.{member.ResourceMemberName}.Value.DateTime : (DateTime?) null))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix}.{member.ResourceMemberName}.DateTime))");
-						}
-					}
-					else if (string.Equals(entityColumn.ModelDataType, "DateTimeOffset", StringComparison.OrdinalIgnoreCase) && string.Equals(member.ResourceMemberType, "DateTime", StringComparison.OrdinalIgnoreCase))
-					{
-						if (first)
-							first = false;
-						else
-							results.AppendLine();
-
-						if (string.IsNullOrWhiteSpace(prefix))
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{member.ResourceMemberName}.HasValue ? new DateTimeOffset(src.{member.ResourceMemberName}.Value) : (DateTimeOffset?) null))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new DateTimeOffset(src.{member.ResourceMemberName})))");
-						}
-						else
-						{
-							if (entityColumn.IsNullable)
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName}.HasValue ? new DateTimeOffset(src.{prefix}.{member.ResourceMemberName}.Value) : (DateTimeOffset?) null))");
-							else
-								results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom( src => new DateTimeOffset(src.{prefix}.{member.ResourceMemberName})))");
-						}
-					}
-				}
-				else if (string.Equals(entityColumn.ModelDataType, "BitArray", StringComparison.OrdinalIgnoreCase))
-				{
-					if (first)
-						first = false;
-					else
-						results.AppendLine();
-
-					if (string.IsNullOrWhiteSpace(prefix))
-					{
-						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} ?? new System.Collections.BitArray(Array.Empty<bool>())))");
-					}
-					else
-					{
-						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix}.{member.ResourceMemberName} ?? new System.Collections.BitArray(Array.Empty<bool>())))");
-					}
-				}
-				else if (string.Equals(entityColumn.ModelDataType, "Uri", StringComparison.OrdinalIgnoreCase))
-				{
-					if (first)
-						first = false;
-					else
-						results.AppendLine();
-
-					if (string.IsNullOrWhiteSpace(prefix))
-					{
-						if (entityColumn.IsNullable)
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName} == null ? (Uri) null : src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())))");
-						else
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}.IsAbsoluteUri ? src.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{member.ResourceMemberName}.ToString())))");
-					}
-					else
-					{
-						if (entityColumn.IsNullable)
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (Uri) null : {prefix}.{member.ResourceMemberName} == null ? (Uri) null : src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())))");
-						else
-							results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? (Uri) null : src => src.{prefix}.{member.ResourceMemberName}.IsAbsoluteUri ? src.{prefix}.{member.ResourceMemberName} : new Uri(new Uri(rootUrl), src.{prefix}.{member.ResourceMemberName}.ToString())))");
-					}
-				}
-				else if (!string.Equals(member.ResourceMemberName, entityColumn.ColumnName, StringComparison.OrdinalIgnoreCase))
-				{
-					if (first)
-						first = false;
-					else
-						results.AppendLine();
-
-					if (string.IsNullOrWhiteSpace(prefix))
-					{
-						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{member.ResourceMemberName}))");
-					}
-					else
-					{
-						results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityName}, opts => opts.MapFrom(src => src.{prefix} == null ? null : src.{prefix}.{member.ResourceMemberName}))");
-					}
-				}
-			}
-		}
-
-		private void EmitChildSet(StringBuilder results, ClassMember member, ref bool subFirst)
-		{
-			if (member.EntityNames.Count > 0)
-			{
-				if (subFirst)
-					subFirst = false;
-				else
-					results.AppendLine(",");
-
-				results.Append($"\t\t\t\t{member.ResourceMemberName} = src.{member.EntityNames[0].EntityName}");
-			}
-		}
-
-		private bool IsNullable(ClassMember member)
-		{
-			bool isNullable = false;
-
-			if (member.ChildMembers.Count > 0)
-			{
-				foreach (var childMember in member.ChildMembers)
-				{
-					isNullable |= IsNullable(childMember);
-				}
-			}
-			else
-			{
-				foreach (var entity in member.EntityNames)
-				{
-					isNullable |= entity.IsNullable;
-				}
-			}
-
-			return isNullable;
-		}
-
-		private void EmitNullTest(StringBuilder results, ClassMember member, ref bool first)
-		{
-			if (member.ChildMembers.Count > 0)
-			{
-				foreach (var childMember in member.ChildMembers)
-				{
-					EmitNullTest(results, childMember, ref first);
-				}
-			}
-			else
-			{
-				foreach (var entityMember in member.EntityNames)
-				{
-					if (first)
-						first = false;
-					else
-					{
-						results.AppendLine(" &&");
-						results.Append("\t\t\t\t\t ");
-					}
-
-					if (string.Equals(entityMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
-					{
-						results.Append($"string.IsNullOrWhiteSpace(src.{entityMember.EntityName})");
-					}
-					else
-					{
-						results.Append($"src.{entityMember.EntityName} == null");
-					}
-				}
-			}
-		}
-
 
 		/// <summary>
 		/// Emits an entity data model based upon the fields contained within the database table
@@ -2861,7 +2266,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					AppendPrecision(result, column.NumericPrecision, column.NumericScale, ref first);
 				}
 
-				AppendDatabaseType(result, entityModel.ServerType, column, ref first);
+				AppendDatabaseType(result, column, ref first);
 				AppendEntityName(result, column, ref first);
 
 				if (entityModel.ServerType == DBServerType.POSTGRESQL)
@@ -2980,7 +2385,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						results.AppendLine();
 					}
 
-					var membername = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(member.ColumnName));
+					var membername = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(member.ColumnName));
 
 					results.AppendLine("\t\t///\t<summary>");
 					results.AppendLine($"\t\t///\t{membername}");
@@ -3084,7 +2489,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								var nn = new NameNormalizer(member.ForeignTableName);
 								var memberName = nn.SingleForm;
 
-								memberName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(memberName));
+								memberName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(memberName));
 
 								results.AppendLine("\t\t///\t<summary>");
 								results.AppendLine($"\t\t///\tA hypertext reference that identifies the associated {memberName}");
@@ -3112,7 +2517,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					}
 					else
 					{
-						var membername = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(member.ColumnName));
+						var membername = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(member.ColumnName));
 
 						results.AppendLine("\t\t///\t<summary>");
 						results.AppendLine($"\t\t///\t{membername}");
@@ -3238,11 +2643,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 				}
 
 				builder.AppendLine("\t\t///\t<summary>");
-				builder.AppendLine($"\t\t///\t{StandardUtils.NormalizeClassName(column.ColumnName)}");
+				builder.AppendLine($"\t\t///\t{COFRSCommonUtilities.NormalizeClassName(column.ColumnName)}");
 				builder.AppendLine("\t\t///\t</summary>");
 				builder.AppendLine($"\t\t[PgName(\"{column.EntityName}\")]");
 
-				var elementName = StandardUtils.NormalizeClassName(column.ColumnName);
+				var elementName = COFRSCommonUtilities.NormalizeClassName(column.ColumnName);
 				builder.Append($"\t\t{elementName}");
 			}
 
@@ -3278,9 +2683,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 				}
 
 				builder.AppendLine("\t\t///\t<summary>");
-				builder.AppendLine($"\t\t///\t{StandardUtils.NormalizeClassName(column.ColumnName)}");
+				builder.AppendLine($"\t\t///\t{COFRSCommonUtilities.NormalizeClassName(column.ColumnName)}");
 				builder.AppendLine("\t\t///\t</summary>");
-				var elementName = StandardUtils.NormalizeClassName(column.ColumnName);
+				var elementName = COFRSCommonUtilities.NormalizeClassName(column.ColumnName);
 				builder.Append($"\t\t{elementName}");
 			}
 
@@ -3290,7 +2695,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return builder.ToString();
 		}
 
-		public string EmitComposite(Solution solution, EntityModel undefinedModel, string connectionString, Dictionary<string, string> replacementsDictionary, EntityMap entityMap, ref List<EntityModel> undefinedElements, ProjectFolder entityModelsFolder)
+		public string EmitComposite(DTE2 dte2, EntityModel undefinedModel, string connectionString, Dictionary<string, string> replacementsDictionary, EntityMap entityMap, ref List<EntityModel> undefinedElements, ProjectFolder entityModelsFolder)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -3329,20 +2734,20 @@ namespace COFRS.Template.Common.ServiceUtilities
 							//	It's not in the list. We need to add it...
 							var classFile = new EntityModel
 							{
-								ClassName = $"E{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(column.DBDataType))}",
+								ClassName = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.DBDataType))}",
 								SchemaName = undefinedModel.SchemaName,
 								TableName = column.DBDataType,
 								Namespace = entityModelsFolder.Namespace,
 								ServerType = undefinedModel.ServerType,
-								Folder = Path.Combine(entityModelsFolder.Folder, $"E{StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(column.DBDataType))}.cs"),
+								Folder = Path.Combine(entityModelsFolder.Folder, $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.DBDataType))}.cs"),
 								ElementType = DBHelper.GetElementType(undefinedModel.SchemaName, column.DBDataType, entityMap, connectionString),
 								ProjectName = undefinedModel.ProjectName
 							};
 
 							if (classFile.ElementType == ElementType.Enum)
-								StandardUtils.GenerateEnumColumns(classFile, connectionString);
+								DBHelper.GenerateEnumColumns(classFile, connectionString);
 							else
-								StandardUtils.GenerateColumns(classFile, connectionString);
+								DBHelper.GenerateColumns(classFile, connectionString);
 
 							undefinedElements.Add(classFile);
 						}
@@ -3440,7 +2845,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					AppendPrecision(result, column.NumericPrecision, column.NumericScale, ref first);
 				}
 
-				AppendDatabaseType(result, DBServerType.POSTGRESQL, column, ref first);
+				AppendDatabaseType(result, column, ref first);
 				AppendEntityName(result, column, ref first);
 
 				if (string.Equals(column.DBDataType, "INet", StringComparison.OrdinalIgnoreCase))
@@ -3490,7 +2895,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				result.AppendLine(")]");
 
-				var memberName = StandardUtils.CorrectForReservedNames(StandardUtils.NormalizeClassName(column.ColumnName));
+				var memberName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.ColumnName));
 				result.AppendLine($"\t\t[PgName(\"{column.ColumnName}\")]");
 
 				var knownEntityModels = new EntityMap();
@@ -3507,7 +2912,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return result.ToString();
 		}
 
-		public void GenerateResourceComposites(Solution solution, List<ResourceModel> undefinedModels, ProjectFolder resourceModelFolder, EntityMap entityMap, ResourceMap resourceMap)
+		public void GenerateResourceComposites(DTE2 dte2, List<ResourceModel> undefinedModels, ProjectFolder resourceModelFolder, EntityMap entityMap, ResourceMap resourceMap)
         {
 			ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -3537,7 +2942,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					File.WriteAllText(undefinedModel.Folder, result.ToString());
 
 					//	Add the model to the project
-					var parentProject = StandardUtils.GetProject(solution, undefinedModel.ProjectName);
+					var parentProject = COFRSCommonUtilities.GetProject(dte2, undefinedModel.ProjectName);
 					parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
 
 					//	Now, it's no longer undefined. Add it to the list of defined models
@@ -3549,12 +2954,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <summary>
 		/// Generate undefined elements
 		/// </summary>
+		/// <param name="dte2"></param>
 		/// <param name="undefinedEntityModels">The list of elements to be defined"/></param>
 		/// <param name="connectionString">The connection string to the database server</param>
-		/// <param name="rootnamespace">The root namespace for the newly defined elements</param>
 		/// <param name="replacementsDictionary">The replacements dictionary</param>
-		/// <param name="definedElements">The lise of elements that are defined</param>
-		public void GenerateComposites(Solution solution, List<EntityModel> undefinedEntityModels, string connectionString, Dictionary<string, string> replacementsDictionary, EntityMap entityMap, ProjectFolder entityModelsFolder)
+		public void GenerateComposites(DTE2 dte2, List<EntityModel> undefinedEntityModels, string connectionString, Dictionary<string, string> replacementsDictionary, EntityMap entityMap, ProjectFolder entityModelsFolder)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -3604,11 +3008,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 						File.WriteAllText(undefinedModel.Folder, result.ToString());
 
 						//	Add the model to the project
-						var parentProject = StandardUtils.GetProject(solution, entityModelsFolder.ProjectName);
+						var parentProject = COFRSCommonUtilities.GetProject(dte2, entityModelsFolder.ProjectName);
 						parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
 
 						//	Register the composite model
-						StandardUtils.RegisterComposite(solution, undefinedModel);
+						COFRSCommonUtilities.RegisterComposite(dte2, undefinedModel);
 
 						//	Now, it's no longer undefined. Add it to the list of defined models
 						entityMap.AddModel(undefinedModel);
@@ -3625,7 +3029,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 						//	Generate the model (and any child models that might be necessary)
 
-						var body = EmitComposite(solution,
+						var body = EmitComposite(dte2,
 												 undefinedModel,
 												 connectionString,
 												 replacementsDictionary,
@@ -3673,11 +3077,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 						File.WriteAllText(undefinedModel.Folder, result.ToString());
 
 						//	Add the model to the project
-						var parentProject = StandardUtils.GetProject(solution, entityModelsFolder.ProjectName);
+						var parentProject = COFRSCommonUtilities.GetProject(dte2, entityModelsFolder.ProjectName);
 						parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
 
 						//	Register the composite model
-						StandardUtils.RegisterComposite(solution, undefinedModel);
+						COFRSCommonUtilities.RegisterComposite(dte2, undefinedModel);
 
 						//	Now, it's no longer undefined. Add it to the list of defined models
 						entityMap.AddModel(undefinedModel);
@@ -3730,7 +3134,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 				result.Append("IsNullable = false");
 		}
 
-		private void AppendDatabaseType(StringBuilder result, DBServerType serverType, DBColumn column, ref bool first)
+		private void AppendDatabaseType(StringBuilder result, DBColumn column, ref bool first)
 		{
 			AppendComma(result, ref first);
 

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace COFRS.Template.Common.Models
+namespace COFRSCoreCommon.Models
 {
 	public class DBTable
 	{
