@@ -1400,7 +1400,7 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint.Insert($"var subNode = RqlNode.Parse(rqlBody.ToString());");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
-				editPoint.Insert($"var selectNode = node.ExtractSelectClause();");
+				editPoint.Insert($"var selectNode = node?.ExtractSelectClause();");
 				editPoint.InsertNewLine();
             }
 
@@ -1490,7 +1490,7 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint.Insert($"var subNode = RqlNode.Parse($\"{memberName}=uri:\\\"{{item.HRef.LocalPath}}\\\"\");");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
-				editPoint.Insert("var selectNode = node.ExtractSelectClause();");
+				editPoint.Insert("var selectNode = node?.ExtractSelectClause();");
 				editPoint.InsertNewLine(2);
 				editPoint.Indent(null, 3);
 				editPoint.Insert("return item;");
@@ -1507,7 +1507,7 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint.Insert($"var subNode = RqlNode.Parse($\"{memberName}=uri:\\\"{{item.HRef.LocalPath}}\\\"\");");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
-				editPoint.Insert("var selectNode = node.ExtractSelectClause();");
+				editPoint.Insert("var selectNode = node?.ExtractSelectClause();");
 				editPoint.InsertNewLine(2);
             }
             editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
