@@ -306,8 +306,8 @@ namespace COFRS.Template.Common.Wizards
 
                             //	Emit Mapping Model
                             ResourceModel = resourceModel,
-                            ResourceModels = resourceMap.Maps.ToList(),
-                            EntityModels = entityMap.Maps.ToList()
+                            ResourceMap = resourceMap,
+                            EntityMap = entityMap
                         };
 
 						if (mapperDialog.ShowDialog() == DialogResult.OK)

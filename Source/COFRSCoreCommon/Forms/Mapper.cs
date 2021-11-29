@@ -1,5 +1,4 @@
-﻿using COFRS.Template.Common.ServiceUtilities;
-using COFRS.Template.Common.Wizards;
+﻿using COFRS.Template.Common.Wizards;
 using COFRSCoreCommon.Models;
 using COFRSCoreCommon.Utilities;
 using EnvDTE;
@@ -17,9 +16,11 @@ namespace COFRS.Template.Common.Forms
     public partial class Mapper : Form
     {
         public ResourceModel ResourceModel { get; set; }
-        public List<ResourceModel> ResourceModels { get; set; }
-        public List<EntityModel> EntityModels { get; set; }
+        public ResourceMap ResourceMap { get; set; }
+        public EntityMap EntityMap { get; set; }
         public ProfileMap ProfileMap { get; set; }
+
+        public DTE2 Dte { get; set; }
 
         public Mapper()
         {
@@ -33,8 +34,87 @@ namespace COFRS.Template.Common.Forms
             ResourceClass_Lablel.Text = ResourceModel.ClassName;
             EntityClass_Label.Text = ResourceModel.EntityModel.ClassName;
 
-            var nn = new NameNormalizer(ResourceModel.ClassName);
+            ProfileMap = COFRSCommonUtilities.OpenProfileMap(Dte, ResourceModel);
 
+            if (ProfileMap == null)
+            {
+                ProfileMap = GenerateProfileMap(ResourceModel);
+            }
+
+            PopulateUI();
+        }
+
+        private void PopulateUI()
+        {
+            resourceGrid.Rows.Clear();
+            EntityGrid.Rows.Clear();
+            EntityList.Items.Clear();
+            ResourceList.Items.Clear();
+
+            var unmappedColumns = new List<DBColumn>();
+            unmappedColumns.AddRange(ResourceModel.EntityModel.Columns);
+
+            foreach (var resourceMember in ProfileMap.ResourceProfiles)
+            {
+                var dataRowIndex = resourceGrid.Rows.Add();
+                var dataRow = resourceGrid.Rows[dataRowIndex];
+
+                dataRow.Cells[0].Value = resourceMember.ResourceColumnName;
+                dataRow.Cells[1].Value = resourceMember.MapFunction;
+                dataRow.Cells[3].Value = resourceMember.EntityColumnNames?.ToCSV();
+
+                dataRow.Cells[1].Style = new DataGridViewCellStyle() { ForeColor = resourceMember.IsDefined ? Color.Black : Color.Red };
+
+                if (resourceMember.EntityColumnNames != null)
+                {
+                    foreach (var entityColumn in resourceMember.EntityColumnNames)
+                    {
+                        var matchedColumn = unmappedColumns.FirstOrDefault(c => c.ColumnName.Equals(entityColumn));
+
+                        if (matchedColumn != null)
+                            unmappedColumns.Remove(matchedColumn);
+                    }
+                }
+            }
+
+            foreach (var column in unmappedColumns)
+            {
+                EntityList.Items.Add(column.ColumnName);
+            }
+
+            unmappedColumns = new List<DBColumn>();
+            unmappedColumns.AddRange(ResourceModel.Columns);
+
+            foreach (var entityColumn in ProfileMap.EntityProfiles)
+            {
+                var dataRowIndex = EntityGrid.Rows.Add();
+                var dataRow = EntityGrid.Rows[dataRowIndex];
+
+                dataRow.Cells[0].Value = entityColumn.EntityColumnName;
+                dataRow.Cells[1].Value = entityColumn.MapFunction;
+                dataRow.Cells[3].Value = entityColumn.ResourceColumns?.ToCSV();
+                dataRow.Cells[1].Style = new DataGridViewCellStyle() { ForeColor = entityColumn.IsDefined ? Color.Black : Color.Red };
+
+                if (entityColumn.ResourceColumns != null)
+                {
+                    foreach (var resourceColumn in entityColumn.ResourceColumns)
+                    {
+                        var matchedColumn = unmappedColumns.FirstOrDefault(c => c.ColumnName.Equals(resourceColumn));
+
+                        if (matchedColumn != null)
+                            unmappedColumns.Remove(matchedColumn);
+                    }
+                }
+            }
+
+            foreach (var column in unmappedColumns)
+            {
+                ResourceList.Items.Add(column.ColumnName);
+            }
+        }
+
+        private ProfileMap GenerateProfileMap(ResourceModel resourceModel)
+        {
             ProfileMap = new ProfileMap
             {
                 ResourceClassName = ResourceModel.ClassName,
@@ -43,48 +123,19 @@ namespace COFRS.Template.Common.Forms
                 EntityProfiles = new List<EntityProfile>()
             };
 
-            var unmappedColumns = new List<DBColumn>();
-            GetEntityModelList(ResourceModel.EntityModel, string.Empty, unmappedColumns);
-            GenerateResourceFromEntityMapping(nn, unmappedColumns);
+            ProfileMap.ResourceProfiles.AddRange(GenerateResourceFromEntityMapping(resourceModel));
+            ProfileMap.EntityProfiles.AddRange(GenerateEntityFromResourceMapping(resourceModel));
 
-            foreach (DataGridViewRow row in resourceGrid.Rows)
-            {
-                var columnName = (row.Cells[0] as DataGridViewTextBoxCell).Value.ToString();
-                var mappingFunction = (row.Cells[1] as DataGridViewTextBoxCell).Value?.ToString();
-
-                var profile = new ResourceProfile()
-                {
-                    ResourceColumnName = columnName,
-                    MapFunction = mappingFunction
-                };
-
-                ProfileMap.ResourceProfiles.Add(profile);
-            }
-
-            unmappedColumns.Clear();
-            GetResourceModelList(ResourceModel, string.Empty, unmappedColumns);
-            GenerateEntityFromResourceMapping(unmappedColumns, ResourceModel);
-
-            foreach (DataGridViewRow row in EntityGrid.Rows)
-            {
-                var columnName = (row.Cells[0] as DataGridViewTextBoxCell).Value.ToString();
-                var mappingFunction = (row.Cells[1] as DataGridViewTextBoxCell).Value?.ToString();
-
-                var profile = new EntityProfile()
-                {
-                    EntityColumnName = columnName,
-                    MapFunction = mappingFunction
-                };
-
-                ProfileMap.EntityProfiles.Add(profile);
-            }
+            return ProfileMap;
         }
 
-        private void GetResourceModelList(ResourceModel source, string ParentName, List<DBColumn> unmappedColumns)
+        private List<DBColumn> GetResourceModelList(ResourceModel source, string ParentName = "")
         {
+            List<DBColumn> result = new List<DBColumn>();  
+
             foreach (var column in source.Columns)
             {
-                var resourceModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                var resourceModel = ResourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                 if (resourceModel != null && resourceModel.ResourceType != ResourceType.Enum)
                 {
@@ -95,22 +146,27 @@ namespace COFRS.Template.Common.Forms
                     else
                         newParent = $"{ParentName}.{column.ColumnName}";
 
-                    GetResourceModelList(resourceModel, newParent, unmappedColumns);
+                    result.AddRange(GetResourceModelList(resourceModel, newParent));
                 }
                 else
                 {
                     if (!string.IsNullOrWhiteSpace(ParentName))
                         column.ColumnName = $"{ParentName}.{column.ColumnName}";
 
-                    unmappedColumns.Add(column);
+                    result.Add(column);
                 }
             }
+
+            return result;
         }
-        private void GetEntityModelList(EntityModel source, string ParentName, List<DBColumn> unmappedColumns)
+
+        private List<DBColumn> GetEntityModelList(EntityModel source, string ParentName = "")
         {
+            List<DBColumn> unmappedColumns = new List<DBColumn>();
+
             foreach (var column in source.Columns)
             {
-                var entityModel = EntityModels.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                var entityModel = EntityMap?.Maps.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                 if (entityModel != null && entityModel.ElementType != ElementType.Enum)
                 {
@@ -121,15 +177,18 @@ namespace COFRS.Template.Common.Forms
                     else
                         newParent = $"{ParentName}.{column.ColumnName}";
 
-                    GetEntityModelList(entityModel, newParent, unmappedColumns);
+                    unmappedColumns.AddRange(GetEntityModelList(entityModel, newParent));
                 }
                 else 
                 { 
                     if (!string.IsNullOrWhiteSpace(ParentName))
                         column.ColumnName = $"{ParentName}.{column.ColumnName}";
+
                     unmappedColumns.Add(column);
                 }
             }
+
+            return unmappedColumns;
         }
 
         /// <summary>
@@ -137,17 +196,19 @@ namespace COFRS.Template.Common.Forms
         /// </summary>
         /// <param name="unmappedColumns"></param>
         /// <param name="resourceModel"></param>
-        private void GenerateEntityFromResourceMapping(List<DBColumn> unmappedColumns, ResourceModel resourceModel)
+        private List<EntityProfile> GenerateEntityFromResourceMapping(ResourceModel resourceModel)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            var result = new List<EntityProfile>();
 
             //  Let's create a mapping for each entity member
             foreach (var entityMember in ResourceModel.EntityModel.Columns)
             {
                 //  Construct a data row for this entity member, and populate the column name
-                var dataRowIndex = EntityGrid.Rows.Add();
-                var dataRow = EntityGrid.Rows[dataRowIndex];
-                dataRow.Cells[0].Value = entityMember.ColumnName;
+                var entityProfile = new EntityProfile
+                {
+                    EntityColumnName = entityMember.ColumnName
+                };
 
                 //  Now, construct the mapping
                 if (entityMember.IsPrimaryKey)
@@ -176,9 +237,9 @@ namespace COFRS.Template.Common.Forms
                     if (primaryKeys.Count() == 1)
                     {
                         //  There is only one primary key element, so we don't need to bother with the count.
-                        var formula = new StringBuilder($"source.HRef == null ? default : source.HRef.GetId<{dataType}>()");
-                        dataRow.Cells[1].Value = formula.ToString();
-                        dataRow.Cells[3].Value = "HRef";
+                        entityProfile.MapFunction = $"source.HRef == null ? default : source.HRef.GetId<{dataType}>()";
+                        entityProfile.ResourceColumns = new string[] { "HRef" };
+                        entityProfile.IsDefined = true;
                     }
                     else
                     {
@@ -200,15 +261,10 @@ namespace COFRS.Template.Common.Forms
 
                         //  Close the formula
                         formula.Append(")");
-                        dataRow.Cells[1].Value = formula.ToString();
-                        dataRow.Cells[3].Value = "HRef";
+                        entityProfile.MapFunction = formula.ToString();
+                        entityProfile.ResourceColumns = new string[] { "HRef" };
+                        entityProfile.IsDefined = true;
                     }
-
-                    var resourceMember = unmappedColumns.FirstOrDefault(u =>
-                        string.Equals(u.ColumnName, "HRef", StringComparison.OrdinalIgnoreCase));
-
-                    if (resourceMember != null)
-                        unmappedColumns.Remove(resourceMember);
                 }
                 else if (entityMember.IsForeignKey)
                 {
@@ -219,20 +275,16 @@ namespace COFRS.Template.Common.Forms
                     var nnx = new NameNormalizer(entityMember.ForeignTableName);
                     DBColumn resourceMember = null;
 
-                    foreach ( DataGridViewRow resourceMap in resourceGrid.Rows )
+                    foreach ( var resourceMap in ProfileMap.ResourceProfiles)
                     {
-                        var entityColumnsUsed = resourceMap.Cells[3].Value.ToString().Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                        foreach ( var entityColumnUsed in entityColumnsUsed )
+                        foreach ( var entityColumnUsed in resourceMap.EntityColumnNames)
                         {
-                            if ( string.Equals(entityColumnUsed, entityMember.ColumnName, StringComparison.OrdinalIgnoreCase))
+                            if ( entityColumnUsed.Equals(entityMember.ColumnName, StringComparison.OrdinalIgnoreCase))
                             {
-                                var resourceMemberName = resourceMap.Cells[0].Value.ToString();
+                                var resourceMemberName = resourceMap.ResourceColumnName;
                                 resourceMember = resourceModel.Columns.FirstOrDefault(c =>
                                     string.Equals(c.ColumnName, resourceMemberName, StringComparison.OrdinalIgnoreCase));
 
-                                if (resourceMember != null)
-                                    unmappedColumns.Remove(resourceMember);
                                 break;
                             }
                         }
@@ -266,15 +318,14 @@ namespace COFRS.Template.Common.Forms
                             if (foreignKeys.Count() == 1)
                             {
                                 var foreignKey = foreignKeys.First();
-                                var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>()");
-                                dataRow.Cells[1].Value = formula.ToString();
-                                dataRow.Cells[3].Value = foreignKey.ColumnName;
+                                entityProfile.MapFunction = $"source.{resourceMember.ColumnName}.GetId<{dataType}>()";
+                                entityProfile.ResourceColumns = new string[] { resourceMember.ColumnName };
+                                entityProfile.IsDefined = true;
                             }
                             else
                             {
                                 var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>(");
-                                var foreignKeyList = new StringBuilder();
-                                var first = true;
+                                var foreignKeyList = new List<string>();
 
                                 if (foreignKeys.Count() > 1)
                                 {
@@ -283,11 +334,7 @@ namespace COFRS.Template.Common.Forms
                                     foreach (var pk in foreignKeys)
                                     {
                                         var foreignKey = foreignKeys.ToList()[index];
-                                        if (first)
-                                            first = false;
-                                        else
-                                            foreignKeyList.Append(',');
-                                        foreignKeyList.Append(foreignKey.ColumnName);
+                                        foreignKeyList.Add(foreignKey.ColumnName);
 
                                         if (pk == entityMember)
                                             formula.Append(index.ToString());
@@ -297,9 +344,9 @@ namespace COFRS.Template.Common.Forms
                                 }
 
                                 formula.Append(")");
-                                dataRow.Cells[1].Value = formula.ToString();
-                                dataRow.Cells[3].Value = foreignKeyList.ToString();
-                                unmappedColumns.Remove(resourceMember);
+                                entityProfile.MapFunction = formula.ToString();
+                                entityProfile.ResourceColumns = foreignKeyList.ToArray();
+                                entityProfile.IsDefined = true;
                             }
                         }
                         else
@@ -307,7 +354,7 @@ namespace COFRS.Template.Common.Forms
                             //  The resource member is not a URI. It should be an enum. If it is, we sould be able to
                             //  find it in our resource models list.
 
-                            var referenceModel = ResourceModels.FirstOrDefault(r =>
+                            var referenceModel = ResourceMap.Maps.FirstOrDefault(r =>
                                             string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
 
                             if ( referenceModel != null )
@@ -325,8 +372,9 @@ namespace COFRS.Template.Common.Forms
                                         string dataType = entityMember.ModelDataType;
 
                                         var formula = $"Convert.ChangeType(source.{resourceMember.ColumnName}, source.{resourceMember.ColumnName}.GetTypeCode())";
-                                        dataRow.Cells[1].Value = formula.ToString();
-                                        unmappedColumns.Remove(resourceMember);
+                                        entityProfile.MapFunction = formula.ToString();
+                                        entityProfile.ResourceColumns = new string[] { "unknown" };
+                                        entityProfile.IsDefined = false;
                                     }
                                 }
                             }
@@ -336,15 +384,12 @@ namespace COFRS.Template.Common.Forms
                 else
                 {
                     //  Is there a corresponding Entity Column for this resource Column?
-                    var resourceMember = unmappedColumns.FirstOrDefault(u =>
-                                                            string.Equals(u.ColumnName,
-                                                                          entityMember.ColumnName,
-                                                                          StringComparison.OrdinalIgnoreCase));
+                    var resourceMember = resourceModel.Columns.FirstOrDefault(u =>
+                                                            u.ColumnName.Equals(entityMember.ColumnName, StringComparison.OrdinalIgnoreCase));
 
                     if (resourceMember != null)
                     {
-                        MapResourceDestinationFromSource(entityMember, dataRow, resourceMember, ref unmappedColumns);
-                        unmappedColumns.Remove(resourceMember);
+                        MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember);
                     }
                     else
                     {
@@ -400,7 +445,7 @@ namespace COFRS.Template.Common.Forms
                                 }
 
                                 mapFunction.Append($"{parent}.{parts[parts.Count() - 1]}");
-                                dataRow.Cells[1].Value = mapFunction.ToString();
+                                entityProfile.MapFunction = mapFunction.ToString();
 
                                 StringBuilder childColumn = new StringBuilder();
 
@@ -411,11 +456,10 @@ namespace COFRS.Template.Common.Forms
                                     childColumn.Append(p);
                                 }
 
-                                var cc = unmappedColumns.FirstOrDefault(c => string.Equals(c.ColumnName, childColumn.ToString(), StringComparison.OrdinalIgnoreCase));
+                                var cc = parentModel.Columns.FirstOrDefault(c => string.Equals(c.ColumnName, childColumn.ToString(), StringComparison.OrdinalIgnoreCase));
                                 if (cc != null)
                                 {
-                                    dataRow.Cells[3].Value = cc.ColumnName;
-                                    unmappedColumns.Remove(cc);
+                                    entityProfile.ResourceColumns = new string[] { cc.ColumnName };
                                 }
                             }
                             else
@@ -425,51 +469,49 @@ namespace COFRS.Template.Common.Forms
                                 resourceMember = resourceModel.Columns.FirstOrDefault(c =>
                                     string.Equals(c.ModelDataType.ToString(), rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
 
-                                MapResourceDestinationFromSource(entityMember, dataRow, resourceMember, ref unmappedColumns);
+                                MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember);
                             }
                         }
                     }
                 }
+
+                result.Add(entityProfile);  
             }
 
-            foreach (var member in unmappedColumns)
-            {
-                ResourceList.Items.Add(member.ColumnName);
-            }
+            return result;
         }
 
-        private void GenerateResourceFromEntityMapping(NameNormalizer nn, List<DBColumn> unmappedColumns)
+        private List<ResourceProfile> GenerateResourceFromEntityMapping(ResourceModel resourceModel)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            foreach (var resourceMember in ResourceModel.Columns)
-            {
-                var dataRowIndex = resourceGrid.Rows.Add();
-                var dataRow = resourceGrid.Rows[dataRowIndex];
+            var nn = new NameNormalizer(resourceModel.ClassName);
+            var result = new List<ResourceProfile>();
 
-                dataRow.Cells[0].Value = resourceMember.ColumnName;
-                StringBuilder entityColumns = new StringBuilder();
+            foreach (var resourceMember in resourceModel.Columns)
+            {
+                var resourceProfile = new ResourceProfile
+                {
+                    ResourceColumnName = resourceMember.ColumnName
+                };
 
                 //  If this is the HRef (the primary key), then the columns that comprise it are all the primary
                 //  key values of the entity in the order in which they appear in the entity
                 if (resourceMember.IsPrimaryKey)
                 {
-                    var primaryKeys = unmappedColumns.FindAll(c => c.IsPrimaryKey);
+                    var primaryKeys = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
                     var formula = new StringBuilder($"new Uri(rootUrl, $\"{nn.PluralCamelCase}/id");
-                    StringBuilder sourceColumns = new StringBuilder();
+                    var sourceColumns = new List<string>();
 
                     foreach (var entityMember in primaryKeys)
                     {
                         formula.Append($"/{{source.{entityMember.ColumnName}}}");
-                        unmappedColumns.Remove(entityMember);
-
-                        if (sourceColumns.Length > 0)
-                            sourceColumns.Append(", ");
-                        sourceColumns.Append(entityMember.ColumnName);
+                        sourceColumns.Add(entityMember.ColumnName);
                     }
 
                     formula.Append("\")");
-                    dataRow.Cells[1].Value = formula.ToString();
-                    dataRow.Cells[3].Value = sourceColumns.ToString();
+                    resourceProfile.MapFunction = formula.ToString();
+                    resourceProfile.EntityColumnNames = sourceColumns.ToArray();
+                    resourceProfile.IsDefined = true;
                 }
 
                 //  If this column represents a foreign key, then the entity members that comprise it will be
@@ -482,49 +524,49 @@ namespace COFRS.Template.Common.Forms
                     //  If it is an enum, there will be a resource model of type enum, whose corresponding entity model
                     //  will point to the foreign table.
 
-                    var enumResource = ResourceModels.FirstOrDefault(r =>
+                    var enumResource = ResourceMap.Maps.FirstOrDefault(r =>
                                        r.ResourceType == ResourceType.Enum &&
                                        r.EntityModel != null && 
                                        string.Equals(r.EntityModel.TableName, resourceMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
 
                     if (enumResource != null)
                     {
-                        StringBuilder sourceColumns = new StringBuilder();
+                        var sourceColumns = new List<string>();
                         var formula = $"({enumResource.ClassName})source.{resourceMember.ColumnName}";
-                        dataRow.Cells[1].Value = formula.ToString();
-                        dataRow.Cells[3].Value = sourceColumns.ToString();
+                        //  Need to think about this...
+                        sourceColumns.Add(enumResource.EntityModel.ClassName);
+                        resourceProfile.MapFunction = formula.ToString();
+                        resourceProfile.EntityColumnNames = sourceColumns.ToArray();
+                        resourceProfile.IsDefined = true;
                     }
                     else
                     {
                         if (string.Equals(resourceMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
                         {
                             var nnn = new NameNormalizer(resourceMember.ColumnName);
-                            var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey &&
+                            var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
                                (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
                                  string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
 
                             var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
-                            StringBuilder sourceColumns = new StringBuilder();
+                            var sourceColumns = new List<string>();
 
                             foreach (var entityMember in foreignKeys)
                             {
                                 formula.Append($"/{{source.{entityMember.ColumnName}}}");
-                                unmappedColumns.Remove(entityMember);
-
-                                if (sourceColumns.Length > 0)
-                                    sourceColumns.Append(", ");
-                                sourceColumns.Append(entityMember.ColumnName);
+                                sourceColumns.Add(entityMember.ColumnName);
                             }
 
                             formula.Append("\")");
-                            dataRow.Cells[1].Value = formula.ToString();
-                            dataRow.Cells[3].Value = sourceColumns.ToString();
+                            resourceProfile.MapFunction = formula.ToString();
+                            resourceProfile.EntityColumnNames = sourceColumns.ToArray();
+                            resourceProfile.IsDefined = true;
                         }
                         else
                         {
                             //  This is probably an Enum. If it is, we should be able to find it in the list of 
                             //  resource models.
-                            var referenceModel = ResourceModels.FirstOrDefault(r =>
+                            var referenceModel = ResourceMap.Maps.FirstOrDefault(r =>
                                     string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
 
                             if (referenceModel != null)
@@ -532,19 +574,18 @@ namespace COFRS.Template.Common.Forms
                                 if (referenceModel.ResourceType == ResourceType.Enum)
                                 {
                                     var nnn = new NameNormalizer(resourceMember.ColumnName);
-                                    var foreignKeys = unmappedColumns.FindAll(c => c.IsForeignKey &&
+                                    var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
                                              (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
                                                string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
 
                                     if (foreignKeys.Count() == 1)
                                     {
-                                        var entityMember = foreignKeys[0];
+                                        var entityMember = foreignKeys.ToList()[0];
 
                                         var formula = $"({referenceModel.ClassName}) source.{entityMember.ColumnName}";
-                                        dataRow.Cells[1].Value = formula.ToString();
-                                        dataRow.Cells[3].Value = entityMember.ColumnName;
-
-                                        unmappedColumns.Remove(entityMember);
+                                        resourceProfile.MapFunction = formula.ToString();
+                                        resourceProfile.EntityColumnNames = new string[] { entityMember.ColumnName };
+                                        resourceProfile.IsDefined = true;
                                     }
                                 }
                             }
@@ -554,35 +595,34 @@ namespace COFRS.Template.Common.Forms
                 else
                 {
                     //  Is there an existing entityMember whos column name matches the resource member?
-                    var entityMember = unmappedColumns.FirstOrDefault(u =>
+                    var entityMember = resourceModel.EntityModel.Columns.FirstOrDefault(u =>
                         string.Equals(u.ColumnName, resourceMember.ColumnName, StringComparison.OrdinalIgnoreCase));
 
                     if (entityMember != null)
                     {
                         //  There is, just assign it.
-                        MapEntityDestinationFromSource(resourceMember, dataRow, entityMember, ref unmappedColumns);
+                        MapEntityDestinationFromSource(resourceMember, resourceProfile, entityMember);
                     }
                     else
                     {
                         //  Is this resource member a class?
-                        var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                        var model = ResourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                         if (model != null)
                         {
                             //  It is a class, instantiate the class
-                            dataRow.Cells[1].Value = $"new {model.ClassName}()";
+                            resourceProfile.MapFunction = $"new {model.ClassName}()";
 
                             //  Now, go map all of it's children
-                            MapEntityChildMembers(unmappedColumns, resourceMember, model, resourceMember.ColumnName);
+                            MapEntityChildMembers(resourceMember, resourceProfile, model, resourceMember.ColumnName);
                         }
                     }
                 }
+
+                result.Add(resourceProfile);
             }
 
-            foreach (var member in unmappedColumns)
-            {
-                EntityList.Items.Add(member.ColumnName);
-            }
+            return result;
         }
 
         private void OnResize(object sender, EventArgs e)
@@ -673,46 +713,7 @@ namespace COFRS.Template.Common.Forms
 
         private void OnOK(object sender, EventArgs e)
         {
-            ProfileMap = new ProfileMap
-            {
-                ResourceClassName = ResourceModel.ClassName,
-                EntityClassName = ResourceModel.EntityModel.ClassName,
-                ResourceProfiles = new List<ResourceProfile>(),
-                EntityProfiles = new List<EntityProfile>()
-            };
-
-            foreach (DataGridViewRow row in resourceGrid.Rows)
-            {
-                var columnName = (row.Cells[0] as DataGridViewTextBoxCell).Value.ToString();
-                var mappingFunction = (row.Cells[1] as DataGridViewTextBoxCell).Value?.ToString();
-                var entityColumnName = (row.Cells[3] as DataGridViewTextBoxCell).Value?.ToString();
-
-                var profile = new ResourceProfile()
-                {
-                    ResourceColumnName = columnName,
-                    MapFunction = mappingFunction,
-                    EntityColumnNames = entityColumnName?.Split(',')
-                };
-
-                ProfileMap.ResourceProfiles.Add(profile);
-            }
-
-            foreach (DataGridViewRow row in EntityGrid.Rows)
-            {
-                var columnName = (row.Cells[0] as DataGridViewTextBoxCell).Value.ToString();
-                var mappingFunction = (row.Cells[1] as DataGridViewTextBoxCell).Value?.ToString();
-                var resourceColumns = (row.Cells[3] as DataGridViewTextBoxCell).Value?.ToString();
-
-                var profile = new EntityProfile()
-                {
-                    EntityColumnName = columnName,
-                    MapFunction = mappingFunction,
-                    ResourceColumns = resourceColumns?.Split(',')
-                };
-
-                ProfileMap.EntityProfiles.Add(profile);
-            }
-
+            COFRSCommonUtilities.SaveProfileMap(Dte, ProfileMap);
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -734,14 +735,50 @@ namespace COFRS.Template.Common.Forms
 
                 if (column != null)
                 {
-                    result = ResourceModels.FirstOrDefault(p => string.Equals(p.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                    result = ResourceMap.Maps.FirstOrDefault(p => string.Equals(p.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
                 }
             }
 
             return result;
         }
 
-        private void MapResourceChildMembers(List<DBColumn> unmappedColumns, DBColumn member, ResourceModel model, string parent)
+        //private void MapResourceChildMembers(DBColumn member, ResourceModel model, string parent = "")
+        //{
+        //    Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+        //    //  We have a model, and the parent column name.
+
+        //    //  Map the children
+        //    foreach (var childMember in model.Columns)
+        //    {
+        //        int dataRowIndex = resourceGrid.Rows.Add();
+        //        var dataRow = resourceGrid.Rows[dataRowIndex];
+
+        //        //  Include the child in the list...
+        //        dataRow.Cells[0].Value = $"{parent}.{childMember.ColumnName}";
+
+        //        //  Do we have an existing entity member that matches the child resource column name?
+        //        var entityMember = model.EntityModel.Columns.FirstOrDefault(u =>
+        //            string.Equals(u.ColumnName, childMember.ColumnName, StringComparison.OrdinalIgnoreCase));
+
+        //        if (entityMember != null)
+        //        {
+        //            //  We do, just assign it
+        //            MapResourceDestinationFromSource(childMember, entityProfile, entityMember);
+        //        }
+        //        else
+        //        {
+        //            var childModel = resourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+
+        //            if (model != null)
+        //            {
+        //                dataRow.Cells[1].Value = $"new {model.ClassName}()";
+        //                MapResourceChildMembers(member, model, $"{parent}?.{childMember.ColumnName}");
+        //            }
+        //        }
+        //    }
+        //}
+
+        private void MapEntityChildMembers(DBColumn member, ResourceProfile resourceProfile, ResourceModel model, string parent)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             //  We have a model, and the parent column name.
@@ -756,72 +793,37 @@ namespace COFRS.Template.Common.Forms
                 dataRow.Cells[0].Value = $"{parent}.{childMember.ColumnName}";
 
                 //  Do we have an existing entity member that matches the child resource column name?
-                var entityMember = unmappedColumns.FirstOrDefault(u =>
+                var entityMember = model.EntityModel.Columns.FirstOrDefault(u =>
                     string.Equals(u.ColumnName, childMember.ColumnName, StringComparison.OrdinalIgnoreCase));
 
                 if (entityMember != null)
                 {
                     //  We do, just assign it
-                    MapResourceDestinationFromSource(childMember, dataRow, entityMember, ref unmappedColumns);
+                    MapEntityDestinationFromSource(childMember, resourceProfile, entityMember);
                 }
                 else
                 {
-                    var childModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+                    var childModel = ResourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
                     if (model != null)
                     {
                         dataRow.Cells[1].Value = $"new {model.ClassName}()";
-                        MapResourceChildMembers(unmappedColumns, member, model, $"{parent}?.{childMember.ColumnName}");
-                    }
-                }
-            }
-        }
-        private void MapEntityChildMembers(List<DBColumn> unmappedColumns, DBColumn member, ResourceModel model, string parent)
-        {
-            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            //  We have a model, and the parent column name.
-
-            //  Map the children
-            foreach (var childMember in model.Columns)
-            {
-                int dataRowIndex = resourceGrid.Rows.Add();
-                var dataRow = resourceGrid.Rows[dataRowIndex];
-
-                //  Include the child in the list...
-                dataRow.Cells[0].Value = $"{parent}.{childMember.ColumnName}";
-
-                //  Do we have an existing entity member that matches the child resource column name?
-                var entityMember = unmappedColumns.FirstOrDefault(u =>
-                    string.Equals(u.ColumnName, childMember.ColumnName, StringComparison.OrdinalIgnoreCase));
-
-                if (entityMember != null)
-                {
-                    //  We do, just assign it
-                    MapEntityDestinationFromSource(childMember, dataRow, entityMember, ref unmappedColumns);
-                }
-                else
-                {
-                    var childModel = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
-
-                    if (model != null)
-                    {
-                        dataRow.Cells[1].Value = $"new {model.ClassName}()";
-                        MapEntityChildMembers(unmappedColumns, member, model, $"{parent}?.{childMember.ColumnName}");
+                        MapEntityChildMembers(member, resourceProfile, model, $"{parent}?.{childMember.ColumnName}");
                     }
                 }
             }
         }
 
-        private void MapEntityDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
+        private void MapEntityDestinationFromSource(DBColumn destinationMember, ResourceProfile resourceProfile, DBColumn sourceMember)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+            var model = ResourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
             if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = $"source.{sourceMember.ColumnName}";
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = true;
             }
             else if (model != null)
             {
@@ -836,22 +838,21 @@ namespace COFRS.Template.Common.Forms
                         string.Equals(sourceMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(sourceMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase))
                     {
-                        dataRow.Cells[1].Value = $"({model.ClassName}) source.{sourceMember.ColumnName}";
-                        dataRow.Cells[3].Value = sourceMember.ColumnName;
-                        unmappedColumns.Remove(sourceMember);
+                        resourceProfile.MapFunction = $"({model.ClassName}) source.{sourceMember.ColumnName}";
+                        resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                        resourceProfile.IsDefined = true;
                     }
                     else if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
                     {
-                        dataRow.Cells[1].Value = $"Enum.Parse<{model.ClassName}>(source.{sourceMember.ColumnName})";
-                        dataRow.Cells[3].Value = sourceMember.ColumnName;
-                        unmappedColumns.Remove(sourceMember);
+                        resourceProfile.MapFunction = $"Enum.Parse<{model.ClassName}>(source.{sourceMember.ColumnName})";
+                        resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                        resourceProfile.IsDefined = true;
                     }
                     else
                     {
-                        dataRow.Cells[1].Value = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
-                        dataRow.Cells[1].Style.ForeColor = Color.Red;
-                        dataRow.Cells[3].Value = sourceMember.ColumnName;
-                        unmappedColumns.Remove(sourceMember);
+                        resourceProfile.MapFunction = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
+                        resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                        resourceProfile.IsDefined = false;
                     }
                 }
                 else
@@ -860,325 +861,283 @@ namespace COFRS.Template.Common.Forms
                     {
                         if (ContainsParseFunction(model))
                         {
-                            dataRow.Cells[1].Value = $"{model.ClassName}.Parse(source.{sourceMember.ColumnName})";
-                            dataRow.Cells[3].Value = sourceMember.ColumnName;
-                            unmappedColumns.Remove(sourceMember);
+                            resourceProfile.MapFunction = $"{model.ClassName}.Parse(source.{sourceMember.ColumnName})";
+                            resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                            resourceProfile.IsDefined = true;
                         }
                         else
                         {
-                            dataRow.Cells[1].Value = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
-                            dataRow.Cells[1].Style.ForeColor = Color.Red;
-                            dataRow.Cells[3].Value = sourceMember.ColumnName;
-                            unmappedColumns.Remove(sourceMember);
+                            resourceProfile.MapFunction = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
+                            resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                            resourceProfile.IsDefined = false;
                         }
                     }
                     else
                     {
-                        dataRow.Cells[1].Value = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
-                        dataRow.Cells[1].Style.ForeColor = Color.Red;
-                        dataRow.Cells[3].Value = sourceMember.ColumnName;
-                        unmappedColumns.Remove(sourceMember);
+                        resourceProfile.MapFunction = $"({model.ClassName}) AFunc(source.{sourceMember.ColumnName})";
+                        resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                        resourceProfile.IsDefined = true;
                     }
                 }
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToByte(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToByte(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableByte(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableByte(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToSByte(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToSByte(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableSByte(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableSByte(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "short", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToShort(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToShort(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "short?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableShort(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableShort(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToUShort(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToUShort(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableUShort(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableUShort(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "int", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToInt(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToInt(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "int?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableInt(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableInt(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToUInt(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToUInt(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableUInt(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableUInt(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "long", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToLong(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToLong(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "long?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableLong(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableLong(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToULong(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToULong(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableULong(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableULong(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToDecimal(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToDecimal(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableDecimal(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableDecimal(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "float", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToFloat(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToFloat(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "float?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableFloat(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableFloat(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "double", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToDouble(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToDouble(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "double?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableDouble(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableDouble(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToBoolean(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToBoolean(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableBoolean(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableBoolean(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "char", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToChar(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToChar(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "char?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableChar(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableChar(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToDateTime(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToDateTime(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableDateTime(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableDateTime(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToDateTimeOffset(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToDateTimeOffset(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableDateTimeOffset(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableDateTimeOffset(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToTimeSpan(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToTimeSpan(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableTimeSpan(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableTimeSpan(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToString(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToString(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte[]", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToByteArray(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToByteArray(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToEnumerableBytes(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToEnumerableBytes(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "List<byte>", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToByteList(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToByteList(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Image", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToImage(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToImage(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToGuid(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToGuid(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableGuid(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToNullableGuid(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToUri(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = SourceConverter.ToUri(sourceMember, out bool isUndefined);
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = !isUndefined;
             }
             else
             {
-                dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                resourceProfile.MapFunction = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
+                resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+                resourceProfile.IsDefined = false;
             }
         }
-        private void MapResourceDestinationFromSource(DBColumn destinationMember, DataGridViewRow dataRow, DBColumn sourceMember, ref List<DBColumn> unmappedColumns)
+
+        private void MapResourceDestinationFromSource(DBColumn destinationMember, EntityProfile entityProfile, DBColumn sourceMember)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            var model = ResourceModels.FirstOrDefault(r => string.Equals(r.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+            var model = ResourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
 
             if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}";
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = $"source.{sourceMember.ColumnName}";
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = true;
             }
             else if (model != null)
             {
@@ -1193,22 +1152,21 @@ namespace COFRS.Template.Common.Forms
                         string.Equals(destinationMember.ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(destinationMember.ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase))
                     {
-                        dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) source.{sourceMember.ColumnName}";
-                        dataRow.Cells[3].Value = sourceMember.ColumnName;
-                        unmappedColumns.Remove(sourceMember);
+                        entityProfile.MapFunction = $"({destinationMember.ModelDataType}) source.{sourceMember.ColumnName}";
+                        entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                        entityProfile.IsDefined = true;
                     }
                     else if (string.Equals(destinationMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
                     {
-                        dataRow.Cells[1].Value = $"source.{sourceMember.ColumnName}.ToString())";
-                        dataRow.Cells[3].Value = sourceMember.ColumnName;
-                        unmappedColumns.Remove(sourceMember);
+                        entityProfile.MapFunction = $"source.{sourceMember.ColumnName}.ToString())";
+                        entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                        entityProfile.IsDefined = true;
                     }
                     else
                     {
-                        dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
-                        dataRow.Cells[1].Style.ForeColor = Color.Red;
-                        dataRow.Cells[3].Value = sourceMember.ColumnName;
-                        unmappedColumns.Remove(sourceMember);
+                        entityProfile.MapFunction = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
+                        entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                        entityProfile.IsDefined = false;
                     }
                 }
                 else
@@ -1217,313 +1175,270 @@ namespace COFRS.Template.Common.Forms
                     {
                         if (ContainsParseFunction(model))
                         {
-                            dataRow.Cells[1].Value = $"{model.ClassName}.Parse(source.{sourceMember.ColumnName})";
-                            dataRow.Cells[3].Value = sourceMember.ColumnName;
-                            unmappedColumns.Remove(sourceMember);
+                            entityProfile.MapFunction = $"{model.ClassName}.Parse(source.{sourceMember.ColumnName})";
+                            entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                            entityProfile.IsDefined = true;
                         }
                         else
                         {
-                            dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
-                            dataRow.Cells[1].Style.ForeColor = Color.Red;
-                            dataRow.Cells[3].Value = sourceMember.ColumnName;
-                            unmappedColumns.Remove(sourceMember);
+                            entityProfile.MapFunction = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
+                            entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                            entityProfile.IsDefined = false;
                         }
                     }
                     else
                     {
-                        dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
-                        dataRow.Cells[1].Style.ForeColor = Color.Red;
-                        dataRow.Cells[3].Value = sourceMember.ColumnName;
-                        unmappedColumns.Remove(sourceMember);
+                        entityProfile.MapFunction = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
+                        entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                        entityProfile.IsDefined = true;
                     }
                 }
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToByte(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToByte(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = true;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableByte(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableByte(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToSByte(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToSByte(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "sbyte?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableSByte(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableSByte(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "short", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToShort(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToShort(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "short?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableShort(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableShort(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToUShort(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToUShort(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ushort?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableUShort(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableUShort(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "int", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToInt(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToInt(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "int?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableInt(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableInt(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToUInt(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToUInt(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "uint?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableUInt(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableUInt(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "long", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToLong(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToLong(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "long?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableLong(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableLong(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToULong(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToULong(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "ulong?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableULong(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableULong(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToDecimal(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToDecimal(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "decimal?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableDecimal(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableDecimal(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "float", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToFloat(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToFloat(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "float?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableFloat(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableFloat(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "double", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToDouble(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToDouble(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "double?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableDouble(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableDouble(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToBoolean(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToBoolean(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "bool?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableBoolean(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableBoolean(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "char", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToChar(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToChar(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "char?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableChar(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableChar(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToDateTime(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToDateTime(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTime?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableDateTime(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableDateTime(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToDateTimeOffset(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToDateTimeOffset(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "DateTimeOffset?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableDateTimeOffset(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableDateTimeOffset(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToTimeSpan(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToTimeSpan(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "TimeSpan?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableTimeSpan(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableTimeSpan(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToString(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToString(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "byte[]", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToByteArray(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToByteArray(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "IEnumerable<byte>", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToEnumerableBytes(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToEnumerableBytes(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "List<byte>", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToByteList(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToByteList(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Image", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToImage(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToImage(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToGuid(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToGuid(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Guid?", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToNullableGuid(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToNullableGuid(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else if (string.Equals(destinationMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
             {
-                dataRow.Cells[1].Value = SourceConverter.ToUri(sourceMember, out bool isUndefined);
-                dataRow.Cells[1].Style.ForeColor = isUndefined ? Color.Red : Color.Black;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = SourceConverter.ToUri(sourceMember, out bool isUndefined);
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = !isUndefined;
             }
             else
             {
-                dataRow.Cells[1].Value = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
-                dataRow.Cells[1].Style.ForeColor = Color.Red;
-                dataRow.Cells[3].Value = sourceMember.ColumnName;
-                unmappedColumns.Remove(sourceMember);
+                entityProfile.MapFunction = $"({destinationMember.ModelDataType}) AFunc(source.{sourceMember.ColumnName})";
+                entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+                entityProfile.IsDefined = false;
             }
         }
 
@@ -1605,6 +1520,15 @@ namespace COFRS.Template.Common.Forms
                 {
                     EntityGrid.Rows[e.RowIndex].Cells[1].Value = mapEditor.MappingFunctionTextBox.Text;
                 }
+            }
+        }
+
+        private void OnReset(object sender, EventArgs e)
+        {
+            if ( MessageBox.Show(this, "Warning: Resetting the mapping will lose any edits that you have made, and will reset the mappings to the default computed values.\r\n\r\nAre you sure you want to reset the mappings?", "Warning", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                ProfileMap = GenerateProfileMap(ResourceModel);
+                PopulateUI();   
             }
         }
     }

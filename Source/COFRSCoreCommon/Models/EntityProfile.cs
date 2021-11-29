@@ -11,5 +11,6 @@ namespace COFRSCoreCommon.Models
         public string EntityColumnName { get; set; }
         public string MapFunction { get; set; }
         public string[] ResourceColumns { get; set; }
+        public bool IsDefined { get; set; }
     }
 }
