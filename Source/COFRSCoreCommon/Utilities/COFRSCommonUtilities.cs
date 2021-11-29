@@ -327,7 +327,6 @@ namespace COFRSCoreCommon.Utilities
 			return false;
 		}
 
-
 		public static string FindOrchestrationNamespace(DTE2 dte)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -343,8 +342,6 @@ namespace COFRSCoreCommon.Utilities
 
 			return string.Empty;
 		}
-
-
 
 		/// <summary>
 		/// This function will add the appropriate code to regster the validation model in the ServicesConfig.cs file.
@@ -3797,6 +3794,29 @@ namespace COFRSCoreCommon.Utilities
 			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs\\ProjectMap.json");
 
 			File.WriteAllText(mappingPath, jsonData);
+		}
+
+		/// <summary>
+		/// Open the <see cref="ProfileMap"/> for the <see cref="ResourceModel"/>
+		/// </summary>
+		/// <param name="dte">The <see cref="DTE2"/> Visual Studio interface.</param>
+		/// <param name="resourceModel">The <see cref="ResourceModel"/> whose <see cref="ProfileMap"/> is to be opened.</param>
+		/// <returns>The <see cref="ProfileMap"/> for the specified <see cref="ResourceModel"/></returns>
+		public static ProfileMap OpenProfileMap(DTE2 dte, ResourceModel resourceModel)
+        {
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var solutionPath = dte.Solution.Properties.Item("Path").Value.ToString();
+			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), $".cofrs\\{resourceModel.ClassName}.{resourceModel.EntityModel.ClassName}.json");
+
+			if ( File.Exists(mappingPath) )
+            {	
+				var jsonText = File.ReadAllText(mappingPath);
+				var profileMap = JsonConvert.DeserializeObject<ProfileMap>(jsonText);
+				return profileMap;
+            }
+
+			return null;
 		}
 
 		/// <summary>

@@ -115,8 +115,8 @@ namespace COFRS.Template.Common.Wizards
 					var resourceModel = (ResourceModel)form._resourceModelList.SelectedItem;
 
 					mapperDialog.ResourceModel = resourceModel;
-					mapperDialog.ResourceModels = resourceMap.Maps.ToList();
-					mapperDialog.EntityModels = entityMap.Maps.ToList();
+					mapperDialog.ResourceMap = resourceMap;
+					mapperDialog.EntityMap = entityMap;
 
 					if (mapperDialog.ShowDialog() == DialogResult.OK)
 					{
