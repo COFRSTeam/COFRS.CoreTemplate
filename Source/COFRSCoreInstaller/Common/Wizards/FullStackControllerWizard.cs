@@ -104,6 +104,7 @@ namespace COFRS.Template.Common.Wizards
 				replacementsDictionary["$orchestrationnamespace$"] = $"{rootNamespace}.Orchestration";
 				replacementsDictionary["$validatornamespace$"] = projectMapping.ValidationNamespace;
 				replacementsDictionary["$validationnamespace$"] = projectMapping.ValidationNamespace;
+				replacementsDictionary["$examplesnamespace$"] = projectMapping.ExampleNamespace;
 
 				var candidateName = replacementsDictionary["$safeitemname$"];
 
