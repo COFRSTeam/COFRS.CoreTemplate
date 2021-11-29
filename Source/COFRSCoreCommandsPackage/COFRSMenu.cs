@@ -13,6 +13,7 @@ using COFRSCoreCommandsPackage.Forms;
 using COFRSCoreCommon.Utilities;
 using System.Text.RegularExpressions;
 using COFRS.Template.Common.Forms;
+using System.Windows.Forms;
 
 namespace COFRSCoreCommandsPackage
 {
@@ -257,13 +258,106 @@ namespace COFRSCoreCommandsPackage
                                         Dte = dte2
                                     };
 
-                                    dialog.ShowDialog();
+                                    if ( dialog.ShowDialog() == DialogResult.OK )
+                                    {
+                                        var ProfileMap = dialog.ProfileMap;
+                                        var resourceModel = dialog.ResourceModel;
+
+                                        editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+                                        foundit = editPoint.FindPattern($"CreateMap<{resourceModel.ClassName}");
+                                        foundit = foundit && editPoint.LessThan(constructor.EndPoint);
+
+                                        if (foundit)
+                                        {
+                                            editPoint.LineDown();
+
+                                            while (!IsLineEmpty(editPoint))
+                                            {
+                                                DeleteLine(editPoint);
+                                            }
+
+                                            bool first = true;
+
+                                            foreach (var rmap in ProfileMap.EntityProfiles)
+                                            {
+                                                if (first)
+                                                    first = false;
+                                                else
+                                                    editPoint.InsertNewLine();
+
+                                                editPoint.StartOfLine();
+                                                editPoint.Indent(null, 4);
+                                                editPoint.Insert(".ForMember(destination => destination.");
+                                                editPoint.Insert(rmap.EntityColumnName);
+                                                editPoint.Insert(", opts => opts.MapFrom(source => ");
+                                                editPoint.Insert(rmap.MapFunction);
+                                                editPoint.Insert("))");
+                                            }
+
+                                            editPoint.Insert(";");
+                                            editPoint.InsertNewLine();
+                                        }
+
+                                        editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+                                        foundit = editPoint.FindPattern($"CreateMap<{resourceModel.EntityModel.ClassName}");
+                                        foundit = foundit && editPoint.LessThan(constructor.EndPoint);
+
+                                        if (foundit)
+                                        {
+                                            editPoint.LineDown();
+
+                                            while (!IsLineEmpty(editPoint))
+                                            {
+                                                DeleteLine(editPoint);
+                                            }
+
+                                            bool first = true;
+
+                                            foreach (var rmap in ProfileMap.ResourceProfiles)
+                                            {
+                                                if (first)
+                                                    first = false;
+                                                else
+                                                    editPoint.InsertNewLine();
+
+                                                editPoint.StartOfLine();
+                                                editPoint.Indent(null, 4);
+                                                editPoint.Insert(".ForMember(destination => destination.");
+                                                editPoint.Insert(rmap.ResourceColumnName);
+                                                editPoint.Insert(", opts => opts.MapFrom(source => ");
+                                                editPoint.Insert(rmap.MapFunction);
+                                                editPoint.Insert("))");
+                                            }
+
+                                            editPoint.Insert(";");
+                                            editPoint.InsertNewLine();
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+
+        private static bool IsLineEmpty(EditPoint2 editPoint)
+        {
+            EditPoint2 startOfLine = (EditPoint2)editPoint.CreateEditPoint();
+            startOfLine.StartOfLine();
+            EditPoint2 eol = (EditPoint2)startOfLine.CreateEditPoint();
+            eol.EndOfLine();
+            return string.IsNullOrWhiteSpace(editPoint.GetText(eol));
+        }
+
+        private static void DeleteLine(EditPoint2 editPoint)
+        {
+            EditPoint2 startOfLine = (EditPoint2)editPoint.CreateEditPoint();
+            startOfLine.StartOfLine();
+            EditPoint2 eol = (EditPoint2)startOfLine.CreateEditPoint();
+            eol.LineDown();
+            eol.StartOfLine();
+            startOfLine.Delete(eol);
         }
     }
 }

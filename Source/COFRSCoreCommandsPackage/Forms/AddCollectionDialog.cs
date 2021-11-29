@@ -143,31 +143,14 @@ namespace COFRSCoreCommandsPackage.Forms
 			ThreadHelper.ThrowIfNotOnUIThread();
 
 			//	Did the user select one of the child resources?
-			if (ChildResourceList.SelectedIndex == -1)
+			if (ChildResourceList.CheckedItems.Count == 0)
 			{
 				MessageBox.Show("No child resource selected. You must select a resource from the list to generate a collection in the parent resource.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				return;
 			}
 
-			//	Some stiff we meed
+			//	Some stuff we need
 			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(_dte2);  //	Contains the names and projects where various source file exist.
-
-			//	Get the child model from the resource map
-			childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(ChildResourceList.SelectedItem.ToString(), StringComparison.OrdinalIgnoreCase));
-
-			//	Setup the default name of our new member
-			var nn = new NameNormalizer(childModel.ClassName);
-			memberName = nn.PluralForm;                                     // The memberName is will be the name of the new collection in the parent resource. By default, it will be
-																			// the plural of the child model class name.
-
-			parentValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(_dte2, parentModel.ClassName);
-			childValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(_dte2, childModel.ClassName);
-			
-			//	Now that we have all the information we need, add the collection member to the parent resource
-			AddCollectionToResource();
-
-			//	Now that we've added a new collection, we need to alter the orchestration layer to handle that new collection...
-
 			ProjectItem orchestrator = _dte2.Solution.FindProjectItem("ServiceOrchestrator.cs");
 			FileCodeModel2 codeModel = (FileCodeModel2)orchestrator.FileCodeModel;
 
@@ -179,72 +162,91 @@ namespace COFRSCoreCommandsPackage.Forms
 			if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text")) == null)
 				codeModel.AddImport("System.Text", -1);
 
-			//	We're going to need a validator for the new members. To get it, we will use dependency injection in the 
-			//	constructor, which means we will need a class variable. That variable is going to need a name. Create 
-			//	the default name for this vairable as the class name of the new member followed by "Validator".
-			//
-			//	i.e., if the new member class is Foo, then the variable name will be FooValidator.
-
-			childValidatorName = $"{childModel.ClassName}Validator";
-
-			//	Find the namespace...
-			foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
+			foreach (var item in ChildResourceList.CheckedItems)
 			{
-				CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
+				//	Get the child model from the resource map
+				childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(item.ToString(), StringComparison.OrdinalIgnoreCase));
 
-				//	The new collection of child items will need to be validated for the various operations.
-				//	Add a validator the for the child items 
-				AddChildValidatorInterfaceMember(classElement);
+				//	Setup the default name of our new member
+				var nn = new NameNormalizer(childModel.ClassName);
+				memberName = nn.PluralForm;                                     // The memberName is will be the name of the new collection in the parent resource. By default, it will be
+																				// the plural of the child model class name.
 
-				//	Now, let's go though all the functions...
-				foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
+				parentValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(_dte2, parentModel.ClassName);
+				childValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(_dte2, childModel.ClassName);
+
+				//	Now that we have all the information we need, add the collection member to the parent resource
+				AddCollectionToResource();
+
+				//	Now that we've added a new collection, we need to alter the orchestration layer to handle that new collection...
+
+				//	We're going to need a validator for the new members. To get it, we will use dependency injection in the 
+				//	constructor, which means we will need a class variable. That variable is going to need a name. Create 
+				//	the default name for this vairable as the class name of the new member followed by "Validator".
+				//
+				//	i.e., if the new member class is Foo, then the variable name will be FooValidator.
+
+				childValidatorName = $"{childModel.ClassName}Validator";
+
+				//	Find the namespace...
+				foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
 				{
-					//	Constructor
-					if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
-					{
-						ModifyConstructor(aFunction);
-					}
+					CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
 
-					//	Get Single
-					else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
-					{
-						ModifyGetSingle(aFunction);
-					}
+					//	The new collection of child items will need to be validated for the various operations.
+					//	Add a validator the for the child items 
+					AddChildValidatorInterfaceMember(classElement);
 
-					//	Get Collection
-					else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
+					//	Now, let's go though all the functions...
+					foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
 					{
-						ModifyGetCollection(aFunction);
-					}
+						//	Constructor
+						if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
+						{
+							ModifyConstructor(aFunction);
+						}
 
-					//	Add
-					else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
-					{
-						ModifyAdd(aFunction);
-					}
+						//	Get Single
+						else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
+						{
+							ModifyGetSingle(aFunction);
+						}
 
-					//	Update
-					else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
-					{
-						ModifyUpdate(aFunction);
-					}
+						//	Get Collection
+						else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
+						{
+							ModifyGetCollection(aFunction);
+						}
 
-					//	Update
-					else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
-					{
-						ModifyPatch(aFunction);
-					}
+						//	Add
+						else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
+						{
+							ModifyAdd(aFunction);
+						}
 
-					//	Delete
-					else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
-					{
-						ModifyDelete(aFunction);
+						//	Update
+						else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
+						{
+							ModifyUpdate(aFunction);
+						}
+
+						//	Update
+						else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
+						{
+							ModifyPatch(aFunction);
+						}
+
+						//	Delete
+						else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
+						{
+							ModifyDelete(aFunction);
+						}
 					}
 				}
-			}
 
-			AddSingleExample();
-			AddCollectionExample();
+				AddSingleExample();
+				AddCollectionExample();
+			}
 
 			DialogResult = DialogResult.OK;
 			Close();
@@ -568,7 +570,7 @@ namespace COFRSCoreCommandsPackage.Forms
 
 					if (constructor == null)
 					{
-						constructor = (CodeFunction2)resourceClass.AddFunction(resourceClass.Name, vsCMFunction.vsCMFunctionConstructor, "", -1);
+						constructor = (CodeFunction2)resourceClass.AddFunction(resourceClass.Name, vsCMFunction.vsCMFunctionConstructor, "", -1, vsCMAccess.vsCMAccessPublic);
 
 						StringBuilder doc = new StringBuilder();
 						doc.AppendLine("<doc>");
@@ -752,7 +754,7 @@ namespace COFRSCoreCommandsPackage.Forms
 					editPoint.EndOfLine();
 					editPoint.InsertNewLine(2);
 					editPoint.Indent(null, 3);
-					editPoint.Insert($"var subNode = RqlNode.Parse($\"Client=uri:\\\"{{url.LocalPath}}\\\"\");");
+					editPoint.Insert($"var subNode = RqlNode.Parse($\"{memberName}=uri:\\\"{{url.LocalPath}}\\\"\");");
 					editPoint.InsertNewLine(2);
 				}
 			}
@@ -846,7 +848,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				editPoint.EndOfLine();
 				editPoint.InsertNewLine(2);
 				editPoint.Indent(null, 3);
-				editPoint.Insert($"var subNode = RqlNode.Parse($\"Client=uri:\\\"{{item.HRef.LocalPath}}\\\"\");\r\n");
+				editPoint.Insert($"var subNode = RqlNode.Parse($\"{memberName}=uri:\\\"{{item.HRef.LocalPath}}\\\"\");\r\n");
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1428,7 +1430,7 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint.Insert("{");
                 editPoint.InsertNewLine();
                 editPoint.Indent(null, 5);
-                editPoint.Insert($"var mainItem = collection.Items.FirstOrDefault(i => i.HRef == item.Client);");
+                editPoint.Insert($"var mainItem = collection.Items.FirstOrDefault(i => i.HRef == item.{parentModel.ClassName});");
                 editPoint.InsertNewLine(2);
                 editPoint.Indent(null, 5);
                 editPoint.Insert($"if (mainItem.{memberName} == null)");
@@ -1485,7 +1487,7 @@ namespace COFRSCoreCommandsPackage.Forms
 				//	And return that item.
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
-                editPoint.Insert("var subNode = RqlNode.Parse($\"Client=uri:\\\"{item.HRef.LocalPath}\\\"\");");
+                editPoint.Insert($"var subNode = RqlNode.Parse($\"{memberName}=uri:\\\"{{item.HRef.LocalPath}}\\\"\");");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
 				editPoint.Insert("var selectNode = node.ExtractSelectClause();");
@@ -1502,7 +1504,7 @@ namespace COFRSCoreCommandsPackage.Forms
                 editPoint = (EditPoint2)aFunction.EndPoint.CreateEditPoint();
                 editPoint.LineUp();
 				editPoint.Indent(null, 3);
-                editPoint.Insert("var subNode = RqlNode.Parse($\"Client=uri:\\\"{item.HRef.LocalPath}\\\"\");");
+                editPoint.Insert($"var subNode = RqlNode.Parse($\"{memberName}=uri:\\\"{{item.HRef.LocalPath}}\\\"\");");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
 				editPoint.Insert("var selectNode = node.ExtractSelectClause();");

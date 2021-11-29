@@ -616,6 +616,34 @@ namespace COFRS.Template.Common.Forms
                             //  Now, go map all of it's children
                             MapEntityChildMembers(resourceMember, resourceProfile, model, resourceMember.ColumnName);
                         }
+                        else
+                        {
+                            if (resourceMember.ModelDataType.Contains("[]"))
+                            {
+                                var className = resourceMember.ModelDataType.Remove(resourceMember.ModelDataType.IndexOf('['), 2);
+                                resourceProfile.MapFunction = $"Array.Empty<{className}>()";
+                                resourceProfile.EntityColumnNames = Array.Empty<string>();
+                                resourceProfile.IsDefined = true;
+                            }
+                            else if (resourceMember.ModelDataType.Contains("List<"))
+                            {
+                                var index = resourceMember.ModelDataType.IndexOf('<');
+                                var count = resourceMember.ModelDataType.IndexOf('>') - index;
+                                var className = resourceMember.ModelDataType.Substring(index + 1, count - 1);
+                                resourceProfile.MapFunction = $"new List<{className}>()";
+                                resourceProfile.EntityColumnNames = Array.Empty<string>();
+                                resourceProfile.IsDefined = true;
+                            }
+                            else if (resourceMember.ModelDataType.Contains("IEnumerable<"))
+                            {
+                                var index = resourceMember.ModelDataType.IndexOf('<');
+                                var count = resourceMember.ModelDataType.IndexOf('>') - index;
+                                var className = resourceMember.ModelDataType.Substring(index + 1, count - 1);
+                                resourceProfile.MapFunction = $"Array.Empty<{className}>()";
+                                resourceProfile.EntityColumnNames = Array.Empty<string>();
+                                resourceProfile.IsDefined = true;
+                            }
+                        }
                     }
                 }
 
@@ -1494,7 +1522,24 @@ namespace COFRS.Template.Common.Forms
 
                 if ( mapEditor.ShowDialog() == DialogResult.OK)
                 {
-                    resourceGrid.Rows[e.RowIndex].Cells[1].Value = mapEditor.MappingFunctionTextBox.Text;
+                    var resourceMap = ProfileMap.ResourceProfiles.FirstOrDefault(m => m.ResourceColumnName.Equals(resourceGrid.Rows[e.RowIndex].Cells[0].Value));
+
+                    if (resourceMap != null)
+                    {
+                        var items = new List<string>();
+                        foreach (var item in mapEditor.MappedList.Items)
+                            items.Add(item.ToString());
+
+                        resourceMap.MapFunction = mapEditor.MappingFunctionTextBox.Text;
+                        resourceMap.EntityColumnNames = items.ToArray();
+
+                        resourceGrid.Rows[e.RowIndex].Cells[1].Value = mapEditor.MappingFunctionTextBox.Text;
+                        resourceGrid.Rows[e.RowIndex].Cells[3].Value = resourceMap.EntityColumnNames?.ToCSV();
+
+                        EntityList.Items.Clear();
+                        foreach ( var item in mapEditor.UnmappedList.Items)
+                            EntityList.Items.Add(item.ToString());
+                    }
                 }
             }
         }
@@ -1518,7 +1563,24 @@ namespace COFRS.Template.Common.Forms
 
                 if (mapEditor.ShowDialog() == DialogResult.OK)
                 {
-                    EntityGrid.Rows[e.RowIndex].Cells[1].Value = mapEditor.MappingFunctionTextBox.Text;
+                    var entityMap = ProfileMap.EntityProfiles.FirstOrDefault(m => m.EntityColumnName.Equals(EntityGrid.Rows[e.RowIndex].Cells[0].Value));
+
+                    if (entityMap != null)
+                    {
+                        var items = new List<string>();
+                        foreach (var item in mapEditor.MappedList.Items)
+                            items.Add(item.ToString());
+
+                        entityMap.MapFunction = mapEditor.MappingFunctionTextBox.Text;
+                        entityMap.ResourceColumns = items.ToArray();
+
+                        EntityGrid.Rows[e.RowIndex].Cells[1].Value = mapEditor.MappingFunctionTextBox.Text;
+                        EntityGrid.Rows[e.RowIndex].Cells[3].Value = entityMap.ResourceColumns?.ToCSV();
+
+                        ResourceList.Items.Clear();
+                        foreach (var item in mapEditor.UnmappedList.Items)
+                            ResourceList.Items.Add(item.ToString());
+                    }
                 }
             }
         }
