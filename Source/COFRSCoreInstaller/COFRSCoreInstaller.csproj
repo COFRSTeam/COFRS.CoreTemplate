@@ -60,12 +60,6 @@
     <Compile Include="Common\Forms\AddConnection.Designer.cs">
       <DependentUpon>AddConnection.cs</DependentUpon>
     </Compile>
-    <Compile Include="Common\Forms\Mapper.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\Mapper.Designer.cs">
-      <DependentUpon>Mapper.cs</DependentUpon>
-    </Compile>
     <Compile Include="Common\Forms\ProgressDialog.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -105,12 +99,6 @@
     <Compile Include="Common\Wizards\EntityWizard.cs" />
     <Compile Include="Common\Wizards\ExampleWizard.cs" />
     <Compile Include="Common\Wizards\FullStackControllerWizard.cs" />
-    <Compile Include="Common\Forms\MapEditor.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\MapEditor.Designer.cs">
-      <DependentUpon>MapEditor.cs</DependentUpon>
-    </Compile>
     <Compile Include="Common\Wizards\MapperWizard.cs" />
     <Compile Include="Common\Wizards\ResourceWizard.cs" />
     <Compile Include="Common\Wizards\ValidationWizard.cs" />
@@ -228,9 +216,6 @@
     <EmbeddedResource Include="Common\Forms\AddConnection.resx">
       <DependentUpon>AddConnection.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\Mapper.resx">
-      <DependentUpon>Mapper.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Common\Forms\ProgressDialog.resx">
       <DependentUpon>ProgressDialog.cs</DependentUpon>
     </EmbeddedResource>
@@ -245,9 +230,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Common\Forms\UserInputResource.resx">
       <DependentUpon>UserInputResource.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\MapEditor.resx">
-      <DependentUpon>MapEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Common\Forms\UserInputProject.resx">
       <DependentUpon>UserInputProject.cs</DependentUpon>

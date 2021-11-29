@@ -12,6 +12,7 @@ using EnvDTE;
 using COFRSCoreCommandsPackage.Forms;
 using COFRSCoreCommon.Utilities;
 using System.Text.RegularExpressions;
+using COFRS.Template.Common.Forms;
 
 namespace COFRSCoreCommandsPackage
 {
@@ -251,9 +252,9 @@ namespace COFRSCoreCommandsPackage
                                 {
                                     Mapper dialog = new Mapper
                                     {
-                                        resourceModels = resourceMap.Maps.ToList(),
-                                        resourceModel = resourceMap.Maps.FirstOrDefault(c => c.ClassName.Equals(match.Groups["resource"].Value)),
-                                        _dte2 = dte2
+                                        ResourceMap = resourceMap,
+                                        ResourceModel = resourceMap.Maps.FirstOrDefault(c => c.ClassName.Equals(match.Groups["resource"].Value)),
+                                        Dte = dte2
                                     };
 
                                     dialog.ShowDialog();

@@ -117,7 +117,4 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="label4.Text" xml:space="preserve">
-    <value>In this dialog, you can define which source columns are used to construct the destination column. You can also specify the mapping function, which takes the source columns and generates the destination column from them. The mapping function can be any C# compatible inline code.</value>
-  </data>
 </root>
