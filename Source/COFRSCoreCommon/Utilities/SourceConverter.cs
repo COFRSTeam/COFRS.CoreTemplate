@@ -329,6 +329,10 @@ namespace COFRSCoreCommon.Utilities
             {
                 return $"source.{sourceMember.ColumnName} == null ? string.Empty : source.{sourceMember.ColumnName}.ToString()";
             }
+            else if (string.Equals(sourceMember.ModelDataType, "Uri", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"source.{sourceMember.ColumnName} == null ? string.Empty : source.{sourceMember.ColumnName}.AbsoluteUri";
+            }
             else
             {
                 return $"source.{sourceMember.ColumnName}.ToString()";

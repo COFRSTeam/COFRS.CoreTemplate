@@ -53,13 +53,13 @@ namespace COFRS.Template.Common.Wizards
 			WizardRunKind runKind, object[] customParams)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
+			DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
 			ProgressDialog progressDialog = null;
 
 			try
 			{
 				//	Full stack must start at the root namespace. Insure that we do...
-				if (!COFRSCommonUtilities.IsRootNamespace(_appObject, replacementsDictionary["$rootnamespace$"]))
+				if (!COFRSCommonUtilities.IsRootNamespace(dte, replacementsDictionary["$rootnamespace$"]))
 				{
 					MessageBox.Show("The COFRS Controller Full Stack should be placed at the project root. It will add the appropriate components in the appropriate folders.", "COFRS", MessageBoxButtons.OK, MessageBoxIcon.Error);
 					Proceed = false;
@@ -67,33 +67,33 @@ namespace COFRS.Template.Common.Wizards
 				}
 
 				//	Show the user that we are busy doing things...
-				var parent = new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd);
+				var parent = new WindowClass((IntPtr)dte.ActiveWindow.HWnd);
 
 				progressDialog = new ProgressDialog("Loading classes and preparing project...");
 				progressDialog.Show(parent);
 
 				HandleMessages();
 
-				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+				dte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 				//  Load the project mapping information
-				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(_appObject);
+				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte);
 				HandleMessages();
 
-				var installationFolder = COFRSCommonUtilities.GetInstallationFolder(_appObject);
+				var installationFolder = COFRSCommonUtilities.GetInstallationFolder(dte);
 				HandleMessages();
 
-				var connectionString = COFRSCommonUtilities.GetConnectionString(_appObject);
+				var connectionString = COFRSCommonUtilities.GetConnectionString(dte);
 				HandleMessages();
 
-				var entityMap = COFRSCommonUtilities.LoadEntityMap(_appObject);
+				var entityMap = COFRSCommonUtilities.LoadEntityMap(dte);
 				HandleMessages();
 
-				var defaultServerType = COFRSCommonUtilities.GetDefaultServerType(_appObject);
-				var resourceMap = COFRSCommonUtilities.LoadResourceMap(_appObject);
+				var defaultServerType = COFRSCommonUtilities.GetDefaultServerType(dte);
+				var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte);
 				HandleMessages();
 
-				var policies = COFRSCommonUtilities.LoadPolicies(_appObject);
+				var policies = COFRSCommonUtilities.LoadPolicies(dte);
 				HandleMessages();
 
 				//	Get folders and namespaces
@@ -129,20 +129,20 @@ namespace COFRS.Template.Common.Wizards
 				HandleMessages();
 
 				progressDialog.Close();
-				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
 					//	Show the user that we are busy...
 					progressDialog = new ProgressDialog("Building classes...");
 					progressDialog.Show(parent);
-					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+					dte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 					HandleMessages();
 					connectionString = $"{form.ConnectionString}Application Name={projectMapping.ControllersProject}";
 
 					//	Replace the ConnectionString
-					COFRSCommonUtilities.ReplaceConnectionString(_appObject, connectionString);
+					COFRSCommonUtilities.ReplaceConnectionString(dte, connectionString);
 					HandleMessages();
 
 					var entityClassName = $"E{form.SingularResourceName}";
@@ -159,7 +159,7 @@ namespace COFRS.Template.Common.Wizards
 					replacementsDictionary["$exampleClass$"] = exampleClassName;
 					replacementsDictionary["$controllerClass$"] = controllerClassName;
 
-					var moniker = COFRSCommonUtilities.LoadMoniker(_appObject);
+					var moniker = COFRSCommonUtilities.LoadMoniker(dte);
 					var policy = form.Policy;
 					HandleMessages();
 
@@ -189,7 +189,7 @@ namespace COFRS.Template.Common.Wizards
 							var definedList = new List<EntityModel>();
 							definedList.AddRange(undefinedModels);
 
-							standardEmitter.GenerateComposites(_appObject,
+							standardEmitter.GenerateComposites(dte,
 															   undefinedModels,
 															   form.ConnectionString,
 															   replacementsDictionary,
@@ -200,10 +200,10 @@ namespace COFRS.Template.Common.Wizards
 							foreach (var composite in undefinedModels)
 							{
 								//	TO DO: This is incorret - the item could reside in another project
-								var pj = (VSProject)_appObject.Solution.Projects.Item(1).Object;
+								var pj = (VSProject)dte.Solution.Projects.Item(1).Object;
 								pj.Project.ProjectItems.AddFromFile(composite.Folder);
 
-								COFRSCommonUtilities.RegisterComposite(_appObject, composite);
+								COFRSCommonUtilities.RegisterComposite(dte, composite);
 							}
 
 						}
@@ -299,7 +299,7 @@ namespace COFRS.Template.Common.Wizards
 
                         HandleMessages();
 						progressDialog.Close();
-						_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+						dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
                         Mapper mapperDialog = new Mapper
                         {
@@ -307,12 +307,13 @@ namespace COFRS.Template.Common.Wizards
                             //	Emit Mapping Model
                             ResourceModel = resourceModel,
                             ResourceMap = resourceMap,
-                            EntityMap = entityMap
+                            EntityMap = entityMap,
+							Dte = dte
                         };
 
 						if (mapperDialog.ShowDialog() == DialogResult.OK)
 						{
-							COFRSCommonUtilities.SaveProfileMap(_appObject, mapperDialog.ProfileMap);
+							COFRSCommonUtilities.SaveProfileMap(dte, mapperDialog.ProfileMap);
 
 							var mappingModel = standardEmitter.EmitMappingModel(resourceModel, resourceModel.EntityModel, mapperDialog.ProfileMap, mappingClassName, replacementsDictionary);
 
@@ -323,7 +324,7 @@ namespace COFRS.Template.Common.Wizards
 
 						progressDialog = new ProgressDialog("Building classes...");
 						progressDialog.Show(parent);
-						_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+						dte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 						HandleMessages();
 					}
 					#endregion
@@ -335,9 +336,9 @@ namespace COFRS.Template.Common.Wizards
 					{
 						GenerateValidator = true;
 
-						var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
+						var solutionPath = dte.Solution.Properties.Item("Path").Value.ToString();
 						var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
-						var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(_appObject);
+						var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(dte);
 
 						//	Emit Validation Model
 						var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, validationClassName, out validatorInterface);
@@ -345,7 +346,7 @@ namespace COFRS.Template.Common.Wizards
 						HandleMessages();
 
 						//	Register the validation model
-						COFRSCommonUtilities.RegisterValidationModel(_appObject, 
+						COFRSCommonUtilities.RegisterValidationModel(dte, 
 														  validationClassName,
 														  replacementsDictionary["$validatornamespace$"]);
 					}
@@ -355,7 +356,7 @@ namespace COFRS.Template.Common.Wizards
                     if (form.ExampleCheckBox.Checked)
                     {
 						GenerateExample = true;
-						var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
+						var solutionPath = dte.Solution.Properties.Item("Path").Value.ToString();
 						var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
 
 						var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, entityMap, exampleClassName, defaultServerType, connectionString);
@@ -369,7 +370,7 @@ namespace COFRS.Template.Common.Wizards
 						GenerateController = true;
 
 						var controllerModel = emitter.EmitController(
-							_appObject,
+							dte,
 							entityModel,
 							resourceModel,
 							moniker,
@@ -384,7 +385,7 @@ namespace COFRS.Template.Common.Wizards
 					#endregion
 
 					progressDialog.Close();
-					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+					dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
 					Proceed = true;
 				}
@@ -393,7 +394,7 @@ namespace COFRS.Template.Common.Wizards
 			}
 			catch (Exception ex)
 			{
-				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
 				if (progressDialog != null)
 					progressDialog.Close();

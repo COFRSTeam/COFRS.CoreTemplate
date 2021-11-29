@@ -35,7 +35,7 @@ namespace COFRSCoreCommandsPackage.Forms
             this.label1 = new System.Windows.Forms.Label();
             this.ResourceName = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
-            this.ChildResourceList = new System.Windows.Forms.ListBox();
+            this.ChildResourceList = new System.Windows.Forms.CheckedListBox();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -98,10 +98,9 @@ namespace COFRSCoreCommandsPackage.Forms
             // ChildResourceList
             // 
             this.ChildResourceList.FormattingEnabled = true;
-            this.ChildResourceList.Location = new System.Drawing.Point(112, 56);
+            this.ChildResourceList.Location = new System.Drawing.Point(112, 58);
             this.ChildResourceList.Name = "ChildResourceList";
-            this.ChildResourceList.Size = new System.Drawing.Size(372, 186);
-            this.ChildResourceList.Sorted = true;
+            this.ChildResourceList.Size = new System.Drawing.Size(372, 184);
             this.ChildResourceList.TabIndex = 36;
             // 
             // AddCollectionDialog
@@ -135,6 +134,6 @@ namespace COFRSCoreCommandsPackage.Forms
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         public System.Windows.Forms.Label ResourceName;
-        public System.Windows.Forms.ListBox ChildResourceList;
+        private System.Windows.Forms.CheckedListBox ChildResourceList;
     }
 }
