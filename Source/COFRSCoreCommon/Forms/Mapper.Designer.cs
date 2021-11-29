@@ -44,10 +44,6 @@ namespace COFRS.Template.Common.Forms
             this.ResourceMemberLabel = new System.Windows.Forms.Label();
             this.UnmappedEntityMembersLabel = new System.Windows.Forms.Label();
             this.resourceGrid = new System.Windows.Forms.DataGridView();
-            this.ResourceColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.EntityColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.EditMapping = new System.Windows.Forms.DataGridViewImageColumn();
-            this.EntityColumns = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.AssignButton = new System.Windows.Forms.Button();
             this.UnassignButton = new System.Windows.Forms.Button();
             this.tabControl = new System.Windows.Forms.TabControl();
@@ -56,20 +52,25 @@ namespace COFRS.Template.Common.Forms
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.ResourceList = new System.Windows.Forms.ListBox();
             this.EntityGrid = new System.Windows.Forms.DataGridView();
-            this.dataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.dataGridViewTextBoxColumn2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.dataGridViewImageColumn1 = new System.Windows.Forms.DataGridViewImageColumn();
-            this.ResourceMembers = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ResourceAssign = new System.Windows.Forms.Button();
             this.ResourceUnassign = new System.Windows.Forms.Button();
             this.UnmappedResourceMembersLabel = new System.Windows.Forms.Label();
             this.EntityMembersLabel = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.ResetButton = new System.Windows.Forms.Button();
             this._okButton = new System.Windows.Forms.Button();
             this._cancelButton = new System.Windows.Forms.Button();
             this.dataGridViewImageColumn2 = new System.Windows.Forms.DataGridViewImageColumn();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.ResourceColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.EntityColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.EditMapping = new System.Windows.Forms.DataGridViewImageColumn();
+            this.EntityColumns = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewImageColumn1 = new System.Windows.Forms.DataGridViewImageColumn();
+            this.ResourceMembers = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.resourceGrid)).BeginInit();
             this.tabControl.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -189,41 +190,6 @@ namespace COFRS.Template.Common.Forms
             this.resourceGrid.Size = new System.Drawing.Size(649, 326);
             this.resourceGrid.TabIndex = 12;
             this.resourceGrid.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.OnCellClick);
-            // 
-            // ResourceColumn
-            // 
-            this.ResourceColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.ResourceColumn.HeaderText = "Resource Member";
-            this.ResourceColumn.Name = "ResourceColumn";
-            this.ResourceColumn.ReadOnly = true;
-            this.ResourceColumn.Width = 109;
-            // 
-            // EntityColumn
-            // 
-            this.EntityColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.EntityColumn.HeaderText = "Mapped Entity Members";
-            this.EntityColumn.Name = "EntityColumn";
-            this.EntityColumn.ReadOnly = true;
-            this.EntityColumn.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            // 
-            // EditMapping
-            // 
-            this.EditMapping.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
-            this.EditMapping.HeaderText = "";
-            this.EditMapping.Image = global::COFRS.Template.Properties.Resources.EditButton;
-            this.EditMapping.Name = "EditMapping";
-            this.EditMapping.ReadOnly = true;
-            this.EditMapping.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.EditMapping.ToolTipText = "Edit the mapping formulas for this resource.";
-            this.EditMapping.Width = 60;
-            // 
-            // EntityColumns
-            // 
-            this.EntityColumns.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
-            this.EntityColumns.HeaderText = "Entity Columns";
-            this.EntityColumns.Name = "EntityColumns";
-            this.EntityColumns.ReadOnly = true;
-            this.EntityColumns.Visible = false;
             // 
             // AssignButton
             // 
@@ -352,39 +318,6 @@ namespace COFRS.Template.Common.Forms
             this.EntityGrid.TabIndex = 21;
             this.EntityGrid.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.OnEntityCellClick);
             // 
-            // dataGridViewTextBoxColumn1
-            // 
-            this.dataGridViewTextBoxColumn1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.dataGridViewTextBoxColumn1.HeaderText = "Entity Member";
-            this.dataGridViewTextBoxColumn1.Name = "dataGridViewTextBoxColumn1";
-            this.dataGridViewTextBoxColumn1.ReadOnly = true;
-            this.dataGridViewTextBoxColumn1.Width = 91;
-            // 
-            // dataGridViewTextBoxColumn2
-            // 
-            this.dataGridViewTextBoxColumn2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.dataGridViewTextBoxColumn2.HeaderText = "Mapped Resource Members";
-            this.dataGridViewTextBoxColumn2.Name = "dataGridViewTextBoxColumn2";
-            this.dataGridViewTextBoxColumn2.ReadOnly = true;
-            this.dataGridViewTextBoxColumn2.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            // 
-            // dataGridViewImageColumn1
-            // 
-            this.dataGridViewImageColumn1.HeaderText = "";
-            this.dataGridViewImageColumn1.Image = global::COFRS.Template.Properties.Resources.EditButton;
-            this.dataGridViewImageColumn1.Name = "dataGridViewImageColumn1";
-            this.dataGridViewImageColumn1.ReadOnly = true;
-            this.dataGridViewImageColumn1.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.dataGridViewImageColumn1.ToolTipText = "Edit the mapping formulas for this resource.";
-            this.dataGridViewImageColumn1.Width = 60;
-            // 
-            // ResourceMembers
-            // 
-            this.ResourceMembers.HeaderText = "ResourceMembers";
-            this.ResourceMembers.Name = "ResourceMembers";
-            this.ResourceMembers.ReadOnly = true;
-            this.ResourceMembers.Visible = false;
-            // 
             // ResourceAssign
             // 
             this.ResourceAssign.Location = new System.Drawing.Point(674, 76);
@@ -424,12 +357,23 @@ namespace COFRS.Template.Common.Forms
             // panel1
             // 
             this.panel1.BackColor = System.Drawing.SystemColors.ActiveCaption;
+            this.panel1.Controls.Add(this.ResetButton);
             this.panel1.Controls.Add(this._okButton);
             this.panel1.Controls.Add(this._cancelButton);
             this.panel1.Location = new System.Drawing.Point(-10, 577);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(1025, 144);
             this.panel1.TabIndex = 84;
+            // 
+            // ResetButton
+            // 
+            this.ResetButton.Location = new System.Drawing.Point(26, 17);
+            this.ResetButton.Name = "ResetButton";
+            this.ResetButton.Size = new System.Drawing.Size(75, 23);
+            this.ResetButton.TabIndex = 28;
+            this.ResetButton.Text = "Reset";
+            this.ResetButton.UseVisualStyleBackColor = true;
+            this.ResetButton.Click += new System.EventHandler(this.OnReset);
             // 
             // _okButton
             // 
@@ -455,7 +399,6 @@ namespace COFRS.Template.Common.Forms
             // dataGridViewImageColumn2
             // 
             this.dataGridViewImageColumn2.HeaderText = "";
-            this.dataGridViewImageColumn2.Image = global::COFRS.Template.Properties.Resources.EditButton;
             this.dataGridViewImageColumn2.Name = "dataGridViewImageColumn2";
             this.dataGridViewImageColumn2.Resizable = System.Windows.Forms.DataGridViewTriState.True;
             this.dataGridViewImageColumn2.ToolTipText = "Edit the mapping formulas for this resource.";
@@ -463,7 +406,7 @@ namespace COFRS.Template.Common.Forms
             // 
             // pictureBox1
             // 
-            this.pictureBox1.Image = global::COFRS.Template.Properties.Resources.ico128;
+            this.pictureBox1.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox1.Image")));
             this.pictureBox1.Location = new System.Drawing.Point(12, 12);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(128, 128);
@@ -479,6 +422,74 @@ namespace COFRS.Template.Common.Forms
             this.label1.Size = new System.Drawing.Size(195, 31);
             this.label1.TabIndex = 85;
             this.label1.Text = "Mapping Editor";
+            // 
+            // ResourceColumn
+            // 
+            this.ResourceColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.ResourceColumn.HeaderText = "Resource Member";
+            this.ResourceColumn.Name = "ResourceColumn";
+            this.ResourceColumn.ReadOnly = true;
+            this.ResourceColumn.Width = 109;
+            // 
+            // EntityColumn
+            // 
+            this.EntityColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.EntityColumn.HeaderText = "Mapped Entity Members";
+            this.EntityColumn.Name = "EntityColumn";
+            this.EntityColumn.ReadOnly = true;
+            this.EntityColumn.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            // 
+            // EditMapping
+            // 
+            this.EditMapping.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.EditMapping.HeaderText = "";
+            this.EditMapping.Image = ((System.Drawing.Image)(resources.GetObject("EditMapping.Image")));
+            this.EditMapping.Name = "EditMapping";
+            this.EditMapping.ReadOnly = true;
+            this.EditMapping.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.EditMapping.ToolTipText = "Edit the mapping formulas for this resource.";
+            this.EditMapping.Width = 60;
+            // 
+            // EntityColumns
+            // 
+            this.EntityColumns.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.EntityColumns.HeaderText = "Entity Columns";
+            this.EntityColumns.Name = "EntityColumns";
+            this.EntityColumns.ReadOnly = true;
+            this.EntityColumns.Visible = false;
+            // 
+            // dataGridViewTextBoxColumn1
+            // 
+            this.dataGridViewTextBoxColumn1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.dataGridViewTextBoxColumn1.HeaderText = "Entity Member";
+            this.dataGridViewTextBoxColumn1.Name = "dataGridViewTextBoxColumn1";
+            this.dataGridViewTextBoxColumn1.ReadOnly = true;
+            this.dataGridViewTextBoxColumn1.Width = 99;
+            // 
+            // dataGridViewTextBoxColumn2
+            // 
+            this.dataGridViewTextBoxColumn2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.dataGridViewTextBoxColumn2.HeaderText = "Mapped Resource Members";
+            this.dataGridViewTextBoxColumn2.Name = "dataGridViewTextBoxColumn2";
+            this.dataGridViewTextBoxColumn2.ReadOnly = true;
+            this.dataGridViewTextBoxColumn2.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            // 
+            // dataGridViewImageColumn1
+            // 
+            this.dataGridViewImageColumn1.HeaderText = "";
+            this.dataGridViewImageColumn1.Image = ((System.Drawing.Image)(resources.GetObject("dataGridViewImageColumn1.Image")));
+            this.dataGridViewImageColumn1.Name = "dataGridViewImageColumn1";
+            this.dataGridViewImageColumn1.ReadOnly = true;
+            this.dataGridViewImageColumn1.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.dataGridViewImageColumn1.ToolTipText = "Edit the mapping formulas for this resource.";
+            this.dataGridViewImageColumn1.Width = 60;
+            // 
+            // ResourceMembers
+            // 
+            this.ResourceMembers.HeaderText = "ResourceMembers";
+            this.ResourceMembers.Name = "ResourceMembers";
+            this.ResourceMembers.ReadOnly = true;
+            this.ResourceMembers.Visible = false;
             // 
             // Mapper
             // 
@@ -542,6 +553,7 @@ namespace COFRS.Template.Common.Forms
         private System.Windows.Forms.DataGridViewImageColumn dataGridViewImageColumn2;
         private System.Windows.Forms.ListBox ResourceList;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button ResetButton;
         private System.Windows.Forms.DataGridViewTextBoxColumn ResourceColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn EntityColumn;
         private System.Windows.Forms.DataGridViewImageColumn EditMapping;

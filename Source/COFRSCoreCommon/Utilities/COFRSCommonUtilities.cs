@@ -11,13 +11,303 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web.UI.Design;
+using VSLangProj;
 
 namespace COFRSCoreCommon.Utilities
 {
     public static class COFRSCommonUtilities
     {
-		#region Miscellaneous Operations
-		public static bool IsChildOf(string parentPath, string candidateChildPath)
+		#region AppSettings Operations
+		/// <summary>
+		/// Get the default connection string from the appsettings.local.json configuration file
+		/// </summary> 
+		/// <param name="dte2>"The <see cref="DTE2"/> Visual Studio interface</param>
+		/// <returns>The connection string used in the local settings</returns>
+		public static string GetConnectionString(DTE2 dte2)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			string jsonText;
+
+			ProjectItem settingsFile = dte2.Solution.FindProjectItem("appsettings.Local.json");
+
+			if (!settingsFile.IsOpen)
+			{
+				settingsFile.Open();
+
+				TextSelection sel = (TextSelection)settingsFile.Document.Selection;
+				sel.SelectAll();
+				jsonText = sel.Text;
+
+				settingsFile.Document.Close();
+			}
+			else
+            {
+				TextSelection sel = (TextSelection)settingsFile.Document.Selection;
+				sel.SelectAll();
+				jsonText = sel.Text;
+			}
+
+			var settings = JObject.Parse(jsonText);
+			var connectionStrings = settings["ConnectionStrings"].Value<JObject>();
+			return connectionStrings["DefaultConnection"].Value<string>();
+		}
+
+		/// <summary>
+		/// Replaces the connection string in the appsettings.local.json configuration file
+		/// </summary>
+		/// <param name="dte2>"The <see cref="DTE2"/> Visual Studio interface</param>
+		/// <param name="connectionString">The new connection string.</param>
+		public static void ReplaceConnectionString(DTE2 dte2, string connectionString)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			//	The first thing we need to do, is we need to load the appSettings.local.json file
+			ProjectItem settingsFile = dte2.Solution.FindProjectItem("appsettings.Local.json");
+
+			if (settingsFile.IsOpen)
+			{
+				TextSelection sel = (TextSelection)settingsFile.Document.Selection;
+
+				sel.StartOfDocument();
+
+				if (sel.FindText("Server=localdb;Database=master;Trusted_Connection=True;"))
+				{
+					sel.SelectLine();
+					sel.Text = $"\t\t\"DefaultConnection\": \"{connectionString}\"\r\n";
+					settingsFile.Document.Save();
+				}
+			}
+			else
+			{
+				settingsFile.Open();
+				TextSelection sel = (TextSelection)settingsFile.Document.Selection;
+
+				sel.StartOfDocument();
+
+				if (sel.FindText("Server=localdb;Database=master;Trusted_Connection=True;"))
+				{
+					sel.SelectLine();
+					sel.Text = $"\t\t\"DefaultConnection\": \"{connectionString}\"\r\n";
+					settingsFile.Document.Save();
+				}
+
+				settingsFile.Document.Close();
+			}
+		}
+
+		/// <summary>
+		/// Get the default server type
+		/// </summary>
+		/// <param name="dte2>"The <see cref="DTE2"/> Visual Studio interface</param>
+		/// <returns>The default server type</returns>
+		public static DBServerType GetDefaultServerType(DTE2 dte2)
+		{
+			//	Get the location of the server configuration on disk
+			var DefaultConnectionString = GetConnectionString(dte2);
+			var baseFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+			var dataFolder = Path.Combine(baseFolder, "COFRS");
+
+			if (!Directory.Exists(dataFolder))
+				Directory.CreateDirectory(dataFolder);
+
+			var filePath = Path.Combine(dataFolder, "Servers");
+
+			ServerConfig _serverConfig;
+
+			//	Read the ServerConfig into memory. If one does not exist
+			//	create an empty one.
+			using (var stream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+			{
+				using (var streamReader = new StreamReader(stream))
+				{
+					using (var reader = new JsonTextReader(streamReader))
+					{
+						var serializer = new JsonSerializer();
+
+						_serverConfig = serializer.Deserialize<ServerConfig>(reader);
+
+						if (_serverConfig == null)
+							_serverConfig = new ServerConfig();
+					}
+				}
+			}
+
+			//	If there are any servers in the list, we need to populate
+			//	the windows controls.
+			if (_serverConfig.Servers.Count() > 0)
+			{
+				int LastServerUsed = _serverConfig.LastServerUsed;
+				//	When we populate the windows controls, ensure that the last server that
+				//	the user used is in the visible list, and make sure it is the one
+				//	selected.
+				for (int candidate = 0; candidate < _serverConfig.Servers.ToList().Count(); candidate++)
+				{
+					var candidateServer = _serverConfig.Servers.ToList()[candidate];
+					var candidateConnectionString = string.Empty;
+
+					switch (candidateServer.DBType)
+					{
+						case DBServerType.MYSQL:
+							candidateConnectionString = $"Server={candidateServer.ServerName};Port={candidateServer.PortNumber}";
+							break;
+
+						case DBServerType.POSTGRESQL:
+							candidateConnectionString = $"Server={candidateServer.ServerName};Port={candidateServer.PortNumber}";
+							break;
+
+						case DBServerType.SQLSERVER:
+							candidateConnectionString = $"Server={candidateServer.ServerName}";
+							break;
+					}
+
+					if (DefaultConnectionString.StartsWith(candidateConnectionString))
+					{
+						LastServerUsed = candidate;
+						break;
+					}
+				}
+
+				var dbServer = _serverConfig.Servers.ToList()[LastServerUsed];
+				return dbServer.DBType;
+			}
+
+			return DBServerType.SQLSERVER;
+		}
+
+		/// <summary>
+		/// Loads the policies from the configureation file
+		/// </summary>
+		/// <param name="dte>"The <see cref="DTE2"/> Visual Studio interface</param>
+		/// <returns></returns>
+		public static List<string> LoadPolicies(DTE2 dte)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var results = new List<string>();
+			var appSettings = dte.Solution.FindProjectItem("appSettings.json");
+
+			if (appSettings.IsOpen)
+			{
+				var sel = (TextSelection)appSettings.Document.Selection;
+
+				sel.SelectAll();
+
+				using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(sel.Text)))
+				{
+					using (var textReader = new StreamReader(stream))
+					{
+						using (var reader = new JsonTextReader(textReader))
+						{
+							var jsonConfig = JObject.Load(reader, new JsonLoadSettings { CommentHandling = CommentHandling.Ignore, LineInfoHandling = LineInfoHandling.Ignore });
+
+							if (jsonConfig["OAuth2"] == null)
+								return null;
+
+							var oAuth2Settings = jsonConfig["OAuth2"].Value<JObject>();
+
+							if (oAuth2Settings["Policies"] == null)
+								return null;
+
+							var policyArray = oAuth2Settings["Policies"].Value<JArray>();
+
+							foreach (var policy in policyArray)
+								results.Add(policy["Policy"].Value<string>());
+						}
+					}
+				}
+			}
+			else
+			{
+				appSettings.Open();
+				var sel = (TextSelection)appSettings.Document.Selection;
+
+				sel.SelectAll();
+
+				using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(sel.Text)))
+				{
+					using (var textReader = new StreamReader(stream))
+					{
+						using (var reader = new JsonTextReader(textReader))
+						{
+							var jsonConfig = JObject.Load(reader, new JsonLoadSettings { CommentHandling = CommentHandling.Ignore, LineInfoHandling = LineInfoHandling.Ignore });
+
+							if (jsonConfig["OAuth2"] == null)
+								return null;
+
+							var oAuth2Settings = jsonConfig["OAuth2"].Value<JObject>();
+
+							if (oAuth2Settings["Policies"] == null)
+								return null;
+
+							var policyArray = oAuth2Settings["Policies"].Value<JArray>();
+
+							foreach (var policy in policyArray)
+								results.Add(policy["Policy"].Value<string>());
+						}
+					}
+				}
+
+				appSettings.Document.Close();
+			}
+
+			return results;
+		}
+
+		public static string LoadMoniker(DTE2 dte)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			string moniker = string.Empty;
+
+			//	The first thing we need to do, is we need to load the appSettings.local.json file
+			ProjectItem settingsFile = dte.Solution.FindProjectItem("appSettings.json");
+
+			if (settingsFile.IsOpen)
+			{
+				TextSelection sel = (TextSelection)settingsFile.Document.Selection;
+
+				sel.StartOfDocument();
+				if (sel.FindText("CompanyName"))
+				{
+					sel.SelectLine();
+
+					var match = Regex.Match(sel.Text, "[ \t]*\\\"CompanyName\\\"\\:[ \t]\\\"(?<moniker>[^\\\"]+)\\\"");
+
+					if (match.Success)
+						moniker = match.Groups["moniker"].Value;
+				}
+			}
+			else
+			{
+				settingsFile.Open();
+				TextSelection sel = (TextSelection)settingsFile.Document.Selection;
+
+				sel.StartOfDocument();
+				if (sel.FindText("CompanyName"))
+				{
+					sel.SelectLine();
+
+					var match = Regex.Match(sel.Text, "[ \t]*\\\"CompanyName\\\"\\:[ \t]\\\"(?<moniker>[^\\\"]+)\\\"");
+
+					if (match.Success)
+						moniker = match.Groups["moniker"].Value;
+				}
+
+				settingsFile.Document.Close();
+			}
+
+			return moniker;
+		}
+        #endregion
+
+        #region Miscellaneous Operations
+        /// <summary>
+        /// Returns <see langword="true"/> if the candidate child path is a child of the parent path; <see langword="false"/> otherwise.
+        /// </summary>
+        /// <param name="parentPath">The prospective parent path.</param>
+        /// <param name="candidateChildPath">The prospective child path.</param>
+        /// <returns>Returns <see langword="true"/> if the candidate child path is a child of the parent path; <see langword="false"/> otherwise.</returns>
+        public static bool IsChildOf(string parentPath, string candidateChildPath)
 		{
 			var a = Path.GetFullPath(parentPath).Replace('/', Path.DirectorySeparatorChar);
 			var b = Path.GetFullPath(candidateChildPath).Replace('/', Path.DirectorySeparatorChar);
@@ -37,53 +327,6 @@ namespace COFRSCoreCommon.Utilities
 			return false;
 		}
 
-		public static List<string> LoadPolicies(DTE2 dte)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			var results = new List<string>();
-			var appSettings = dte.Solution.FindProjectItem("appSettings.json");
-
-			var wasOpen = appSettings.IsOpen[EnvDTE.Constants.vsViewKindAny];
-
-			if (!wasOpen)
-				appSettings.Open(EnvDTE.Constants.vsViewKindTextView);
-
-			var doc = appSettings.Document;
-			var sel = (TextSelection)doc.Selection;
-
-			sel.SelectAll();
-
-			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(sel.Text)))
-			{
-				using (var textReader = new StreamReader(stream))
-				{
-					using (var reader = new JsonTextReader(textReader))
-					{
-						var jsonConfig = JObject.Load(reader, new JsonLoadSettings { CommentHandling = CommentHandling.Ignore, LineInfoHandling = LineInfoHandling.Ignore });
-
-						if (jsonConfig["OAuth2"] == null)
-							return null;
-
-						var oAuth2Settings = jsonConfig["OAuth2"].Value<JObject>();
-
-						if (oAuth2Settings["Policies"] == null)
-							return null;
-
-						var policyArray = oAuth2Settings["Policies"].Value<JArray>();
-
-						foreach (var policy in policyArray)
-							results.Add(policy["Policy"].Value<string>());
-					}
-				}
-			}
-
-			if (!wasOpen)
-				doc.Close();
-
-			return results;
-		}
-
 		public static string FindOrchestrationNamespace(DTE2 dte)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -100,34 +343,6 @@ namespace COFRSCoreCommon.Utilities
 			return string.Empty;
 		}
 
-
-		public static string LoadMoniker(DTE2 dte)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			//	The first thing we need to do, is we need to load the appSettings.local.json file
-			ProjectItem settingsFile = dte.Solution.FindProjectItem("appSettings.json");
-
-			var window = settingsFile.Open(Constants.vsViewKindTextView);
-			Document doc = settingsFile.Document;
-			TextSelection sel = (TextSelection)doc.Selection;
-			string moniker = string.Empty;
-
-			sel.StartOfDocument();
-			if (sel.FindText("CompanyName"))
-			{
-				sel.SelectLine();
-
-				var match = Regex.Match(sel.Text, "[ \t]*\\\"CompanyName\\\"\\:[ \t]\\\"(?<moniker>[^\\\"]+)\\\"");
-
-				if (match.Success)
-					moniker = match.Groups["moniker"].Value;
-			}
-
-			window.Close();
-
-			return moniker;
-		}
 		/// <summary>
 		/// This function will add the appropriate code to regster the validation model in the ServicesConfig.cs file.
 		/// </summary>
@@ -3451,137 +3666,6 @@ namespace COFRSCoreCommon.Utilities
 		}
 		#endregion
 
-		#region Database Operations
-		/// <summary>
-		/// Get the default connection string from the appsettings.local.json
-		/// </summary>
-		/// <returns>The connection string used in the local settings</returns>
-		public static string GetConnectionString(DTE2 dte2)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			ProjectItem settingsFile = dte2.Solution.FindProjectItem("appsettings.Local.json");
-
-			var filepath = settingsFile.FileNames[0];
-
-			using (var stream = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-			{
-				using (var reader = new StreamReader(stream))
-				{
-					var jsonText = reader.ReadToEnd();
-					var settings = JObject.Parse(jsonText);
-					var connectionStrings = settings["ConnectionStrings"].Value<JObject>();
-					return connectionStrings["DefaultConnection"].Value<string>();
-				}
-			}
-		}
-
-		public static void ReplaceConnectionString(DTE2 dte2, string connectionString)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			//	The first thing we need to do, is we need to load the appSettings.local.json file
-			ProjectItem settingsFile = dte2.Solution.FindProjectItem("appsettings.Local.json");
-
-			bool wasOpen = settingsFile.IsOpen;
-
-			var window = settingsFile.Open(Constants.vsViewKindTextView);
-			Document doc = settingsFile.Document;
-			TextSelection sel = (TextSelection)doc.Selection;
-
-			sel.StartOfDocument();
-
-			if (sel.FindText("Server=localdb;Database=master;Trusted_Connection=True;"))
-			{
-				sel.SelectLine();
-				sel.Text = $"\t\t\"DefaultConnection\": \"{connectionString}\"\r\n";
-				doc.Save();
-			}
-
-			if ( !wasOpen)
-				window.Close();
-		}
-
-		/// <summary>
-		/// Get the default server type
-		/// </summary>
-		/// <param name="DefaultConnectionString">The default connection string</param>
-		/// <returns>The default server type</returns>
-		public static DBServerType GetDefaultServerType(DTE2 dte2)
-		{
-			//	Get the location of the server configuration on disk
-			var DefaultConnectionString = GetConnectionString(dte2);
-			var baseFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-			var dataFolder = Path.Combine(baseFolder, "COFRS");
-
-			if (!Directory.Exists(dataFolder))
-				Directory.CreateDirectory(dataFolder);
-
-			var filePath = Path.Combine(dataFolder, "Servers");
-
-			ServerConfig _serverConfig;
-
-			//	Read the ServerConfig into memory. If one does not exist
-			//	create an empty one.
-			using (var stream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
-			{
-				using (var streamReader = new StreamReader(stream))
-				{
-					using (var reader = new JsonTextReader(streamReader))
-					{
-						var serializer = new JsonSerializer();
-
-						_serverConfig = serializer.Deserialize<ServerConfig>(reader);
-
-						if (_serverConfig == null)
-							_serverConfig = new ServerConfig();
-					}
-				}
-			}
-
-			//	If there are any servers in the list, we need to populate
-			//	the windows controls.
-			if (_serverConfig.Servers.Count() > 0)
-			{
-				int LastServerUsed = _serverConfig.LastServerUsed;
-				//	When we populate the windows controls, ensure that the last server that
-				//	the user used is in the visible list, and make sure it is the one
-				//	selected.
-				for (int candidate = 0; candidate < _serverConfig.Servers.ToList().Count(); candidate++)
-				{
-					var candidateServer = _serverConfig.Servers.ToList()[candidate];
-					var candidateConnectionString = string.Empty;
-
-					switch (candidateServer.DBType)
-					{
-						case DBServerType.MYSQL:
-							candidateConnectionString = $"Server={candidateServer.ServerName};Port={candidateServer.PortNumber}";
-							break;
-
-						case DBServerType.POSTGRESQL:
-							candidateConnectionString = $"Server={candidateServer.ServerName};Port={candidateServer.PortNumber}";
-							break;
-
-						case DBServerType.SQLSERVER:
-							candidateConnectionString = $"Server={candidateServer.ServerName}";
-							break;
-					}
-
-					if (DefaultConnectionString.StartsWith(candidateConnectionString))
-					{
-						LastServerUsed = candidate;
-						break;
-					}
-				}
-
-				var dbServer = _serverConfig.Servers.ToList()[LastServerUsed];
-				return dbServer.DBType;
-			}
-
-			return DBServerType.SQLSERVER;
-		}
-		#endregion
-
 		#region Mapping Functions
 		/// <summary>
 		/// Loads the <see cref="ProjectMapping"/> for the project
@@ -3710,6 +3794,29 @@ namespace COFRSCoreCommon.Utilities
 			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs\\ProjectMap.json");
 
 			File.WriteAllText(mappingPath, jsonData);
+		}
+
+		/// <summary>
+		/// Open the <see cref="ProfileMap"/> for the <see cref="ResourceModel"/>
+		/// </summary>
+		/// <param name="dte">The <see cref="DTE2"/> Visual Studio interface.</param>
+		/// <param name="resourceModel">The <see cref="ResourceModel"/> whose <see cref="ProfileMap"/> is to be opened.</param>
+		/// <returns>The <see cref="ProfileMap"/> for the specified <see cref="ResourceModel"/></returns>
+		public static ProfileMap OpenProfileMap(DTE2 dte, ResourceModel resourceModel)
+        {
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var solutionPath = dte.Solution.Properties.Item("Path").Value.ToString();
+			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), $".cofrs\\{resourceModel.ClassName}.{resourceModel.EntityModel.ClassName}.json");
+
+			if ( File.Exists(mappingPath) )
+            {	
+				var jsonText = File.ReadAllText(mappingPath);
+				var profileMap = JsonConvert.DeserializeObject<ProfileMap>(jsonText);
+				return profileMap;
+            }
+
+			return null;
 		}
 
 		/// <summary>
