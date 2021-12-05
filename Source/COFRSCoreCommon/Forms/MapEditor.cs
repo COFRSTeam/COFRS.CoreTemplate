@@ -22,5 +22,31 @@ namespace COFRS.Template.Common.Wizards
             DialogResult = DialogResult.OK;
             Close();
         }
+
+        private void TransferToMapped(object sender, EventArgs e)
+        {
+            var selectedItems = new List<string>();
+            foreach ( var selectedItem in UnmappedList.SelectedItems)
+                selectedItems.Add(selectedItem.ToString());
+
+            foreach ( var selectedItem in selectedItems )
+            {
+                UnmappedList.Items.Remove(selectedItem.ToString());
+                MappedList.Items.Add(selectedItem.ToString()); 
+            }
+        }
+
+        private void TransferToUnmapped(object sender, EventArgs e)
+        {
+            var selectedItems = new List<string>();
+            foreach (var selectedItem in MappedList.SelectedItems)
+                selectedItems.Add(selectedItem.ToString());
+
+            foreach (var selectedItem in selectedItems)
+            {
+                MappedList.Items.Remove(selectedItem.ToString());
+                UnmappedList.Items.Add(selectedItem.ToString());
+            }
+        }
     }
 }

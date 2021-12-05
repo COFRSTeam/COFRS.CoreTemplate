@@ -277,15 +277,18 @@ namespace COFRS.Template.Common.Forms
 
                     foreach ( var resourceMap in ProfileMap.ResourceProfiles)
                     {
-                        foreach ( var entityColumnUsed in resourceMap.EntityColumnNames)
+                        if (resourceMap.EntityColumnNames != null)
                         {
-                            if ( entityColumnUsed.Equals(entityMember.ColumnName, StringComparison.OrdinalIgnoreCase))
+                            foreach (var entityColumnUsed in resourceMap.EntityColumnNames)
                             {
-                                var resourceMemberName = resourceMap.ResourceColumnName;
-                                resourceMember = resourceModel.Columns.FirstOrDefault(c =>
-                                    string.Equals(c.ColumnName, resourceMemberName, StringComparison.OrdinalIgnoreCase));
+                                if (entityColumnUsed.Equals(entityMember.ColumnName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var resourceMemberName = resourceMap.ResourceColumnName;
+                                    resourceMember = resourceModel.Columns.FirstOrDefault(c =>
+                                        string.Equals(c.ColumnName, resourceMemberName, StringComparison.OrdinalIgnoreCase));
 
-                                break;
+                                    break;
+                                }
                             }
                         }
 
@@ -545,8 +548,7 @@ namespace COFRS.Template.Common.Forms
                         {
                             var nnn = new NameNormalizer(resourceMember.ColumnName);
                             var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
-                               (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
-                                 string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
+                                string.Equals(c.ForeignTableName, resourceMember.ForeignTableName, StringComparison.Ordinal));
 
                             var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
                             var sourceColumns = new List<string>();
@@ -1508,12 +1510,17 @@ namespace COFRS.Template.Common.Forms
             if ( e.ColumnIndex == 2 )
             {
                 MapEditor mapEditor = new MapEditor();
+                string[] sourceColumnNames;
 
-                var sourceColumnNames = resourceGrid.Rows[e.RowIndex].Cells[3].Value.ToString().Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (resourceGrid.Rows[e.RowIndex].Cells[3].Value == null)
+                    sourceColumnNames = Array.Empty<string>();
+                else
+                    sourceColumnNames = resourceGrid.Rows[e.RowIndex].Cells[3].Value.ToString().Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                
                 var destinationColumnName = resourceGrid.Rows[e.RowIndex].Cells[0].Value.ToString();
 
                 mapEditor.DestinationMemberLabel.Text = destinationColumnName;
-                mapEditor.MappingFunctionTextBox.Text = resourceGrid.Rows[e.RowIndex].Cells[1].Value.ToString();
+                mapEditor.MappingFunctionTextBox.Text = resourceGrid.Rows[e.RowIndex].Cells[1].Value?.ToString();
                 mapEditor.MappedList.Items.AddRange(sourceColumnNames);
                 mapEditor.UnmappedList.Items.AddRange(EntityList.Items);
 
@@ -1550,11 +1557,11 @@ namespace COFRS.Template.Common.Forms
             {
                 MapEditor mapEditor = new MapEditor();
 
-                var sourceColumnNames = EntityGrid.Rows[e.RowIndex].Cells[3].Value.ToString().Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var sourceColumnNames = EntityGrid.Rows[e.RowIndex].Cells[3].Value?.ToString().Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 var destinationColumnName = EntityGrid.Rows[e.RowIndex].Cells[0].Value.ToString();
 
                 mapEditor.DestinationMemberLabel.Text = destinationColumnName;
-                mapEditor.MappingFunctionTextBox.Text = EntityGrid.Rows[e.RowIndex].Cells[1].Value.ToString();
+                mapEditor.MappingFunctionTextBox.Text = EntityGrid.Rows[e.RowIndex].Cells[1].Value?.ToString();
                 mapEditor.MappedList.Items.AddRange(sourceColumnNames);
                 mapEditor.UnmappedList.Items.AddRange(EntityList.Items);
 

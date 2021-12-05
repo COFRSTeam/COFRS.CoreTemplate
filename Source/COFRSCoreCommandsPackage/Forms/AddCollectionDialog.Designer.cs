@@ -134,6 +134,6 @@ namespace COFRSCoreCommandsPackage.Forms
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         public System.Windows.Forms.Label ResourceName;
-        private System.Windows.Forms.CheckedListBox ChildResourceList;
+        public System.Windows.Forms.CheckedListBox ChildResourceList;
     }
 }

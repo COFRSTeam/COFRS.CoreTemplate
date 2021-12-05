@@ -2486,8 +2486,16 @@ namespace COFRS.Template.Common.ServiceUtilities
 							//	This is just the plain old foreign key reference
 							if (!foreignTableList.Contains(member.ForeignTableName))
 							{
-								var nn = new NameNormalizer(member.ForeignTableName);
-								var memberName = nn.SingleForm;
+								var childResource = resourceMap.Maps.FirstOrDefault(m => m.EntityModel != null && m.EntityModel.TableName.Equals(member.ForeignTableName));
+								string memberName;
+
+								if (childResource != null)
+									memberName = childResource.ClassName;
+								else
+								{
+									var nn = new NameNormalizer(member.ForeignTableName);
+									memberName = nn.SingleForm;
+								}
 
 								memberName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(memberName));
 
@@ -2508,6 +2516,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 									IsIdentity = member.IsIdentity,
 									IsIndexed = member.IsIndexed,
 									IsNullable = member.IsNullable,
+									ForeignTableName = member.ForeignTableName,
 									ModelDataType = "Uri"
 								};
 

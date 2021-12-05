@@ -166,6 +166,8 @@ namespace COFRS.Template.Common.Wizards
             this.MapButton.TabIndex = 87;
             this.MapButton.Text = "<<";
             this.MapButton.UseVisualStyleBackColor = true;
+            this.MapButton.TextChanged += new System.EventHandler(this.TransferToUnmapped);
+            this.MapButton.Click += new System.EventHandler(this.TransferToMapped);
             // 
             // pictureBox1
             // 

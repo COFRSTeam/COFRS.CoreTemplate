@@ -60,12 +60,6 @@
     <Compile Include="Common\Forms\AddConnection.Designer.cs">
       <DependentUpon>AddConnection.cs</DependentUpon>
     </Compile>
-    <Compile Include="Common\Forms\ProgressDialog.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\ProgressDialog.Designer.cs">
-      <DependentUpon>ProgressDialog.cs</DependentUpon>
-    </Compile>
     <Compile Include="Common\Forms\UserInputEntity.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -93,8 +87,6 @@
     <Compile Include="Common\ServiceUtilities\DBHelper.cs" />
     <Compile Include="Common\ServiceUtilities\SourceConverter.cs" />
     <Compile Include="Common\ServiceUtilities\StandardEmitter.cs" />
-    <Compile Include="Common\ServiceUtilities\WindowClass.cs" />
-    <Compile Include="Common\ServiceUtilities\WinNative.cs" />
     <Compile Include="Common\Wizards\ControllerWizard.cs" />
     <Compile Include="Common\Wizards\EntityWizard.cs" />
     <Compile Include="Common\Wizards\ExampleWizard.cs" />
@@ -215,9 +207,6 @@
   <ItemGroup>
     <EmbeddedResource Include="Common\Forms\AddConnection.resx">
       <DependentUpon>AddConnection.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\ProgressDialog.resx">
-      <DependentUpon>ProgressDialog.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Common\Forms\UserInputEntity.resx">
       <DependentUpon>UserInputEntity.cs</DependentUpon>
