@@ -143,19 +143,28 @@ namespace COFRSCoreCommandsPackage
             var dte2 = package.GetService<SDTE, DTE2>() as DTE2;
             object[] selectedItems = (object[])dte2.ToolWindows.SolutionExplorer.SelectedItems;
 
+
 			if (selectedItems.Length == 1)
             {
+				var progressDialog = new ProgressDialog("Loading classes and preparing project...");
+				progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
+				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+				HandleMessages();
+
                 EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
                 var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
 
                 if (theNamespace != null)
                 {
-                    var theClass = theNamespace.Children.OfType<CodeClass2>().First();
+					HandleMessages();
+					var theClass = theNamespace.Children.OfType<CodeClass2>().First();
 
                     if (theClass != null)
                     {
+						HandleMessages();
 						var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte2);         //	The resource map contains all the resource classes in the project.
 
+						HandleMessages();
 						//	The parent resource is the resource selected by the user. This is the resource we will be adding the collection to.
 						//	Get the resource model for the parent resource.
 						var parentModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(theClass.Name, StringComparison.OrdinalIgnoreCase));
@@ -163,13 +172,15 @@ namespace COFRSCoreCommandsPackage
                         dialog.ResourceName.Text = theClass.Name;
 						dialog._dte2 = dte2;
 
-                        if ( dialog.ShowDialog() == DialogResult.OK)
+						progressDialog.Close();
+						dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+
+						if ( dialog.ShowDialog() == DialogResult.OK)
                         {
-							var progressDialog = new ProgressDialog("Loading classes and preparing project...");
+							progressDialog = new ProgressDialog("Loading classes and preparing project...");
 							progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
 							dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 							HandleMessages();
-
 
 							var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);  //	Contains the names and projects where various source file exist.
                             ProjectItem orchestrator = dte2.Solution.FindProjectItem("ServiceOrchestrator.cs");
@@ -222,57 +233,70 @@ namespace COFRSCoreCommandsPackage
 
                                     //	Now, let's go though all the functions...
                                     foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
-                                    {
-                                        //	Constructor
-                                        if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
+									{
+										HandleMessages();
+
+										//	Constructor
+										if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
                                         {
-                                            ModifyConstructor(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, childValidatorInterface, memberName);
+											HandleMessages();
+											ModifyConstructor(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, childValidatorInterface, memberName);
                                         }
 
                                         //	Get Single
                                         else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
                                         {
-                                            ModifyGetSingle(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName, memberType);
+											HandleMessages();
+											ModifyGetSingle(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName, memberType);
                                         }
 
                                         //	Get Collection
                                         else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
                                         {
-                                            ModifyGetCollection(aFunction, parentModel, childModel, childValidatorName, memberName);
+											HandleMessages();
+											ModifyGetCollection(aFunction, parentModel, childModel, childValidatorName, memberName);
                                         }
 
                                         //	Add
                                         else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
                                         {
-                                            ModifyAdd(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
+											HandleMessages();
+											ModifyAdd(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
                                         }
 
                                         //	Update
                                         else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
                                         {
-                                            ModifyUpdate(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
+											HandleMessages();
+											ModifyUpdate(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
                                         }
 
                                         //	Update
                                         else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
                                         {
-                                            ModifyPatch(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
+											HandleMessages();
+											ModifyPatch(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
                                         }
 
                                         //	Delete
                                         else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
                                         {
-                                            ModifyDelete(aFunction, childModel, parentValidatorName, childValidatorName, memberName);
+											HandleMessages();
+											ModifyDelete(aFunction, childModel, parentValidatorName, childValidatorName, memberName);
                                         }
                                     }
                                 }
 
-                                AddSingleExample(dte2, parentModel, childModel, memberName);
-                                AddCollectionExample(dte2, parentModel, childModel, memberName);
+								HandleMessages();
+								AddSingleExample(dte2, parentModel, childModel, memberName);
+								HandleMessages();
+								AddCollectionExample(dte2, parentModel, childModel, memberName);
+								HandleMessages();
 
 								progressDialog.Close();
-                            }
-                        }
+								dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+							}
+						}
                     }
                 }
             }
@@ -334,39 +358,50 @@ namespace COFRSCoreCommandsPackage
             var dte2 = package.GetService<SDTE, DTE2>() as DTE2;
             object[] selectedItems = (object[])dte2.ToolWindows.SolutionExplorer.SelectedItems;
 
-            if (selectedItems.Length == 1)
+			if (selectedItems.Length == 1)
             {
+				var progressDialog = new ProgressDialog("Loading classes and preparing project...");
+				progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
+				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+				HandleMessages();
+
                 EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
                 var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
 
                 if (theNamespace != null)
                 {
-                    var theClass = theNamespace.Children.OfType<CodeClass2>().First();
+					HandleMessages();
+					var theClass = theNamespace.Children.OfType<CodeClass2>().First();
 
                     if (theClass != null)
                     {
-                        var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte2);
+						HandleMessages();
+						var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte2);
 
-                        var constructor = theClass.Children
+						HandleMessages();
+						var constructor = theClass.Children
                                                   .OfType<CodeFunction2>()
                                                   .First(c => c.FunctionKind == vsCMFunction.vsCMFunctionConstructor);
 
                         if (constructor != null)
                         {
 
-                            EditPoint2 editPoint = (EditPoint2) constructor.StartPoint.CreateEditPoint();
+							HandleMessages();
+							EditPoint2 editPoint = (EditPoint2) constructor.StartPoint.CreateEditPoint();
                             bool foundit = editPoint.FindPattern("CreateMap<");
                             foundit = foundit && editPoint.LessThan(constructor.EndPoint);
 
                             if (foundit)
                             {
-                                editPoint.StartOfLine();
+								HandleMessages();
+								editPoint.StartOfLine();
                                 EditPoint2 start = (EditPoint2) editPoint.CreateEditPoint();
                                 editPoint.EndOfLine();
                                 EditPoint2 end = (EditPoint2) editPoint.CreateEditPoint();
                                 var text = start.GetText(end);
 
-                                var match = Regex.Match(text, "[ \t]*CreateMap\\<(?<resource>[a-zA-Z0-9_]+)[ \t]*\\,[ \t]*(?<entity>[a-zA-Z0-9_]+)\\>[ \t]*\\([ \t]*\\)");
+								HandleMessages();
+								var match = Regex.Match(text, "[ \t]*CreateMap\\<(?<resource>[a-zA-Z0-9_]+)[ \t]*\\,[ \t]*(?<entity>[a-zA-Z0-9_]+)\\>[ \t]*\\([ \t]*\\)");
 
                                 if (match.Success)
                                 {
@@ -377,9 +412,18 @@ namespace COFRSCoreCommandsPackage
                                         Dte = dte2
                                     };
 
-                                    if ( dialog.ShowDialog() == DialogResult.OK )
+									HandleMessages();
+									progressDialog.Close();
+									dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+
+									if ( dialog.ShowDialog() == DialogResult.OK )
                                     {
-                                        var ProfileMap = dialog.ProfileMap;
+										progressDialog = new ProgressDialog("Building classes...");
+										progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
+										dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+										HandleMessages();
+
+										var ProfileMap = dialog.ProfileMap;
                                         var resourceModel = dialog.ResourceModel;
 
                                         editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
@@ -388,18 +432,21 @@ namespace COFRSCoreCommandsPackage
 
                                         if (foundit)
                                         {
-                                            editPoint.LineDown();
+											HandleMessages();
+											editPoint.LineDown();
 
                                             while (!IsLineEmpty(editPoint))
                                             {
                                                 DeleteLine(editPoint);
                                             }
+											HandleMessages();
 
-                                            bool first = true;
+											bool first = true;
 
                                             foreach (var rmap in ProfileMap.EntityProfiles)
                                             {
-                                                if (first)
+												HandleMessages();
+												if (first)
                                                     first = false;
                                                 else
                                                     editPoint.InsertNewLine();
@@ -416,25 +463,29 @@ namespace COFRSCoreCommandsPackage
                                             editPoint.Insert(";");
                                             editPoint.InsertNewLine();
                                         }
+										HandleMessages();
 
-                                        editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+										editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
                                         foundit = editPoint.FindPattern($"CreateMap<{resourceModel.EntityModel.ClassName}");
                                         foundit = foundit && editPoint.LessThan(constructor.EndPoint);
 
                                         if (foundit)
                                         {
-                                            editPoint.LineDown();
+											HandleMessages();
+											editPoint.LineDown();
 
                                             while (!IsLineEmpty(editPoint))
                                             {
-                                                DeleteLine(editPoint);
+												HandleMessages();
+												DeleteLine(editPoint);
                                             }
 
                                             bool first = true;
 
                                             foreach (var rmap in ProfileMap.ResourceProfiles)
                                             {
-                                                if (first)
+												HandleMessages();
+												if (first)
                                                     first = false;
                                                 else
                                                     editPoint.InsertNewLine();
@@ -448,16 +499,21 @@ namespace COFRSCoreCommandsPackage
                                                 editPoint.Insert("))");
                                             }
 
-                                            editPoint.Insert(";");
+											HandleMessages();
+											editPoint.Insert(";");
                                             editPoint.InsertNewLine();
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                }
-            }
+                	}
+
+					HandleMessages();
+					progressDialog.Close();
+					dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				}
+			}
         }
 
         private static bool IsLineEmpty(EditPoint2 editPoint)
