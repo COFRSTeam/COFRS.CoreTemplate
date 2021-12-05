@@ -200,70 +200,82 @@ namespace COFRS.Template.Common.Forms
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             var result = new List<EntityProfile>();
+            var unmappedMembers = new List<String>();
+            foreach ( var column in resourceModel.EntityModel.Columns)
+                unmappedMembers.Add(column.ColumnName);
 
             //  Let's create a mapping for each entity member
             foreach (var entityMember in ResourceModel.EntityModel.Columns)
             {
-                //  Construct a data row for this entity member, and populate the column name
-                var entityProfile = new EntityProfile
-                {
-                    EntityColumnName = entityMember.ColumnName
-                };
-
                 //  Now, construct the mapping
                 if (entityMember.IsPrimaryKey)
                 {
-                    //  This entity member is part of the primary key. In the resource model, the primary
-                    //  key is contained in the hRef. Therefore, the formula to extract the value of this
-                    //  entity member is going to take the form: source.HRef.GetId<datatype>(n), were datatype
-                    //  is the datatype of this entity member, and n is the position of this member in the 
-                    //  HRef, counting backwards.
-                    //
-                    //  For example, suppose we have the HRef = /resourcename/id/10/20
-                    //  Where 10 is the dealer id and it is an int.
-                    //  And 20 is the user id and it is a short.
-                    //
-                    //  To extract the dealer id, the formula would be: source.HRef.GetId<int>(1)
-                    //  To extract the user id, the formula would be: source.HRef.GetId<short>(0)
-                    string dataType = "Unknown";
+                    var matchedColumn = unmappedMembers.FirstOrDefault(c => c.Equals(entityMember.EntityName, StringComparison.OrdinalIgnoreCase));
 
-                    //  We're going to need that datatype. Get it here.
-                    dataType = entityMember.ModelDataType;
-
-                    //  We need the list of all the primary keys in the entity model, so that we know the
-                    //  position of this member.
-                    var primaryKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
-
-                    if (primaryKeys.Count() == 1)
+                    if (!string.IsNullOrWhiteSpace(matchedColumn))
                     {
-                        //  There is only one primary key element, so we don't need to bother with the count.
-                        entityProfile.MapFunction = $"source.HRef == null ? default : source.HRef.GetId<{dataType}>()";
-                        entityProfile.ResourceColumns = new string[] { "HRef" };
-                        entityProfile.IsDefined = true;
-                    }
-                    else
-                    {
-                        var formula = new StringBuilder($"source.HRef == null ? default : source.HRef.GetId<{dataType}>(");
+                        unmappedMembers.Remove(matchedColumn);
 
-                        //  Compute the index and append it to the above formula.
-                        if (primaryKeys.Count() > 1)
+                        //  Construct a data row for this entity member, and populate the column name
+                        var entityProfile = new EntityProfile
                         {
-                            var index = primaryKeys.Count() - 1;
+                            EntityColumnName = entityMember.ColumnName
+                        };
 
-                            foreach (var pk in primaryKeys)
+                        //  This entity member is part of the primary key. In the resource model, the primary
+                        //  key is contained in the hRef. Therefore, the formula to extract the value of this
+                        //  entity member is going to take the form: source.HRef.GetId<datatype>(n), were datatype
+                        //  is the datatype of this entity member, and n is the position of this member in the 
+                        //  HRef, counting backwards.
+                        //
+                        //  For example, suppose we have the HRef = /resourcename/id/10/20
+                        //  Where 10 is the dealer id and it is an int.
+                        //  And 20 is the user id and it is a short.
+                        //
+                        //  To extract the dealer id, the formula would be: source.HRef.GetId<int>(1)
+                        //  To extract the user id, the formula would be: source.HRef.GetId<short>(0)
+                        string dataType = "Unknown";
+
+                        //  We're going to need that datatype. Get it here.
+                        dataType = entityMember.ModelDataType;
+
+                        //  We need the list of all the primary keys in the entity model, so that we know the
+                        //  position of this member.
+                        var primaryKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
+
+                        if (primaryKeys.Count() == 1)
+                        {
+                            //  There is only one primary key element, so we don't need to bother with the count.
+                            entityProfile.MapFunction = $"source.HRef == null ? default : source.HRef.GetId<{dataType}>()";
+                            entityProfile.ResourceColumns = new string[] { "HRef" };
+                            entityProfile.IsDefined = true;
+                        }
+                        else
+                        {
+                            var formula = new StringBuilder($"source.HRef == null ? default : source.HRef.GetId<{dataType}>(");
+
+                            //  Compute the index and append it to the above formula.
+                            if (primaryKeys.Count() > 1)
                             {
-                                if (pk == entityMember)
-                                    formula.Append(index.ToString());
-                                else
-                                    index--;
+                                var index = primaryKeys.Count() - 1;
+
+                                foreach (var pk in primaryKeys)
+                                {
+                                    if (pk == entityMember)
+                                        formula.Append(index.ToString());
+                                    else
+                                        index--;
+                                }
                             }
+
+                            //  Close the formula
+                            formula.Append(")");
+                            entityProfile.MapFunction = formula.ToString();
+                            entityProfile.ResourceColumns = new string[] { "HRef" };
+                            entityProfile.IsDefined = true;
                         }
 
-                        //  Close the formula
-                        formula.Append(")");
-                        entityProfile.MapFunction = formula.ToString();
-                        entityProfile.ResourceColumns = new string[] { "HRef" };
-                        entityProfile.IsDefined = true;
+                        result.Add(entityProfile);
                     }
                 }
                 else if (entityMember.IsForeignKey)
@@ -298,89 +310,104 @@ namespace COFRS.Template.Common.Forms
 
                     if (resourceMember != null)
                     {
-                        //  We found a resource member.
-                        //
-                        //  Foreign keys generally come in one of two forms. Either it is a reference to a primary key
-                        //  in a foreign table, or it is an enumeration. If it is a reference to a primary key in a 
-                        //  foreign table, then it will be a Uri.
+                        var matchedMember = unmappedMembers.FirstOrDefault(c => c.Equals(entityMember.EntityName));
 
-                        if (string.Equals(resourceMember.ModelDataType.ToString(), "uri", StringComparison.OrdinalIgnoreCase))
+                        if (!string.IsNullOrWhiteSpace(matchedMember))
                         {
-                            //  This is an href. First, get the data type.
-                            string dataType = entityMember.ModelDataType;
+                            unmappedMembers.Remove(matchedMember);
 
-                            //  Now, we need the list of entity members that correspond to this resource member.
-                            //  To get that, we need to look at the resource mapping.
-
-                            //  This is an href. Very much like the primary key, there can be more than one single 
-                            //  element in this href. 
-
-                            var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
-                                                string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
-
-                            if (foreignKeys.Count() == 1)
+                            //  Construct a data row for this entity member, and populate the column name
+                            var entityProfile = new EntityProfile
                             {
-                                var foreignKey = foreignKeys.First();
-                                entityProfile.MapFunction = $"source.{resourceMember.ColumnName}.GetId<{dataType}>()";
-                                entityProfile.ResourceColumns = new string[] { resourceMember.ColumnName };
-                                entityProfile.IsDefined = true;
+                                EntityColumnName = entityMember.ColumnName
+                            };
+
+                            //  We found a resource member.
+                            //
+                            //  Foreign keys generally come in one of two forms. Either it is a reference to a primary key
+                            //  in a foreign table, or it is an enumeration. If it is a reference to a primary key in a 
+                            //  foreign table, then it will be a Uri.
+
+                            if (string.Equals(resourceMember.ModelDataType.ToString(), "uri", StringComparison.OrdinalIgnoreCase))
+                            {
+                                //  This is an href. First, get the data type.
+                                string dataType = entityMember.ModelDataType;
+
+                                //  Now, we need the list of entity members that correspond to this resource member.
+                                //  To get that, we need to look at the resource mapping.
+
+                                //  This is an href. Very much like the primary key, there can be more than one single 
+                                //  element in this href. 
+
+                                var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+                                                    string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
+
+                                if (foreignKeys.Count() == 1)
+                                {
+                                    var foreignKey = foreignKeys.First();
+                                    entityProfile.MapFunction = $"source.{resourceMember.ColumnName}.GetId<{dataType}>()";
+                                    entityProfile.ResourceColumns = new string[] { resourceMember.ColumnName };
+                                    entityProfile.IsDefined = true;
+                                }
+                                else
+                                {
+                                    var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>(");
+                                    var foreignKeyList = new List<string>();
+
+                                    if (foreignKeys.Count() > 1)
+                                    {
+                                        var index = foreignKeys.Count() - 1;
+
+                                        foreach (var pk in foreignKeys)
+                                        {
+                                            var foreignKey = foreignKeys.ToList()[index];
+                                            foreignKeyList.Add(foreignKey.ColumnName);
+
+                                            if (pk == entityMember)
+                                                formula.Append(index.ToString());
+                                            else
+                                                index--;
+                                        }
+                                    }
+
+                                    formula.Append(")");
+                                    entityProfile.MapFunction = formula.ToString();
+                                    entityProfile.ResourceColumns = foreignKeyList.ToArray();
+                                    entityProfile.IsDefined = true;
+                                }
                             }
                             else
                             {
-                                var formula = new StringBuilder($"source.{resourceMember.ColumnName}.GetId<{dataType}>(");
-                                var foreignKeyList = new List<string>();
+                                //  The resource member is not a URI. It should be an enum. If it is, we sould be able to
+                                //  find it in our resource models list.
 
-                                if (foreignKeys.Count() > 1)
+                                var referenceModel = ResourceMap.Maps.FirstOrDefault(r =>
+                                                string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
+
+                                if (referenceModel != null)
                                 {
-                                    var index = foreignKeys.Count() - 1;
-
-                                    foreach (var pk in foreignKeys)
+                                    if (referenceModel.ResourceType == ResourceType.Enum)
                                     {
-                                        var foreignKey = foreignKeys.ToList()[index];
-                                        foreignKeyList.Add(foreignKey.ColumnName);
+                                        var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+                                            string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
 
-                                        if (pk == entityMember)
-                                            formula.Append(index.ToString());
-                                        else
-                                            index--;
-                                    }
-                                }
+                                        //  If the resource member is an enum that represents the value of the primary key of a foreign table,
+                                        //  then that foreign key can only have one member. If it has more than one member, then this 
+                                        //  is not the proper mapping.
+                                        if (foreignKeys.Count() == 1)
+                                        {
+                                            string dataType = entityMember.ModelDataType;
 
-                                formula.Append(")");
-                                entityProfile.MapFunction = formula.ToString();
-                                entityProfile.ResourceColumns = foreignKeyList.ToArray();
-                                entityProfile.IsDefined = true;
-                            }
-                        }
-                        else
-                        {
-                            //  The resource member is not a URI. It should be an enum. If it is, we sould be able to
-                            //  find it in our resource models list.
-
-                            var referenceModel = ResourceMap.Maps.FirstOrDefault(r =>
-                                            string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
-
-                            if ( referenceModel != null )
-                            {
-                                if ( referenceModel.ResourceType == ResourceType.Enum )
-                                { 
-                                    var foreignKeys = ResourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
-                                        string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
-
-                                    //  If the resource member is an enum that represents the value of the primary key of a foreign table,
-                                    //  then that foreign key can only have one member. If it has more than one member, then this 
-                                    //  is not the proper mapping.
-                                    if (foreignKeys.Count() == 1)
-                                    {
-                                        string dataType = entityMember.ModelDataType;
-
-                                        var formula = $"Convert.ChangeType(source.{resourceMember.ColumnName}, source.{resourceMember.ColumnName}.GetTypeCode())";
-                                        entityProfile.MapFunction = formula.ToString();
-                                        entityProfile.ResourceColumns = new string[] { "unknown" };
-                                        entityProfile.IsDefined = false;
+                                            var formula = $"Convert.ChangeType(source.{resourceMember.ColumnName}, source.{resourceMember.ColumnName}.GetTypeCode())";
+                                            entityProfile.MapFunction = formula.ToString();
+                                            entityProfile.ResourceColumns = new string[] { "unknown" };
+                                            entityProfile.IsDefined = false;
+                                        }
                                     }
                                 }
                             }
+
+                            result.Add(entityProfile);
                         }
                     }
                 }
@@ -390,95 +417,107 @@ namespace COFRS.Template.Common.Forms
                     var resourceMember = resourceModel.Columns.FirstOrDefault(u =>
                                                             u.ColumnName.Equals(entityMember.ColumnName, StringComparison.OrdinalIgnoreCase));
 
-                    if (resourceMember != null)
-                    {
-                        MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember);
-                    }
-                    else
-                    {
-                        var rp = ProfileMap.ResourceProfiles.FirstOrDefault(c => c.MapFunction.IndexOf(entityMember.ColumnName, 0, StringComparison.CurrentCultureIgnoreCase) != -1);
+                    var matchedColumn = unmappedMembers.FirstOrDefault(c => c.Equals(entityMember.EntityName, StringComparison.OrdinalIgnoreCase));
 
-                        if (rp != null)
+                    if (!string.IsNullOrWhiteSpace(matchedColumn))
+                    {
+                        unmappedMembers.Remove(matchedColumn);
+                        //  Construct a data row for this entity member, and populate the column name
+                        var entityProfile = new EntityProfile
                         {
-                            if (rp.ResourceColumnName.Contains("."))
+                            EntityColumnName = entityMember.ColumnName
+                        };
+
+                        if (resourceMember != null)
+                        {
+                            MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember);
+                        }
+                        else
+                        {
+                            var rp = ProfileMap.ResourceProfiles.FirstOrDefault(c => c.MapFunction.IndexOf(entityMember.ColumnName, 0, StringComparison.CurrentCultureIgnoreCase) != -1);
+
+                            if (rp != null)
                             {
-                                var parts = rp.ResourceColumnName.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-                                StringBuilder mapFunction = new StringBuilder();
-                                StringBuilder parent = new StringBuilder("");
-                                string NullValue = "null";
-
-                                var parentModel = GetParentModel(ResourceModel, parts);
-
-                                if (parentModel != null)
+                                if (rp.ResourceColumnName.Contains("."))
                                 {
-                                    var parentColumn = parentModel.Columns.FirstOrDefault(c => string.Equals(c.ColumnName, parts[parts.Count() - 1], StringComparison.OrdinalIgnoreCase));
+                                    var parts = rp.ResourceColumnName.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+                                    StringBuilder mapFunction = new StringBuilder();
+                                    StringBuilder parent = new StringBuilder("");
+                                    string NullValue = "null";
 
-                                    if (parentColumn != null)
+                                    var parentModel = GetParentModel(ResourceModel, parts);
+
+                                    if (parentModel != null)
                                     {
-                                        if (string.Equals(parentColumn.ModelDataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            NullValue = "string.Empty";
-                                        }
-                                        else
-                                        {
-                                            var theDataType = Type.GetType(parentColumn.ModelDataType.ToString());
+                                        var parentColumn = parentModel.Columns.FirstOrDefault(c => string.Equals(c.ColumnName, parts[parts.Count() - 1], StringComparison.OrdinalIgnoreCase));
 
-                                            if (theDataType != null)
+                                        if (parentColumn != null)
+                                        {
+                                            if (string.Equals(parentColumn.ModelDataType.ToString(), "string", StringComparison.OrdinalIgnoreCase))
                                             {
-                                                NullValue = "default";
+                                                NullValue = "string.Empty";
                                             }
                                             else
                                             {
-                                                NullValue = "default";
+                                                var theDataType = Type.GetType(parentColumn.ModelDataType.ToString());
+
+                                                if (theDataType != null)
+                                                {
+                                                    NullValue = "default";
+                                                }
+                                                else
+                                                {
+                                                    NullValue = "default";
+                                                }
                                             }
                                         }
                                     }
-                                }
 
-                                for (int i = 0; i < parts.Count() - 1; i++)
+                                    for (int i = 0; i < parts.Count() - 1; i++)
+                                    {
+                                        var parentClass = parts[i];
+
+                                        if (string.IsNullOrWhiteSpace(parent.ToString()))
+                                            mapFunction.Append($"source.{parentClass} == null ? {NullValue} : ");
+                                        else
+                                            mapFunction.Append($"source.{parent}.{parentClass} == null ? {NullValue} : ");
+                                        parent.Append($"source.{parentClass}");
+
+                                    }
+
+                                    mapFunction.Append($"{parent}.{parts[parts.Count() - 1]}");
+                                    entityProfile.MapFunction = mapFunction.ToString();
+
+                                    StringBuilder childColumn = new StringBuilder();
+
+                                    foreach (var p in parts)
+                                    {
+                                        if (childColumn.Length > 0)
+                                            childColumn.Append(".");
+                                        childColumn.Append(p);
+                                    }
+
+                                    var cc = parentModel.Columns.FirstOrDefault(c => string.Equals(c.ColumnName, childColumn.ToString(), StringComparison.OrdinalIgnoreCase));
+                                    if (cc != null)
+                                    {
+                                        entityProfile.ResourceColumns = new string[] { cc.ColumnName };
+                                    }
+                                }
+                                else
                                 {
-                                    var parentClass = parts[i];
+                                    StringBuilder mc = new StringBuilder();
 
-                                    if (string.IsNullOrWhiteSpace(parent.ToString()))
-                                        mapFunction.Append($"source.{parentClass} == null ? {NullValue} : ");
-                                    else
-                                        mapFunction.Append($"source.{parent}.{parentClass} == null ? {NullValue} : ");
-                                    parent.Append($"source.{parentClass}");
+                                    resourceMember = resourceModel.Columns.FirstOrDefault(c =>
+                                        string.Equals(c.ModelDataType.ToString(), rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
 
+                                    MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember);
                                 }
-
-                                mapFunction.Append($"{parent}.{parts[parts.Count() - 1]}");
-                                entityProfile.MapFunction = mapFunction.ToString();
-
-                                StringBuilder childColumn = new StringBuilder();
-
-                                foreach (var p in parts)
-                                {
-                                    if (childColumn.Length > 0)
-                                        childColumn.Append(".");
-                                    childColumn.Append(p);
-                                }
-
-                                var cc = parentModel.Columns.FirstOrDefault(c => string.Equals(c.ColumnName, childColumn.ToString(), StringComparison.OrdinalIgnoreCase));
-                                if (cc != null)
-                                {
-                                    entityProfile.ResourceColumns = new string[] { cc.ColumnName };
-                                }
-                            }
-                            else
-                            {
-                                StringBuilder mc = new StringBuilder();
-
-                                resourceMember = resourceModel.Columns.FirstOrDefault(c =>
-                                    string.Equals(c.ModelDataType.ToString(), rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
-
-                                MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember);
                             }
                         }
+
+                        result.Add(entityProfile);
                     }
                 }
-
-                result.Add(entityProfile);  
             }
 
             return result;
@@ -489,32 +528,45 @@ namespace COFRS.Template.Common.Forms
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             var nn = new NameNormalizer(resourceModel.ClassName);
             var result = new List<ResourceProfile>();
+            var unmappedMembers = new List<string>();
+
+            foreach ( var column in resourceModel.Columns)
+                unmappedMembers.Add(column.ColumnName);
 
             foreach (var resourceMember in resourceModel.Columns)
             {
-                var resourceProfile = new ResourceProfile
-                {
-                    ResourceColumnName = resourceMember.ColumnName
-                };
-
                 //  If this is the HRef (the primary key), then the columns that comprise it are all the primary
                 //  key values of the entity in the order in which they appear in the entity
                 if (resourceMember.IsPrimaryKey)
                 {
-                    var primaryKeys = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
-                    var formula = new StringBuilder($"new Uri(rootUrl, $\"{nn.PluralCamelCase}/id");
-                    var sourceColumns = new List<string>();
+                    var matchedColumn = unmappedMembers.FirstOrDefault(c => c.Equals(resourceMember.ColumnName));
 
-                    foreach (var entityMember in primaryKeys)
+                    if (!string.IsNullOrWhiteSpace(matchedColumn))
                     {
-                        formula.Append($"/{{source.{entityMember.ColumnName}}}");
-                        sourceColumns.Add(entityMember.ColumnName);
-                    }
+                        unmappedMembers.Remove(matchedColumn);  
 
-                    formula.Append("\")");
-                    resourceProfile.MapFunction = formula.ToString();
-                    resourceProfile.EntityColumnNames = sourceColumns.ToArray();
-                    resourceProfile.IsDefined = true;
+                        var resourceProfile = new ResourceProfile
+                        {
+                            ResourceColumnName = resourceMember.ColumnName
+                        };
+
+                        var primaryKeys = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
+                        var formula = new StringBuilder($"new Uri(rootUrl, $\"{nn.PluralCamelCase}/id");
+                        var sourceColumns = new List<string>();
+
+                        foreach (var entityMember in primaryKeys)
+                        {
+                            formula.Append($"/{{source.{entityMember.ColumnName}}}");
+                            sourceColumns.Add(entityMember.ColumnName);
+                        }
+
+                        formula.Append("\")");
+                        resourceProfile.MapFunction = formula.ToString();
+                        resourceProfile.EntityColumnNames = sourceColumns.ToArray();
+                        resourceProfile.IsDefined = true;
+                        result.Add(resourceProfile);
+
+                    }
                 }
 
                 //  If this column represents a foreign key, then the entity members that comprise it will be
@@ -534,35 +586,61 @@ namespace COFRS.Template.Common.Forms
 
                     if (enumResource != null)
                     {
-                        var sourceColumns = new List<string>();
-                        var formula = $"({enumResource.ClassName})source.{resourceMember.ColumnName}";
-                        //  Need to think about this...
-                        sourceColumns.Add(enumResource.EntityModel.ClassName);
-                        resourceProfile.MapFunction = formula.ToString();
-                        resourceProfile.EntityColumnNames = sourceColumns.ToArray();
-                        resourceProfile.IsDefined = true;
+                        var matchedColumn = unmappedMembers.FirstOrDefault(c => c.Equals(resourceMember.ColumnName));
+
+                        if (!string.IsNullOrWhiteSpace(matchedColumn))
+                        {
+                            unmappedMembers.Remove(matchedColumn);
+
+                            var resourceProfile = new ResourceProfile
+                            {
+                                ResourceColumnName = resourceMember.ColumnName
+                            };
+
+                            var sourceColumns = new List<string>();
+                            var formula = $"({enumResource.ClassName})source.{resourceMember.ColumnName}";
+                            //  Need to think about this...
+                            sourceColumns.Add(enumResource.EntityModel.ClassName);
+                            resourceProfile.MapFunction = formula.ToString();
+                            resourceProfile.EntityColumnNames = sourceColumns.ToArray();
+                            resourceProfile.IsDefined = true;
+                            result.Add(resourceProfile);
+                        }
                     }
                     else
                     {
                         if (string.Equals(resourceMember.ModelDataType.ToString(), "Uri", StringComparison.OrdinalIgnoreCase))
                         {
-                            var nnn = new NameNormalizer(resourceMember.ColumnName);
-                            var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
-                                string.Equals(c.ForeignTableName, resourceMember.ForeignTableName, StringComparison.Ordinal));
+                            var matchedColumn = unmappedMembers.FirstOrDefault(c => c.Equals(resourceMember.ColumnName));
 
-                            var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
-                            var sourceColumns = new List<string>();
-
-                            foreach (var entityMember in foreignKeys)
+                            if (!string.IsNullOrWhiteSpace(matchedColumn))
                             {
-                                formula.Append($"/{{source.{entityMember.ColumnName}}}");
-                                sourceColumns.Add(entityMember.ColumnName);
-                            }
+                                unmappedMembers.Remove(matchedColumn);
 
-                            formula.Append("\")");
-                            resourceProfile.MapFunction = formula.ToString();
-                            resourceProfile.EntityColumnNames = sourceColumns.ToArray();
-                            resourceProfile.IsDefined = true;
+                                var resourceProfile = new ResourceProfile
+                                {
+                                    ResourceColumnName = resourceMember.ColumnName
+                                };
+
+                                var nnn = new NameNormalizer(resourceMember.ColumnName);
+                                var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+                                    string.Equals(c.ForeignTableName, resourceMember.ForeignTableName, StringComparison.Ordinal));
+
+                                var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
+                                var sourceColumns = new List<string>();
+
+                                foreach (var entityMember in foreignKeys)
+                                {
+                                    formula.Append($"/{{source.{entityMember.ColumnName}}}");
+                                    sourceColumns.Add(entityMember.ColumnName);
+                                }
+
+                                formula.Append("\")");
+                                resourceProfile.MapFunction = formula.ToString();
+                                resourceProfile.EntityColumnNames = sourceColumns.ToArray();
+                                resourceProfile.IsDefined = true;
+                                result.Add(resourceProfile);
+                            }
                         }
                         else
                         {
@@ -575,19 +653,32 @@ namespace COFRS.Template.Common.Forms
                             {
                                 if (referenceModel.ResourceType == ResourceType.Enum)
                                 {
-                                    var nnn = new NameNormalizer(resourceMember.ColumnName);
-                                    var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
-                                             (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
-                                               string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
+                                    var matchedColumn = unmappedMembers.FirstOrDefault(c => c.Equals(resourceMember.ColumnName));
 
-                                    if (foreignKeys.Count() == 1)
+                                    if (!string.IsNullOrWhiteSpace(matchedColumn))
                                     {
-                                        var entityMember = foreignKeys.ToList()[0];
+                                        unmappedMembers.Remove(matchedColumn);
 
-                                        var formula = $"({referenceModel.ClassName}) source.{entityMember.ColumnName}";
-                                        resourceProfile.MapFunction = formula.ToString();
-                                        resourceProfile.EntityColumnNames = new string[] { entityMember.ColumnName };
-                                        resourceProfile.IsDefined = true;
+                                        var resourceProfile = new ResourceProfile
+                                        {
+                                            ResourceColumnName = resourceMember.ColumnName
+                                        };
+
+                                        var nnn = new NameNormalizer(resourceMember.ColumnName);
+                                        var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+                                                 (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
+                                                   string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
+
+                                        if (foreignKeys.Count() == 1)
+                                        {
+                                            var entityMember = foreignKeys.ToList()[0];
+
+                                            var formula = $"({referenceModel.ClassName}) source.{entityMember.ColumnName}";
+                                            resourceProfile.MapFunction = formula.ToString();
+                                            resourceProfile.EntityColumnNames = new string[] { entityMember.ColumnName };
+                                            resourceProfile.IsDefined = true;
+                                            result.Add(resourceProfile);
+                                        }
                                     }
                                 }
                             }
@@ -603,7 +694,13 @@ namespace COFRS.Template.Common.Forms
                     if (entityMember != null)
                     {
                         //  There is, just assign it.
+                        var resourceProfile = new ResourceProfile
+                        {
+                            ResourceColumnName = resourceMember.ColumnName
+                        };
+
                         MapEntityDestinationFromSource(resourceMember, resourceProfile, entityMember);
+                        result.Add(resourceProfile);
                     }
                     else
                     {
@@ -612,44 +709,62 @@ namespace COFRS.Template.Common.Forms
 
                         if (model != null)
                         {
+                            var resourceProfile = new ResourceProfile
+                            {
+                                ResourceColumnName = resourceMember.ColumnName
+                            };
                             //  It is a class, instantiate the class
                             resourceProfile.MapFunction = $"new {model.ClassName}()";
 
                             //  Now, go map all of it's children
                             MapEntityChildMembers(resourceMember, resourceProfile, model, resourceMember.ColumnName);
+                            result.Add(resourceProfile);
                         }
                         else
                         {
                             if (resourceMember.ModelDataType.Contains("[]"))
                             {
+                                var resourceProfile = new ResourceProfile
+                                {
+                                    ResourceColumnName = resourceMember.ColumnName
+                                };
                                 var className = resourceMember.ModelDataType.Remove(resourceMember.ModelDataType.IndexOf('['), 2);
                                 resourceProfile.MapFunction = $"Array.Empty<{className}>()";
                                 resourceProfile.EntityColumnNames = Array.Empty<string>();
                                 resourceProfile.IsDefined = true;
+                                result.Add(resourceProfile);
                             }
                             else if (resourceMember.ModelDataType.Contains("List<"))
                             {
+                                var resourceProfile = new ResourceProfile
+                                {
+                                    ResourceColumnName = resourceMember.ColumnName
+                                };
                                 var index = resourceMember.ModelDataType.IndexOf('<');
                                 var count = resourceMember.ModelDataType.IndexOf('>') - index;
                                 var className = resourceMember.ModelDataType.Substring(index + 1, count - 1);
                                 resourceProfile.MapFunction = $"new List<{className}>()";
                                 resourceProfile.EntityColumnNames = Array.Empty<string>();
                                 resourceProfile.IsDefined = true;
+                                result.Add(resourceProfile);
                             }
                             else if (resourceMember.ModelDataType.Contains("IEnumerable<"))
                             {
+                                var resourceProfile = new ResourceProfile
+                                {
+                                    ResourceColumnName = resourceMember.ColumnName
+                                };
                                 var index = resourceMember.ModelDataType.IndexOf('<');
                                 var count = resourceMember.ModelDataType.IndexOf('>') - index;
                                 var className = resourceMember.ModelDataType.Substring(index + 1, count - 1);
                                 resourceProfile.MapFunction = $"Array.Empty<{className}>()";
                                 resourceProfile.EntityColumnNames = Array.Empty<string>();
                                 resourceProfile.IsDefined = true;
+                                result.Add(resourceProfile);
                             }
                         }
                     }
                 }
-
-                result.Add(resourceProfile);
             }
 
             return result;
