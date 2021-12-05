@@ -1,5 +1,6 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRSCoreCommon.Forms;
 using COFRSCoreCommon.Models;
 using COFRSCoreCommon.Utilities;
 using EnvDTE;
@@ -117,6 +118,7 @@ namespace COFRS.Template.Common.Wizards
 					mapperDialog.ResourceModel = resourceModel;
 					mapperDialog.ResourceMap = resourceMap;
 					mapperDialog.EntityMap = entityMap;
+					mapperDialog.Dte = _appObject;
 
 					if (mapperDialog.ShowDialog() == DialogResult.OK)
 					{

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace COFRS.Template.Common.ServiceUtilities
+namespace COFRSCoreCommon.Utilities
 {
     public class WindowClass : IWin32Window
     {

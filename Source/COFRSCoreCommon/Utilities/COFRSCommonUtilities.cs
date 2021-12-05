@@ -3418,6 +3418,11 @@ namespace COFRSCoreCommon.Utilities
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var map = new List<ResourceModel>();
+			Dictionary<string, string> rmap = new Dictionary<string, string>();
+			Dictionary<string, string> emap = new Dictionary<string, string>();
+
+			LoadResourceEntityAssociations(dte, ref rmap);
+			LoadEntityTableAssociations(dte, ref emap);
 
 			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte);                        //	Contains the names and projects where various source file exist.
 			var entityModelsFolder = projectMapping.GetEntityModelsFolder();
@@ -3547,17 +3552,29 @@ namespace COFRSCoreCommon.Utilities
 											IsPrimaryKey = string.Equals(property.Name, "href", StringComparison.OrdinalIgnoreCase)
 										};
 
-										var fk = foreignKeyColumns.FirstOrDefault(c =>
-										{
-											var nn = new NameNormalizer(c.ForeignTableName);
-											return string.Equals(nn.SingleForm, dbColumn.ColumnName, StringComparison.OrdinalIgnoreCase);
-										});
+										//	ForeignTableName = AspNetRoles
 
-										if (fk != null)
-										{
-											dbColumn.IsForeignKey = true;
-											dbColumn.ForeignTableName = fk.ForeignTableName;
-										}
+										if ( rmap.Keys.Contains(property.Name))
+                                        {
+											var entityClass = rmap[property.Name];
+
+											if (emap.Keys.Contains(entityClass))
+											{
+												var tableName = emap[entityClass];
+
+												var fk = foreignKeyColumns.FirstOrDefault(c =>
+												{
+													return string.Equals(c.ForeignTableName, tableName, StringComparison.OrdinalIgnoreCase);
+												});
+
+												if (fk != null)
+												{
+													dbColumn.IsForeignKey = true;
+													dbColumn.ForeignTableName = fk.ForeignTableName;
+												}
+											}
+                                        }
+
 
 										columns.Add(dbColumn);
 									}
@@ -3579,6 +3596,103 @@ namespace COFRSCoreCommon.Utilities
 
 			return new ResourceMap() { Maps = map.ToArray() };
 		}
+
+		private static void LoadEntityTableAssociations(DTE2 dte, ref Dictionary<string,string> emap, ProjectItem parentFolder = null)
+        {
+			ThreadHelper.ThrowIfNotOnUIThread();
+			ProjectItems projectItems = null;
+
+			if (parentFolder == null)
+			{
+				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte);    //	Contains the names and projects where various source file exist.
+				var EntityModelsFolder = projectMapping.GetEntityModelsFolder();
+				var project = GetProject(dte, EntityModelsFolder.ProjectName);
+				projectItems = project.ProjectItems;
+			}
+			else
+				projectItems = parentFolder.ProjectItems;
+
+			foreach (ProjectItem projectItem in projectItems)
+			{
+				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
+					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
+				{
+					LoadEntityTableAssociations(dte, ref emap, projectItem);
+				}
+				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile &&
+					projectItem.FileCodeModel != null &&
+					projectItem.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
+					Convert.ToInt32(projectItem.Properties.Item("BuildAction").Value) == 1)
+				{
+					foreach (CodeNamespace namespaceElement in projectItem.FileCodeModel.CodeElements.OfType<CodeNamespace>())
+					{
+						foreach (CodeClass2 childElement in namespaceElement.Members.OfType<CodeClass2>())
+						{
+							var attribute = childElement.Children.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Table"));
+
+							if (attribute != null)
+							{
+								var match = Regex.Match(attribute.Value, "\"(?<tablename>[a-zA-Z0-9_]+)\"");
+
+								if (match.Success)
+                                {
+									emap.Add(childElement.Name, match.Groups["tablename"].Value);
+                                }
+							}
+						}
+					}
+				}
+			}
+		}
+
+		private static void LoadResourceEntityAssociations(DTE2 dte, ref Dictionary<string,string> rmap, ProjectItem parentFolder = null)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			ProjectItems projectItems = null;
+
+			if (parentFolder == null)
+            {
+				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte);    //	Contains the names and projects where various source file exist.
+				var ResourceModelsFolder = projectMapping.GetResourceModelsFolder();
+				var project = GetProject(dte, ResourceModelsFolder.ProjectName);
+				projectItems = project.ProjectItems;
+            }
+			else
+				projectItems = parentFolder.ProjectItems;
+
+			foreach (ProjectItem projectItem in projectItems)
+			{
+				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
+					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
+				{
+					LoadResourceEntityAssociations(dte, ref rmap, projectItem);
+				}
+				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile &&
+					projectItem.FileCodeModel != null &&
+					projectItem.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
+					Convert.ToInt32(projectItem.Properties.Item("BuildAction").Value) == 1)
+				{
+					foreach (CodeNamespace namespaceElement in projectItem.FileCodeModel.CodeElements.OfType<CodeNamespace>())
+					{
+						foreach (CodeClass2 childElement in namespaceElement.Members.OfType<CodeClass2>())
+						{
+							var entityAttribute = childElement.Children.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+
+							if (entityAttribute != null )
+                            {
+								Match match = Regex.Match(entityAttribute.Value, "typeof\\((?<entityName>[a-zA-Z0-9_]+)\\)");
+
+								if ( match.Success )
+                                {
+									rmap.Add(childElement.Name, match.Groups["entityName"].Value);
+                                }
+                            }
+						}
+					}
+				}
+			}
+		}
+
 
 		private static DBColumn[] LoadColumns(CodeClass2 codeClass)
 		{

@@ -8,17 +8,21 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace COFRS.Template.Common.Forms
+namespace COFRSCoreCommon.Forms
 {
     public partial class ProgressDialog : Form
     {
-        public string Message { get; set; }
+        string msg;
 
-        public ProgressDialog(string msg)
+        public ProgressDialog(string message)
         {
+            msg = message;
             InitializeComponent();
-            Message = msg;
-            MessageText.Text = Message;
+        }
+
+        private void OnLoad(object sender, EventArgs e)
+        {
+            MessageText.Text = msg;
         }
     }
 }

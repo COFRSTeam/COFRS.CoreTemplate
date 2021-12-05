@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace COFRS.Template.Common.ServiceUtilities
+namespace COFRSCoreCommon.Utilities
 {
     public static class WinNative
     {
         [StructLayout(LayoutKind.Sequential)]
         public struct Point
         {
-            long x;
-            long y;
+            readonly long x;
+            readonly long y;
 
             public override string ToString()
             {

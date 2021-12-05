@@ -1,5 +1,6 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRSCoreCommon.Forms;
 using COFRSCoreCommon.Models;
 using COFRSCoreCommon.Utilities;
 using EnvDTE;
