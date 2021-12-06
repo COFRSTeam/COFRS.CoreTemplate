@@ -108,6 +108,72 @@ namespace COFRS.Template.Common.ServiceUtilities
 			//										Require(!string.IsNullOrWhiteSpace(item.membername), "The value for membername cannot be null."); 
 			//										Require(item.membername.Length <= 10, "The value of membername must be 10 characters or less.");
 
+			foreach (ResourceProfile resourceProfile in profileMap.ResourceProfiles)
+            {
+				var resourceColumn = resourceModel.Columns.FirstOrDefault(rc => rc.ColumnName.Equals(resourceProfile.ResourceColumnName));
+
+				if ( resourceColumn != null )
+                {
+					if ( resourceColumn.IsPrimaryKey)
+                    {
+
+                    }
+					else if ( resourceColumn.IsForeignKey)
+                    {
+						if (resourceProfile.EntityColumnNames.Count() == 1)
+						{
+							var entityColumn = resourceModel.EntityModel.Columns.FirstOrDefault(ec => ec.ColumnName.Equals(resourceProfile.EntityColumnNames.ToList()[0]));
+
+							if (entityColumn != null)
+							{
+								if (entityColumn.ModelDataType.Equals("Uri", StringComparison.OrdinalIgnoreCase))
+								{
+									if (!entityColumn.IsNullable)
+										results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null, \"{resourceColumn.ColumnName} cannot be null.\");");
+								}
+							}
+						}
+					}
+					else
+                    {
+						if (resourceProfile.EntityColumnNames.Count() == 1)
+						{
+							var entityColumn = resourceModel.EntityModel.Columns.FirstOrDefault(ec => ec.ColumnName.Equals(resourceProfile.EntityColumnNames.ToList()[0]));
+
+							if (entityColumn != null)
+							{
+								if (entityColumn.ModelDataType.Equals("string", StringComparison.OrdinalIgnoreCase))
+								{
+									if (resourceProfile.MapFunction == $"source.{entityColumn.ColumnName}")
+									{
+										if (!entityColumn.IsNullable)
+										{
+											results.AppendLine($"\t\t\tRequire(!string.IsNullOrWhiteSpace(item.{resourceColumn.ColumnName}), \"{resourceColumn.ColumnName} cannot be null or whitespace.\");");
+											results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null && item.{resourceColumn.ColumnName}.Length <= {entityColumn.Length}, \"{resourceColumn.ColumnName} cannot exceed {entityColumn.Length} characters.\");");
+										}
+										else if (resourceProfile.MapFunction == $"source.{entityColumn.ColumnName}")
+											results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null && item.{resourceColumn.ColumnName}.Length <= {entityColumn.Length}, \"{resourceColumn.ColumnName} cannot exceed {entityColumn.Length} characters.\");");
+									}
+								}
+								else if (entityColumn.ModelDataType.Equals("Uri", StringComparison.OrdinalIgnoreCase))
+								{
+									if (!entityColumn.IsNullable)
+										results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null, \"{resourceColumn.ColumnName} cannot be null.\");");
+								}
+								else if (entityColumn.ModelDataType.EndsWith("[]", StringComparison.OrdinalIgnoreCase) ||
+										 entityColumn.ModelDataType.StartsWith("IEnumerable", StringComparison.OrdinalIgnoreCase) ||
+										 entityColumn.ModelDataType.StartsWith("List", StringComparison.OrdinalIgnoreCase))
+								{
+									if (!entityColumn.IsNullable)
+										results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null, \"{resourceColumn.ColumnName} cannot be null.\");");
+								}
+							}
+						}
+                    }
+                }
+            }
+
+			results.AppendLine();
 			results.AppendLine("\t\t\t//\tTo do: Add any additinal code to perform any specific validations pertaining to");
 			results.AppendLine("\t\t\t//\t       adding or updating an item here.");
 			results.AppendLine("\t\t\tawait Task.CompletedTask;");
@@ -127,7 +193,18 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceModel.ClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
 			results.AppendLine("\t\t{");
 			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, User, parms);");
-			results.AppendLine();
+			foreach (ResourceProfile resourceProfile in profileMap.ResourceProfiles)
+			{
+				var resourceColumn = resourceModel.Columns.FirstOrDefault(rc => rc.ColumnName.Equals(resourceProfile.ResourceColumnName));
+
+				if (resourceColumn != null)
+				{
+					if (resourceColumn.IsPrimaryKey)
+					{
+						results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null, \"{resourceColumn.ColumnName} cannot be null.\");");
+					}
+				}
+			}
 
 			//	To do:	If the item has an href, then that href cannot be null for an update. Write the code to ensure it is not null
 			//			here, if needed.
