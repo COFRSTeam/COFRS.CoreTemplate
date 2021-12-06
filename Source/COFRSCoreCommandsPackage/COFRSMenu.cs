@@ -254,7 +254,7 @@ namespace COFRSCoreCommandsPackage
                                         else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
                                         {
 											HandleMessages();
-											ModifyGetCollection(aFunction, parentModel, childModel, childValidatorName, memberName);
+											ModifyGetCollection(aFunction, parentModel, childModel, memberName);
                                         }
 
                                         //	Add
@@ -1636,7 +1636,7 @@ namespace COFRSCoreCommandsPackage
 		/// Modify the get collection function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyGetCollection(CodeFunction2 aFunction, ResourceModel parentModel, ResourceModel childModel, string childValidatorName, string memberName)
+		private void ModifyGetCollection(CodeFunction2 aFunction, ResourceModel parentModel, ResourceModel childModel, string memberName)
 		{
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 
