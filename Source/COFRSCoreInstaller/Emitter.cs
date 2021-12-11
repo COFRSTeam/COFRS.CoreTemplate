@@ -513,6 +513,15 @@ namespace COFRS.Template
             if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Collections.Generic")) == null)
                 fileCodeModel.AddImport("System.Collections.Generic");
 
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text.Json")) == null)
+                fileCodeModel.AddImport("System.Text.Json");
+
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("Microsoft.Extensions.Logging")) == null)
+                fileCodeModel.AddImport("Microsoft.Extensions.Logging");
+
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("Serilog.Context")) == null)
+                fileCodeModel.AddImport("Serilog.Context");
+
             if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(resourceModel.Namespace)) == null)
                 fileCodeModel.AddImport(resourceModel.Namespace);
 
@@ -658,6 +667,15 @@ namespace COFRS.Template
                             editPoint.LineUp();
                             editPoint.StartOfLine();
                             editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"RqlNode\", node);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"Logger.LogDebug($\"{getSingleFunctionName}\");");
+                            editPoint.InsertNewLine(2);
+                            editPoint.Indent(null, 3);
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
@@ -700,6 +718,15 @@ namespace COFRS.Template
                             editPoint.LineUp();
                             editPoint.StartOfLine();
                             editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"RqlNode\", node);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"Logger.LogDebug($\"{collectionFunctionName}\");");
+                            editPoint.InsertNewLine(2);
+                            editPoint.Indent(null, 3);
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
@@ -740,6 +767,15 @@ namespace COFRS.Template
                             editPoint.LineUp();
                             editPoint.StartOfLine();
                             editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"Item\", JsonSerializer.Serialize(item));");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"Logger.LogDebug($\"{addFunctionName}\");");
+                            editPoint.InsertNewLine(2);
+                            editPoint.Indent(null, 3);
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForAddAsync(item, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
@@ -779,7 +815,15 @@ namespace COFRS.Template
                             editPoint = (EditPoint2)theUpdateFunction.EndPoint.CreateEditPoint();
                             editPoint.LineUp();
                             editPoint.StartOfLine();
-
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"Item\", JsonSerializer.Serialize(item));");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"Logger.LogDebug($\"{updateFunctionName}\");");
+                            editPoint.InsertNewLine(2);
                             editPoint.Indent(null, 3);
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForUpdateAsync(item, User);");
                             editPoint.InsertNewLine();
@@ -822,6 +866,18 @@ namespace COFRS.Template
                             editPoint.LineUp();
                             editPoint.StartOfLine();
                             editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"Commands\", JsonSerializer.Serialize(commands));");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"RqlNode\", node);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"Logger.LogDebug($\"{patchFunctionName}\");");
+                            editPoint.InsertNewLine(2);
+                            editPoint.Indent(null, 3);
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForPatchAsync(commands, node, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
@@ -860,6 +916,15 @@ namespace COFRS.Template
                             editPoint = (EditPoint2)theDeleteFunction.EndPoint.CreateEditPoint();
                             editPoint.LineUp();
                             editPoint.StartOfLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"RqlNode\", node);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
+                            editPoint.InsertNewLine();
+                            editPoint.Indent(null, 3);
+                            editPoint.Insert($"Logger.LogDebug($\"{deleteFunctionName}\");");
+                            editPoint.InsertNewLine(2);
                             editPoint.Indent(null, 3);
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForDeleteAsync(node, User);");
                             editPoint.InsertNewLine();

@@ -125,7 +125,7 @@ namespace COFRS.Template.Common.Wizards
 				{
 					var entityModel = (EntityModel)form._entityModelList.SelectedItem;
 					var resourceModel = (ResourceModel)form._resourceModelList.SelectedItem;
-					var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
+					var profileMap = COFRSCommonUtilities.OpenProfileMap(_appObject, resourceModel, out bool isAllDefined);
 
 					var emitter = new StandardEmitter();
 					var model = emitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, replacementsDictionary["$safeitemname$"], out string ValidatorInterface);
@@ -165,14 +165,6 @@ namespace COFRS.Template.Common.Wizards
 			{
 				WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
 			}
-		}
-
-		private ProfileMap LoadMapping(string solutionPath, ResourceModel resourceModel, EntityModel entityModel)
-		{
-			var filePath = Path.Combine(Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs"), $"{resourceModel.ClassName}.{entityModel.ClassName}.json");
-			var jsonValue = File.ReadAllText(filePath);
-
-			return JsonConvert.DeserializeObject<ProfileMap>(jsonValue);
 		}
 	}
 }
