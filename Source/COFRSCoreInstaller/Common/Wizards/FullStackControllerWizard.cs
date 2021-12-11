@@ -133,6 +133,9 @@ namespace COFRS.Template.Common.Wizards
 				progressDialog.Close();
 				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
+				EntityModel entityModel = null;
+				ResourceModel resourceModel = null;
+
 				if (form.ShowDialog() == DialogResult.OK)
 				{
 					//	Show the user that we are busy...
@@ -171,15 +174,12 @@ namespace COFRS.Template.Common.Wizards
 
 					List<EntityModel> undefinedModels = form.UndefinedClassList;
 
-					EntityModel entityModel = null;
-					ResourceModel resourceModel = null;
-
 					var emitter = new Emitter();
 					var standardEmitter = new StandardEmitter();
 
-                    #region Entity Model Operations
-                    //	Should we generate an entity model?
-                    if (form.EntityModelCheckBox.Checked)
+					#region Entity Model Operations
+					//	Should we generate an entity model?
+					if (form.EntityModelCheckBox.Checked)
 					{
 						GenerateEntity = true;
 
@@ -238,23 +238,23 @@ namespace COFRS.Template.Common.Wizards
 						HandleMessages();
 					}
 					else
-                    {
+					{
 						//	Since we're not generating an entity model, that must mean that one
 						//	already exists.
 
 						entityModel = entityMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, entityClassName, StringComparison.OrdinalIgnoreCase));
 					}
 
-					if ( entityModel == null )
-                    {
+					if (entityModel == null)
+					{
 						MessageBox.Show($"No entity model was found for {entityClassName}. Generation canceled.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 						Proceed = false;
 						return;
-                    }
-                    #endregion
+					}
+					#endregion
 
-                    #region Resource Model Operations
-                    if (form.ResourceModelCheckBox.Checked)
+					#region Resource Model Operations
+					if (form.ResourceModelCheckBox.Checked)
 					{
 						GenerateResource = true;
 
@@ -292,54 +292,38 @@ namespace COFRS.Template.Common.Wizards
 
 						resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
 					}
-                    #endregion
+					#endregion
 
-                    #region Mapping Operations
-                    if (form.MappingProfileCheckBox.Checked)
+					ProfileMap profileMap = null;
+
+					#region Mapping Operations
+					if (form.MappingProfileCheckBox.Checked)
 					{
 						GenerateMapping = true;
 
-                        HandleMessages();
-						progressDialog.Close();
-						dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+						if (resourceModel == null )
+							resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
+						profileMap = COFRSCommonUtilities.GenerateProfileMap(resourceModel, resourceMap);
 
-                        Mapper mapperDialog = new Mapper
-                        {
+						var mappingModel = standardEmitter.EmitMappingModel(resourceModel, resourceModel.EntityModel, profileMap, mappingClassName, replacementsDictionary);
 
-                            //	Emit Mapping Model
-                            ResourceModel = resourceModel,
-                            ResourceMap = resourceMap,
-                            EntityMap = entityMap,
-							Dte = dte
-                        };
-
-						if (mapperDialog.ShowDialog() == DialogResult.OK)
-						{
-							COFRSCommonUtilities.SaveProfileMap(dte, mapperDialog.ProfileMap);
-
-							var mappingModel = standardEmitter.EmitMappingModel(resourceModel, resourceModel.EntityModel, mapperDialog.ProfileMap, mappingClassName, replacementsDictionary);
-
-							replacementsDictionary.Add("$mappingModel$", mappingModel);
-						}
-						else
-							GenerateMapping = false;
-
-						progressDialog = new ProgressDialog("Building classes...");
-						progressDialog.Show(parent);
-						dte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-						HandleMessages();
+						replacementsDictionary.Add("$mappingModel$", mappingModel);
 					}
-					#endregion
+					else
+						GenerateMapping = false;
+                    #endregion
 
-					var validatorInterface = string.Empty;
-
-                    #region Validation Operations
-                    if (form.ValidatorCheckBox.Checked)
+					#region Validation Operations
+                    var validatorInterface = string.Empty;
+					if (form.ValidatorCheckBox.Checked)
 					{
 						GenerateValidator = true;
 
-						var solutionPath = dte.Solution.Properties.Item("Path").Value.ToString();
-						var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
+						if ( resourceModel == null)
+							resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
+
+						if ( profileMap == null)
+							profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
 						var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(dte);
 
 						//	Emit Validation Model
@@ -348,18 +332,22 @@ namespace COFRS.Template.Common.Wizards
 						HandleMessages();
 
 						//	Register the validation model
-						COFRSCommonUtilities.RegisterValidationModel(dte, 
+						COFRSCommonUtilities.RegisterValidationModel(dte,
 														  validationClassName,
 														  replacementsDictionary["$validatornamespace$"]);
 					}
-                    #endregion
+					#endregion
 
-                    #region Example Operations
-                    if (form.ExampleCheckBox.Checked)
-                    {
+					#region Example Operations
+					if (form.ExampleCheckBox.Checked)
+					{
 						GenerateExample = true;
-						var solutionPath = dte.Solution.Properties.Item("Path").Value.ToString();
-						var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
+
+						if ( resourceModel == null)
+							resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
+
+						if ( profileMap== null)
+							profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
 
 						var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, entityMap, exampleClassName, defaultServerType, connectionString);
 						replacementsDictionary.Add("$examplemodel$", exampleModel);
@@ -370,6 +358,9 @@ namespace COFRS.Template.Common.Wizards
 					if (form.ControllerCheckbox.Checked)
 					{
 						GenerateController = true;
+
+						if (resourceModel == null)
+							resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
 
 						var controllerModel = emitter.EmitController(
 							dte,
@@ -385,14 +376,12 @@ namespace COFRS.Template.Common.Wizards
 						HandleMessages();
 					}
 					#endregion
-
-					progressDialog.Close();
-					dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-
-					Proceed = true;
 				}
-				else
-					Proceed = false;
+
+				progressDialog.Close();
+				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+
+				Proceed = true;
 			}
 			catch (Exception ex)
 			{
@@ -441,14 +430,5 @@ namespace COFRS.Template.Common.Wizards
                 WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
             }
         }
-
-		private ProfileMap LoadMapping(string solutionPath, ResourceModel resourceModel, EntityModel entityModel)
-		{
-			var filePath = Path.Combine(Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs"), $"{resourceModel.ClassName}.{entityModel.ClassName}.json");
-			var jsonValue = File.ReadAllText(filePath);
-
-			return JsonConvert.DeserializeObject<ProfileMap>(jsonValue);
-		}
-
 	}
 }

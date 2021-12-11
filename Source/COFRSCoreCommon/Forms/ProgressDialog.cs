@@ -12,17 +12,21 @@ namespace COFRSCoreCommon.Forms
 {
     public partial class ProgressDialog : Form
     {
-        string msg;
+        private string MessageText { get; set; }
 
+        public ProgressDialog()
+        {
+            InitializeComponent();
+        }
         public ProgressDialog(string message)
         {
-            msg = message;
             InitializeComponent();
+            MessageText = message;
         }
 
         private void OnLoad(object sender, EventArgs e)
         {
-            MessageText.Text = msg;
+            Message.Text = MessageText; 
         }
     }
 }

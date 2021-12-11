@@ -39,7 +39,6 @@ namespace COFRS.Template.Common.Wizards
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
 			ProgressDialog progressDialog = new ProgressDialog("Loading classes and preparing project...");
-			Mapper mapperDialog = new Mapper();
 
 			try
 			{
@@ -114,27 +113,16 @@ namespace COFRS.Template.Common.Wizards
 				if (form.ShowDialog() == DialogResult.OK)
 				{
 					var resourceModel = (ResourceModel)form._resourceModelList.SelectedItem;
+					var profileMap = COFRSCommonUtilities.GenerateProfileMap(resourceModel, resourceMap);
 
-					mapperDialog.ResourceModel = resourceModel;
-					mapperDialog.ResourceMap = resourceMap;
-					mapperDialog.EntityMap = entityMap;
-					mapperDialog.Dte = _appObject;
+					var emitter = new StandardEmitter();
+					var model = emitter.EmitMappingModel(resourceModel, resourceModel.EntityModel, profileMap, replacementsDictionary["$safeitemname$"], replacementsDictionary);
 
-					if (mapperDialog.ShowDialog() == DialogResult.OK)
-					{
-						COFRSCommonUtilities.SaveProfileMap(_appObject, mapperDialog.ProfileMap);
+					replacementsDictionary["$resourcenamespace$"] = resourceModel.Namespace;
+					replacementsDictionary["$entitynamespace$"] = resourceModel.EntityModel.Namespace;
+					replacementsDictionary["$model$"] = model;
 
-						var emitter = new StandardEmitter();
-						var model = emitter.EmitMappingModel(resourceModel, resourceModel.EntityModel, mapperDialog.ProfileMap, replacementsDictionary["$safeitemname$"], replacementsDictionary);
-
-						replacementsDictionary["$resourcenamespace$"] = resourceModel.Namespace;
-						replacementsDictionary["$entitynamespace$"] = resourceModel.EntityModel.Namespace;
-						replacementsDictionary["$model$"] = model;
-
-						Proceed = true;
-					}
-					else
-						Proceed = false;
+					Proceed = true;
 				}
 				else
 					Proceed = false;

@@ -28,34 +28,30 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.MessageText = new System.Windows.Forms.Label();
+            this.Message = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
-            // MessageText
+            // Message
             // 
-            this.MessageText.AutoSize = true;
-            this.MessageText.Location = new System.Drawing.Point(12, 16);
-            this.MessageText.Name = "MessageText";
-            this.MessageText.Size = new System.Drawing.Size(83, 13);
-            this.MessageText.TabIndex = 0;
-            this.MessageText.Text = "Loading classes";
+            this.Message.AutoSize = true;
+            this.Message.Location = new System.Drawing.Point(12, 9);
+            this.Message.Name = "Message";
+            this.Message.Size = new System.Drawing.Size(35, 13);
+            this.Message.TabIndex = 0;
+            this.Message.Text = "label1";
             // 
             // ProgressDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(349, 42);
-            this.ControlBox = false;
-            this.Controls.Add(this.MessageText);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
+            this.ClientSize = new System.Drawing.Size(266, 33);
+            this.Controls.Add(this.Message);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Name = "ProgressDialog";
             this.ShowIcon = false;
             this.ShowInTaskbar = false;
-            this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Microsoft Visual Studio";
+            this.Text = "Visual Studio";
             this.TopMost = true;
             this.Load += new System.EventHandler(this.OnLoad);
             this.ResumeLayout(false);
@@ -65,6 +61,6 @@
 
         #endregion
 
-        private System.Windows.Forms.Label MessageText;
+        private System.Windows.Forms.Label Message;
     }
 }

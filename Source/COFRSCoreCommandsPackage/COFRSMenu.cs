@@ -1,24 +1,20 @@
-﻿using EnvDTE80;
+﻿using COFRSCoreCommandsPackage.Forms;
+using COFRSCoreCommon.Forms;
+using COFRSCoreCommon.Models;
+using COFRSCoreCommon.Utilities;
+using EnvDTE;
+using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using System;
-using System.Linq;
-using System.ComponentModel.Design;
-using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
-using Task = System.Threading.Tasks.Task;
-using EnvDTE;
-using COFRSCoreCommandsPackage.Forms;
-using COFRSCoreCommon.Utilities;
-using System.Text.RegularExpressions;
-using COFRS.Template.Common.Forms;
-using System.Windows.Forms;
-using COFRSCoreCommon.Models;
 using Newtonsoft.Json.Linq;
+using System;
+using System.ComponentModel.Design;
 using System.IO;
+using System.Linq;
 using System.Text;
-using COFRSCoreCommon.Forms;
+using System.Text.RegularExpressions;
+using System.Windows.Forms;
+using Task = System.Threading.Tasks.Task;
 
 namespace COFRSCoreCommandsPackage
 {
@@ -60,8 +56,8 @@ namespace COFRSCoreCommandsPackage
             commandService.AddCommand(AddCollectionMenu);
 
             var editMappingCommandId = new CommandID(CommandSet, EditMappingId);
-            OleMenuCommand EditMappingMenu = new OleMenuCommand(new EventHandler(OnEditMapping), editMappingCommandId);
-            EditMappingMenu.BeforeQueryStatus += new EventHandler(OnBeforeEditMapping);
+            OleMenuCommand EditMappingMenu = new OleMenuCommand(new EventHandler(OnResetMapping), editMappingCommandId);
+            EditMappingMenu.BeforeQueryStatus += new EventHandler(OnBeforeResetMapping);
             commandService.AddCommand(EditMappingMenu);
         }
 
@@ -143,7 +139,6 @@ namespace COFRSCoreCommandsPackage
             var dte2 = package.GetService<SDTE, DTE2>() as DTE2;
             object[] selectedItems = (object[])dte2.ToolWindows.SolutionExplorer.SelectedItems;
 
-
 			if (selectedItems.Length == 1)
             {
 				var progressDialog = new ProgressDialog("Loading classes and preparing project...");
@@ -177,12 +172,9 @@ namespace COFRSCoreCommandsPackage
 
 						if ( dialog.ShowDialog() == DialogResult.OK)
                         {
-							progressDialog = new ProgressDialog("Loading classes and preparing project...");
-							progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
-							dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-							HandleMessages();
+							dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationGeneral);
 
-							var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);  //	Contains the names and projects where various source file exist.
+                            var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);  //	Contains the names and projects where various source file exist.
                             ProjectItem orchestrator = dte2.Solution.FindProjectItem("ServiceOrchestrator.cs");
                             FileCodeModel2 codeModel = (FileCodeModel2)orchestrator.FileCodeModel;
 
@@ -190,11 +182,15 @@ namespace COFRSCoreCommandsPackage
                             if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Linq")) == null)
                                 codeModel.AddImport("System.Linq", -1);
 
-                            //	The orchestration layer is going to need "using System.Text", ensure that it it does
-                            if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text")) == null)
-                                codeModel.AddImport("System.Text", -1);
+							//	The orchestration layer is going to need "using System.Text", ensure that it it does
+							if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text")) == null)
+								codeModel.AddImport("System.Text", -1);
 
-                            foreach (var childItem in dialog.ChildResourceList.CheckedItems)
+							//	The orchestration layer is going to need "using System.Text", ensure that it it does
+							if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System")) == null)
+								codeModel.AddImport("System", -1);
+
+							foreach (var childItem in dialog.ChildResourceList.CheckedItems)
                             {
                                 //	Get the child model from the resource map
                                 var childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(childItem.ToString(), StringComparison.OrdinalIgnoreCase));
@@ -234,75 +230,72 @@ namespace COFRSCoreCommandsPackage
                                     //	Now, let's go though all the functions...
                                     foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
 									{
-										HandleMessages();
-
 										//	Constructor
 										if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
                                         {
-											HandleMessages();
 											ModifyConstructor(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, childValidatorInterface, memberName);
                                         }
 
                                         //	Get Single
                                         else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
                                         {
-											HandleMessages();
 											ModifyGetSingle(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName, memberType);
                                         }
 
                                         //	Get Collection
                                         else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
                                         {
-											HandleMessages();
 											ModifyGetCollection(aFunction, parentModel, childModel, memberName);
                                         }
 
                                         //	Add
                                         else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
                                         {
-											HandleMessages();
 											ModifyAdd(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
                                         }
 
                                         //	Update
                                         else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
                                         {
-											HandleMessages();
 											ModifyUpdate(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
                                         }
 
                                         //	Update
                                         else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
                                         {
-											HandleMessages();
 											ModifyPatch(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
                                         }
 
                                         //	Delete
                                         else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
                                         {
-											HandleMessages();
 											ModifyDelete(aFunction, childModel, parentValidatorName, childValidatorName, memberName);
                                         }
                                     }
                                 }
 
-								HandleMessages();
 								AddSingleExample(dte2, parentModel, childModel, memberName);
-								HandleMessages();
 								AddCollectionExample(dte2, parentModel, childModel, memberName);
-								HandleMessages();
-
-								progressDialog.Close();
-								dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 							}
+
+							dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationGeneral);
 						}
-                    }
+					}
+					else
+					{
+						progressDialog.Close();
+						dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+					}
+				}
+				else
+                {
+					progressDialog.Close();
+					dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
                 }
             }
         }
 
-        private void OnBeforeEditMapping(object sender, EventArgs e)
+        private void OnBeforeResetMapping(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var myCommand = sender as OleMenuCommand;
@@ -351,7 +344,7 @@ namespace COFRSCoreCommandsPackage
             }
         }
 
-        private void OnEditMapping(object sender, EventArgs e)
+        private void OnResetMapping(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -360,7 +353,7 @@ namespace COFRSCoreCommandsPackage
 
 			if (selectedItems.Length == 1)
             {
-				var progressDialog = new ProgressDialog("Loading classes and preparing project...");
+				var progressDialog = new ProgressDialog("Rebuilding classes...");
 				progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
 				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 				HandleMessages();
@@ -403,113 +396,122 @@ namespace COFRSCoreCommandsPackage
 								HandleMessages();
 								var match = Regex.Match(text, "[ \t]*CreateMap\\<(?<resource>[a-zA-Z0-9_]+)[ \t]*\\,[ \t]*(?<entity>[a-zA-Z0-9_]+)\\>[ \t]*\\([ \t]*\\)");
 
-                                if (match.Success)
-                                {
-                                    Mapper dialog = new Mapper
-                                    {
-                                        ResourceMap = resourceMap,
-                                        ResourceModel = resourceMap.Maps.FirstOrDefault(c => c.ClassName.Equals(match.Groups["resource"].Value)),
-                                        Dte = dte2
-                                    };
+
+								if (match.Success)
+								{
+									var resourceModel = resourceMap.Maps.FirstOrDefault(c => c.ClassName.Equals(match.Groups["resource"].Value));
 
 									HandleMessages();
+
+									var ProfileMap = COFRSCommonUtilities.GenerateProfileMap(resourceModel, resourceMap);
+
+									editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+									foundit = editPoint.FindPattern($"CreateMap<{resourceModel.ClassName}");
+									foundit = foundit && editPoint.LessThan(constructor.EndPoint);
+
+									if (foundit)
+									{
+										HandleMessages();
+										editPoint.LineDown();
+
+										while (!IsLineEmpty(editPoint))
+										{
+											DeleteLine(editPoint);
+										}
+										HandleMessages();
+
+										bool first = true;
+
+										foreach (var rmap in ProfileMap.EntityProfiles)
+										{
+											HandleMessages();
+											if (first)
+												first = false;
+											else
+												editPoint.InsertNewLine();
+
+											editPoint.StartOfLine();
+											editPoint.Indent(null, 4);
+											editPoint.Insert(".ForMember(destination => destination.");
+											editPoint.Insert(rmap.EntityColumnName);
+											editPoint.Insert(", opts => opts.MapFrom(source => ");
+											editPoint.Insert(rmap.MapFunction);
+											editPoint.Insert("))");
+										}
+
+										editPoint.Insert(";");
+										editPoint.InsertNewLine();
+									}
+									HandleMessages();
+
+									editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+									foundit = editPoint.FindPattern($"CreateMap<{resourceModel.EntityModel.ClassName}");
+									foundit = foundit && editPoint.LessThan(constructor.EndPoint);
+
+									if (foundit)
+									{
+										HandleMessages();
+										editPoint.LineDown();
+
+										while (!IsLineEmpty(editPoint))
+										{
+											HandleMessages();
+											DeleteLine(editPoint);
+										}
+
+										bool first = true;
+
+										foreach (var rmap in ProfileMap.ResourceProfiles)
+										{
+											HandleMessages();
+											if (first)
+												first = false;
+											else
+												editPoint.InsertNewLine();
+
+											editPoint.StartOfLine();
+											editPoint.Indent(null, 4);
+											editPoint.Insert(".ForMember(destination => destination.");
+											editPoint.Insert(rmap.ResourceColumnName);
+											editPoint.Insert(", opts => opts.MapFrom(source => ");
+											editPoint.Insert(rmap.MapFunction);
+											editPoint.Insert("))");
+										}
+
+										HandleMessages();
+										editPoint.Insert(";");
+										editPoint.InsertNewLine();
+									}
+
 									progressDialog.Close();
 									dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-
-									if ( dialog.ShowDialog() == DialogResult.OK )
-                                    {
-										progressDialog = new ProgressDialog("Building classes...");
-										progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
-										dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-										HandleMessages();
-
-										var ProfileMap = dialog.ProfileMap;
-                                        var resourceModel = dialog.ResourceModel;
-
-                                        editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
-                                        foundit = editPoint.FindPattern($"CreateMap<{resourceModel.ClassName}");
-                                        foundit = foundit && editPoint.LessThan(constructor.EndPoint);
-
-                                        if (foundit)
-                                        {
-											HandleMessages();
-											editPoint.LineDown();
-
-                                            while (!IsLineEmpty(editPoint))
-                                            {
-                                                DeleteLine(editPoint);
-                                            }
-											HandleMessages();
-
-											bool first = true;
-
-                                            foreach (var rmap in ProfileMap.EntityProfiles)
-                                            {
-												HandleMessages();
-												if (first)
-                                                    first = false;
-                                                else
-                                                    editPoint.InsertNewLine();
-
-                                                editPoint.StartOfLine();
-                                                editPoint.Indent(null, 4);
-                                                editPoint.Insert(".ForMember(destination => destination.");
-                                                editPoint.Insert(rmap.EntityColumnName);
-                                                editPoint.Insert(", opts => opts.MapFrom(source => ");
-                                                editPoint.Insert(rmap.MapFunction);
-                                                editPoint.Insert("))");
-                                            }
-
-                                            editPoint.Insert(";");
-                                            editPoint.InsertNewLine();
-                                        }
-										HandleMessages();
-
-										editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
-                                        foundit = editPoint.FindPattern($"CreateMap<{resourceModel.EntityModel.ClassName}");
-                                        foundit = foundit && editPoint.LessThan(constructor.EndPoint);
-
-                                        if (foundit)
-                                        {
-											HandleMessages();
-											editPoint.LineDown();
-
-                                            while (!IsLineEmpty(editPoint))
-                                            {
-												HandleMessages();
-												DeleteLine(editPoint);
-                                            }
-
-                                            bool first = true;
-
-                                            foreach (var rmap in ProfileMap.ResourceProfiles)
-                                            {
-												HandleMessages();
-												if (first)
-                                                    first = false;
-                                                else
-                                                    editPoint.InsertNewLine();
-
-                                                editPoint.StartOfLine();
-                                                editPoint.Indent(null, 4);
-                                                editPoint.Insert(".ForMember(destination => destination.");
-                                                editPoint.Insert(rmap.ResourceColumnName);
-                                                editPoint.Insert(", opts => opts.MapFrom(source => ");
-                                                editPoint.Insert(rmap.MapFunction);
-                                                editPoint.Insert("))");
-                                            }
-
-											HandleMessages();
-											editPoint.Insert(";");
-                                            editPoint.InsertNewLine();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                	}
-
-					HandleMessages();
+								}
+								else
+								{
+									progressDialog.Close();
+									dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+								}
+							}
+							else
+							{
+								progressDialog.Close();
+								dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+							}
+						}
+						else
+						{
+							progressDialog.Close();
+							dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+						}
+					}
+					else
+					{
+						progressDialog.Close();
+						dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+					}
+				}
+				else
+                {
 					progressDialog.Close();
 					dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 				}
@@ -592,7 +594,7 @@ namespace COFRSCoreCommandsPackage
 
 									var exampleModel = COFRSCommonUtilities.GetExampleModel(0, childModel, serverType, connectionString);
 									var entityJson = JObject.Parse(exampleModel);
-									var profileMap = COFRSCommonUtilities.LoadResourceMapping(dte2, childModel);
+									var profileMap = COFRSCommonUtilities.OpenProfileMap(dte2, childModel, out bool isAllDefined);
 
 									bool first = true;
 
@@ -660,7 +662,7 @@ namespace COFRSCoreCommandsPackage
 
 							var exampleModel = COFRSCommonUtilities.GetExampleModel(0, childModel, serverType, connectionString);
 							var entityJson = JObject.Parse(exampleModel);
-							var profileMap = COFRSCommonUtilities.LoadResourceMapping(dte2, childModel);
+							var profileMap = COFRSCommonUtilities.OpenProfileMap(dte2, childModel, out bool isAllDefined);
 
 							bool first = true;
 
@@ -747,7 +749,7 @@ namespace COFRSCoreCommandsPackage
 
 							var exampleModel = COFRSCommonUtilities.GetExampleModel(0, childModel, serverType, connectionString);
 							var entityJson = JObject.Parse(exampleModel);
-							var profileMap = COFRSCommonUtilities.LoadResourceMapping(dte2, childModel);
+							var profileMap = COFRSCommonUtilities.OpenProfileMap(dte2, childModel, out bool isAllDefined);
 
 							bool first = true;
 
@@ -1013,12 +1015,17 @@ namespace COFRSCoreCommandsPackage
 
 			if (!foundit)
 			{
-				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.LineDown();
-				editPoint.EndOfLine();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("var url = node.Value<Uri>(1);");
+				foundit = editPoint.FindPattern($"await {parentValidatorName}.ValidateForDeleteAsync");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+				if (foundit)
+				{
+					editPoint.LineUp();
+					editPoint.EndOfLine();
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("var url = node.Value<Uri>(1);");
+				}
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1030,9 +1037,10 @@ namespace COFRSCoreCommandsPackage
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				string searchText = $"await {parentValidatorName}.ValidateForDeleteAsync";
+				foundit = editPoint.FindPattern($"await {parentValidatorName}.ValidateForDeleteAsync");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-				if (editPoint.FindPattern(searchText))
+				if (foundit)
 				{
 					editPoint.EndOfLine();
 					editPoint.InsertNewLine(2);
@@ -1043,61 +1051,69 @@ namespace COFRSCoreCommandsPackage
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-			editPoint.FindPattern("var subNode = ");
-			foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
-			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+			foundit = editPoint.FindPattern("var subNode = ");
 
-			if (!foundit)
+			if (foundit)
 			{
-				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern("var subNode = ");
-				editPoint.EndOfLine();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"await {childValidatorName}.ValidateForDeleteAsync(dnode, User);");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
+				foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-				editPoint = (EditPoint2)aFunction.EndPoint.CreateEditPoint();
-				editPoint.LineUp(3);
-				editPoint.StartOfLine();
-				var theLine = editPoint.GetText(editPoint.LineLength);
-
-				if (!string.IsNullOrWhiteSpace(theLine))
+				if (!foundit)
 				{
-					editPoint.EndOfLine();
+					editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+					foundit = editPoint.FindPattern("var subNode = ");
+					foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+					if (foundit)
+					{ 
+						editPoint.EndOfLine();
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 3);
+						editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+						editPoint.InsertNewLine(2);
+						editPoint.Indent(null, 3);
+						editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 3);
+						editPoint.Insert("{");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 4);
+						editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 4);
+						editPoint.Insert($"await {childValidatorName}.ValidateForDeleteAsync(dnode, User);");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 3);
+						editPoint.Insert("}");
+					}
+
+					editPoint = (EditPoint2)aFunction.EndPoint.CreateEditPoint();
+					editPoint.LineUp(3);
+					editPoint.StartOfLine();
+					var theLine = editPoint.GetText(editPoint.LineLength);
+
+					if (!string.IsNullOrWhiteSpace(theLine))
+					{
+						editPoint.EndOfLine();
+					}
+
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert($"await DeleteAsync<{childModel.ClassName}>(dnode);");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("}");
 				}
 			}
-			editPoint.InsertNewLine();
-			editPoint.Indent(null, 3);
-			editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
-			editPoint.InsertNewLine();
-			editPoint.Indent(null, 3);
-			editPoint.Insert("{");
-			editPoint.InsertNewLine();
-			editPoint.Indent(null, 4);
-			editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
-			editPoint.InsertNewLine();
-			editPoint.Indent(null, 4);
-			editPoint.Insert($"await DeleteAsync<{childModel.ClassName}>(dnode);");
-			editPoint.InsertNewLine();
-			editPoint.Indent(null, 3);
-			editPoint.Insert("}");
-			editPoint.InsertNewLine();
 		}
 
 		/// <summary>
@@ -1282,36 +1298,42 @@ namespace COFRSCoreCommandsPackage
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.LineDown();
-				editPoint.EndOfLine();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("var baseCommands = new List<PatchCommand>();");
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 3);
-				editPoint.Insert("foreach (var command in commands)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"if (typeof({parentModel.ClassName}).GetProperties().FirstOrDefault(p => p.Name.Equals(command.Path, StringComparison.OrdinalIgnoreCase)) != null)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert("baseCommands.Add(command);");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"var subNode = RqlNode.Parse($\"{parentModel.ClassName}=uri:\\\"{{node.Value<Uri>(1).LocalPath}}\\\"\");");
-				editPoint.InsertNewLine();
+				foundit = editPoint.FindPattern("Logger.LogDebug");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+				if (foundit)
+				{
+					editPoint.LineDown();
+					editPoint.EndOfLine();
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("var baseCommands = new List<PatchCommand>();");
+					editPoint.InsertNewLine(2);
+					editPoint.Indent(null, 3);
+					editPoint.Insert("foreach (var command in commands)");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert($"if (typeof({parentModel.ClassName}).GetProperties().FirstOrDefault(p => p.Name.Equals(command.Path, StringComparison.OrdinalIgnoreCase)) != null)");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 5);
+					editPoint.Insert("baseCommands.Add(command);");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert("}");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("}");
+					editPoint.InsertNewLine(2);
+					editPoint.Indent(null, 3);
+					editPoint.Insert($"var subNode = RqlNode.Parse($\"{parentModel.ClassName}=uri:\\\"{{node.Value<Uri>(1).LocalPath}}\\\"\");");
+					editPoint.InsertNewLine();
+				}
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1575,10 +1597,21 @@ namespace COFRSCoreCommandsPackage
 			{
 				editPoint.ReplaceText(6, "item =", 0);
 				editPoint.EndOfLine();
-				editPoint.InsertNewLine();
+				editPoint.InsertNewLine(2);
 				editPoint.Indent(null, 3);
 				editPoint.Insert("return item;");
+
+				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+				foundit = editPoint.FindPattern($"await {parentValidatorName}.ValidateForAddAsync(item, User);");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+				if ( foundit )
+                {
+					editPoint.EndOfLine();
+					editPoint.InsertNewLine();
+                }
 			}
+
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			foundit = editPoint.FindPattern($"foreach ( var subitem in item.{memberName})");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
@@ -1586,49 +1619,59 @@ namespace COFRSCoreCommandsPackage
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern($"await {parentValidatorName}.ValidateForAddAsync(item, User);");
-				editPoint.EndOfLine();
-				editPoint.InsertNewLine();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"foreach ( var subitem in item.{memberName})");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"await {childValidatorName}.ValidateForAddAsync(subitem, User);");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("}");
+				foundit = editPoint.FindPattern($"await {parentValidatorName}.ValidateForAddAsync(item, User);");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+				if (foundit)
+				{
+					editPoint.EndOfLine();
+					editPoint.InsertNewLine(2);
+					editPoint.Indent(null, 3);
+					editPoint.Insert($"foreach ( var subitem in item.{memberName})");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert($"await {childValidatorName}.ValidateForAddAsync(subitem, User);");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("}");
+				}
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			editPoint.FindPattern("item = await AddAsync");
 			foundit = editPoint.FindPattern($"foreach ( var subitem in item.{memberName})");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern($"return item;");
-				editPoint.LineUp();
-				editPoint.EndOfLine();
-				editPoint.InsertNewLine();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"foreach ( var subitem in item.{memberName})");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"subitem.{parentModel.ClassName} = item.HRef;");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"subitem.HRef = (await AddAsync<{childModel.ClassName}>(subitem)).HRef;");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("}");
+				foundit = editPoint.FindPattern($"return item;");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+				if (foundit)
+				{
+					editPoint.LineUp();
+					editPoint.EndOfLine();
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert($"foreach ( var subitem in item.{memberName})");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert($"subitem.{parentModel.ClassName} = item.HRef;");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert($"subitem.HRef = (await AddAsync<{childModel.ClassName}>(subitem)).HRef;");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("}");
+					editPoint.InsertNewLine();
+				}
 			}
 		}
 
@@ -1653,111 +1696,143 @@ namespace COFRSCoreCommandsPackage
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-			foundit = editPoint.FindPattern($"StringBuilder rqlBody = new(\"in({parentModel.ClassName}\");");
+			foundit = editPoint.FindPattern($"if (collection.Count > 0)");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-			if (!foundit)
-			{
-				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern("return collection");
-				editPoint.LineUp();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
 
-				editPoint.LineUp(3);
-				editPoint.EndOfLine();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("if (collection.Count > 0)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"StringBuilder rqlBody = new(\"in({parentModel.ClassName}\");");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"foreach (var item in collection.Items)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert("rqlBody.Append($\", uri:\\\"{item.HRef.LocalPath}\\\"\");");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"rqlBody.Append(')');");
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"var subNode = RqlNode.Parse(rqlBody.ToString());");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"var selectNode = node?.ExtractSelectClause();");
-				editPoint.InsertNewLine();
+			if (!foundit)
+            {
+				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+				foundit = editPoint.FindPattern($"var collection = await GetCollectionAsync");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+				if (foundit)
+                {
+					editPoint.EndOfLine();
+					editPoint.InsertNewLine(2);
+					editPoint.Indent(null, 3);
+					editPoint.Insert("if (collection.Count > 0)");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert("}");
+				}
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-			foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection =");
+			foundit = editPoint.FindPattern($"if (collection.Count > 0)");
+			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+			if (foundit)
+			{
+				foundit = editPoint.FindPattern($"StringBuilder rqlBody = new(\"in({parentModel.ClassName}\");");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+				if (!foundit)
+				{
+					editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+					foundit = editPoint.FindPattern($"if (collection.Count > 0)");
+					foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+					if (foundit)
+					{
+						editPoint.LineDown();
+						editPoint.EndOfLine();
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 4);
+						editPoint.Insert($"StringBuilder rqlBody = new(\"in({parentModel.ClassName}\");");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 4);
+						editPoint.Insert($"foreach (var item in collection.Items)");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 4);
+						editPoint.Insert("{");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 5);
+						editPoint.Insert("rqlBody.Append($\", uri:\\\"{item.HRef.LocalPath}\\\"\");");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 4);
+						editPoint.Insert("}");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 4);
+						editPoint.Insert($"rqlBody.Append(')');");
+						editPoint.InsertNewLine(2);
+						editPoint.Indent(null, 4);
+						editPoint.Insert($"var subNode = RqlNode.Parse(rqlBody.ToString());");
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 4);
+						editPoint.Insert($"var selectNode = node?.ExtractSelectClause();");
+					}
+				}
+			}
+
+			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+			foundit = editPoint.FindPattern($"if (selectNode == null || selectNode.SelectContains(\"{memberName}\"))");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern("return collection");
-				editPoint.LineUp(2);
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"if (selectNode == null || selectNode.SelectContains(\"{memberName}\"))");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 5);
-				editPoint.Insert($"foreach ( var item in {childModel.ClassName}Collection.Items)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 6);
-				editPoint.Insert($"var mainItem = collection.Items.FirstOrDefault(i => i.HRef == item.{parentModel.ClassName});");
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 6);
-				editPoint.Insert($"if (mainItem.{memberName} == null)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 6);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 7);
-				editPoint.Insert($"mainItem.{memberName} = new {childModel.ClassName}[] {{ item }};");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 6);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 6);
-				editPoint.Insert("else");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 6);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 7);
-				editPoint.Insert($"mainItem.{memberName} = new List<{childModel.ClassName}>(mainItem.{memberName}) {{ item }}.ToArray();");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 6);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
+				foundit = editPoint.FindPattern($"return");
+				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+				if (foundit)
+				{
+					editPoint.LineUp(3);
+					editPoint.EndOfLine();
+					editPoint.InsertNewLine(2);
+					editPoint.Indent(null, 4);
+					editPoint.Insert($"if (selectNode == null || selectNode.SelectContains(\"{memberName}\"))");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 5);
+					editPoint.Insert($"Logger.LogDebug($\"GetCollectionAsync<{childModel.ClassName}>\");");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 5);
+					editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+					editPoint.InsertNewLine(2);
+					editPoint.Indent(null, 5);
+					editPoint.Insert($"foreach ( var item in {childModel.ClassName}Collection.Items)");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 5);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 6);
+					editPoint.Insert($"var mainItem = collection.Items.FirstOrDefault(i => i.HRef == item.{parentModel.ClassName});");
+					editPoint.InsertNewLine(2);
+					editPoint.Indent(null, 6);
+					editPoint.Insert($"if (mainItem.{memberName} == null)");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 6);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 7);
+					editPoint.Insert($"mainItem.{memberName} = new {childModel.ClassName}[] {{ item }};");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 6);
+					editPoint.Insert("}");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 6);
+					editPoint.Insert("else");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 6);
+					editPoint.Insert("{");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 7);
+					editPoint.Insert($"mainItem.{memberName} = new List<{childModel.ClassName}>(mainItem.{memberName}) {{ item }}.ToArray();");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 6);
+					editPoint.Insert("}");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 5);
+					editPoint.Insert("}");
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 4);
+					editPoint.Insert("}");
+				}
 			}
 		}
 
@@ -1824,6 +1899,9 @@ namespace COFRSCoreCommandsPackage
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
 				editPoint.Insert("{");
+				editPoint.InsertNewLine();
+				editPoint.Indent(null, 4);
+				editPoint.Insert($"Logger.LogDebug($\"GetCollectionAsync<{childModel.ClassName}>\");");
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 4);
 				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
