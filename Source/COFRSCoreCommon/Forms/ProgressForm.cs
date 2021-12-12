@@ -10,15 +10,15 @@ using System.Windows.Forms;
 
 namespace COFRSCoreCommon.Forms
 {
-    public partial class ProgressDialog : Form
+    public partial class ProgressForm : Form
     {
         private string MessageText { get; set; }
 
-        public ProgressDialog()
+        public ProgressForm()
         {
             InitializeComponent();
         }
-        public ProgressDialog(string message)
+        public ProgressForm(string message)
         {
             InitializeComponent();
             MessageText = message;

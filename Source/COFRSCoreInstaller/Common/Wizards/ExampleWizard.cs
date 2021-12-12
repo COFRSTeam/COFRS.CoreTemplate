@@ -46,7 +46,7 @@ namespace COFRS.Template.Common.Wizards
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
-			ProgressDialog progressDialog = new ProgressDialog("Loading classes and preparing project...");
+			ProgressForm progressDialog = new ProgressForm("Loading classes and preparing project...");
 
 			try
 			{
@@ -88,7 +88,7 @@ namespace COFRS.Template.Common.Wizards
 						return;
 					}
 
-					progressDialog = new ProgressDialog("Loading classes and preparing project...");
+					progressDialog = new ProgressForm("Loading classes and preparing project...");
 					progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
 					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 					HandleMessages();
