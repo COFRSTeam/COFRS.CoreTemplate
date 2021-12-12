@@ -2020,10 +2020,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine($"\t\t\t//\tCreates a mapping to transform a collection of {entityModel.ClassName} model instances (the source)");
 			results.AppendLine($"\t\t\t//\tinto a collection of {resourceModel.ClassName} model instances (the destination).");
 			results.AppendLine($"\t\t\tCreateMap<PagedCollection<{entityModel.ClassName}>, PagedCollection<{resourceModel.ClassName}>>()");
-			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.HRef, opts => opts.MapFrom(source => new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{source.HRef.Query}}\")))");
-			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.First, opts => opts.MapFrom(source => source.First == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{source.First.Query}}\")))");
-			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.Next, opts => opts.MapFrom(source => source.Next == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{source.Next.Query}}\")))");
-			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.Previous, opts => opts.MapFrom(source => source.Previous == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{source.Previous.Query}}\")));");
+			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.HRef, opts => opts.MapFrom(source => new Uri(rootUrl, $\"{nn.PluralCamelCase}{{source.HRef.Query}}\")))");
+			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.First, opts => opts.MapFrom(source => source.First == null ? null : new Uri(rootUrl, $\"{nn.PluralCamelCase}{{source.First.Query}}\")))");
+			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.Next, opts => opts.MapFrom(source => source.Next == null ? null : new Uri(rootUrl, $\"{nn.PluralCamelCase}{{source.Next.Query}}\")))");
+			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.Previous, opts => opts.MapFrom(source => source.Previous == null ? null : new Uri(rootUrl, $\"{nn.PluralCamelCase}{{source.Previous.Query}}\")));");
 			results.AppendLine("\t\t}");
 			results.AppendLine("\t}");
 
