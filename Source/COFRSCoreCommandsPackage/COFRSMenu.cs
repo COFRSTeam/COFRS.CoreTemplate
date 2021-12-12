@@ -4,6 +4,7 @@ using COFRSCoreCommon.Models;
 using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.Internal.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Newtonsoft.Json.Linq;
@@ -14,6 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using Microsoft.VisualStudio.PlatformUI;
 using Task = System.Threading.Tasks.Task;
 
 namespace COFRSCoreCommandsPackage
@@ -141,9 +143,11 @@ namespace COFRSCoreCommandsPackage
 
 			if (selectedItems.Length == 1)
             {
-				var progressDialog = new ProgressDialog("Loading classes and preparing project...");
-				progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
+				var uiShell = (IVsUIShell) package.GetService<IVsUIShell, SVsUIShell>();
+				ProgressForm progressDialog = new ProgressForm("Loading classes...");
+				progressDialog.Show();
 				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+
 				HandleMessages();
 
                 EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
@@ -170,30 +174,40 @@ namespace COFRSCoreCommandsPackage
 						progressDialog.Close();
 						dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
-						if ( dialog.ShowDialog() == DialogResult.OK)
+						if ( dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                         {
+							progressDialog = new ProgressForm("Building classes...");
+							progressDialog.Show();
 							dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationGeneral);
+							HandleMessages();
 
                             var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);  //	Contains the names and projects where various source file exist.
-                            ProjectItem orchestrator = dte2.Solution.FindProjectItem("ServiceOrchestrator.cs");
-                            FileCodeModel2 codeModel = (FileCodeModel2)orchestrator.FileCodeModel;
+							HandleMessages();
+							ProjectItem orchestrator = dte2.Solution.FindProjectItem("ServiceOrchestrator.cs");
+							HandleMessages();
+							FileCodeModel2 codeModel = (FileCodeModel2)orchestrator.FileCodeModel;
+							HandleMessages();
 
-                            //	The orchestration layer is going to need "using System.Linq", ensure that it it does
-                            if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Linq")) == null)
+							//	The orchestration layer is going to need "using System.Linq", ensure that it it does
+							if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Linq")) == null)
                                 codeModel.AddImport("System.Linq", -1);
+							HandleMessages();
 
 							//	The orchestration layer is going to need "using System.Text", ensure that it it does
 							if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text")) == null)
 								codeModel.AddImport("System.Text", -1);
+							HandleMessages();
 
 							//	The orchestration layer is going to need "using System.Text", ensure that it it does
 							if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System")) == null)
 								codeModel.AddImport("System", -1);
+							HandleMessages();
 
 							foreach (var childItem in dialog.ChildResourceList.CheckedItems)
                             {
-                                //	Get the child model from the resource map
-                                var childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(childItem.ToString(), StringComparison.OrdinalIgnoreCase));
+								HandleMessages();
+								//	Get the child model from the resource map
+								var childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(childItem.ToString(), StringComparison.OrdinalIgnoreCase));
 
                                 //	Setup the default name of our new member
                                 var nn = new NameNormalizer(childModel.ClassName);
@@ -201,83 +215,99 @@ namespace COFRSCoreCommandsPackage
                                                                                                 // the plural of the child model class name.
 
                                 var parentValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte2, parentModel.ClassName);
-                                var childValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte2, childModel.ClassName);
+								HandleMessages();
+								var childValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte2, childModel.ClassName);
+								HandleMessages();
 								string memberType = string.Empty;
 
                                 //	Now that we have all the information we need, add the collection member to the parent resource
                                 AddCollectionToResource(dte2, parentModel, childModel, memberName, ref memberType);
+								HandleMessages();
 
-                                //	Now that we've added a new collection, we need to alter the orchestration layer to handle that new collection...
+								//	Now that we've added a new collection, we need to alter the orchestration layer to handle that new collection...
 
-                                //	We're going to need a validator for the new members. To get it, we will use dependency injection in the 
-                                //	constructor, which means we will need a class variable. That variable is going to need a name. Create 
-                                //	the default name for this vairable as the class name of the new member followed by "Validator".
-                                //
-                                //	i.e., if the new member class is Foo, then the variable name will be FooValidator.
+								//	We're going to need a validator for the new members. To get it, we will use dependency injection in the 
+								//	constructor, which means we will need a class variable. That variable is going to need a name. Create 
+								//	the default name for this vairable as the class name of the new member followed by "Validator".
+								//
+								//	i.e., if the new member class is Foo, then the variable name will be FooValidator.
 
-                                var childValidatorName = $"{childModel.ClassName}Validator";
+								var childValidatorName = $"{childModel.ClassName}Validator";
 								var parentValidatorName = $"{parentModel.ClassName}Validator";
 
                                 //	Find the namespace...
                                 foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
                                 {
-                                    CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
+									HandleMessages();
+									CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
 
                                     //	The new collection of child items will need to be validated for the various operations.
                                     //	Add a validator the for the child items 
                                     AddChildValidatorInterfaceMember(classElement, parentValidatorInterface, childValidatorInterface, childValidatorName, ref parentValidatorName);
+									HandleMessages();
 
-                                    //	Now, let's go though all the functions...
-                                    foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
+									//	Now, let's go though all the functions...
+									foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
 									{
 										//	Constructor
 										if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
                                         {
 											ModifyConstructor(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, childValidatorInterface, memberName);
-                                        }
+											HandleMessages();
+										}
 
-                                        //	Get Single
-                                        else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
+										//	Get Single
+										else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
                                         {
 											ModifyGetSingle(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName, memberType);
-                                        }
+											HandleMessages();
+										}
 
-                                        //	Get Collection
-                                        else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
+										//	Get Collection
+										else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
                                         {
 											ModifyGetCollection(aFunction, parentModel, childModel, memberName);
-                                        }
+											HandleMessages();
+										}
 
-                                        //	Add
-                                        else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
+										//	Add
+										else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
                                         {
 											ModifyAdd(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
-                                        }
+											HandleMessages();
+										}
 
-                                        //	Update
-                                        else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
+										//	Update
+										else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
                                         {
 											ModifyUpdate(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
-                                        }
+											HandleMessages();
+										}
 
-                                        //	Update
-                                        else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
+										//	Update
+										else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
                                         {
 											ModifyPatch(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
-                                        }
+											HandleMessages();
+										}
 
-                                        //	Delete
-                                        else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
+										//	Delete
+										else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
                                         {
 											ModifyDelete(aFunction, childModel, parentValidatorName, childValidatorName, memberName);
-                                        }
-                                    }
+											HandleMessages();
+										}
+									}
                                 }
 
+								HandleMessages();
 								AddSingleExample(dte2, parentModel, childModel, memberName);
+								HandleMessages();
 								AddCollectionExample(dte2, parentModel, childModel, memberName);
+								HandleMessages();
 							}
 
+							progressDialog.Close();
 							dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationGeneral);
 						}
 					}
@@ -353,7 +383,7 @@ namespace COFRSCoreCommandsPackage
 
 			if (selectedItems.Length == 1)
             {
-				var progressDialog = new ProgressDialog("Rebuilding classes...");
+				var progressDialog = new ProgressForm("Rebuilding classes...");
 				progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
 				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 				HandleMessages();

@@ -1,6 +1,6 @@
 ﻿namespace COFRSCoreCommon.Forms
 {
-    partial class ProgressDialog
+    partial class ProgressForm
     {
         /// <summary>
         /// Required designer variable.

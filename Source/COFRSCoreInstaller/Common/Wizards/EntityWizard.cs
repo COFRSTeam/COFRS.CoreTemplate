@@ -46,12 +46,12 @@ namespace COFRS.Template.Common.Wizards
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 dte2 = automationObject as DTE2;
-			ProgressDialog progressDialog = null;
+			ProgressForm progressDialog = null;
 
             try
             {
                 //	Show the user that we are busy doing things...
-                progressDialog = new ProgressDialog("Loading classes and preparing project...");
+                progressDialog = new ProgressForm("Loading classes and preparing project...");
                 progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
                 dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
                 HandleMessages();
@@ -83,7 +83,7 @@ namespace COFRS.Template.Common.Wizards
                         return;
                     }
 
-                    progressDialog = new ProgressDialog("Loading classes and preparing project...");
+                    progressDialog = new ProgressForm("Loading classes and preparing project...");
                     progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
                     dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
                     HandleMessages();
@@ -121,7 +121,7 @@ namespace COFRS.Template.Common.Wizards
                 if (form.ShowDialog() == DialogResult.OK)
                 {
                     //	Show the user that we are busy...
-                    progressDialog = new ProgressDialog("Building classes...");
+                    progressDialog = new ProgressForm("Building classes...");
                     progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
                     dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
