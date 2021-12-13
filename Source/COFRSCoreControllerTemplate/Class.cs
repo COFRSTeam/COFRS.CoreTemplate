@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using $entitynamespace$;
 using $resourcenamespace$;
 using COFRS;
+using Serilog.Context;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;

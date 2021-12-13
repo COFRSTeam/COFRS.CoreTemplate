@@ -4,8 +4,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="COFRS.Common" Version="0.0.41-alpha" />
-    <PackageReference Include="COFRS" Version="0.0.96-alpha" />
+    <PackageReference Include="COFRS.Common" Version="0.0.42-alpha" />
+    <PackageReference Include="COFRS" Version="0.0.97-alpha" />
     <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
     <PackageReference Include="System.Text.Json" Version="6.0.0" />
   </ItemGroup>
