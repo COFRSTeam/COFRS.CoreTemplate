@@ -96,8 +96,11 @@ namespace COFRS.Template
             results.AppendLine("\t\t[SupportRQL]");
             results.AppendLine($"\t\tpublic async Task<IActionResult> Get{nn.PluralForm}Async()");
             results.AppendLine("\t\t{");
-            results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method} {Request.Path}\");");
             results.AppendLine("\t\t\tvar node = RqlNode.Parse(Request.QueryString.Value);");
+            results.AppendLine();
+            results.AppendLine("\t\t\tLogContext.PushProperty(\"RqlNode\", node);");
+            results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
+            results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method} {Request.Path}\");");
             results.AppendLine();
 
             results.AppendLine($"\t\t\tvar collection = await Orchestrator.Get{resourceClass.ClassName}CollectionAsync(Request.QueryString.Value, node, User);");
@@ -136,11 +139,13 @@ namespace COFRS.Template
                 EmitEndpoint(entityClass.ServerType, resourceClass.ClassName, "Get", results, pkcolumns);
 
                 results.AppendLine("\t\t{");
-                results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-                results.AppendLine();
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
                 results.AppendLine($"\t\t\t\t\t\t\t  .Merge(RqlNode.Parse(Request.QueryString.Value));");
+                results.AppendLine();
 
+                results.AppendLine("\t\t\tLogContext.PushProperty(\"RqlNode\", node);");
+                results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
+                results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
                 results.AppendLine($"\t\t\tvar item = await Orchestrator.Get{resourceClass.ClassName}Async(node, User);");
                 results.AppendLine();
                 results.AppendLine("\t\t\tif (item == null)");
@@ -174,9 +179,11 @@ namespace COFRS.Template
             results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
             results.AppendLine($"\t\tpublic async Task<IActionResult> Add{resourceClass.ClassName}Async([FromBody] {resourceClass.ClassName} item)");
             results.AppendLine("\t\t{");
-            results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-            results.AppendLine();
 
+            results.AppendLine("\t\t\tLogContext.PushProperty(\"Item\", JsonSerializer.Serialize(item));");
+            results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
+            results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
+            results.AppendLine();
             results.AppendLine($"\t\t\titem = await Orchestrator.Add{resourceClass.ClassName}Async(item, User);");
             results.AppendLine($"\t\t\treturn Created(item.HRef.AbsoluteUri, item);");
 
@@ -208,7 +215,10 @@ namespace COFRS.Template
             results.AppendLine("\t\t[SupportRQL]");
             results.AppendLine($"\t\tpublic async Task<IActionResult> Update{resourceClass.ClassName}Async([FromBody] {resourceClass.ClassName} item)");
             results.AppendLine("\t\t{");
-            results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
+
+            results.AppendLine("\t\t\tLogContext.PushProperty(\"Item\", JsonSerializer.Serialize(item));");
+            results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
+            results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
             results.AppendLine();
 
             results.AppendLine($"\t\t\titem = await Orchestrator.Update{resourceClass.ClassName}Async(item, User);");
@@ -244,9 +254,12 @@ namespace COFRS.Template
                 EmitEndpoint(entityClass.ServerType, resourceClass.ClassName, "Patch", results, pkcolumns);
 
                 results.AppendLine("\t\t{");
-                results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-                results.AppendLine();
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\");");
+                results.AppendLine();
+                results.AppendLine("\t\t\tLogContext.PushProperty(\"Commands\", JsonSerializer.Serialize(commands));");
+                results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
+                results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
+                results.AppendLine();
 
                 results.AppendLine($"\t\t\tawait Orchestrator.Patch{resourceClass.ClassName}Async(commands, node, User);");
                 results.AppendLine($"\t\t\treturn NoContent();");
@@ -274,9 +287,12 @@ namespace COFRS.Template
                 EmitEndpoint(entityClass.ServerType, resourceClass.ClassName, "Delete", results, pkcolumns);
 
                 results.AppendLine("\t\t{");
-                results.AppendLine("\t\t\tLogger.LogTrace($\"{Request.Method}	{Request.Path}\");");
-                results.AppendLine();
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\");");
+                results.AppendLine();
+                results.AppendLine("\t\t\tLogContext.PushProperty(\"RqlNode\", node);");
+                results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
+                results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
+                results.AppendLine();
 
                 results.AppendLine($"\t\t\tawait Orchestrator.Delete{resourceClass.ClassName}Async(node, User);");
                 results.AppendLine($"\t\t\treturn NoContent();");
@@ -667,12 +683,6 @@ namespace COFRS.Template
                             editPoint.LineUp();
                             editPoint.StartOfLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"RqlNode\", node);");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
                             editPoint.Insert($"Logger.LogDebug($\"{getSingleFunctionName}\");");
                             editPoint.InsertNewLine(2);
                             editPoint.Indent(null, 3);
@@ -718,12 +728,6 @@ namespace COFRS.Template
                             editPoint.LineUp();
                             editPoint.StartOfLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"RqlNode\", node);");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
                             editPoint.Insert($"Logger.LogDebug($\"{collectionFunctionName}\");");
                             editPoint.InsertNewLine(2);
                             editPoint.Indent(null, 3);
@@ -767,12 +771,6 @@ namespace COFRS.Template
                             editPoint.LineUp();
                             editPoint.StartOfLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"Item\", JsonSerializer.Serialize(item));");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
                             editPoint.Insert($"Logger.LogDebug($\"{addFunctionName}\");");
                             editPoint.InsertNewLine(2);
                             editPoint.Indent(null, 3);
@@ -815,12 +813,6 @@ namespace COFRS.Template
                             editPoint = (EditPoint2)theUpdateFunction.EndPoint.CreateEditPoint();
                             editPoint.LineUp();
                             editPoint.StartOfLine();
-                            editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"Item\", JsonSerializer.Serialize(item));");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
-                            editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
                             editPoint.Insert($"Logger.LogDebug($\"{updateFunctionName}\");");
                             editPoint.InsertNewLine(2);
@@ -866,15 +858,6 @@ namespace COFRS.Template
                             editPoint.LineUp();
                             editPoint.StartOfLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"Commands\", JsonSerializer.Serialize(commands));");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"RqlNode\", node);");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
                             editPoint.Insert($"Logger.LogDebug($\"{patchFunctionName}\");");
                             editPoint.InsertNewLine(2);
                             editPoint.Indent(null, 3);
@@ -916,12 +899,6 @@ namespace COFRS.Template
                             editPoint = (EditPoint2)theDeleteFunction.EndPoint.CreateEditPoint();
                             editPoint.LineUp();
                             editPoint.StartOfLine();
-                            editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"RqlNode\", node);");
-                            editPoint.InsertNewLine();
-                            editPoint.Indent(null, 3);
-                            editPoint.Insert("LogContext.PushProperty(\"ClaimsPrincipal\", User);");
-                            editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
                             editPoint.Insert($"Logger.LogDebug($\"{deleteFunctionName}\");");
                             editPoint.InsertNewLine(2);
