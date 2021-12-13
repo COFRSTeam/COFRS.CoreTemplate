@@ -20,7 +20,7 @@ namespace $safeprojectname$.Orchestration
 		///	</remarks>
 		public ServiceOrchestrator(ILogger<ServiceOrchestrator> logger, IServiceRepository repository, IRepositoryOptions options) : base(repository, options)
 		{
-			Logger = Logger;
+			Logger = logger;
 		}
 	}
 }

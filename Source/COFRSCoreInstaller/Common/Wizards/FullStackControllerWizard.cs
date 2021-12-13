@@ -336,6 +336,10 @@ namespace COFRS.Template.Common.Wizards
 														  validationClassName,
 														  replacementsDictionary["$validatornamespace$"]);
 					}
+					else
+                    {
+						validatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte, resourceModel.ClassName);
+                    }
 					#endregion
 
 					#region Example Operations
@@ -370,7 +374,7 @@ namespace COFRS.Template.Common.Wizards
 							controllerClassName,
 							validatorInterface,
 							policy,
-							projectMapping.ControllersNamespace);
+							projectMapping.ValidationNamespace);
 
 						replacementsDictionary.Add("$controllerModel$", controllerModel);
 						HandleMessages();
