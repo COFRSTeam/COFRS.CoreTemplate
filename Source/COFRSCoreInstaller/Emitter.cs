@@ -145,7 +145,7 @@ namespace COFRS.Template
 
                 results.AppendLine("\t\t\tLogContext.PushProperty(\"RqlNode\", node);");
                 results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
-                results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
+                results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method} {Request.Path}\");");
                 results.AppendLine($"\t\t\tvar item = await Orchestrator.Get{resourceClass.ClassName}Async(node, User);");
                 results.AppendLine();
                 results.AppendLine("\t\t\tif (item == null)");
@@ -182,7 +182,7 @@ namespace COFRS.Template
 
             results.AppendLine("\t\t\tLogContext.PushProperty(\"Item\", JsonSerializer.Serialize(item));");
             results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
-            results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
+            results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method} {Request.Path}\");");
             results.AppendLine();
             results.AppendLine($"\t\t\titem = await Orchestrator.Add{resourceClass.ClassName}Async(item, User);");
             results.AppendLine($"\t\t\treturn Created(item.HRef.AbsoluteUri, item);");
