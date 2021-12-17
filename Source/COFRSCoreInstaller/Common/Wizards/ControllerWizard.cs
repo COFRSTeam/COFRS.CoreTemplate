@@ -6,6 +6,7 @@ using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
@@ -44,35 +45,22 @@ namespace COFRS.Template.Common.Wizards
 			WizardRunKind runKind, object[] customParams)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			DTE2 dte2 = Package.GetGlobalService(typeof(DTE)) as DTE2;
-			ProgressForm progressDialog = new ProgressForm("Loading classes and preparing project...");
 
 			try
 			{
 				//	Show the user that we are busy doing things...
-				progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
 				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);
-				HandleMessages();
-
+				var projectMapping = codeService.LoadProjectMapping();
 				var solutionPath = dte2.Solution.Properties.Item("Path").Value.ToString();
-
-				var installationFolder = COFRSCommonUtilities.GetInstallationFolder(dte2);
-				HandleMessages();
-
-				projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);
-				HandleMessages();
-
-				var connectionString = COFRSCommonUtilities.GetConnectionString(dte2);
-				HandleMessages();
+				var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
+				var connectionString = COFRSCommonUtilities.GetConnectionString();
 
 				//  Make sure we are where we're supposed to be
 				if (!COFRSCommonUtilities.IsChildOf(projectMapping.ControllersFolder, installationFolder.Folder))
 				{
-					HandleMessages();
-
-					progressDialog.Close();
 					dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					var controllersFolder = projectMapping.GetControllersFolder();
 
@@ -87,10 +75,7 @@ namespace COFRS.Template.Common.Wizards
 						return;
 					}
 
-					progressDialog = new ProgressForm("Loading classes and preparing project...");
-					progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
 					dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-					HandleMessages();
 
 					controllersFolder = installationFolder;
 
@@ -98,35 +83,20 @@ namespace COFRS.Template.Common.Wizards
 					projectMapping.ControllersNamespace = controllersFolder.Namespace;
 					projectMapping.ControllersProject = controllersFolder.ProjectName;
 
-					COFRSCommonUtilities.SaveProjectMapping(dte2, projectMapping);
+					codeService.SaveProjectMapping();
 				}
-
-				var entityMap = COFRSCommonUtilities.LoadEntityMap(dte2);
-				HandleMessages();
-
-				var defultServerType = COFRSCommonUtilities.GetDefaultServerType(dte2);
-
-				var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte2);
-				HandleMessages();
 
 				var form = new UserInputGeneral()
 				{
 					DefaultConnectionString = connectionString,
-					EntityMap = entityMap,
-					ResourceMap = resourceMap,
 					InstallType = 3
 				};
 
-				HandleMessages();
-
-				progressDialog.Close();
 				dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-				progressDialog = null;
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
-					var entityModel = (EntityModel)form._entityModelList.SelectedItem;
-					var resourceModel = (ResourceModel)form._resourceModelList.SelectedItem;
+					var resourceModel = (ResourceClass)form._resourceModelList.SelectedItem;
 					var moniker = COFRSCommonUtilities.LoadMoniker(dte2);
 					string policy = string.Empty;
 
@@ -134,13 +104,12 @@ namespace COFRS.Template.Common.Wizards
 						policy = form.policyCombo.SelectedItem.ToString();
 					
 					var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(dte2);
-
 					var validatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte2, resourceModel.ClassName);
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
 					replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
-					replacementsDictionary.Add("$entitynamespace$", entityModel.Namespace);
+					replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
 					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
 					replacementsDictionary.Add("$validationnamespace$", projectMapping.ValidationNamespace);
@@ -148,8 +117,6 @@ namespace COFRS.Template.Common.Wizards
 
 					var emitter = new Emitter();
 					var model = emitter.EmitController(
-						dte2,
-						entityModel,
 						resourceModel,
 						moniker,
 						replacementsDictionary["$safeitemname$"],
@@ -165,10 +132,6 @@ namespace COFRS.Template.Common.Wizards
 			}
 			catch (Exception error)
 			{
-				if (progressDialog != null)
-					if (progressDialog.IsHandleCreated)
-						progressDialog.Close();
-
 				dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				Proceed = false;
@@ -180,14 +143,6 @@ namespace COFRS.Template.Common.Wizards
 		public bool ShouldAddProjectItem(string filePath)
 		{
 			return Proceed;
-		}
-
-		private void HandleMessages()
-		{
-			while (WinNative.PeekMessage(out WinNative.NativeMessage msg, IntPtr.Zero, 0, (uint)0xFFFFFFFF, 1) != 0)
-			{
-				WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
-			}
 		}
 	}
 }

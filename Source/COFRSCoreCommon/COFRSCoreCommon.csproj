@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>COFRSCoreCommon</RootNamespace>
     <AssemblyName>COFRSCoreCommon</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
@@ -46,6 +46,9 @@
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Shell.15.0, Version=17.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.VisualStudio.Shell.Framework, Version=17.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=17.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.VisualStudio.Shell.Interop.17.0.31902.203\lib\net472\Microsoft.VisualStudio.Shell.Interop.dll</HintPath>
+    </Reference>
     <Reference Include="netstandard" />
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -79,14 +82,19 @@
     <Compile Include="Models\DBServerType.cs" />
     <Compile Include="Models\DBTable.cs" />
     <Compile Include="Models\ElementType.cs" />
+    <Compile Include="Models\EntityClass.cs" />
     <Compile Include="Models\EntityMap.cs" />
     <Compile Include="Models\EntityModel.cs" />
     <Compile Include="Models\EntityProfile.cs" />
+    <Compile Include="Models\ResourceClass.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Utilities\CodeService.cs" />
+    <Compile Include="Utilities\COFRSServiceFactory.cs" />
+    <Compile Include="Utilities\ICodeService.cs" />
     <Compile Include="Utilities\NameNormalizer.cs" />
     <Compile Include="Models\ProfileMap.cs" />
     <Compile Include="Models\ProjectFolder.cs" />

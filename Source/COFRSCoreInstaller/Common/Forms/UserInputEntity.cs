@@ -1,6 +1,9 @@
 ﻿using COFRS.Template.Common.ServiceUtilities;
 using COFRSCoreCommon.Models;
 using COFRSCoreCommon.Utilities;
+using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Npgsql;
@@ -29,7 +32,6 @@ namespace COFRS.Template.Common.Forms
 		public List<EntityModel> UndefinedEntityModels { get; set; }
 		public DBServerType ServerType { get; set; }
 		public ElementType EType { get; set; }
-		public EntityMap EntityMap { get; set; }
 
 		#endregion
 
@@ -351,6 +353,7 @@ select s.name, t.name
 
 		private void OnSelectedTableChanged(object sender, EventArgs e)
 		{
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			_okButton.Enabled = true;
 
 			try
@@ -375,7 +378,7 @@ select s.name, t.name
 					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
 					
 					UndefinedEntityModels.Clear();
-					EType = DBHelper.GetElementType(table.Schema, table.Table, EntityMap, connectionString);
+					EType = DBHelper.GetElementType(mDte, table.Schema, table.Table, connectionString);
 
 					switch (EType)
 					{
@@ -720,6 +723,7 @@ select c.name as column_name,
 
         private void ConstructPostgresqlColumn(DBTable table, NpgsqlDataReader reader)
         {
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
             var entityName = reader.GetString(0);
             var columnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0)));
 
@@ -744,10 +748,10 @@ select c.name as column_name,
 
             if (string.IsNullOrWhiteSpace(dbColumn.ModelDataType))
             {
+				var theChildEntityClass = codeService.GetEntityClassBySchema(table.Schema, dbColumn.DBDataType);
+
                 //	See if this column type is already defined...
-                if (EntityMap.Maps.FirstOrDefault(ent =>
-                   string.Equals(ent.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
-                   string.Equals(ent.TableName, dbColumn.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
+				if (theChildEntityClass == null )
                 {
                     //	It's not defined. See if it is already included in the undefined list...
                     if (UndefinedEntityModels.FirstOrDefault(ent =>
@@ -782,6 +786,7 @@ select c.name as column_name,
 
         private void WarnUndefinedContent(DBTable table, string connectionString)
         {
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			var message = new StringBuilder();
             message.Append($"The entity model {table.Table} uses ");
 
@@ -791,7 +796,7 @@ select c.name as column_name,
 
             foreach (var unknownClass in UndefinedEntityModels)
             {
-                unknownClass.ElementType = DBHelper.GetElementType(unknownClass.SchemaName, unknownClass.TableName, EntityMap, connectionString);
+                unknownClass.ElementType = DBHelper.GetElementType(mDte, unknownClass.SchemaName, unknownClass.TableName, connectionString);
 
                 if (unknownClass.ElementType == ElementType.Enum)
                     unknownEnums.Add(unknownClass.TableName);
@@ -1114,6 +1119,8 @@ select c.name as column_name,
 
 		private void OnOK(object sender, EventArgs e)
 		{
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+
 			if (_tableList.SelectedIndex == -1)
 			{
 				MessageBox.Show("You must select a database table in order to create an entity model", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1125,15 +1132,14 @@ select c.name as column_name,
 			var server = (DBServer)_serverList.SelectedItem;
 			DatabaseTable = (DBTable) _tableList.SelectedItem;
 
-			if (server.DBType == DBServerType.POSTGRESQL)
-			{
-				UndefinedEntityModels = DBHelper.GenerateEntityClassList(UndefinedEntityModels, 
-					                                                       EntityMap,
-																		   EntityModelsFolder.Folder, 
-																		   ConnectionString);
-			}
+            if (server.DBType == DBServerType.POSTGRESQL)
+            {
+                UndefinedEntityModels = DBHelper.GenerateEntityClassList(UndefinedEntityModels,
+                                                                         EntityModelsFolder.Folder,
+                                                                         ConnectionString);
+            }
 
-			DialogResult = DialogResult.OK;
+            DialogResult = DialogResult.OK;
 			Close();
 		}
 		#endregion

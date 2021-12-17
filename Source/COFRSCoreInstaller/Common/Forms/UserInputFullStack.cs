@@ -44,9 +44,10 @@ namespace COFRS.Template.Common.Forms
 		public JObject Examples { get; set; }
 		public Dictionary<string, string> ReplacementsDictionary { get; set; }
 		public List<string> Policies;
-		public List<EntityModel> UndefinedClassList = new List<EntityModel>();
+		public List<EntityModel> UndefinedEntityModels { get; set; }
 		public DBServerType ServerType { get; set; }
 		public EntityMap EntityMap { get; set; }
+		public DTE2 dte2 { get; set; }
 
 		public string Policy
 		{
@@ -631,7 +632,7 @@ select s.name, t.name
 
 				if (server.DBType == DBServerType.POSTGRESQL)
 				{
-					UndefinedClassList.Clear();
+					UndefinedEntityModels.Clear();
 
 					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
 
@@ -727,7 +728,7 @@ select a.attname as columnname,
 												Namespace = EntityModelsFolder.Namespace
 											};
 
-											UndefinedClassList.Add(entity);
+											UndefinedEntityModels.Add(entity);
 										}
 									}
 
@@ -754,9 +755,9 @@ select a.attname as columnname,
 							}
 						}
 
-						foreach (var unknownClass in UndefinedClassList)
+						foreach (var unknownClass in UndefinedEntityModels)
 						{
-							unknownClass.ElementType = DBHelper.GetElementType(unknownClass.SchemaName, unknownClass.TableName, EntityMap, connectionString);
+							unknownClass.ElementType = DBHelper.GetElementType(dte2, unknownClass.SchemaName, unknownClass.TableName, connectionString);
 						}
 					}
 				}
@@ -947,10 +948,9 @@ select c.name as column_name,
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
-				UndefinedClassList = DBHelper.GenerateEntityClassList(UndefinedClassList, 
-					                                                       EntityMap, 
-																		   EntityModelsFolder.Folder, 
-																		   ConnectionString);
+				UndefinedEntityModels = DBHelper.GenerateEntityClassList(UndefinedEntityModels, 
+																	     EntityModelsFolder.Folder, 
+																	     ConnectionString);
 			}
 
 			DialogResult = DialogResult.OK;

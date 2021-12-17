@@ -24,16 +24,14 @@ namespace COFRS.Template.Common.Forms
 		public DBServerType ServerType { get; set; }
 		public ProjectFolder ResourceModelsFolder { get; set; }
 		public string DefaultConnectionString { get; set; }
-		public EntityMap EntityMap { get; set; }
-		public ResourceMap ResourceMap { get; set; } 
-		public List<ResourceModel> UndefinedResources { get; set; }
+		public List<ResourceClass> UndefinedResources { get; set; }
 		#endregion
 
 		#region Utility functions
 		public UserInputResource()
 		{
 			InitializeComponent();
-			UndefinedResources = new List<ResourceModel>();
+			UndefinedResources = new List<ResourceClass>();
 		}
 
 		/// <summary>
@@ -43,25 +41,21 @@ namespace COFRS.Template.Common.Forms
 		/// <param name="e">The <see cref="EventArgs"/> for the notification</param>
 		private void OnLoad(object sender, EventArgs e)
 		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			_portNumber.Location = new Point(93, 60);
 			ReadServerList();
 
-			if (EntityMap.Maps == null || EntityMap.Maps.ToList().Count == 0)
+			if ( codeService.EntityClassList.Count == 0)
 			{
 				MessageBox.Show("No entity models were found in the project. Please create a corresponding entity model before attempting to create the resource model.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				DialogResult = DialogResult.Cancel;
 				Close();
 			}
 
+			_entityModelList.Items.AddRange(codeService.EntityClassList.ToArray());
+
 			_GenerateAsEnum.Enabled = false;
 			_GenerateAsEnum.Hide();
-
-			var entityModelList = EntityMap.Maps.ToList();
-
-			foreach ( var entityModel in entityModelList )
-            {
-				_entityModelList.Items.Add(entityModel);
-			}
 
 			OnServerChanged(this, new EventArgs());
 		}
@@ -354,6 +348,8 @@ select s.name, t.name
 
 		private void OnSelectedTableChanged(object sender, EventArgs e)
 		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+
 			try
 			{
 				var server = (DBServer)_serverList.SelectedItem;
@@ -403,7 +399,7 @@ select s.name, t.name
 				}
 				else
 				{
-					EntityModel entityModel = _entityModelList.SelectedItem as EntityModel;
+					EntityClass entityModel = _entityModelList.SelectedItem as EntityClass;
 					UndefinedResources.Clear();
 
 					foreach ( var column in entityModel.Columns)
@@ -411,31 +407,35 @@ select s.name, t.name
 						if ( column.ModelDataType != null && column.ModelDataType.Equals(NpgsqlDbType.Unknown))
                         {
 							var entityType = column.ModelDataType;
-							var childEntityModel = EntityMap.Maps.FirstOrDefault(ent =>
-							   string.Equals(ent.ClassName, entityType, StringComparison.OrdinalIgnoreCase));
+							var childEntityModel = codeService.GetEntityClassBySchema(table.Schema, table.Table);
 
 							if (childEntityModel != null)
 							{
-								var resourceModels = ResourceMap.Maps.ToList();
-								var resourceModel = resourceModels.FirstOrDefault(res =>
-										string.Equals(res.EntityModel.ClassName, childEntityModel.ClassName, StringComparison.OrdinalIgnoreCase));
+								var resourceModel = codeService.GetResourceClass(childEntityModel.ClassName);
 
 								if ( resourceModel == null )
                                 {
 									var className = $"{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(childEntityModel.TableName))}";
+									//UndefinedResources.Add(className);
 
-									resourceModel = new ResourceModel()
-									{
-										ProjectName = ResourceModelsFolder.ProjectName,
-										Namespace = ResourceModelsFolder.Namespace,
-										Folder = Path.Combine(ResourceModelsFolder.Folder, $"{className}.cs"),
-										ClassName = className,
-										ServerType = server.DBType,
-										EntityModel = childEntityModel,
-										Columns = new DBColumn[] { }
-									};
 
-									UndefinedResources.Add(resourceModel);
+									var r = new ResourceClass();
+									r.Entity = childEntityModel;
+									UndefinedResources.Add(r);
+
+
+									//resourceModel = new ResourceModel()
+									//{
+									//	ProjectName = ResourceModelsFolder.ProjectName,
+									//	Namespace = ResourceModelsFolder.Namespace,
+									//	Folder = Path.Combine(ResourceModelsFolder.Folder, $"{className}.cs"),
+									//	ClassName = className,
+									//	ServerType = server.DBType,
+									//	EntityModel = childEntityModel,
+									//	Columns = new DBColumn[] { }
+									//};
+
+									//UndefinedResources.Add(resourceModel);
                                 }
 							}
 							else

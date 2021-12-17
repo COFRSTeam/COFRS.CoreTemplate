@@ -17,212 +17,189 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.VisualStudio.PlatformUI;
 using Task = System.Threading.Tasks.Task;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace COFRSCoreCommandsPackage
 {
-    /// <summary>
-    /// Command handler
-    /// </summary>
-    internal sealed class COFRSMenu
-    {
-        /// <summary>
-        /// Command ID.
-        /// </summary>
-        public const int AddCollectionId = 0x0100;
-        public const int EditMappingId = 0x0101;
+	/// <summary>
+	/// Command handler
+	/// </summary>
+	internal sealed class COFRSMenu
+	{
+		/// <summary>
+		/// Command ID.
+		/// </summary>
+		public const int AddCollectionId = 0x0100;
+		public const int EditMappingId = 0x0101;
 
-        /// <summary>
-        /// Command menu group (command set GUID).
-        /// </summary>
-        public static readonly Guid CommandSet = new Guid("5563b5a3-cd74-44df-b9e4-a25fcd9a2d03");
+		/// <summary>
+		/// Command menu group (command set GUID).
+		/// </summary>
+		public static readonly Guid CommandSet = new Guid("5563b5a3-cd74-44df-b9e4-a25fcd9a2d03");
 
-        /// <summary>
-        /// VS Package that provides this command, not null.
-        /// </summary>
-        private readonly AsyncPackage package;
+		/// <summary>
+		/// VS Package that provides this command, not null.
+		/// </summary>
+		private readonly AsyncPackage package = null;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="COFRSMenu"/> class.
-        /// Adds our command handlers for menu (commands must exist in the command table file)
-        /// </summary>
-        /// <param name="package">Owner package, not null.</param>
-        /// <param name="commandService">Command service to add command to, not null.</param>
-        private COFRSMenu(AsyncPackage package, OleMenuCommandService commandService)
-        {
-            this.package = package ?? throw new ArgumentNullException(nameof(package));
-            commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
+		private readonly ICodeService _codeService = null;
 
-            var addCollectionCommandId = new CommandID(CommandSet, AddCollectionId);
-            OleMenuCommand AddCollectionMenu = new OleMenuCommand(new EventHandler(OnAddCollection), addCollectionCommandId);
-            AddCollectionMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddCollection);
-            commandService.AddCommand(AddCollectionMenu);
+		/// <summary>
+		/// Initializes a new instance of the <see cref="COFRSMenu"/> class.
+		/// Adds our command handlers for menu (commands must exist in the command table file)
+		/// </summary>
+		/// <param name="package">Owner package, not null.</param>
+		/// <param name="commandService">Command service to add command to, not null.</param>
+		private COFRSMenu(AsyncPackage package, OleMenuCommandService commandService)
+		{
+			package = package ?? throw new ArgumentNullException(nameof(package));
+			commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
 
-            var editMappingCommandId = new CommandID(CommandSet, EditMappingId);
-            OleMenuCommand EditMappingMenu = new OleMenuCommand(new EventHandler(OnResetMapping), editMappingCommandId);
-            EditMappingMenu.BeforeQueryStatus += new EventHandler(OnBeforeResetMapping);
-            commandService.AddCommand(EditMappingMenu);
-        }
+			_codeService = COFRSServiceFactory.GetService<ICodeService>();
 
-        /// <summary>
-        /// Gets the instance of the command.
-        /// </summary>
-        public static COFRSMenu Instance
-        {
-            get;
-            private set;
-        }
+			var addCollectionCommandId = new CommandID(CommandSet, AddCollectionId);
+			OleMenuCommand AddCollectionMenu = new OleMenuCommand(new EventHandler(OnAddCollection), addCollectionCommandId);
+			AddCollectionMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddCollection);
+			commandService.AddCommand(AddCollectionMenu);
 
-        /// <summary>
-        /// Initializes the singleton instance of the command.
-        /// </summary>
-        /// <param name="package">Owner package, not null.</param>
-        public static async Task InitializeAsync(AsyncPackage ownerPackage)
-        {
-            // Switch to the main thread - the call to AddCommand in Command1's constructor requires
-            // the UI thread.
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ownerPackage.DisposalToken);
+			var editMappingCommandId = new CommandID(CommandSet, EditMappingId);
+			OleMenuCommand EditMappingMenu = new OleMenuCommand(new EventHandler(OnResetMapping), editMappingCommandId);
+			EditMappingMenu.BeforeQueryStatus += new EventHandler(OnBeforeResetMapping);
+			commandService.AddCommand(EditMappingMenu);
+		}
 
-            OleMenuCommandService commandService = await ownerPackage.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
-            Instance = new COFRSMenu(ownerPackage, commandService);
-        }
+		/// <summary>
+		/// Gets the instance of the command.
+		/// </summary>
+		public static COFRSMenu Instance
+		{
+			get;
+			private set;
+		}
 
-        private void OnBeforeAddCollection(object sender, EventArgs e)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var myCommand = sender as OleMenuCommand;
-            var dte2 = package.GetService<SDTE, DTE2>() as DTE2;
-            object[] selectedItems = (object[])dte2.ToolWindows.SolutionExplorer.SelectedItems;
+		/// <summary>
+		/// Initializes the singleton instance of the command.
+		/// </summary>
+		/// <param name="package">Owner package, not null.</param>
+		public static async Task InitializeAsync(AsyncPackage ownerPackage)
+		{
+			// Switch to the main thread - the call to AddCommand in Command1's constructor requires
+			// the UI thread.
+			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ownerPackage.DisposalToken);
 
-            if (selectedItems.Length > 1)
-            {
-                myCommand.Visible = false;
-            }
-            else
-            {
-                EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
-                var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
+			OleMenuCommandService commandService = await ownerPackage.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
+			Instance = new COFRSMenu(ownerPackage, commandService);
+		}
 
-                if (theNamespace != null)
-                {
-                    var theClass = theNamespace.Children.OfType<CodeClass2>().First();
+		private void OnBeforeAddCollection(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var myCommand = sender as OleMenuCommand;
+			var mDte = (DTE2)Package.GetGlobalService(typeof(SDTE));
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
 
-                    if (theClass != null)
-                    {
-                        var theAttribute = theClass.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+			if (selectedItems.Length > 1)
+			{
+				myCommand.Visible = false;
+			}
+			else
+			{
+				EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
+				var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
 
-                        if (theAttribute != null)
-                        {
-                            myCommand.Enabled = true;
-                            myCommand.Visible = true;
-                        }
-                        else
-                        {
-                            myCommand.Enabled = false;
-                            myCommand.Visible = false;
-                        }
-                    }
-                    else
-                    {
-                        myCommand.Enabled = false;
-                        myCommand.Visible = false;
-                    }
-                }
-                else
-                {
-                    myCommand.Enabled = false;
-                    myCommand.Visible = false;
-                }
-            }
-        }
-
-        private void OnAddCollection(object sender, EventArgs e)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var dte2 = package.GetService<SDTE, DTE2>() as DTE2;
-            object[] selectedItems = (object[])dte2.ToolWindows.SolutionExplorer.SelectedItems;
-
-			if (selectedItems.Length == 1)
-            {
-				var uiShell = (IVsUIShell) package.GetService<IVsUIShell, SVsUIShell>();
-				ProgressForm progressDialog = new ProgressForm("Loading classes...");
-				progressDialog.Show();
-				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-
-				HandleMessages();
-
-                EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
-                var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
-
-                if (theNamespace != null)
-                {
-					HandleMessages();
+				if (theNamespace != null)
+				{
 					var theClass = theNamespace.Children.OfType<CodeClass2>().First();
 
-                    if (theClass != null)
-                    {
-						HandleMessages();
-						var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte2);         //	The resource map contains all the resource classes in the project.
+					if (theClass != null)
+					{
+						var theAttribute = theClass.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
 
-						HandleMessages();
+						if (theAttribute != null)
+						{
+							myCommand.Enabled = true;
+							myCommand.Visible = true;
+						}
+						else
+						{
+							myCommand.Enabled = false;
+							myCommand.Visible = false;
+						}
+					}
+					else
+					{
+						myCommand.Enabled = false;
+						myCommand.Visible = false;
+					}
+				}
+				else
+				{
+					myCommand.Enabled = false;
+					myCommand.Visible = false;
+				}
+			}
+		}
+
+		private void OnAddCollection(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = package.GetService<SDTE, DTE2>() as DTE2;
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+
+			if (selectedItems.Length == 1)
+			{
+				ProjectItem item = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+				var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
+
+				if (theNamespace != null)
+				{
+					var theClass = theNamespace.Children.OfType<CodeClass2>().First();
+
+					if (theClass != null)
+					{
 						//	The parent resource is the resource selected by the user. This is the resource we will be adding the collection to.
 						//	Get the resource model for the parent resource.
-						var parentModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(theClass.Name, StringComparison.OrdinalIgnoreCase));
-                        var dialog = new AddCollectionDialog();
-                        dialog.ResourceName.Text = theClass.Name;
-						dialog._dte2 = dte2;
+						var parentModel = codeService.GetResourceClass(theClass.Name);
+						var dialog = new AddCollectionDialog();
+						dialog.ResourceName.Text = theClass.Name;
+						dialog._dte2 = mDte;
 
-						progressDialog.Close();
-						dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-
-						if ( dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                        {
-							progressDialog = new ProgressForm("Building classes...");
-							progressDialog.Show();
-							dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationGeneral);
-							HandleMessages();
-
-                            var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);  //	Contains the names and projects where various source file exist.
-							HandleMessages();
-							ProjectItem orchestrator = dte2.Solution.FindProjectItem("ServiceOrchestrator.cs");
-							HandleMessages();
+						if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+						{
+							var projectMapping = codeService.LoadProjectMapping();  //	Contains the names and projects where various source file exist.
+							ProjectItem orchestrator = mDte.Solution.FindProjectItem("ServiceOrchestrator.cs");
 							FileCodeModel2 codeModel = (FileCodeModel2)orchestrator.FileCodeModel;
-							HandleMessages();
 
 							//	The orchestration layer is going to need "using System.Linq", ensure that it it does
 							if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Linq")) == null)
-                                codeModel.AddImport("System.Linq", -1);
-							HandleMessages();
+								codeModel.AddImport("System.Linq", -1);
 
 							//	The orchestration layer is going to need "using System.Text", ensure that it it does
 							if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text")) == null)
 								codeModel.AddImport("System.Text", -1);
-							HandleMessages();
 
 							//	The orchestration layer is going to need "using System.Text", ensure that it it does
 							if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System")) == null)
 								codeModel.AddImport("System", -1);
-							HandleMessages();
 
 							foreach (var childItem in dialog.ChildResourceList.CheckedItems)
-                            {
-								HandleMessages();
+							{
 								//	Get the child model from the resource map
-								var childModel = resourceMap.Maps.FirstOrDefault(r => r.ClassName.Equals(childItem.ToString(), StringComparison.OrdinalIgnoreCase));
+								var childModel = codeService.GetResourceClass(childItem.ToString());
 
-                                //	Setup the default name of our new member
-                                var nn = new NameNormalizer(childModel.ClassName);
-                                var memberName = nn.PluralForm;                                     // The memberName is will be the name of the new collection in the parent resource. By default, it will be
-                                                                                                // the plural of the child model class name.
+								//	Setup the default name of our new member
+								var nn = new NameNormalizer(childModel.ClassName);
+								var memberName = nn.PluralForm;                                     // The memberName is will be the name of the new collection in the parent resource. By default, it will be
+																									// the plural of the child model class name.
 
-                                var parentValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte2, parentModel.ClassName);
-								HandleMessages();
-								var childValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte2, childModel.ClassName);
-								HandleMessages();
+								var parentValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(mDte, parentModel.ClassName);
+								var childValidatorInterface = COFRSCommonUtilities.FindValidatorInterface(mDte, childModel.ClassName);
 								string memberType = string.Empty;
 
-                                //	Now that we have all the information we need, add the collection member to the parent resource
-                                AddCollectionToResource(dte2, parentModel, childModel, memberName, ref memberType);
-								HandleMessages();
+								//	Now that we have all the information we need, add the collection member to the parent resource
+								AddCollectionToResource(parentModel, childModel, memberName, ref memberType);
 
 								//	Now that we've added a new collection, we need to alter the orchestration layer to handle that new collection...
 
@@ -235,205 +212,180 @@ namespace COFRSCoreCommandsPackage
 								var childValidatorName = $"{childModel.ClassName}Validator";
 								var parentValidatorName = $"{parentModel.ClassName}Validator";
 
-                                //	Find the namespace...
-                                foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
-                                {
-									HandleMessages();
+								//	Find the namespace...
+								foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
+								{
 									CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
 
-                                    //	The new collection of child items will need to be validated for the various operations.
-                                    //	Add a validator the for the child items 
-                                    AddChildValidatorInterfaceMember(classElement, parentValidatorInterface, childValidatorInterface, childValidatorName, ref parentValidatorName);
-									HandleMessages();
+									//	The new collection of child items will need to be validated for the various operations.
+									//	Add a validator the for the child items 
+									AddChildValidatorInterfaceMember(classElement, parentValidatorInterface, childValidatorInterface, childValidatorName, ref parentValidatorName);
 
 									//	Now, let's go though all the functions...
 									foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
 									{
 										//	Constructor
 										if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
-                                        {
-											ModifyConstructor(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, childValidatorInterface, memberName);
-											HandleMessages();
+										{
+											ModifyConstructor(aFunction, parentValidatorName, childValidatorName, childValidatorInterface, memberName);
 										}
 
 										//	Get Single
 										else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
-                                        {
+										{
 											ModifyGetSingle(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName, memberType);
-											HandleMessages();
 										}
 
 										//	Get Collection
 										else if (aFunction.Name.Equals($"Get{parentModel.ClassName}CollectionAsync"))
-                                        {
+										{
 											ModifyGetCollection(aFunction, parentModel, childModel, memberName);
-											HandleMessages();
 										}
 
 										//	Add
 										else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
-                                        {
+										{
 											ModifyAdd(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
-											HandleMessages();
 										}
 
 										//	Update
 										else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
-                                        {
+										{
 											ModifyUpdate(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
-											HandleMessages();
 										}
 
 										//	Update
 										else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
-                                        {
+										{
 											ModifyPatch(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
-											HandleMessages();
 										}
 
 										//	Delete
 										else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
-                                        {
+										{
 											ModifyDelete(aFunction, childModel, parentValidatorName, childValidatorName, memberName);
-											HandleMessages();
 										}
 									}
-                                }
+								}
 
-								HandleMessages();
-								AddSingleExample(dte2, parentModel, childModel, memberName);
-								HandleMessages();
-								AddCollectionExample(dte2, parentModel, childModel, memberName);
-								HandleMessages();
+								AddSingleExample(parentModel, childModel, memberName);
+								AddCollectionExample(parentModel, childModel, memberName);
 							}
 
-							progressDialog.Close();
-							dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationGeneral);
+							mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationGeneral);
 						}
 					}
 					else
 					{
-						progressDialog.Close();
-						dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+						mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					}
 				}
 				else
-                {
-					progressDialog.Close();
-					dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-                }
-            }
-        }
+				{
+					mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				}
+			}
+		}
 
-        private void OnBeforeResetMapping(object sender, EventArgs e)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var myCommand = sender as OleMenuCommand;
-            var dte2 = package.GetService<SDTE, DTE2>() as DTE2;
-            object[] selectedItems = (object[])dte2.ToolWindows.SolutionExplorer.SelectedItems;
+		private void OnBeforeResetMapping(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var myCommand = sender as OleMenuCommand;
+			var mDte = (DTE2)Package.GetGlobalService(typeof(SDTE));
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
 
-            if (selectedItems.Length > 1)
-            {
-                myCommand.Visible = false;
-            }
-            else
-            {
-                EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
-                var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
+			if (selectedItems.Length > 1)
+			{
+				myCommand.Visible = false;
+			}
+			else
+			{
+				EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
+				var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
 
-                if (theNamespace != null)
-                {
-                    var theClass = theNamespace.Children.OfType<CodeClass2>().First();
-
-                    if (theClass != null)
-                    {
-                        var theBaseClass = theClass.Bases.OfType<CodeClass2>().FirstOrDefault(a => a.Name.Equals("Profile"));
-
-                        if (theBaseClass != null)
-                        {
-                            myCommand.Enabled = true;
-                            myCommand.Visible = true;
-                        }
-                        else
-                        {
-                            myCommand.Enabled = false;
-                            myCommand.Visible = false;
-                        }
-                    }
-                    else
-                    {
-                        myCommand.Enabled = false;
-                        myCommand.Visible = false;
-                    }
-                }
-                else
-                {
-                    myCommand.Enabled = false;
-                    myCommand.Visible = false;
-                }
-            }
-        }
-
-        private void OnResetMapping(object sender, EventArgs e)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            var dte2 = package.GetService<SDTE, DTE2>() as DTE2;
-            object[] selectedItems = (object[])dte2.ToolWindows.SolutionExplorer.SelectedItems;
-
-			if (selectedItems.Length == 1)
-            {
-				var progressDialog = new ProgressForm("Rebuilding classes...");
-				progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
-				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-				HandleMessages();
-
-                EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
-                var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
-
-                if (theNamespace != null)
-                {
-					HandleMessages();
+				if (theNamespace != null)
+				{
 					var theClass = theNamespace.Children.OfType<CodeClass2>().First();
 
-                    if (theClass != null)
-                    {
-						HandleMessages();
+					if (theClass != null)
+					{
+						var theBaseClass = theClass.Bases.OfType<CodeClass2>().FirstOrDefault(a => a.Name.Equals("Profile"));
+
+						if (theBaseClass != null)
+						{
+							myCommand.Enabled = true;
+							myCommand.Visible = true;
+						}
+						else
+						{
+							myCommand.Enabled = false;
+							myCommand.Visible = false;
+						}
+					}
+					else
+					{
+						myCommand.Enabled = false;
+						myCommand.Visible = false;
+					}
+				}
+				else
+				{
+					myCommand.Enabled = false;
+					myCommand.Visible = false;
+				}
+			}
+		}
+
+		private void OnResetMapping(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+
+
+			var dte2 = package.GetService<SDTE, DTE2>() as DTE2;
+			object[] selectedItems = (object[])dte2.ToolWindows.SolutionExplorer.SelectedItems;
+
+			if (selectedItems.Length == 1)
+			{
+				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
+
+				ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+				var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
+
+				if (theNamespace != null)
+				{
+					var theClass = theNamespace.Children.OfType<CodeClass2>().First();
+
+					if (theClass != null)
+					{
 						var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte2);
 
-						HandleMessages();
 						var constructor = theClass.Children
-                                                  .OfType<CodeFunction2>()
-                                                  .First(c => c.FunctionKind == vsCMFunction.vsCMFunctionConstructor);
+												  .OfType<CodeFunction2>()
+												  .First(c => c.FunctionKind == vsCMFunction.vsCMFunctionConstructor);
 
-                        if (constructor != null)
-                        {
+						if (constructor != null)
+						{
 
-							HandleMessages();
-							EditPoint2 editPoint = (EditPoint2) constructor.StartPoint.CreateEditPoint();
-                            bool foundit = editPoint.FindPattern("CreateMap<");
-                            foundit = foundit && editPoint.LessThan(constructor.EndPoint);
+							EditPoint2 editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+							bool foundit = editPoint.FindPattern("CreateMap<");
+							foundit = foundit && editPoint.LessThan(constructor.EndPoint);
 
-                            if (foundit)
-                            {
-								HandleMessages();
+							if (foundit)
+							{
 								editPoint.StartOfLine();
-                                EditPoint2 start = (EditPoint2) editPoint.CreateEditPoint();
-                                editPoint.EndOfLine();
-                                EditPoint2 end = (EditPoint2) editPoint.CreateEditPoint();
-                                var text = start.GetText(end);
+								EditPoint2 start = (EditPoint2)editPoint.CreateEditPoint();
+								editPoint.EndOfLine();
+								EditPoint2 end = (EditPoint2)editPoint.CreateEditPoint();
+								var text = start.GetText(end);
 
-								HandleMessages();
 								var match = Regex.Match(text, "[ \t]*CreateMap\\<(?<resource>[a-zA-Z0-9_]+)[ \t]*\\,[ \t]*(?<entity>[a-zA-Z0-9_]+)\\>[ \t]*\\([ \t]*\\)");
 
 
 								if (match.Success)
 								{
-									var resourceModel = resourceMap.Maps.FirstOrDefault(c => c.ClassName.Equals(match.Groups["resource"].Value));
-
-									HandleMessages();
-
-									var ProfileMap = COFRSCommonUtilities.GenerateProfileMap(resourceModel, resourceMap);
+									var resourceModel = codeService.GetResourceClass(match.Groups["resource"].Value);
+									var ProfileMap = COFRSCommonUtilities.GenerateProfileMap(resourceModel);
 
 									editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
 									foundit = editPoint.FindPattern($"CreateMap<{resourceModel.ClassName}");
@@ -441,20 +393,17 @@ namespace COFRSCoreCommandsPackage
 
 									if (foundit)
 									{
-										HandleMessages();
 										editPoint.LineDown();
 
 										while (!IsLineEmpty(editPoint))
 										{
 											DeleteLine(editPoint);
 										}
-										HandleMessages();
 
 										bool first = true;
 
 										foreach (var rmap in ProfileMap.EntityProfiles)
 										{
-											HandleMessages();
 											if (first)
 												first = false;
 											else
@@ -472,20 +421,17 @@ namespace COFRSCoreCommandsPackage
 										editPoint.Insert(";");
 										editPoint.InsertNewLine();
 									}
-									HandleMessages();
 
 									editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
-									foundit = editPoint.FindPattern($"CreateMap<{resourceModel.EntityModel.ClassName}");
+									foundit = editPoint.FindPattern($"CreateMap<{resourceModel.Entity.ClassName}");
 									foundit = foundit && editPoint.LessThan(constructor.EndPoint);
 
 									if (foundit)
 									{
-										HandleMessages();
 										editPoint.LineDown();
 
 										while (!IsLineEmpty(editPoint))
 										{
-											HandleMessages();
 											DeleteLine(editPoint);
 										}
 
@@ -493,7 +439,6 @@ namespace COFRSCoreCommandsPackage
 
 										foreach (var rmap in ProfileMap.ResourceProfiles)
 										{
-											HandleMessages();
 											if (first)
 												first = false;
 											else
@@ -508,69 +453,63 @@ namespace COFRSCoreCommandsPackage
 											editPoint.Insert("))");
 										}
 
-										HandleMessages();
 										editPoint.Insert(";");
 										editPoint.InsertNewLine();
 									}
 
-									progressDialog.Close();
 									dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 								}
 								else
 								{
-									progressDialog.Close();
 									dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 								}
 							}
 							else
 							{
-								progressDialog.Close();
 								dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 							}
 						}
 						else
 						{
-							progressDialog.Close();
 							dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 						}
 					}
 					else
 					{
-						progressDialog.Close();
 						dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					}
 				}
 				else
-                {
-					progressDialog.Close();
+				{
 					dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 				}
 			}
-        }
+		}
 
-        private static bool IsLineEmpty(EditPoint2 editPoint)
-        {
-            EditPoint2 startOfLine = (EditPoint2)editPoint.CreateEditPoint();
-            startOfLine.StartOfLine();
-            EditPoint2 eol = (EditPoint2)startOfLine.CreateEditPoint();
-            eol.EndOfLine();
-            return string.IsNullOrWhiteSpace(editPoint.GetText(eol));
-        }
-
-        private static void DeleteLine(EditPoint2 editPoint)
-        {
-            EditPoint2 startOfLine = (EditPoint2)editPoint.CreateEditPoint();
-            startOfLine.StartOfLine();
-            EditPoint2 eol = (EditPoint2)startOfLine.CreateEditPoint();
-            eol.LineDown();
-            eol.StartOfLine();
-            startOfLine.Delete(eol);
-        }
 
 		#region Helper Functions
-		private void AddCollectionExample(DTE2 dte2, ResourceModel parentModel, ResourceModel childModel, string memberName)
+		private static bool IsLineEmpty(EditPoint2 editPoint)
 		{
-			var collectionExampleClass = COFRSCommonUtilities.FindCollectionExampleCode(dte2, parentModel);
+			EditPoint2 startOfLine = (EditPoint2)editPoint.CreateEditPoint();
+			startOfLine.StartOfLine();
+			EditPoint2 eol = (EditPoint2)startOfLine.CreateEditPoint();
+			eol.EndOfLine();
+			return string.IsNullOrWhiteSpace(editPoint.GetText(eol));
+		}
+
+		private static void DeleteLine(EditPoint2 editPoint)
+		{
+			EditPoint2 startOfLine = (EditPoint2)editPoint.CreateEditPoint();
+			startOfLine.StartOfLine();
+			EditPoint2 eol = (EditPoint2)startOfLine.CreateEditPoint();
+			eol.LineDown();
+			eol.StartOfLine();
+			startOfLine.Delete(eol);
+		}
+		private void AddCollectionExample(ResourceClass parentModel, ResourceClass childModel, string memberName)
+		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var collectionExampleClass = COFRSCommonUtilities.FindCollectionExampleCode(parentModel);
 
 			if (collectionExampleClass != null)
 			{
@@ -619,12 +558,12 @@ namespace COFRSCoreCommandsPackage
 									nextClassStart.Indent(null, 6);
 									nextClassStart.Insert("{");
 
-									var serverType = COFRSCommonUtilities.GetDefaultServerType(dte2);
-									var connectionString = COFRSCommonUtilities.GetConnectionString(dte2);
+									var serverType = COFRSCommonUtilities.GetDefaultServerType();
+									var connectionString = COFRSCommonUtilities.GetConnectionString();
 
 									var exampleModel = COFRSCommonUtilities.GetExampleModel(0, childModel, serverType, connectionString);
 									var entityJson = JObject.Parse(exampleModel);
-									var profileMap = COFRSCommonUtilities.OpenProfileMap(dte2, childModel, out bool isAllDefined);
+									var profileMap = COFRSCommonUtilities.OpenProfileMap(childModel, out bool isAllDefined);
 
 									bool first = true;
 
@@ -687,12 +626,12 @@ namespace COFRSCoreCommandsPackage
 							nextClassStart.Indent(null, 6);
 							nextClassStart.Insert("{");
 
-							var serverType = COFRSCommonUtilities.GetDefaultServerType(dte2);
-							var connectionString = COFRSCommonUtilities.GetConnectionString(dte2);
+							var serverType = COFRSCommonUtilities.GetDefaultServerType();
+							var connectionString = COFRSCommonUtilities.GetConnectionString();
 
 							var exampleModel = COFRSCommonUtilities.GetExampleModel(0, childModel, serverType, connectionString);
 							var entityJson = JObject.Parse(exampleModel);
-							var profileMap = COFRSCommonUtilities.OpenProfileMap(dte2, childModel, out bool isAllDefined);
+							var profileMap = COFRSCommonUtilities.OpenProfileMap(childModel, out bool isAllDefined);
 
 							bool first = true;
 
@@ -724,9 +663,9 @@ namespace COFRSCoreCommandsPackage
 			}
 		}
 
-		private void AddSingleExample(DTE2 dte2, ResourceModel parentModel, ResourceModel childModel, string memberName)
+		private void AddSingleExample(ResourceClass parentModel, ResourceClass childModel, string memberName)
 		{
-			var singleExampleClass = COFRSCommonUtilities.FindExampleCode(dte2, parentModel);
+			var singleExampleClass = COFRSCommonUtilities.FindExampleCode(parentModel);
 
 			if (singleExampleClass != null)
 			{
@@ -774,12 +713,12 @@ namespace COFRSCoreCommandsPackage
 							editPoint.Indent(null, 5);
 							editPoint.Insert("{");
 
-							var serverType = COFRSCommonUtilities.GetDefaultServerType(dte2);
-							var connectionString = COFRSCommonUtilities.GetConnectionString(dte2);
+							var serverType = COFRSCommonUtilities.GetDefaultServerType();
+							var connectionString = COFRSCommonUtilities.GetConnectionString();
 
 							var exampleModel = COFRSCommonUtilities.GetExampleModel(0, childModel, serverType, connectionString);
 							var entityJson = JObject.Parse(exampleModel);
-							var profileMap = COFRSCommonUtilities.OpenProfileMap(dte2, childModel, out bool isAllDefined);
+							var profileMap = COFRSCommonUtilities.OpenProfileMap(childModel, out bool isAllDefined);
 
 							bool first = true;
 
@@ -862,65 +801,116 @@ namespace COFRSCoreCommandsPackage
 		/// <summary>
 		/// Adds the new collection member to the parent resource
 		/// </summary>
-		private void AddCollectionToResource(DTE2 dte2, ResourceModel parentModel, ResourceModel childModel, string memberName, ref string memberType)
+		private void AddCollectionToResource(ResourceClass parentModel, ResourceClass childModel, string memberName, ref string memberType)
 		{
-			//	First we need to open the code file for the parent resource
-			var fileName = Path.GetFileName(parentModel.Folder);
-			ProjectItem resourceCodeFile = dte2.Solution.FindProjectItem(fileName);
 			EditPoint2 editPoint;
+			var resourceClass = (CodeClass2)parentModel.Resource;
 
 			//	Now we have the code file for our main resource.
 			//	First, find the namespace with this file...
-			foreach (CodeNamespace namespaceElement in resourceCodeFile.FileCodeModel.CodeElements.OfType<CodeNamespace>())
+			CodeFunction2 constructor = resourceClass.Children
+													 .OfType<CodeFunction2>()
+													 .FirstOrDefault(c => c.FunctionKind == vsCMFunction.vsCMFunctionConstructor);
+
+			if (constructor == null)
 			{
-				CodeClass2 resourceClass = namespaceElement.Children
-														   .OfType<CodeClass2>()
-														   .FirstOrDefault(c => c.Name.Equals(parentModel.ClassName));
+				constructor = (CodeFunction2)resourceClass.AddFunction(resourceClass.Name, vsCMFunction.vsCMFunctionConstructor, "", -1, vsCMAccess.vsCMAccessPublic);
 
-				if (resourceClass != null)
+				StringBuilder doc = new StringBuilder();
+				doc.AppendLine("<doc>");
+				doc.AppendLine("<summary>");
+				doc.AppendLine($"Constructor for the resource.");
+				doc.AppendLine("</summary>");
+				doc.AppendLine("</doc>");
+
+				constructor.DocComment = doc.ToString();
+			}
+
+			//	We're in the class. Now we need to add a new property of type IEnumerable<childClass>
+			//	However, this may not be the first time the user has done this, and they may have already added the member.
+			//	So, we need to determine if such a member already exists...
+
+			CodeProperty2 enumerableChild = resourceClass.Members
+														 .OfType<CodeProperty2>()
+														 .FirstOrDefault(c =>
+														 {
+															 var parts = c.Type.AsString.Split('.');
+															 if (parts.Contains("IEnumerable"))
+															 {
+																 if (parts[parts.Length - 1].Equals(childModel.ClassName))
+																	 return true;
+															 }
+
+															 return false;
+														 });
+
+			if (enumerableChild != null)
+			{
+				memberName = enumerableChild.Name;
+				memberType = $"IEnumerable<{childModel.ClassName}>";
+
+				editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+				if (!editPoint.FindPattern($"{memberName} = Array.Empty<{childModel.ClassName}>();"))
 				{
-					CodeFunction2 constructor = resourceClass.Children
-															 .OfType<CodeFunction2>()
-															 .FirstOrDefault(c => c.FunctionKind == vsCMFunction.vsCMFunctionConstructor);
+					editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
+					editPoint.LineUp();
+					editPoint.EndOfLine();
+					editPoint.InsertNewLine();
+					editPoint.Indent(null, 3);
+					editPoint.Insert($"{memberName} = Array.Empty<{childModel.ClassName}>();");
+				}
+			}
+			else
+			{
+				CodeProperty2 listChild = resourceClass.Members
+															 .OfType<CodeProperty2>()
+															 .FirstOrDefault(c =>
+															 {
+																 var parts = c.Type.AsString.Split('.');
+																 if (parts.Contains("List"))
+																 {
+																	 if (parts[parts.Length - 1].Equals(childModel.ClassName))
+																		 return true;
+																 }
 
-					if (constructor == null)
+																 return false;
+															 });
+
+				if (listChild != null)
+				{
+					memberName = listChild.Name;
+					memberType = $"List<{childModel.ClassName}>";
+					editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+
+					if (!editPoint.FindPattern($"{memberName} = new List<{childModel.ClassName}>();"))
 					{
-						constructor = (CodeFunction2)resourceClass.AddFunction(resourceClass.Name, vsCMFunction.vsCMFunctionConstructor, "", -1, vsCMAccess.vsCMAccessPublic);
-
-						StringBuilder doc = new StringBuilder();
-						doc.AppendLine("<doc>");
-						doc.AppendLine("<summary>");
-						doc.AppendLine($"Constructor for the resource.");
-						doc.AppendLine("</summary>");
-						doc.AppendLine("</doc>");
-
-						constructor.DocComment = doc.ToString();
+						editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
+						editPoint.LineUp();
+						editPoint.EndOfLine();
+						editPoint.InsertNewLine();
+						editPoint.Indent(null, 3);
+						editPoint.Insert($"{memberName} = new List<{childModel.ClassName}>();");
 					}
-
-					//	We're in the class. Now we need to add a new property of type IEnumerable<childClass>
-					//	However, this may not be the first time the user has done this, and they may have already added the member.
-					//	So, we need to determine if such a member already exists...
-
-					CodeProperty2 enumerableChild = resourceClass.Members
+				}
+				else
+				{
+					CodeProperty2 arrayChild = resourceClass.Members
 																 .OfType<CodeProperty2>()
 																 .FirstOrDefault(c =>
 																 {
 																	 var parts = c.Type.AsString.Split('.');
-																	 if (parts.Contains("IEnumerable"))
-																	 {
-																		 if (parts[parts.Length - 1].Equals(childModel.ClassName))
-																			 return true;
-																	 }
+																	 if (parts[parts.Length - 1].Equals($"{childModel.ClassName}[]"))
+																		 return true;
 
 																	 return false;
 																 });
 
-					if (enumerableChild != null)
+					if (arrayChild != null)
 					{
-						memberName = enumerableChild.Name;
-						memberType = $"IEnumerable<{childModel.ClassName}>";
-
+						memberName = arrayChild.Name;
+						memberType = $"{childModel.ClassName}[]";
 						editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+
 						if (!editPoint.FindPattern($"{memberName} = Array.Empty<{childModel.ClassName}>();"))
 						{
 							editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
@@ -933,110 +923,48 @@ namespace COFRSCoreCommandsPackage
 					}
 					else
 					{
-						CodeProperty2 listChild = resourceClass.Members
-																	 .OfType<CodeProperty2>()
-																	 .FirstOrDefault(c =>
-																	 {
-																		 var parts = c.Type.AsString.Split('.');
-																		 if (parts.Contains("List"))
-																		 {
-																			 if (parts[parts.Length - 1].Equals(childModel.ClassName))
-																				 return true;
-																		 }
+						var count = resourceClass.Children.OfType<CodeProperty>().Count();
 
-																		 return false;
-																	 });
+						var property = resourceClass.AddProperty(memberName, memberName,
+																 $"{childModel.ClassName}[]",
+																 count,
+																 vsCMAccess.vsCMAccessPublic, null);
 
-						if (listChild != null)
+						StringBuilder doc = new StringBuilder();
+						doc.AppendLine("<doc>");
+						doc.AppendLine("<summary>");
+						doc.AppendLine($"Gets or sets the collection of <see cref=\"{childModel.ClassName}\"/> resources.");
+						doc.AppendLine("</summary>");
+						doc.AppendLine("</doc>");
+
+						property.DocComment = doc.ToString();
+						memberType = $"{childModel.ClassName}[]";
+
+						editPoint = (EditPoint2)property.StartPoint.CreateEditPoint();
+						editPoint.EndOfLine();
+						editPoint.ReplaceText(property.EndPoint, " { get; set; }", 0);
+						editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
+
+						if (!editPoint.FindPattern($"{memberName} = Array.Empty<{childModel.ClassName}>();"))
 						{
-							memberName = listChild.Name;
-							memberType = $"List<{childModel.ClassName}>";
-							editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
-
-							if (!editPoint.FindPattern($"{memberName} = new List<{childModel.ClassName}>();"))
-							{
-								editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
-								editPoint.LineUp();
-								editPoint.EndOfLine();
-								editPoint.InsertNewLine();
-								editPoint.Indent(null, 3);
-								editPoint.Insert($"{memberName} = new List<{childModel.ClassName}>();");
-							}
-						}
-						else
-						{
-							CodeProperty2 arrayChild = resourceClass.Members
-																		 .OfType<CodeProperty2>()
-																		 .FirstOrDefault(c =>
-																		 {
-																			 var parts = c.Type.AsString.Split('.');
-																			 if (parts[parts.Length - 1].Equals($"{childModel.ClassName}[]"))
-																				 return true;
-
-																			 return false;
-																		 });
-
-							if (arrayChild != null)
-							{
-								memberName = arrayChild.Name;
-								memberType = $"{childModel.ClassName}[]";
-								editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
-
-								if (!editPoint.FindPattern($"{memberName} = Array.Empty<{childModel.ClassName}>();"))
-								{
-									editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
-									editPoint.LineUp();
-									editPoint.EndOfLine();
-									editPoint.InsertNewLine();
-									editPoint.Indent(null, 3);
-									editPoint.Insert($"{memberName} = Array.Empty<{childModel.ClassName}>();");
-								}
-							}
-							else
-							{
-								var count = resourceClass.Children.OfType<CodeProperty>().Count();
-
-								var property = resourceClass.AddProperty(memberName, memberName,
-																		 $"{childModel.ClassName}[]",
-																		 count,
-																		 vsCMAccess.vsCMAccessPublic, null);
-
-								StringBuilder doc = new StringBuilder();
-								doc.AppendLine("<doc>");
-								doc.AppendLine("<summary>");
-								doc.AppendLine($"Gets or sets the collection of <see cref=\"{childModel.ClassName}\"/> resources.");
-								doc.AppendLine("</summary>");
-								doc.AppendLine("</doc>");
-
-								property.DocComment = doc.ToString();
-								memberType = $"{childModel.ClassName}[]";
-
-								editPoint = (EditPoint2)property.StartPoint.CreateEditPoint();
-								editPoint.EndOfLine();
-								editPoint.ReplaceText(property.EndPoint, " { get; set; }", 0);
-								editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
-
-								if (!editPoint.FindPattern($"{memberName} = Array.Empty<{childModel.ClassName}>();"))
-								{
-									editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
-									editPoint.LineUp();
-									editPoint.EndOfLine();
-									editPoint.InsertNewLine();
-									editPoint.Indent(null, 3);
-									editPoint.Insert($"{memberName} = Array.Empty<{childModel.ClassName}>();");
-								}
-							}
+							editPoint = (EditPoint2)constructor.EndPoint.CreateEditPoint();
+							editPoint.LineUp();
+							editPoint.EndOfLine();
+							editPoint.InsertNewLine();
+							editPoint.Indent(null, 3);
+							editPoint.Insert($"{memberName} = Array.Empty<{childModel.ClassName}>();");
 						}
 					}
 				}
 			}
 		}
+		
 
 		/// <summary>
 		/// Modify the delete function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction">The <see cref="CodeFunction2"/> instance of the delete function.</param>
-		private void ModifyDelete(CodeFunction2 aFunction, ResourceModel childModel, string parentValidatorName, string childValidatorName, string memberName)
+		private void ModifyDelete(CodeFunction2 aFunction, ResourceClass childModel, string parentValidatorName, string childValidatorName, string memberName)
 		{
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 
@@ -1150,7 +1078,7 @@ namespace COFRSCoreCommandsPackage
 		/// Modify the update function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyUpdate(CodeFunction2 aFunction, ResourceModel parentModel, ResourceModel childModel, string parentValidatorName, string childValidatorName, string memberName)
+		private void ModifyUpdate(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string parentValidatorName, string childValidatorName, string memberName)
 		{
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			bool foundit = editPoint.FindPattern($"return await UpdateAsync");
@@ -1319,7 +1247,7 @@ namespace COFRSCoreCommandsPackage
 		/// Modify teh patch function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyPatch(CodeFunction2 aFunction, ResourceModel parentModel, ResourceModel childModel, string parentValidatorName, string childValidatorName, string memberName)
+		private void ModifyPatch(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string parentValidatorName, string childValidatorName, string memberName)
 		{
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			bool foundit = editPoint.FindPattern("var baseCommands = new List<PatchCommand>();");
@@ -1617,7 +1545,7 @@ namespace COFRSCoreCommandsPackage
 		/// Modify the add function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyAdd(CodeFunction2 aFunction, ResourceModel parentModel, ResourceModel childModel, string parentValidatorName, string childValidatorName, string memberName)
+		private void ModifyAdd(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string parentValidatorName, string childValidatorName, string memberName)
 		{
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			bool foundit = editPoint.FindPattern("return await AddAsync");
@@ -1709,7 +1637,7 @@ namespace COFRSCoreCommandsPackage
 		/// Modify the get collection function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyGetCollection(CodeFunction2 aFunction, ResourceModel parentModel, ResourceModel childModel, string memberName)
+		private void ModifyGetCollection(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string memberName)
 		{
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 
@@ -1870,7 +1798,7 @@ namespace COFRSCoreCommandsPackage
 		/// Modify the Get Single function to populate the new collection
 		/// </summary>
 		/// <param name="aFunction">The <see cref="CodeFunction2"/> instance of the get single function.</param>
-		private void ModifyGetSingle(CodeFunction2 aFunction, ResourceModel parentModel, ResourceModel childModel, string parentValidatorName, string childValidatorName, string memberName, string memberType)
+		private void ModifyGetSingle(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string parentValidatorName, string childValidatorName, string memberName, string memberType)
 		{
 			//	Find were it returns the GetSingleAsync (this may or may not be there)
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -1956,7 +1884,7 @@ namespace COFRSCoreCommandsPackage
 		/// Modify the consructor to add and assign the needed validator for the child items
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyConstructor(CodeFunction2 aFunction, ResourceModel parentModel, ResourceModel childModel, string parentValidatorName, string childValidatorName, string childValidatorInterface, string memberName)
+		private void ModifyConstructor(CodeFunction2 aFunction, string parentValidatorName, string childValidatorName, string childValidatorInterface, string memberName)
 		{
 			//	This is the constructor function. We need that new validator, and we get it using dependency
 			//	injection. That means, it needs to be an argument in the aruguement list of the constructor.
@@ -2002,14 +1930,6 @@ namespace COFRSCoreCommandsPackage
 				editPoint.Insert($"{childValidatorName} = {parameterName};");
 			}
 		}
-		private void HandleMessages()
-		{
-			while (WinNative.PeekMessage(out WinNative.NativeMessage msg, IntPtr.Zero, 0, (uint)0xFFFFFFFF, 1) != 0)
-			{
-				WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
-			}
-		}
 		#endregion
-
 	}
 }

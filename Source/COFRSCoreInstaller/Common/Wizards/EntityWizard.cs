@@ -6,6 +6,7 @@ using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace COFRS.Template.Common.Wizards
 	{
 		private bool Proceed = false;
 
-		public void BeforeOpeningFile(ProjectItem projectItem)
+        public void BeforeOpeningFile(ProjectItem projectItem)
 		{
 		}
 
@@ -29,6 +30,8 @@ namespace COFRS.Template.Common.Wizards
 
 		public void ProjectItemFinishedGenerating(ProjectItem projectItem)
 		{
+            var codeService = COFRSServiceFactory.GetService<ICodeService>();
+            codeService.AddEntity(projectItem);
 		}
 
 		public void RunFinished()
@@ -45,34 +48,19 @@ namespace COFRS.Template.Common.Wizards
 		public void RunStarted(object automationObject, Dictionary<string, string> replacementsDictionary, WizardRunKind runKind, object[] customParams)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			DTE2 dte2 = automationObject as DTE2;
-			ProgressForm progressDialog = null;
+			var mDte = automationObject as DTE2;
+            var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
             try
             {
-                //	Show the user that we are busy doing things...
-                progressDialog = new ProgressForm("Loading classes and preparing project...");
-                progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
-                dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-                HandleMessages();
-
-                //  Load the project mapping information
-                var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);
-                HandleMessages();
-
-                var installationFolder = COFRSCommonUtilities.GetInstallationFolder(dte2);
-                HandleMessages();
+                var projectMapping = codeService.LoadProjectMapping();
+                var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
+                var connectionString = COFRSCommonUtilities.GetConnectionString();
 
                 //  Make sure we are where we're supposed to be
                 if ( !COFRSCommonUtilities.IsChildOf(projectMapping.EntityFolder, installationFolder.Folder))
                 {
-                    HandleMessages();
-                    progressDialog.Close();
-                    dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-
-                    var entityModelsFolder = projectMapping.GetEntityModelsFolder();
-
-                    var result = MessageBox.Show($"You are attempting to install an entity model into {COFRSCommonUtilities.GetRelativeFolder(dte2, installationFolder)}. Typically, entity models reside in {COFRSCommonUtilities.GetRelativeFolder(dte2, entityModelsFolder)}.\r\n\r\nDo you wish to place the new entity model in this non-standard location?", 
+                    var result = MessageBox.Show($"You are attempting to install an entity model into {COFRSCommonUtilities.GetRelativeFolder(mDte, installationFolder)}. Typically, entity models reside in {COFRSCommonUtilities.GetRelativeFolder(mDte, projectMapping.GetEntityModelsFolder())}.\r\n\r\nDo you wish to place the new entity model in this non-standard location?", 
                         "Warning: Non-Standard Location", 
                         MessageBoxButtons.YesNo, 
                         MessageBoxIcon.Warning);
@@ -83,26 +71,16 @@ namespace COFRS.Template.Common.Wizards
                         return;
                     }
 
-                    progressDialog = new ProgressForm("Loading classes and preparing project...");
-                    progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
-                    dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-                    HandleMessages();
+                    mDte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-                    entityModelsFolder = installationFolder;
+                    projectMapping.EntityFolder = installationFolder.Folder;
+                    projectMapping.EntityNamespace = installationFolder.Namespace;
+                    projectMapping.EntityProject = installationFolder.ProjectName;
 
-                    projectMapping.EntityFolder = entityModelsFolder.Folder;
-                    projectMapping.EntityNamespace = entityModelsFolder.Namespace;
-                    projectMapping.EntityProject = entityModelsFolder.ProjectName;
-
-                    COFRSCommonUtilities.SaveProjectMapping(dte2, projectMapping);
+                    codeService.SaveProjectMapping();
                 }
 
-                var projectName = projectMapping.EntityProject;
-                var connectionString = COFRSCommonUtilities.GetConnectionString(dte2);
-                HandleMessages();
-
-                var entityMap = COFRSCommonUtilities.LoadEntityMap(dte2);
-                HandleMessages();
+               // var projectName = projectMapping.EntityProject;
 
                 //	Construct the form, and fill in all the prerequisite data
                 var form = new UserInputEntity
@@ -110,151 +88,102 @@ namespace COFRS.Template.Common.Wizards
                     ReplacementsDictionary = replacementsDictionary,
                     EntityModelsFolder = projectMapping.GetEntityModelsFolder(),
                     DefaultConnectionString = connectionString,
-                    EntityMap = entityMap
                 };
-
-                HandleMessages();
-
-                progressDialog.Close();
-                dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
                 if (form.ShowDialog() == DialogResult.OK)
                 {
-                    //	Show the user that we are busy...
-                    progressDialog = new ProgressForm("Building classes...");
-                    progressDialog.Show(new WindowClass((IntPtr)dte2.ActiveWindow.HWnd));
-                    dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-
-                    HandleMessages();
-
-                    connectionString = $"{form.ConnectionString}Application Name={projectName}";
-
-                    //	Replace the default connection string in the appSettings.Local.json, so that the 
-                    //	user doesn't have to do it. Note: this function only replaces the connection string
-                    //	if the appSettings.Local.json contains the original placeholder connection string.
-                    COFRSCommonUtilities.ReplaceConnectionString(dte2, connectionString);
-
-                    //	We well need these when we replace placeholders in the class
-                    var className = replacementsDictionary["$safeitemname$"];
-                    replacementsDictionary["$entityClass$"] = className;
-
-                    //	Get the list of any undefined items that we encountered. (This list will only contain
-                    //	items if we are using the Postgrsql database)
-                    List<EntityModel> undefinedEntityModels = form.UndefinedEntityModels;
-
-                    var emitter = new Emitter();
-                    var standardEmitter = new StandardEmitter();
-
-                    if (form.ServerType == DBServerType.POSTGRESQL)
+                    try
                     {
-                        //	Generate any undefined composits before we construct our entity model (because, 
-                        //	the entity model depends upon them)
+                        //	Show the user that we are busy...
+                        connectionString = $"{form.ConnectionString}Application Name={mDte.Solution.FullName}";
 
-                        standardEmitter.GenerateComposites(dte2,
-                                                           undefinedEntityModels,
-                                                           form.ConnectionString,
-                                                           replacementsDictionary,
-                                                           entityMap,
-                                                           projectMapping.GetEntityModelsFolder());
-                        HandleMessages();
-                    }
+                        //	Replace the default connection string in the appSettings.Local.json, so that the 
+                        //	user doesn't have to do it. Note: this function only replaces the connection string
+                        //	if the appSettings.Local.json contains the original placeholder connection string.
+                        COFRSCommonUtilities.ReplaceConnectionString(connectionString);
 
-                    string model = string.Empty;
+                        //	We will need these when we replace placeholders in the class
+                        var className = replacementsDictionary["$safeitemname$"];
+                        replacementsDictionary["$entityClass$"] = className;
 
-                    if (form.EType == ElementType.Enum)
-                    {
-                        var entityModel = new EntityModel()
+                        var emitter = new Emitter();
+                        var standardEmitter = new StandardEmitter();
+
+                        if (form.ServerType == DBServerType.POSTGRESQL)
                         {
-                            ClassName = COFRSCommonUtilities.NormalizeClassName(replacementsDictionary["$safeitemname$"]),
-                            SchemaName = form.DatabaseTable.Schema,
-                            TableName = form.DatabaseTable.Table,
-                            Namespace = replacementsDictionary["$rootnamespace$"],
-                            ElementType = ElementType.Enum,
-                            ServerType = form.ServerType,
-                            ProjectName = projectMapping.EntityProject,
-                            Folder = Path.Combine(projectMapping.EntityFolder, replacementsDictionary["$safeitemname$"])
-                        };
+                            //	Generate any undefined composits before we construct our entity model (because, 
+                            //	the entity model depends upon them)
 
-                        DBHelper.GenerateEnumColumns(entityModel, form.ConnectionString);
-                        model = standardEmitter.EmitEntityEnum(entityModel);
-                        replacementsDictionary["$npgsqltypes$"] = "true";
+                            standardEmitter.GenerateComposites(form.UndefinedEntityModels,
+                                                               form.ConnectionString,
+                                                               replacementsDictionary,
+                                                               projectMapping.GetEntityModelsFolder());
+                        }
 
-                        COFRSCommonUtilities.RegisterComposite(dte2, entityModel);
-                    }
-                    else if (form.EType == ElementType.Composite)
-                    {
-                        var undefinedElements = new List<EntityModel>();
+                        string model = string.Empty;
 
-                        var entityModel = new EntityModel()
+                        if (form.EType == ElementType.Enum)
                         {
-                            ClassName = replacementsDictionary["$safeitemname$"],
-                            SchemaName = form.DatabaseTable.Schema,
-                            TableName = form.DatabaseTable.Table,
-                            Namespace = replacementsDictionary["$rootnamespace$"],
-                            ElementType = ElementType.Composite,
-                            ServerType = form.ServerType,
-                            Folder = Path.Combine(projectMapping.EntityFolder, replacementsDictionary["$safeitemname$"])
-                        };
+                            var columns = DBHelper.GenerateEnumColumns(form.DatabaseTable.Schema,
+                                                                       form.DatabaseTable.Table,
+                                                                       form.ConnectionString);
 
-                        DBHelper.GenerateColumns(entityModel, form.ConnectionString);
+                            model = standardEmitter.EmitEntityEnum(replacementsDictionary["$safeitemname$"],
+                                                                   form.DatabaseTable.Schema,
+                                                                   form.DatabaseTable.Table,
+                                                                   columns);
 
-                        model = standardEmitter.EmitComposite(dte2,
-                                                              entityModel,
-                                                              form.ConnectionString,
-                                                              replacementsDictionary,
-                                                              entityMap,
-                                                              ref undefinedElements,
-                                                              projectMapping.GetEntityModelsFolder());
+                            replacementsDictionary["$npgsqltypes$"] = "true";
 
-                        replacementsDictionary["$npgsqltypes$"] = "true";
-
-
-                        COFRSCommonUtilities.RegisterComposite(dte2, entityModel);
-                    }
-                    else
-                    {
-                        var entityModel = new EntityModel()
+                            COFRSCommonUtilities.RegisterComposite(replacementsDictionary["$safeitemname$"],
+                                                                   replacementsDictionary["$rootnamespace$"],
+                                                                   ElementType.Enum,
+                                                                   form.DatabaseTable.Table);
+                        }
+                        else if (form.EType == ElementType.Composite)
                         {
-                            ClassName = replacementsDictionary["$safeitemname$"],
-                            SchemaName = form.DatabaseTable.Schema,
-                            TableName = form.DatabaseTable.Table,
-                            Namespace = replacementsDictionary["$rootnamespace$"],
-                            ElementType = ElementType.Composite,
-                            ServerType = form.ServerType,
-                            Folder = Path.Combine(projectMapping.EntityFolder, replacementsDictionary["$safeitemname$"]),
-                            Columns = form.DatabaseColumns.ToArray()
-                        };
+                            var  columns = DBHelper.GenerateColumns(form.DatabaseTable.Schema, form.DatabaseTable.Table, form.ServerType, form.ConnectionString);
 
-                        model = standardEmitter.EmitEntityModel(entityModel,
-                                                                entityMap,
-                                                                replacementsDictionary);
+                            model = standardEmitter.EmitComposite(replacementsDictionary["$safeitemname$"],
+                                                                  form.DatabaseTable.Schema,
+                                                                  form.DatabaseTable.Table,
+                                                                  ElementType.Composite,
+                                                                  columns,
+                                                                  form.ConnectionString,
+                                                                  replacementsDictionary,
+                                                                  projectMapping.GetEntityModelsFolder());
 
-                        var existingEntities = entityMap.Maps.ToList();
+                            replacementsDictionary["$npgsqltypes$"] = "true";
 
-                        entityModel.Folder = Path.Combine(projectMapping.EntityFolder, replacementsDictionary["$safeitemname$"]);
+                            COFRSCommonUtilities.RegisterComposite(replacementsDictionary["$safeitemname$"],
+                                                                   replacementsDictionary["$rootnamespace$"],
+                                                                   ElementType.Enum,
+                                                                   form.DatabaseTable.Table);
+                        }
+                        else
+                        {
+                            model = standardEmitter.EmitEntityModel(replacementsDictionary["$safeitemname$"],
+                                                                    form.DatabaseTable.Schema,
+                                                                    form.DatabaseTable.Table,
+                                                                    form.ServerType,
+                                                                    form.DatabaseColumns.ToArray(),
+                                                                    replacementsDictionary);
+                        }
 
-                        existingEntities.Add(entityModel);
-                        entityMap.Maps = existingEntities.ToArray();
+                        replacementsDictionary.Add("$entityModel$", model);
+                        Proceed = true;
                     }
-
-                    replacementsDictionary.Add("$entityModel$", model);
-                    HandleMessages();
-
-                    progressDialog.Close();
-                    dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-
-                    Proceed = true;
+                    catch ( Exception error )
+                    {
+                        MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Proceed = false;
+                    }
                 }
                 else
                     Proceed = false;
             }
             catch (Exception error)
 			{
-				if (progressDialog != null)
-					if ( progressDialog.IsHandleCreated)
-						progressDialog.Close();
-
-				dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				Proceed = false;
 			}
@@ -263,14 +192,6 @@ namespace COFRS.Template.Common.Wizards
         public bool ShouldAddProjectItem(string filePath)
 		{
 			return Proceed;
-		}
-
-		private void HandleMessages()
-		{
-			while (WinNative.PeekMessage(out WinNative.NativeMessage msg, IntPtr.Zero, 0, (uint)0xFFFFFFFF, 1) != 0)
-			{
-				WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
-			}
 		}
 	}
 }

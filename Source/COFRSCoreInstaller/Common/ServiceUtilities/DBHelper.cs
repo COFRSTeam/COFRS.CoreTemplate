@@ -1,8 +1,12 @@
 ﻿using COFRSCoreCommon.Models;
 using COFRSCoreCommon.Utilities;
+using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -12,70 +16,89 @@ namespace COFRS.Template.Common.ServiceUtilities
 {
     public static class DBHelper
 	{
-		public static List<EntityModel> GenerateEntityClassList(List<EntityModel> UndefinedClassList, EntityMap entityMap, string baseFolder, string connectionString)
+		public static List<EntityModel> GenerateEntityClassList(List<EntityModel> UndefinedClassList, string baseFolder, string connectionString)
 		{
-			List<EntityModel> resultList = new List<EntityModel>();
+			DTE2 mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+
+			var resultList = new List<EntityModel>();	//	This will hold all the new undefined classes
 
 			foreach (var classFile in UndefinedClassList)
 			{
-				var newClassFile = GenerateEntityClass(classFile, connectionString);
-				resultList.Add(newClassFile);
+				//	Get the list of column for this undefined class
+				var columns = GenerateColumns(classFile.SchemaName, classFile.TableName, classFile.ServerType, connectionString);
 
-				if (newClassFile.ElementType != ElementType.Enum)
+				foreach (var column in columns)
 				{
-					foreach (var column in newClassFile.Columns)
+					if (string.IsNullOrWhiteSpace(column.ModelDataType))
 					{
-						if (string.IsNullOrWhiteSpace(column.ModelDataType))
+						//	Is is already defined?
+						var elementType = GetElementType(mDte, classFile.SchemaName, column.DBDataType, connectionString);
+
+						if (elementType == ElementType.Enum)
 						{
-							if (UndefinedClassList.FirstOrDefault(c => string.Equals(c.TableName, column.EntityName, StringComparison.OrdinalIgnoreCase)) == null)
+							//	Is is already defined?
+							if ( codeService.GetEntityClassBySchema(classFile.SchemaName, column.DBDataType) == null)
 							{
-								var aList = new List<EntityModel>();
-								var bList = new List<EntityModel>();
-								var className = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.ColumnName))}";
-
-								var elementType = DBHelper.GetElementType(classFile.SchemaName, column.DBDataType, entityMap, connectionString);
-
-								var aClassFile = new EntityModel()
+								//	Is is already in the list?
+								if (UndefinedClassList.FirstOrDefault(c => c.SchemaName.Equals(classFile.SchemaName) &&
+																		   c.TableName.Equals(column.DBDataType)) == null)
 								{
-									ClassName = className,
-									TableName = column.DBDataType,
-									SchemaName = classFile.SchemaName,
-									ProjectName = classFile.ProjectName,
-									Folder = Path.Combine(baseFolder, $"{className}.cs"),
-									Namespace = classFile.Namespace,
-									ElementType = elementType,
-									ServerType = DBServerType.POSTGRESQL
-								};
+									var className = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.ColumnName))}";
 
-								aList.Add(aClassFile);
-								bList.AddRange(entityMap.Maps);
-								bList.AddRange(UndefinedClassList);
+									var aClassFile = new EntityModel()
+									{
+										ClassName = className,
+										TableName = column.DBDataType,
+										SchemaName = classFile.SchemaName,
+										ProjectName = classFile.ProjectName,
+										Folder = Path.Combine(baseFolder, $"{className}.cs"),
+										Namespace = classFile.Namespace,
+										ElementType = elementType,
+										ServerType = DBServerType.POSTGRESQL
+									};
 
-								var theMap = new EntityMap() { Maps = bList.ToArray() };
+									resultList.Add(aClassFile);
+								}
+							}
+						}
+						else
+						{
+							//	Is it already defined?
+							if ( codeService.GetEntityClassBySchema(classFile.SchemaName, column.DBDataType) == null )
+							{
+								//	Is it already in the list?
+								if (UndefinedClassList.FirstOrDefault(c => c.SchemaName.Equals(classFile.SchemaName) &&
+																		   c.TableName.Equals(column.DBDataType)) == null)
+								{
+									var className = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.ColumnName))}";
 
-								resultList.AddRange(GenerateEntityClassList(aList, theMap, baseFolder, connectionString));
+									var aClassFile = new EntityModel()
+									{
+										ClassName = className,
+										TableName = column.DBDataType,
+										SchemaName = classFile.SchemaName,
+										ProjectName = classFile.ProjectName,
+										Folder = Path.Combine(baseFolder, $"{className}.cs"),
+										Namespace = classFile.Namespace,
+										ElementType = elementType,
+										ServerType = DBServerType.POSTGRESQL
+									};
+
+									resultList.AddRange(GenerateEntityClassList(new List<EntityModel>() { aClassFile }, baseFolder, connectionString));
+								}
 							}
 						}
 					}
 				}
-				else
-					GenerateEnumColumns(newClassFile, connectionString);
 			}
 
+			resultList.AddRange(UndefinedClassList);
 			return resultList;
 		}
 
-		private static EntityModel GenerateEntityClass(EntityModel classFile, string connectionString)
-		{
-			if (classFile.ElementType == ElementType.Enum)
-				GenerateEnumColumns(classFile, connectionString);
-			else
-				GenerateColumns(classFile, connectionString);
 
-			return classFile;
-		}
-
-		public static void GenerateEnumColumns(EntityModel entityModel, string connectionString)
+		public static DBColumn[] GenerateEnumColumns(string schema, string tableName, string connectionString)
 		{
 			var columns = new List<DBColumn>();
 
@@ -92,8 +115,8 @@ where t.typname = @dataType
 				connection.Open();
 				using (var command = new NpgsqlCommand(query, connection))
 				{
-					command.Parameters.AddWithValue("@dataType", entityModel.TableName);
-					command.Parameters.AddWithValue("@schema", entityModel.SchemaName);
+					command.Parameters.AddWithValue("@dataType", tableName);
+					command.Parameters.AddWithValue("@schema", schema);
 
 					using (var reader = command.ExecuteReader())
 					{
@@ -115,14 +138,14 @@ where t.typname = @dataType
 				}
 			}
 
-			entityModel.Columns = columns.ToArray();
+			return columns.ToArray();
 		}
 
-		public static void GenerateColumns(EntityModel entityModel, string connectionString)
+		public static DBColumn[] GenerateColumns(string schemaName, string tableName, DBServerType serverType, string connectionString)
 		{
 			var columns = new List<DBColumn>();
 
-			if (entityModel.ServerType == DBServerType.POSTGRESQL)
+			if (serverType == DBServerType.POSTGRESQL)
 			{
 				using (var connection = new NpgsqlConnection(connectionString))
 				{
@@ -165,8 +188,8 @@ select a.attname as columnname,
 
 					using (var command = new NpgsqlCommand(query, connection))
 					{
-						command.Parameters.AddWithValue("@schema", entityModel.SchemaName);
-						command.Parameters.AddWithValue("@tablename", entityModel.TableName);
+						command.Parameters.AddWithValue("@schema", schemaName);
+						command.Parameters.AddWithValue("@tablename", tableName);
 
 						using (var reader = command.ExecuteReader())
 						{
@@ -194,11 +217,11 @@ select a.attname as columnname,
 					}
 				}
 			}
-			else if (entityModel.ServerType == DBServerType.MYSQL)
+			else if (serverType == DBServerType.MYSQL)
 			{
 
 			}
-			else if (entityModel.ServerType == DBServerType.SQLSERVER)
+			else if (serverType == DBServerType.SQLSERVER)
 			{
 				using (var connection = new SqlConnection(connectionString))
 				{
@@ -237,8 +260,8 @@ select c.name as column_name,
 
 					using (var command = new SqlCommand(query, connection))
 					{
-						command.Parameters.AddWithValue("@schema", entityModel.SchemaName);
-						command.Parameters.AddWithValue("@tablename", entityModel.TableName);
+						command.Parameters.AddWithValue("@schema", schemaName);
+						command.Parameters.AddWithValue("@tablename", tableName);
 
 						using (var reader = command.ExecuteReader())
 						{
@@ -285,7 +308,7 @@ select c.name as column_name,
 				}
 			}
 
-			entityModel.Columns = columns.ToArray();
+			return columns.ToArray();
 		}
 
 		public static MemoryCache _cache = new MemoryCache("ClassCache");
@@ -1819,15 +1842,13 @@ select c.name as column_name,
 		}
 
 		#region Postgrsql Helper Functions
-		public static ElementType GetElementType(string schema, string datatype, EntityMap entityMap, string connectionString)
+		public static ElementType GetElementType(DTE2 dte2, string schema, string tableName, string connectionString)
 		{
-				var entityModel = entityMap.Maps.FirstOrDefault(c =>
-					c.GetType() == typeof(EntityModel) &&
-					string.Equals(((EntityModel)c).SchemaName, schema, StringComparison.OrdinalIgnoreCase) && 
-					string.Equals(((EntityModel)c).TableName, datatype, StringComparison.OrdinalIgnoreCase));
+			var codeService = (ICodeService)COFRSServiceFactory.GetService<ICodeService>();
+			var entityClass = codeService.GetEntityClassBySchema(schema, tableName);
 
-				if (entityModel != null)
-					return entityModel.ElementType;
+			if (entityClass != null)
+					return entityClass.ElementType;
 
 			string query = @"
 select t.typtype
@@ -1846,7 +1867,7 @@ select t.typtype
 				using (var command = new NpgsqlCommand(query, connection))
 				{
 					command.Parameters.AddWithValue("@schema", schema);
-					command.Parameters.AddWithValue("@element", datatype);
+					command.Parameters.AddWithValue("@element", tableName);
 
 					using (var reader = command.ExecuteReader())
 					{

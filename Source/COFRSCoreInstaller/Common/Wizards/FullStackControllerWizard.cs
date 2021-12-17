@@ -6,6 +6,7 @@ using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using Newtonsoft.Json;
 using System;
@@ -55,7 +56,8 @@ namespace COFRS.Template.Common.Wizards
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
-			ProgressForm progressDialog = null;
+			var uiShell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell2;
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
 			try
 			{
@@ -69,33 +71,16 @@ namespace COFRS.Template.Common.Wizards
 
 				//	Show the user that we are busy doing things...
 				var parent = new WindowClass((IntPtr)dte.ActiveWindow.HWnd);
-
-				progressDialog = new ProgressForm("Loading classes and preparing project...");
-				progressDialog.Show(parent);
-
-				HandleMessages();
-
 				dte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 				//  Load the project mapping information
-				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte);
-				HandleMessages();
+				var projectMapping = codeService.LoadProjectMapping();
+				var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
+				var connectionString = COFRSCommonUtilities.GetConnectionString();
 
-				var installationFolder = COFRSCommonUtilities.GetInstallationFolder(dte);
-				HandleMessages();
-
-				var connectionString = COFRSCommonUtilities.GetConnectionString(dte);
-				HandleMessages();
-
-				var entityMap = COFRSCommonUtilities.LoadEntityMap(dte);
-				HandleMessages();
-
-				var defaultServerType = COFRSCommonUtilities.GetDefaultServerType(dte);
-				var resourceMap = COFRSCommonUtilities.LoadResourceMap(dte);
-				HandleMessages();
+				var defaultServerType = COFRSCommonUtilities.GetDefaultServerType();
 
 				var policies = COFRSCommonUtilities.LoadPolicies(dte);
-				HandleMessages();
 
 				//	Get folders and namespaces
 				var rootNamespace = replacementsDictionary["$rootnamespace$"];
@@ -114,41 +99,30 @@ namespace COFRS.Template.Common.Wizards
 
 				var resourceName = new NameNormalizer(candidateName);
 
-				HandleMessages();
-
 				var form = new UserInputFullStack
 				{
 					SingularResourceName = resourceName.SingleForm,
 					PluralResourceName = resourceName.PluralForm,
 					RootNamespace = rootNamespace,
 					ReplacementsDictionary = replacementsDictionary,
-					EntityMap = entityMap,
 					EntityModelsFolder = projectMapping.GetEntityModelsFolder(),
 					Policies = policies,
-					DefaultConnectionString = connectionString
+					DefaultConnectionString = connectionString,
+					dte2 = dte
 				};
 
-				HandleMessages();
-
-				progressDialog.Close();
 				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 
-				EntityModel entityModel = null;
-				ResourceModel resourceModel = null;
+				EntityClass entityModel = null;
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
 					//	Show the user that we are busy...
-					progressDialog = new ProgressForm("Building classes...");
-					progressDialog.Show(parent);
 					dte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-
-					HandleMessages();
 					connectionString = $"{form.ConnectionString}Application Name={projectMapping.ControllersProject}";
 
 					//	Replace the ConnectionString
-					COFRSCommonUtilities.ReplaceConnectionString(dte, connectionString);
-					HandleMessages();
+					COFRSCommonUtilities.ReplaceConnectionString(connectionString);
 
 					var entityClassName = $"E{form.SingularResourceName}";
 					var resourceClassName = form.SingularResourceName;
@@ -166,13 +140,10 @@ namespace COFRS.Template.Common.Wizards
 
 					var moniker = COFRSCommonUtilities.LoadMoniker(dte);
 					var policy = form.Policy;
-					HandleMessages();
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
 					replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
-
-					List<EntityModel> undefinedModels = form.UndefinedClassList;
 
 					var emitter = new Emitter();
 					var standardEmitter = new StandardEmitter();
@@ -188,61 +159,27 @@ namespace COFRS.Template.Common.Wizards
 							//	Generate any undefined composits before we construct our entity model (because, 
 							//	the entity model depends upon them)
 
-							var definedList = new List<EntityModel>();
-							definedList.AddRange(undefinedModels);
-
-							standardEmitter.GenerateComposites(dte,
-															   undefinedModels,
+							standardEmitter.GenerateComposites(form.UndefinedEntityModels,
 															   form.ConnectionString,
 															   replacementsDictionary,
-															   entityMap,
 															   projectMapping.GetEntityModelsFolder());
-							HandleMessages();
-
-							foreach (var composite in undefinedModels)
-							{
-								//	TO DO: This is incorret - the item could reside in another project
-								var pj = (VSProject)dte.Solution.Projects.Item(1).Object;
-								pj.Project.ProjectItems.AddFromFile(composite.Folder);
-
-								COFRSCommonUtilities.RegisterComposite(dte, composite);
-							}
-
 						}
 
 						//	Emit Entity Model
-						entityModel = new EntityModel()
-						{
-							ClassName = entityClassName,
-							SchemaName = form.DatabaseTable.Schema,
-							TableName = form.DatabaseTable.Table,
-							Namespace = replacementsDictionary["$rootnamespace$"],
-							ElementType = ElementType.Composite,
-							Folder = Path.Combine(projectMapping.EntityFolder, replacementsDictionary["$safeitemname$"])
-						};
+						var columns = DBHelper.GenerateColumns(form.DatabaseTable.Schema, 
+							                                   form.DatabaseTable.Table,
+															   form.ServerType,
+															   form.ConnectionString);
 
-						DBHelper.GenerateColumns(entityModel, form.ConnectionString);
+						var emodel = standardEmitter.EmitEntityModel(entityClassName,
+							                                         form.DatabaseTable.Schema,
+																	 form.DatabaseTable.Table,
+																	 form.ServerType,
+																	 columns,
+																     replacementsDictionary);
 
-						var emodel = standardEmitter.EmitEntityModel(entityModel,
-																entityMap,
-																replacementsDictionary);
-
-						var existingEntities = entityMap.Maps.ToList();
-
-						entityModel.Folder = Path.Combine(projectMapping.EntityFolder, $"{entityModel.ClassName}.cs");
-
-						existingEntities.Add(entityModel);
-						entityMap.Maps = existingEntities.ToArray();
 
 						replacementsDictionary.Add("$entityModel$", emodel);
-						HandleMessages();
-					}
-					else
-					{
-						//	Since we're not generating an entity model, that must mean that one
-						//	already exists.
-
-						entityModel = entityMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, entityClassName, StringComparison.OrdinalIgnoreCase));
 					}
 
 					if (entityModel == null)
@@ -258,39 +195,10 @@ namespace COFRS.Template.Common.Wizards
 					{
 						GenerateResource = true;
 
-						//	Emit Resource Model
-
-						HandleMessages();
-
-						resourceModel = new ResourceModel()
-						{
-							ProjectName = projectMapping.ResourceProject,
-							Namespace = projectMapping.ResourceNamespace,
-							Folder = Path.Combine(projectMapping.ResourceFolder, $"{resourceClassName}.cs"),
-							ClassName = resourceClassName,
-							EntityModel = entityModel,
-							ServerType = form.ServerType
-						};
-
-						var rmodel = standardEmitter.EmitResourceModel(resourceModel,
-																	   resourceMap,
+						var rmodel = standardEmitter.EmitResourceModel(entityModel,
 																	   replacementsDictionary);
+
 						replacementsDictionary.Add("$resourceModel$", rmodel);
-
-						var existingResources = resourceMap.Maps.ToList();
-
-						resourceModel.Folder = Path.Combine(projectMapping.ResourceFolder, $"{resourceModel.ClassName}.cs");
-
-						existingResources.Add(resourceModel);
-						resourceMap.Maps = existingResources.ToArray();
-						HandleMessages();
-					}
-					else
-					{
-						//	Since we're not generating a resource model, that must mean that one
-						//	already exists.
-
-						resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
 					}
 					#endregion
 
@@ -301,11 +209,9 @@ namespace COFRS.Template.Common.Wizards
 					{
 						GenerateMapping = true;
 
-						if (resourceModel == null )
-							resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
-						profileMap = COFRSCommonUtilities.GenerateProfileMap(resourceModel, resourceMap);
+						var resourceModel = codeService.GetResourceClass(resourceClassName);
 
-						var mappingModel = standardEmitter.EmitMappingModel(resourceModel, resourceModel.EntityModel, profileMap, mappingClassName, replacementsDictionary);
+						var mappingModel = standardEmitter.EmitMappingModel(resourceModel, mappingClassName, replacementsDictionary);
 
 						replacementsDictionary.Add("$mappingModel$", mappingModel);
 					}
@@ -314,86 +220,75 @@ namespace COFRS.Template.Common.Wizards
                     #endregion
 
 					#region Validation Operations
-                    var validatorInterface = string.Empty;
-					if (form.ValidatorCheckBox.Checked)
-					{
-						GenerateValidator = true;
+     //               var validatorInterface = string.Empty;
+					//if (form.ValidatorCheckBox.Checked)
+					//{
+					//	GenerateValidator = true;
 
-						if ( resourceModel == null)
-							resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
+					//	var resourceModel = codeService.GetResourceClass(resourceClassName);
 
-						if ( profileMap == null)
-							profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
-						var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(dte);
+					//	if ( profileMap == null)
+					//		profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
+					//	var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(dte);
 
-						//	Emit Validation Model
-						var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, validationClassName, out validatorInterface);
-						replacementsDictionary.Add("$validationModel$", validationModel);
-						HandleMessages();
+					//	//	Emit Validation Model
+					//	var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, resourceMap, validationClassName, out validatorInterface);
+					//	replacementsDictionary.Add("$validationModel$", validationModel);
 
-						//	Register the validation model
-						COFRSCommonUtilities.RegisterValidationModel(dte,
-														  validationClassName,
-														  replacementsDictionary["$validatornamespace$"]);
-					}
-					else
-                    {
-						validatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte, resourceModel.ClassName);
-                    }
+					//	//	Register the validation model
+					//	COFRSCommonUtilities.RegisterValidationModel(dte,
+					//									  validationClassName,
+					//									  replacementsDictionary["$validatornamespace$"]);
+					//}
+					//else
+     //               {
+					//	validatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte, resourceModel.ClassName);
+     //               }
 					#endregion
 
 					#region Example Operations
-					if (form.ExampleCheckBox.Checked)
-					{
-						GenerateExample = true;
+					//if (form.ExampleCheckBox.Checked)
+					//{
+					//	GenerateExample = true;
 
-						if ( resourceModel == null)
-							resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
+					//	var resourceModel = codeService.GetResourceClass(resourceClassName);
 
-						if ( profileMap== null)
-							profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
+					//	if ( profileMap== null)
+					//		profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
 
-						var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, entityMap, exampleClassName, defaultServerType, connectionString);
-						replacementsDictionary.Add("$examplemodel$", exampleModel);
-					}
+					//	var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, exampleClassName, defaultServerType, connectionString);
+					//	replacementsDictionary.Add("$examplemodel$", exampleModel);
+					//}
 					#endregion
 
 					#region Controller Operations
-					if (form.ControllerCheckbox.Checked)
-					{
-						GenerateController = true;
+					//if (form.ControllerCheckbox.Checked)
+					//{
+					//	GenerateController = true;
 
-						if (resourceModel == null)
-							resourceModel = resourceMap.Maps.FirstOrDefault(m => string.Equals(m.ClassName, resourceClassName, StringComparison.OrdinalIgnoreCase));
+					//	var resourceModel = codeService.GetResourceClass(resourceClassName);
 
-						var controllerModel = emitter.EmitController(
-							dte,
-							entityModel,
-							resourceModel,
-							moniker,
-							controllerClassName,
-							validatorInterface,
-							policy,
-							projectMapping.ValidationNamespace);
+					//	var controllerModel = emitter.EmitController(
+					//		dte,
+					//		entityModel,
+					//		resourceModel,
+					//		moniker,
+					//		controllerClassName,
+					//		validatorInterface,
+					//		policy,
+					//		projectMapping.ValidationNamespace);
 
-						replacementsDictionary.Add("$controllerModel$", controllerModel);
-						HandleMessages();
-					}
+					//	replacementsDictionary.Add("$controllerModel$", controllerModel);
+					//}
 					#endregion
 				}
 
-				progressDialog.Close();
 				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-
 				Proceed = true;
 			}
 			catch (Exception ex)
 			{
 				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-
-				if (progressDialog != null)
-					progressDialog.Close();
-
 				MessageBox.Show(ex.ToString());
 				Proceed = false;
 			}
@@ -426,13 +321,5 @@ namespace COFRS.Template.Common.Wizards
 
 			return Proceed;
 		}
-
-		private void HandleMessages()
-        {
-            while (WinNative.PeekMessage(out WinNative.NativeMessage msg, IntPtr.Zero, 0, (uint)0xFFFFFFFF, 1) != 0)
-            {
-                WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
-            }
-        }
 	}
 }
