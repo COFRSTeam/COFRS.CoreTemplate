@@ -1,5 +1,5 @@
-﻿using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
+﻿using COFRS.Template.Common.Models;
+using COFRS.Template.Common.ServiceUtilities;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;

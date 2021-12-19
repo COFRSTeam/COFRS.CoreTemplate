@@ -1,4 +1,4 @@
-﻿using COFRSCoreCommon.Models;
+﻿using COFRS.Template.Common.Models;
 using MySql.Data.MySqlClient;
 using Npgsql;
 using System;

@@ -1,17 +1,12 @@
 ﻿using COFRS.Template.Common.Forms;
+using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Forms;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
@@ -54,13 +49,13 @@ namespace COFRS.Template.Common.Wizards
             try
             {
                 var projectMapping = codeService.LoadProjectMapping();
-                var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
-                var connectionString = COFRSCommonUtilities.GetConnectionString();
+                var installationFolder = codeService.InstallationFolder;
+                var connectionString = codeService.ConnectionString;
 
                 //  Make sure we are where we're supposed to be
-                if ( !COFRSCommonUtilities.IsChildOf(projectMapping.EntityFolder, installationFolder.Folder))
+                if ( !codeService.IsChildOf(projectMapping.EntityFolder, installationFolder.Folder))
                 {
-                    var result = MessageBox.Show($"You are attempting to install an entity model into {COFRSCommonUtilities.GetRelativeFolder(mDte, installationFolder)}. Typically, entity models reside in {COFRSCommonUtilities.GetRelativeFolder(mDte, projectMapping.GetEntityModelsFolder())}.\r\n\r\nDo you wish to place the new entity model in this non-standard location?", 
+                    var result = MessageBox.Show($"You are attempting to install an entity model into {codeService.GetRelativeFolder(installationFolder)}. Typically, entity models reside in {codeService.GetRelativeFolder(projectMapping.GetEntityModelsFolder())}.\r\n\r\nDo you wish to place the new entity model in this non-standard location?", 
                         "Warning: Non-Standard Location", 
                         MessageBoxButtons.YesNo, 
                         MessageBoxIcon.Warning);
@@ -94,13 +89,10 @@ namespace COFRS.Template.Common.Wizards
                 {
                     try
                     {
-                        //	Show the user that we are busy...
-                        connectionString = $"{form.ConnectionString}Application Name={mDte.Solution.FullName}";
-
                         //	Replace the default connection string in the appSettings.Local.json, so that the 
                         //	user doesn't have to do it. Note: this function only replaces the connection string
                         //	if the appSettings.Local.json contains the original placeholder connection string.
-                        COFRSCommonUtilities.ReplaceConnectionString(connectionString);
+                        codeService.ConnectionString = $"{form.ConnectionString}Application Name={mDte.Solution.FullName}";
 
                         //	We will need these when we replace placeholders in the class
                         var className = replacementsDictionary["$safeitemname$"];
@@ -135,7 +127,7 @@ namespace COFRS.Template.Common.Wizards
 
                             replacementsDictionary["$npgsqltypes$"] = "true";
 
-                            COFRSCommonUtilities.RegisterComposite(replacementsDictionary["$safeitemname$"],
+                            codeService.RegisterComposite(replacementsDictionary["$safeitemname$"],
                                                                    replacementsDictionary["$rootnamespace$"],
                                                                    ElementType.Enum,
                                                                    form.DatabaseTable.Table);
@@ -155,7 +147,7 @@ namespace COFRS.Template.Common.Wizards
 
                             replacementsDictionary["$npgsqltypes$"] = "true";
 
-                            COFRSCommonUtilities.RegisterComposite(replacementsDictionary["$safeitemname$"],
+                            codeService.RegisterComposite(replacementsDictionary["$safeitemname$"],
                                                                    replacementsDictionary["$rootnamespace$"],
                                                                    ElementType.Enum,
                                                                    form.DatabaseTable.Table);

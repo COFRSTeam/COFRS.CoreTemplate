@@ -1,16 +1,12 @@
 ﻿using COFRS.Template.Common.Forms;
+using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Forms;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
@@ -46,17 +42,16 @@ namespace COFRS.Template.Common.Wizards
 			try
             {
                 var projectMapping = codeService.LoadProjectMapping();
-                var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
-                var connectionString = COFRSCommonUtilities.GetConnectionString();
-                var defaultServerType = COFRSCommonUtilities.GetDefaultServerType();
+                var installationFolder = codeService.InstallationFolder;
+                var connectionString = codeService.ConnectionString;
 
                 //  Make sure we are where we're supposed to be
-                if (!COFRSCommonUtilities.IsChildOf(projectMapping.ResourceFolder, installationFolder.Folder))
+                if (!codeService.IsChildOf(projectMapping.ResourceFolder, installationFolder.Folder))
                 {
                     mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
                     var resourceModelsFolder = projectMapping.GetResourceModelsFolder();
 
-                    var result = MessageBox.Show($"You are attempting to install a resource model into {COFRSCommonUtilities.GetRelativeFolder(mDte, installationFolder)}. Typically, resource models reside in {COFRSCommonUtilities.GetRelativeFolder(mDte, resourceModelsFolder)}.\r\n\r\nDo you wish to place the new resource model in this non-standard location?",
+                    var result = MessageBox.Show($"You are attempting to install a resource model into {codeService.GetRelativeFolder(installationFolder)}. Typically, resource models reside in {codeService.GetRelativeFolder(resourceModelsFolder)}.\r\n\r\nDo you wish to place the new resource model in this non-standard location?",
                         "Warning: Non-Standard Location",
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Warning);
@@ -89,8 +84,7 @@ namespace COFRS.Template.Common.Wizards
                     var standardEmitter = new StandardEmitter();
                     var undefinedModels = form.UndefinedResources;
 
-                    standardEmitter.GenerateResourceComposites(mDte,
-                                                               undefinedModels,
+                    standardEmitter.GenerateResourceComposites(undefinedModels,
                                                                projectMapping.GetResourceModelsFolder(),
                                                                form.ConnectionString);
 

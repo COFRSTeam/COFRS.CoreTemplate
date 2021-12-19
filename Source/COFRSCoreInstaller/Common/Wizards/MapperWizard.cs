@@ -1,16 +1,12 @@
 ﻿using COFRS.Template.Common.Forms;
+using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Forms;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
@@ -45,16 +41,16 @@ namespace COFRS.Template.Common.Wizards
 			{
 				//  Load the project mapping information
 				var projectMapping = codeService.LoadProjectMapping();
-				var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
-				var connectionString = COFRSCommonUtilities.GetConnectionString();
+				var installationFolder = codeService.InstallationFolder;
+				var connectionString = codeService.ConnectionString;
 
 				//  Make sure we are where we're supposed to be
-				if (!COFRSCommonUtilities.IsChildOf(projectMapping.MappingFolder, installationFolder.Folder))
+				if (!codeService.IsChildOf(projectMapping.MappingFolder, installationFolder.Folder))
 				{
 					mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					var mappingFolder = projectMapping.GetMappingFolder();
 
-					var result = MessageBox.Show($"You are attempting to install a resource/entity mapping model into {COFRSCommonUtilities.GetRelativeFolder(mDte, installationFolder)}. Typically, resource/entity mapping models reside in {COFRSCommonUtilities.GetRelativeFolder(mDte, mappingFolder)}.\r\n\r\nDo you wish to place the new resource/entity mapping model in this non-standard location?",
+					var result = MessageBox.Show($"You are attempting to install a resource/entity mapping model into {codeService.GetRelativeFolder(installationFolder)}. Typically, resource/entity mapping models reside in {codeService.GetRelativeFolder(mappingFolder)}.\r\n\r\nDo you wish to place the new resource/entity mapping model in this non-standard location?",
 						"Warning: Non-Standard Location",
 						MessageBoxButtons.YesNo,
 						MessageBoxIcon.Warning);

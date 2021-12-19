@@ -1,4 +1,4 @@
-﻿using COFRSCoreCommon.Models;
+﻿using COFRS.Template.Common.Models;
 using System;
 
 namespace COFRS.Template.Common.ServiceUtilities

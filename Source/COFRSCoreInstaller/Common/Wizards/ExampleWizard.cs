@@ -1,8 +1,6 @@
 ﻿using COFRS.Template.Common.Forms;
+using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Forms;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
@@ -49,21 +47,20 @@ namespace COFRS.Template.Common.Wizards
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();	
 			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
 			var uiShell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell2;
-			ProgressForm progressDialog = new ProgressForm(_appObject, uiShell, "Loading classes and preparing project...");
 
 			try
 			{
 				var projectMapping = codeService.LoadProjectMapping();
 				var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
-				var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
-				var connectionString = COFRSCommonUtilities.GetConnectionString();
+				var installationFolder = codeService.InstallationFolder;
+				var connectionString = codeService.ConnectionString;
 
 				//  Make sure we are where we're supposed to be
-				if (!COFRSCommonUtilities.IsChildOf(projectMapping.ExampleFolder, installationFolder.Folder))
+				if (!codeService.IsChildOf(projectMapping.ExampleFolder, installationFolder.Folder))
 				{
 					var exampleFolder = projectMapping.GetExamplesFolder();
 
-					var result = MessageBox.Show($"You are attempting to install an example model into {COFRSCommonUtilities.GetRelativeFolder(_appObject, installationFolder)}. Typically, example models reside in {COFRSCommonUtilities.GetRelativeFolder(_appObject, exampleFolder)}.\r\n\r\nDo you wish to place the new example model in this non-standard location?",
+					var result = MessageBox.Show($"You are attempting to install an example model into {codeService.GetRelativeFolder(installationFolder)}. Typically, example models reside in {codeService.GetRelativeFolder(exampleFolder)}.\r\n\r\nDo you wish to place the new example model in this non-standard location?",
 						"Warning: Non-Standard Location",
 						MessageBoxButtons.YesNo,
 						MessageBoxIcon.Warning);
@@ -97,7 +94,7 @@ namespace COFRS.Template.Common.Wizards
 					var emitter = new StandardEmitter();
 					//var model = emitter.EmitExampleModel(resourceModel, profileMap, replacementsDictionary["$safeitemname$"], defaultServerType, connectionString);
 
-					var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(_appObject);
+					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
 
 					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
 					replacementsDictionary.Add("$model$", "");

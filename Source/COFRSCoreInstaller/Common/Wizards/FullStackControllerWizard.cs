@@ -1,20 +1,14 @@
 ﻿using COFRS.Template.Common.Forms;
+using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Forms;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Windows.Forms;
-using VSLangProj;
 
 namespace COFRS.Template.Common.Wizards
 {
@@ -23,9 +17,9 @@ namespace COFRS.Template.Common.Wizards
 		private bool Proceed = false;
 		private bool GenerateEntity = false;
 		private bool GenerateResource = false;
-		private bool GenerateController = false;
-		private bool GenerateExample = false;
-		private bool GenerateValidator = false;
+		private readonly bool GenerateController = false;
+		private readonly bool GenerateExample = false;
+		private readonly bool GenerateValidator = false;
 		private bool GenerateMapping = false;
 
 		// This method is called before opening any item that
@@ -56,13 +50,12 @@ namespace COFRS.Template.Common.Wizards
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
-			var uiShell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell2;
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
 			try
 			{
 				//	Full stack must start at the root namespace. Insure that we do...
-				if (!COFRSCommonUtilities.IsRootNamespace(dte, replacementsDictionary["$rootnamespace$"]))
+				if (!codeService.IsRootNamespace(replacementsDictionary["$rootnamespace$"]))
 				{
 					MessageBox.Show("The COFRS Controller Full Stack should be placed at the project root. It will add the appropriate components in the appropriate folders.", "COFRS", MessageBoxButtons.OK, MessageBoxIcon.Error);
 					Proceed = false;
@@ -74,13 +67,13 @@ namespace COFRS.Template.Common.Wizards
 				dte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 				//  Load the project mapping information
+				var installationFolder = codeService.InstallationFolder;
+				var connectionString = codeService.ConnectionString;
 				var projectMapping = codeService.LoadProjectMapping();
-				var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
-				var connectionString = COFRSCommonUtilities.GetConnectionString();
 
-				var defaultServerType = COFRSCommonUtilities.GetDefaultServerType();
+				var defaultServerType = codeService.DefaultServerType;
 
-				var policies = COFRSCommonUtilities.LoadPolicies(dte);
+				var policies = codeService.Policies;
 
 				//	Get folders and namespaces
 				var rootNamespace = replacementsDictionary["$rootnamespace$"];
@@ -117,12 +110,7 @@ namespace COFRS.Template.Common.Wizards
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
-					//	Show the user that we are busy...
-					dte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-					connectionString = $"{form.ConnectionString}Application Name={projectMapping.ControllersProject}";
-
-					//	Replace the ConnectionString
-					COFRSCommonUtilities.ReplaceConnectionString(connectionString);
+					codeService.ConnectionString = $"{form.ConnectionString}Application Name={projectMapping.ControllersProject}";
 
 					var entityClassName = $"E{form.SingularResourceName}";
 					var resourceClassName = form.SingularResourceName;
@@ -138,7 +126,7 @@ namespace COFRS.Template.Common.Wizards
 					replacementsDictionary["$exampleClass$"] = exampleClassName;
 					replacementsDictionary["$controllerClass$"] = controllerClassName;
 
-					var moniker = COFRSCommonUtilities.LoadMoniker(dte);
+					var moniker = codeService.Moniker;
 					var policy = form.Policy;
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
@@ -201,8 +189,6 @@ namespace COFRS.Template.Common.Wizards
 						replacementsDictionary.Add("$resourceModel$", rmodel);
 					}
 					#endregion
-
-					ProfileMap profileMap = null;
 
 					#region Mapping Operations
 					if (form.MappingProfileCheckBox.Checked)

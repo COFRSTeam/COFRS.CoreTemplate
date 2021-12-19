@@ -1,18 +1,13 @@
-﻿using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
-using EnvDTE;
+﻿using COFRS.Template.Common.Models;
+using COFRS.Template.Common.ServiceUtilities;
 using EnvDTE80;
-using Microsoft.VisualStudio.Shell;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Npgsql;
-using NpgsqlTypes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
@@ -21,14 +16,11 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using VSLangProj;
 
 namespace COFRS.Template.Common.Forms
 {
-	public partial class UserInputFullStack : Form
+    public partial class UserInputFullStack : Form
     {
 		#region Variables
 		private ServerConfig _serverConfig;
@@ -46,7 +38,6 @@ namespace COFRS.Template.Common.Forms
 		public List<string> Policies;
 		public List<EntityModel> UndefinedEntityModels { get; set; }
 		public DBServerType ServerType { get; set; }
-		public EntityMap EntityMap { get; set; }
 		public DTE2 dte2 { get; set; }
 
 		public string Policy
@@ -614,6 +605,8 @@ select s.name, t.name
 
 		private void OnTableChanged(object sender, EventArgs e)
 		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+
 			try
 			{
 				var server = (DBServer)_serverList.SelectedItem;
@@ -704,22 +697,20 @@ select a.attname as columnname,
 								while (reader.Read())
 								{
 									var entityName = reader.GetString(0);
-									var columnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0)));
+									var columnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0)));
 
 									string dataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1));
 
 									if (string.IsNullOrWhiteSpace(dataType))
 									{
-										var entity = EntityMap.Maps.FirstOrDefault(ent =>
-											string.Equals(ent.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
-											string.Equals(ent.TableName, reader.GetString(1), StringComparison.OrdinalIgnoreCase));
+										var entity = codeService.GetEntityClassBySchema(table.Schema, reader.GetString(1));
 
 										if (entity == null)
 										{
 											entityName = reader.GetString(1);
-											var className = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(entityName));
+											var className = codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityName));
 
-											entity = new EntityModel()
+											var entityModel = new EntityModel()
 											{
 												SchemaName = table.Schema,
 												ClassName = className,
@@ -728,7 +719,7 @@ select a.attname as columnname,
 												Namespace = EntityModelsFolder.Namespace
 											};
 
-											UndefinedEntityModels.Add(entity);
+											UndefinedEntityModels.Add(entityModel);
 										}
 									}
 

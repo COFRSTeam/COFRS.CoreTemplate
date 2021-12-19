@@ -1,23 +1,15 @@
-﻿using COFRSCoreCommon.Models;
-using EnvDTE;
+﻿using COFRS.Template.Common.Models;
+using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
-using MySql.Data.MySqlClient;
-using Newtonsoft.Json;
+using Microsoft.VisualStudio.Shell.Interop;
 using Newtonsoft.Json.Linq;
-using Npgsql;
-using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using COFRSCoreCommon.Utilities;
-using EnvDTE80;
-using Microsoft.VisualStudio.Shell.Interop;
 
 namespace COFRS.Template.Common.ServiceUtilities
 {
@@ -675,6 +667,8 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 		public string EmitResourceEnum(EntityClass model, string connectionString)
         {
+			ThreadHelper.ThrowIfNotOnUIThread();
+
 			if (model.ServerType == DBServerType.MYSQL)
 				return EmitResourceMySqlEnum(model, connectionString);
 			else if (model.ServerType == DBServerType.POSTGRESQL)
@@ -695,8 +689,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 		}
 		private static string EmitResourceSqlServerEnum(EntityClass entityModel, string connectionString)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			StringBuilder results = new StringBuilder();
-			var ResourceClassName = $"{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(entityModel.TableName))}";
+			var ResourceClassName = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityModel.TableName))}";
 
 			results.AppendLine("\t///\t<summary>");
 			results.AppendLine($"\t///\t{ResourceClassName}");
@@ -1932,7 +1928,8 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 		public string EmitMappingModel(ResourceClass resourceModel, string mappingClassName, Dictionary<string, string> replacementsDictionary)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var ImageConversionRequired = false;
 			var results = new StringBuilder();
 			var nn = new NameNormalizer(resourceModel.ClassName);
@@ -1960,7 +1957,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			bool first = true;
 
-			var profileMap = COFRSCommonUtilities.GenerateProfileMap(resourceModel);
+			var profileMap = codeService.GenerateProfileMap(resourceModel);
 
 			foreach ( var resourceMap in profileMap.EntityProfiles)
             {
@@ -2422,9 +2419,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <returns></returns>
 		public string EmitResourceModel(EntityClass entityModel, Dictionary<string, string> replacementsDictionary)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
 			List<DBColumn> resourceColumns = new List<DBColumn>();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
-			var ResourceClassName = $"{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(entityModel.TableName))}";
+			var ResourceClassName = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityModel.TableName))}";
 
 
 			replacementsDictionary.Add("$resourceimage$", "false");
@@ -2458,7 +2456,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						results.AppendLine();
 					}
 
-					var membername = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(member.ColumnName));
+					var membername = codeService.CorrectForReservedNames(codeService.NormalizeClassName(member.ColumnName));
 
 					results.AppendLine("\t\t///\t<summary>");
 					results.AppendLine($"\t\t///\t{membername}");
@@ -2568,7 +2566,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 									memberName = nn.SingleForm;
 								}
 
-								memberName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(memberName));
+								memberName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(memberName));
 
 								results.AppendLine("\t\t///\t<summary>");
 								results.AppendLine($"\t\t///\tA hypertext reference that identifies the associated {memberName}");
@@ -2597,7 +2595,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					}
 					else
 					{
-						var membername = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(member.ColumnName));
+						var membername = codeService.CorrectForReservedNames(codeService.NormalizeClassName(member.ColumnName));
 
 						results.AppendLine("\t\t///\t<summary>");
 						results.AppendLine($"\t\t///\t{membername}");
@@ -2694,6 +2692,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 		public string EmitEntityEnum(string className, string schema, string tablename, DBColumn[] columns)
 		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var nn = new NameNormalizer(className);
 			var builder = new StringBuilder();
 
@@ -2722,11 +2721,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 				}
 
 				builder.AppendLine("\t\t///\t<summary>");
-				builder.AppendLine($"\t\t///\t{COFRSCommonUtilities.NormalizeClassName(column.ColumnName)}");
+				builder.AppendLine($"\t\t///\t{codeService.NormalizeClassName(column.ColumnName)}");
 				builder.AppendLine("\t\t///\t</summary>");
 				builder.AppendLine($"\t\t[PgName(\"{column.EntityName}\")]");
 
-				var elementName = COFRSCommonUtilities.NormalizeClassName(column.ColumnName);
+				var elementName = codeService.NormalizeClassName(column.ColumnName);
 				builder.Append($"\t\t{elementName}");
 			}
 
@@ -2738,6 +2737,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 		public string EmitResourceEnum(ResourceModel resourceModel)
 		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var nn = new NameNormalizer(resourceModel.ClassName);
 			var builder = new StringBuilder();
 
@@ -2763,9 +2763,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 				}
 
 				builder.AppendLine("\t\t///\t<summary>");
-				builder.AppendLine($"\t\t///\t{COFRSCommonUtilities.NormalizeClassName(column.ColumnName)}");
+				builder.AppendLine($"\t\t///\t{codeService.NormalizeClassName(column.ColumnName)}");
 				builder.AppendLine("\t\t///\t</summary>");
-				var elementName = COFRSCommonUtilities.NormalizeClassName(column.ColumnName);
+				var elementName = codeService.NormalizeClassName(column.ColumnName);
 				builder.Append($"\t\t{elementName}");
 			}
 
@@ -2778,6 +2778,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 		public string EmitComposite(string className, string schema, string tableName, ElementType elementType, DBColumn[] columns, string connectionString, Dictionary<string, string> replacementsDictionary, ProjectFolder entityModelsFolder)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var result = new StringBuilder();
 
 			result.Clear();
@@ -2933,7 +2934,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				result.AppendLine(")]");
 
-				var memberName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.ColumnName));
+				var memberName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(column.ColumnName));
 				result.AppendLine($"\t\t[PgName(\"{column.ColumnName}\")]");
 
 				//	Insert the column definition
@@ -2945,7 +2946,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return result.ToString();
 		}
 
-		public void GenerateResourceComposites(DTE2 dte2, List<ResourceClass> undefinedModels, ProjectFolder resourceModelFolder, string connectionString)
+		public void GenerateResourceComposites(List<ResourceClass> undefinedModels, ProjectFolder resourceModelFolder, string connectionString)
         {
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
@@ -2973,14 +2974,14 @@ namespace COFRS.Template.Common.ServiceUtilities
 					if (!Directory.Exists(Path.GetDirectoryName(resourceModelFolder.Folder)))
 						Directory.CreateDirectory(Path.GetDirectoryName(resourceModelFolder.Folder));
 
-					var className = $"{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(undefinedModel.Entity.TableName))}";
+					var className = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(undefinedModel.Entity.TableName))}";
 					var fullPath = Path.Combine(resourceModelFolder.Folder, $"{className}.cs");
 
 
 					File.WriteAllText(fullPath, result.ToString());
 
 					//	Add the model to the project
-					var parentProject = COFRSCommonUtilities.GetProjectFromFolder(resourceModelFolder.Folder);
+					var parentProject = codeService.GetProjectFromFolder(resourceModelFolder.Folder);
 					var resourceItem = parentProject.ProjectItems.AddFromFile(resourceModelFolder.Folder);
 
 					codeService.AddResource(resourceItem);
@@ -2998,7 +2999,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 		public void GenerateComposites(List<EntityModel> undefinedEntityModels, string connectionString, Dictionary<string, string> replacementsDictionary, ProjectFolder entityModelsFolder)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
 			//	As we generate each model, the model itself may contain undefined types, which in turn need to be added
@@ -3039,11 +3039,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 						File.WriteAllText(undefinedModel.Folder, result.ToString());
 
 						//	Add the model to the project
-						var parentProject = COFRSCommonUtilities.GetProjectFromFolder(undefinedModel.Folder);
+						var parentProject = codeService.GetProjectFromFolder(undefinedModel.Folder);
 						parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
 
 						//	Register the composite model
-						COFRSCommonUtilities.RegisterComposite(undefinedModel.ClassName, 
+						codeService.RegisterComposite(undefinedModel.ClassName, 
 							                                   undefinedModel.Namespace,
 															   undefinedModel.ElementType,
 															   undefinedModel.TableName);
@@ -3109,11 +3109,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 						File.WriteAllText(undefinedModel.Folder, result.ToString());
 
 						//	Add the model to the project
-						var parentProject = COFRSCommonUtilities.GetProjectFromFolder(undefinedModel.Folder);
+						var parentProject = codeService.GetProjectFromFolder(undefinedModel.Folder);
 						parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
 
 						//	Register the composite model
-						COFRSCommonUtilities.RegisterComposite(undefinedModel.ClassName,
+						codeService.RegisterComposite(undefinedModel.ClassName,
 							                                   undefinedModel.Namespace,
 															   undefinedModel.ElementType,
 															   undefinedModel.TableName);

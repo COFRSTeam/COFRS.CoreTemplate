@@ -1,12 +1,9 @@
 ﻿using COFRS.Template.Common.Forms;
+using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Forms;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
@@ -55,16 +52,16 @@ namespace COFRS.Template.Common.Wizards
 
 				var projectMapping = codeService.LoadProjectMapping();
 				var solutionPath = dte2.Solution.Properties.Item("Path").Value.ToString();
-				var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
-				var connectionString = COFRSCommonUtilities.GetConnectionString();
+				var installationFolder = codeService.InstallationFolder;
+				var connectionString = codeService.ConnectionString;
 
 				//  Make sure we are where we're supposed to be
-				if (!COFRSCommonUtilities.IsChildOf(projectMapping.ControllersFolder, installationFolder.Folder))
+				if (!codeService.IsChildOf(projectMapping.ControllersFolder, installationFolder.Folder))
 				{
 					dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					var controllersFolder = projectMapping.GetControllersFolder();
 
-					var result = MessageBox.Show($"You are attempting to install a controller model into {COFRSCommonUtilities.GetRelativeFolder(dte2, installationFolder)}. Typically, controller models reside in {COFRSCommonUtilities.GetRelativeFolder(dte2, controllersFolder)}.\r\n\r\nDo you wish to place the new controller model in this non-standard location?",
+					var result = MessageBox.Show($"You are attempting to install a controller model into {codeService.GetRelativeFolder(installationFolder)}. Typically, controller models reside in {codeService.GetRelativeFolder(controllersFolder)}.\r\n\r\nDo you wish to place the new controller model in this non-standard location?",
 						"Warning: Non-Standard Location",
 						MessageBoxButtons.YesNo,
 						MessageBoxIcon.Warning);
@@ -97,14 +94,14 @@ namespace COFRS.Template.Common.Wizards
 				if (form.ShowDialog() == DialogResult.OK)
 				{
 					var resourceModel = (ResourceClass)form._resourceModelList.SelectedItem;
-					var moniker = COFRSCommonUtilities.LoadMoniker(dte2);
+					var moniker = codeService.Moniker;
 					string policy = string.Empty;
 
 					if ( form.policyCombo.Items.Count > 0 )
 						policy = form.policyCombo.SelectedItem.ToString();
 					
-					var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(dte2);
-					var validatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte2, resourceModel.ClassName);
+					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
+					var validatorInterface = codeService.FindValidatorInterface(resourceModel.ClassName);
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");

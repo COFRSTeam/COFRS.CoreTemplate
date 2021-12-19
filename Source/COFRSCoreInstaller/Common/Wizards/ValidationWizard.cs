@@ -1,17 +1,13 @@
 ﻿using COFRS.Template.Common.Forms;
+using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Forms;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
@@ -55,20 +51,17 @@ namespace COFRS.Template.Common.Wizards
 				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 				var projectMapping = codeService.LoadProjectMapping();
-
 				var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
-
-				var installationFolder = COFRSCommonUtilities.GetInstallationFolder();
-
-				var connectionString = COFRSCommonUtilities.GetConnectionString();
+				var installationFolder = codeService.InstallationFolder;
+				var connectionString = codeService.ConnectionString;
 
 				//  Make sure we are where we're supposed to be
-				if (!COFRSCommonUtilities.IsChildOf(projectMapping.ValidationFolder, installationFolder.Folder))
+				if (!codeService.IsChildOf(projectMapping.ValidationFolder, installationFolder.Folder))
 				{
 					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					var validationFolder = projectMapping.GetValidatorFolder();
 
-					var result = MessageBox.Show($"You are attempting to install a validator model into {COFRSCommonUtilities.GetRelativeFolder(_appObject, installationFolder)}. Typically, validator models reside in {COFRSCommonUtilities.GetRelativeFolder(_appObject, validationFolder)}.\r\n\r\nDo you wish to place the new validator model in this non-standard location?",
+					var result = MessageBox.Show($"You are attempting to install a validator model into {codeService.GetRelativeFolder(installationFolder)}. Typically, validator models reside in {codeService.GetRelativeFolder(validationFolder)}.\r\n\r\nDo you wish to place the new validator model in this non-standard location?",
 						"Warning: Non-Standard Location",
 						MessageBoxButtons.YesNo,
 						MessageBoxIcon.Warning);
@@ -101,21 +94,20 @@ namespace COFRS.Template.Common.Wizards
 				if (form.ShowDialog() == DialogResult.OK)
 				{
 					var resourceModel = (ResourceClass)form._resourceModelList.SelectedItem;
-					var profileMap = COFRSCommonUtilities.OpenProfileMap(resourceModel, out bool isAllDefined);
+					var profileMap = codeService.OpenProfileMap(resourceModel, out bool isAllDefined);
 
 					var emitter = new StandardEmitter();
 					//var model = emitter.EmitValidationModel(resourceModel, profileMap, resourceMap, replacementsDictionary["$safeitemname$"], out string ValidatorInterface);
 
-					var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(_appObject);
+					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
 
 					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
 					replacementsDictionary.Add("$model$", "");
 					replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
 
-					COFRSCommonUtilities.RegisterValidationModel(_appObject,
-													  replacementsDictionary["$safeitemname$"],
-													  replacementsDictionary["$rootnamespace$"]);
+					codeService.RegisterValidationModel(replacementsDictionary["$safeitemname$"],
+													    replacementsDictionary["$rootnamespace$"]);
 					Proceed = true;
 				}
 				else

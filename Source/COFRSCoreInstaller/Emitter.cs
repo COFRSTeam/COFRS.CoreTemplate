@@ -1,6 +1,5 @@
-﻿using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
+﻿using COFRS.Template.Common.Models;
+using COFRS.Template.Common.ServiceUtilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;

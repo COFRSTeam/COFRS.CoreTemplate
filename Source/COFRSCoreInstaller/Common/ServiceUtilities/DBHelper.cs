@@ -1,12 +1,10 @@
-﻿using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
+﻿using COFRS.Template.Common.Models;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Npgsql;
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -44,7 +42,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								if (UndefinedClassList.FirstOrDefault(c => c.SchemaName.Equals(classFile.SchemaName) &&
 																		   c.TableName.Equals(column.DBDataType)) == null)
 								{
-									var className = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.ColumnName))}";
+									var className = $"E{codeService.CorrectForReservedNames(codeService.NormalizeClassName(column.ColumnName))}";
 
 									var aClassFile = new EntityModel()
 									{
@@ -71,7 +69,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								if (UndefinedClassList.FirstOrDefault(c => c.SchemaName.Equals(classFile.SchemaName) &&
 																		   c.TableName.Equals(column.DBDataType)) == null)
 								{
-									var className = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.ColumnName))}";
+									var className = $"E{codeService.CorrectForReservedNames(codeService.NormalizeClassName(column.ColumnName))}";
 
 									var aClassFile = new EntityModel()
 									{
@@ -101,6 +99,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 		public static DBColumn[] GenerateEnumColumns(string schema, string tableName, string connectionString)
 		{
 			var columns = new List<DBColumn>();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
 			string query = @"
 select e.enumlabel as enum_value
@@ -123,7 +122,7 @@ where t.typname = @dataType
 						while (reader.Read())
 						{
 							var element = reader.GetString(0);
-							var elementName = COFRSCommonUtilities.NormalizeClassName(element);
+							var elementName = codeService.NormalizeClassName(element);
 
 							var column = new DBColumn()
 							{
@@ -143,6 +142,7 @@ where t.typname = @dataType
 
 		public static DBColumn[] GenerateColumns(string schemaName, string tableName, DBServerType serverType, string connectionString)
 		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService> ();
 			var columns = new List<DBColumn>();
 
 			if (serverType == DBServerType.POSTGRESQL)
@@ -198,7 +198,7 @@ select a.attname as columnname,
 								var dbColumn = new DBColumn
 								{
 									EntityName = reader.GetString(0),
-									ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
+									ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
 									ModelDataType = DBHelper.ConvertPostgresqlDataType(reader.GetString(1)),
 									DBDataType = reader.GetString(1),
 									Length = Convert.ToInt64(reader.GetValue(2)),
@@ -269,7 +269,7 @@ select c.name as column_name,
 							{
 								var dbColumn = new DBColumn
 								{
-									ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
+									ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
 									EntityName = reader.GetString(0),
 									DBDataType = reader.GetString(1),
 									Length = Convert.ToInt64(reader.GetValue(2)),

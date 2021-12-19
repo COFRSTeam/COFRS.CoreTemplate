@@ -1,4 +1,4 @@
-﻿using COFRSCoreCommon.Models;
+﻿using COFRS.Template.Common.Models;
 using EnvDTE;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;

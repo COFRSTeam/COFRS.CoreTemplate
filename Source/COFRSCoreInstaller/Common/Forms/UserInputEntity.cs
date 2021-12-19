@@ -1,6 +1,5 @@
-﻿using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
+﻿using COFRS.Template.Common.Models;
+using COFRS.Template.Common.ServiceUtilities;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -354,6 +353,7 @@ select s.name, t.name
 		private void OnSelectedTableChanged(object sender, EventArgs e)
 		{
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			_okButton.Enabled = true;
 
 			try
@@ -593,7 +593,7 @@ ORDER BY c.ORDINAL_POSITION;
 
 									var dbColumn = new DBColumn
 									{
-										ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
+										ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
 										EntityName = reader.GetString(0),
 										DBDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
@@ -670,7 +670,7 @@ select c.name as column_name,
 								{
 									var dbColumn = new DBColumn
 									{
-										ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
+										ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
 										EntityName = reader.GetString(0),
 										DBDataType = reader.GetString(1),
 										Length = Convert.ToInt64(reader.GetValue(2)),
@@ -725,11 +725,11 @@ select c.name as column_name,
         {
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
             var entityName = reader.GetString(0);
-            var columnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0)));
+            var columnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0)));
 
             var dbColumn = new DBColumn
             {
-                ColumnName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(reader.GetString(0))),
+                ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
                 EntityName = entityName,
                 DBDataType = reader.GetString(1),
                 Length = Convert.ToInt64(reader.GetValue(2)),
@@ -761,7 +761,7 @@ select c.name as column_name,
                         //	It's not defined, and it's not in the undefined list, so it is unknown. Let's make it known
                         //	by constructing it and including it in the undefined list.
                         entityName = dbColumn.DBDataType;
-                        var className = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(entityName))}";
+                        var className = $"E{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityName))}";
 
                         var entity = new EntityModel()
                         {

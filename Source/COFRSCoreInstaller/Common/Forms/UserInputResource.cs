@@ -1,5 +1,6 @@
-﻿using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
+﻿using COFRS.Template.Common.Models;
+using COFRS.Template.Common.ServiceUtilities;
+using Microsoft.VisualStudio.Shell;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Npgsql;
@@ -348,6 +349,7 @@ select s.name, t.name
 
 		private void OnSelectedTableChanged(object sender, EventArgs e)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
 			try
@@ -415,13 +417,15 @@ select s.name, t.name
 
 								if ( resourceModel == null )
                                 {
-									var className = $"{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(childEntityModel.TableName))}";
-									//UndefinedResources.Add(className);
+									var className = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(childEntityModel.TableName))}";
+                                    //UndefinedResources.Add(className);
 
 
-									var r = new ResourceClass();
-									r.Entity = childEntityModel;
-									UndefinedResources.Add(r);
+                                    var r = new ResourceClass
+                                    {
+                                        Entity = childEntityModel
+                                    };
+                                    UndefinedResources.Add(r);
 
 
 									//resourceModel = new ResourceModel()
@@ -449,7 +453,7 @@ select s.name, t.name
 
 					if ( UndefinedResources.Count() > 0 )
                     {
-						var className = $"{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(entityModel.TableName))}";
+						var className = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityModel.TableName))}";
 						if ( MessageBox.Show($"The class {className} contains references to composits or enumerations for which therer is no defined resource model.\r\n\r\nWould you like COFRS to generate the missing resource models as part of generating this model?", 
 							"Warning: Missing Resource Model", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
                         {
