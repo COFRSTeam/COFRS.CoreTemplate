@@ -24,7 +24,7 @@ namespace COFRS.Template.Common.ServiceUtilities
         private readonly Events2 _events2 = null;
         private readonly SolutionEvents _solutionEvents = null;
         private readonly ProjectItemsEvents _projectItemsEvents = null;
-        private readonly ProjectItem _settingsFile = null;
+        private ProjectItem _settingsFile = null;
 
         public CodeService()
         {
@@ -47,11 +47,18 @@ namespace COFRS.Template.Common.ServiceUtilities
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
                 string jsonText;
-                if (!_settingsFile.IsOpen)
+
+				if (_settingsFile == null)
+				{
+					var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+					_settingsFile = mDte.Solution.FindProjectItem("appSettings.json");
+				}
+
+				if (!_settingsFile.IsOpen)
                 {
                     var filePath = _settingsFile.Properties.OfType<Property>().FirstOrDefault(p =>
                     {
-                        Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                        ThreadHelper.ThrowIfNotOnUIThread();
                         return p.Name.Equals("FullPath");
                     });
 
@@ -117,6 +124,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                 }
             }
         }
+
 		/// <summary>
 		/// Returns the <see cref="ProjectFolder"/> where the new item is being installed.
 		/// </summary>
@@ -162,7 +170,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 				}
 			}
 		}
-
 
 		/// <summary>
 		/// Get the default server type
@@ -258,74 +265,61 @@ namespace COFRS.Template.Common.ServiceUtilities
 			get
 			{
 				ThreadHelper.ThrowIfNotOnUIThread();
-				var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 
 				var results = new List<string>();
-				var appSettings = mDte.Solution.FindProjectItem("appSettings.json");
+				string jsonText;
 
-				if (appSettings.IsOpen)
+				if (_settingsFile == null)
 				{
-					var sel = (TextSelection)appSettings.Document.Selection;
+					var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+					_settingsFile = mDte.Solution.FindProjectItem("appSettings.json");
+				}
 
-					sel.SelectAll();
-
-					using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(sel.Text)))
+				if (!_settingsFile.IsOpen)
+				{
+					var filePath = _settingsFile.Properties.OfType<Property>().FirstOrDefault(p =>
 					{
-						using (var textReader = new StreamReader(stream))
-						{
-							using (var reader = new JsonTextReader(textReader))
-							{
-								var jsonConfig = JObject.Load(reader, new JsonLoadSettings { CommentHandling = CommentHandling.Ignore, LineInfoHandling = LineInfoHandling.Ignore });
+						ThreadHelper.ThrowIfNotOnUIThread();
+						return p.Name.Equals("FullPath");
+					});
 
-								if (jsonConfig["OAuth2"] == null)
-									return null;
+					if (filePath != null)
+					{
+						var thePath = filePath.Value.ToString();
+						jsonText = File.ReadAllText(thePath);
+					}
+					else
+					{
+						_settingsFile.Open();
 
-								var oAuth2Settings = jsonConfig["OAuth2"].Value<JObject>();
+						TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+						sel.SelectAll();
+						jsonText = sel.Text;
 
-								if (oAuth2Settings["Policies"] == null)
-									return null;
-
-								var policyArray = oAuth2Settings["Policies"].Value<JArray>();
-
-								foreach (var policy in policyArray)
-									results.Add(policy["Policy"].Value<string>());
-							}
-						}
+						_settingsFile.Document.Close();
 					}
 				}
 				else
 				{
-					appSettings.Open();
-					var sel = (TextSelection)appSettings.Document.Selection;
-
+					TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
 					sel.SelectAll();
-
-					using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(sel.Text)))
-					{
-						using (var textReader = new StreamReader(stream))
-						{
-							using (var reader = new JsonTextReader(textReader))
-							{
-								var jsonConfig = JObject.Load(reader, new JsonLoadSettings { CommentHandling = CommentHandling.Ignore, LineInfoHandling = LineInfoHandling.Ignore });
-
-								if (jsonConfig["OAuth2"] == null)
-									return null;
-
-								var oAuth2Settings = jsonConfig["OAuth2"].Value<JObject>();
-
-								if (oAuth2Settings["Policies"] == null)
-									return null;
-
-								var policyArray = oAuth2Settings["Policies"].Value<JArray>();
-
-								foreach (var policy in policyArray)
-									results.Add(policy["Policy"].Value<string>());
-							}
-						}
-					}
-
-					appSettings.Document.Close();
+					jsonText = sel.Text;
 				}
+
+				var settings = JObject.Parse(jsonText);
+
+				if (settings["OAuth2"] == null)
+					return null;
+
+				var oAuth2Settings = settings["OAuth2"].Value<JObject>();
+
+				if (oAuth2Settings["Policies"] == null)
+					return null;
+
+				var policyArray = oAuth2Settings["Policies"].Value<JArray>();
+
+				foreach (var policy in policyArray)
+					results.Add(policy["Policy"].Value<string>());
 
 				return results;
 			}
@@ -336,48 +330,58 @@ namespace COFRS.Template.Common.ServiceUtilities
 			get
 			{
 				ThreadHelper.ThrowIfNotOnUIThread();
-				var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 
-				string moniker = string.Empty;
+				var results = new List<string>();
+				string jsonText;
 
-				//	The first thing we need to do, is we need to load the appSettings.local.json file
-				ProjectItem settingsFile = mDte.Solution.FindProjectItem("appSettings.json");
-
-				if (settingsFile.IsOpen)
+				if (_settingsFile == null)
 				{
-					TextSelection sel = (TextSelection)settingsFile.Document.Selection;
+					var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+					_settingsFile = mDte.Solution.FindProjectItem("appSettings.json");
+				}
 
-					sel.StartOfDocument();
-					if (sel.FindText("CompanyName"))
+				if (!_settingsFile.IsOpen)
+				{
+					var filePath = _settingsFile.Properties.OfType<Property>().FirstOrDefault(p =>
 					{
-						sel.SelectLine();
+						ThreadHelper.ThrowIfNotOnUIThread();
+						return p.Name.Equals("FullPath");
+					});
 
-						var match = Regex.Match(sel.Text, "[ \t]*\\\"CompanyName\\\"\\:[ \t]\\\"(?<moniker>[^\\\"]+)\\\"");
+					if (filePath != null)
+					{
+						var thePath = filePath.Value.ToString();
+						jsonText = File.ReadAllText(thePath);
+					}
+					else
+					{
+						_settingsFile.Open();
 
-						if (match.Success)
-							moniker = match.Groups["moniker"].Value;
+						TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+						sel.SelectAll();
+						jsonText = sel.Text;
+
+						_settingsFile.Document.Close();
 					}
 				}
 				else
 				{
-					settingsFile.Open();
-					TextSelection sel = (TextSelection)settingsFile.Document.Selection;
-
-					sel.StartOfDocument();
-					if (sel.FindText("CompanyName"))
-					{
-						sel.SelectLine();
-
-						var match = Regex.Match(sel.Text, "[ \t]*\\\"CompanyName\\\"\\:[ \t]\\\"(?<moniker>[^\\\"]+)\\\"");
-
-						if (match.Success)
-							moniker = match.Groups["moniker"].Value;
-					}
-
-					settingsFile.Document.Close();
+					TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+					sel.SelectAll();
+					jsonText = sel.Text;
 				}
 
-				return moniker;
+				var settings = JObject.Parse(jsonText);
+
+				if (settings["ApiSettings"] == null)
+					return "acme";
+
+				var apiSettings = settings["ApiSettings"].Value<JObject>();
+
+				if (apiSettings["CompanyName"] == null)
+					return "acme";
+
+				return apiSettings["CompanyName"].Value<string>();
 			}
 		}
 

@@ -66,16 +66,12 @@ namespace COFRS.Template.Common.Wizards
                         return;
                     }
 
-                    mDte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-
                     projectMapping.EntityFolder = installationFolder.Folder;
                     projectMapping.EntityNamespace = installationFolder.Namespace;
                     projectMapping.EntityProject = installationFolder.ProjectName;
 
                     codeService.SaveProjectMapping();
                 }
-
-               // var projectName = projectMapping.EntityProject;
 
                 //	Construct the form, and fill in all the prerequisite data
                 var form = new UserInputEntity
