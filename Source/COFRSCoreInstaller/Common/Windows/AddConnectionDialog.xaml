@@ -1,0 +1,41 @@
+﻿<ui:DialogWindow x:Class="COFRS.Template.Common.Windows.AddConnectionDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:vsui="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             ShowInTaskbar="False"
+             WindowStartupLocation="CenterOwner"
+             SizeToContent="WidthAndHeight" Loaded="OnLoad"
+             WindowStyle="ToolWindow" Title="Add COFRS Entity Model" >
+    <ui:DialogWindow.Resources>
+        <Style TargetType="{x:Type Grid}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+        </Style>
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolWindowTextKey}}" />
+        </Style>
+        <Style TargetType="{x:Type PasswordBox}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolWindowTextKey}}" />
+        </Style>
+    </ui:DialogWindow.Resources>
+    <Grid x:Name="MainGrid" Width="483" Height="280">
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_ServerType" Content="Server Type" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="Combobox_ServerType" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" HorizontalAlignment="Left" Margin="156,12,0,0" VerticalAlignment="Top" Width="311" SelectionChanged="ServerType_SelectionChanged"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Lable_ServerName" Content="Server Name" HorizontalAlignment="Left" Margin="10,41,0,0" VerticalAlignment="Top"/>
+        <TextBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.TextBoxStyleKey}}" x:Name="Textbox_ServerName" HorizontalAlignment="Left" Margin="156,44,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="311" Height="22"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_Authentication" Content="Authentication" HorizontalAlignment="Left" Margin="10,72,0,0" VerticalAlignment="Top"/>
+        <TextBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.TextBoxStyleKey}}" x:Name="Textbox_PortNumber" HorizontalAlignment="Left" Margin="156,74,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120" Height="22" IsEnabled="False" Visibility="Visible"/>
+        <ComboBox x:Name="Combobox_Authentication" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" HorizontalAlignment="Left" Margin="156,76,0,0" VerticalAlignment="Top" Width="311" SelectionChanged="Authentication_SelectionChanged"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_UserName" Content="User Name" HorizontalAlignment="Left" Margin="10,103,0,0" VerticalAlignment="Top"/>
+        <TextBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.TextBoxStyleKey}}" x:Name="Textbox_UserName" HorizontalAlignment="Left" Margin="156,111,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="311" Height="22"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_Password" Content="Password" HorizontalAlignment="Left" Margin="10,134,0,0" VerticalAlignment="Top"/>
+        <PasswordBox x:Name="Textbox_Password" HorizontalAlignment="Left" Margin="156,142,0,0" VerticalAlignment="Top" Width="311" Height="22"/>
+        <CheckBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogCheckBoxStyleKey}}" x:Name="Checkbox_RememberPassword" Content="Remember Password" HorizontalAlignment="Left" Margin="156,179,0,0" VerticalAlignment="Top"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_CheckConnection" Content="asdf" HorizontalAlignment="Left" Margin="156,199,0,0" VerticalAlignment="Top" Width="311"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_CheckConnection" Content="Check" HorizontalAlignment="Left" Margin="232,240,0,0" VerticalAlignment="Top" Width="65" Click="CheckConnection_Click"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_OK" Content="OK" HorizontalAlignment="Left" Margin="319,240,0,0" VerticalAlignment="Top" Width="65" Click="OK_Click"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_Cancel" Content="Cancel" HorizontalAlignment="Left" Margin="402,240,0,0" VerticalAlignment="Top" Width="65" Click="Cancel_Click"/>
+    </Grid>
+</ui:DialogWindow>

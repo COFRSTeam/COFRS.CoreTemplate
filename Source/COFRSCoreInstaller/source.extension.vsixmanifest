@@ -4,10 +4,10 @@
         <Identity Id="COFRSCoresInstaller.9c754fd6-7e11-4a23-bff5-1c4af2bfea50" Version="1.0" Language="en-US" Publisher="Michael Fernandez" />
         <DisplayName>COFRS (.NET Core)</DisplayName>
         <Description xml:space="preserve">Installs the various tools for creating COFRS REST Services using .NET Core</Description>
-        <License>LICENSE.txt</License>
-        <GettingStartedGuide>StartupGuide.html</GettingStartedGuide>
-        <Icon>COFRS.ico</Icon>
-        <PreviewImage>preview.png</PreviewImage>
+        <License>Resources\LICENSE.txt</License>
+        <GettingStartedGuide>Resources\StartupGuide.html</GettingStartedGuide>
+        <Icon>Resources\COFRS.ico</Icon>
+        <PreviewImage>Resources\preview.png</PreviewImage>
         <Tags>REST Service Web API COFRS </Tags>
         <Preview>true</Preview>
     </Metadata>
@@ -57,6 +57,7 @@
     </Installation>
     <Dependencies>
         <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
+        <Dependency d:Source="Installed" Id="Microsoft.VisualStudio.MPF.17.0" DisplayName="Visual Studio MPF 17.0" Version="[17.0,18.0)" />
     </Dependencies>
     <Prerequisites>
         <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[15.0,18.0)" DisplayName="Visual Studio core editor" />
@@ -73,6 +74,5 @@
         <Asset Type="Microsoft.VisualStudio.ItemTemplate" d:Source="Project" d:ProjectName="COFRSCoreFullStackTemplate" d:TargetPath="|COFRSCoreFullStackTemplate;TemplateProjectOutputGroup|" Path="ItemTemplates" d:VsixSubPath="ItemTemplates" />
         <Asset Type="Microsoft.VisualStudio.ProjectTemplate" d:Source="Project" d:ProjectName="COFRSCoreProjectWitihSDKTemplate" d:TargetPath="|COFRSCoreProjectWitihSDKTemplate;TemplateProjectOutputGroup|" Path="ProjectTemplates" d:VsixSubPath="ProjectTemplates" />
         <Asset Type="Microsoft.VisualStudio.ItemTemplate" d:Source="Project" d:ProjectName="COFRSCoreExampleTemplate" d:TargetPath="|COFRSCoreExampleTemplate;TemplateProjectOutputGroup|" Path="ItemTemplates" d:VsixSubPath="ItemTemplates" />
-        <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="COFRSCoreCommandsPackage" Path="|COFRSCoreCommandsPackage;PkgdefProjectOutputGroup|" />
     </Assets>
 </PackageManifest>

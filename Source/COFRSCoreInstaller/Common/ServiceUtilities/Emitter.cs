@@ -1,14 +1,15 @@
-﻿using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
+﻿using COFRS.Template.Common.Models;
+using COFRS.Template.Common.ServiceUtilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
+using Constants = EnvDTE.Constants;
 
 namespace COFRS.Template
 {
@@ -24,16 +25,17 @@ namespace COFRS.Template
 		/// <param name="ValidatorInterface">The validiator interface used for validations</param>
 		/// <param name="policy">The authentication policy used by the controller</param>
 		/// <returns></returns>
-		public string EmitController(DTE2 app, EntityModel entityClass, ResourceModel resourceClass, string moniker, string controllerClassName, string ValidatorInterface, string policy, string ValidationNamespace)
+		public string EmitController(ResourceClass resourceClass, string moniker, string controllerClassName, string ValidatorInterface, string policy, string ValidationNamespace)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 
             StringBuilder results = new StringBuilder();
             var nn = new NameNormalizer(resourceClass.ClassName);
-            var pkcolumns = resourceClass.EntityModel.Columns.Where(c => c.IsPrimaryKey);
+            var pkcolumns = resourceClass.Entity.Columns.Where(c => c.IsPrimaryKey);
 
-            BuildControllerInterface(app, resourceClass);
-            BuildControllerOrchestration(app, resourceClass, ValidatorInterface, ValidationNamespace);
+            BuildControllerInterface(resourceClass.ClassName, resourceClass.Namespace);
+            BuildControllerOrchestration(resourceClass.ClassName, resourceClass.Namespace, ValidatorInterface, ValidationNamespace);
 
             // --------------------------------------------------------------------------------
             //	Class
@@ -118,7 +120,7 @@ namespace COFRS.Template
                 results.AppendLine("\t\t///\t<summary>");
                 results.AppendLine($"\t\t///\tReturns a {nn.SingleForm}");
                 results.AppendLine("\t\t///\t</summary>");
-                EmitEndpointExamples(entityClass.ServerType, resourceClass.ClassName, results, pkcolumns);
+                EmitEndpointExamples(resourceClass.Entity.ServerType, resourceClass.ClassName, results, pkcolumns);
                 results.AppendLine("\t\t///\t<remarks>This call supports RQL. Use the RQL select clause to limit the members returned.</remarks>");
                 results.AppendLine($"\t\t///\t<response code=\"200\">Returns the specified {nn.SingleForm}.</response>");
                 results.AppendLine($"\t\t///\t<response code=\"404\">Not Found - returned when the speicifed {nn.SingleForm} does not exist in the datastore.</response>");
@@ -136,7 +138,7 @@ namespace COFRS.Template
                 results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
                 results.AppendLine("\t\t[SupportRQL]");
 
-                EmitEndpoint(entityClass.ServerType, resourceClass.ClassName, "Get", results, pkcolumns);
+                EmitEndpoint(resourceClass.Entity.ServerType, resourceClass.ClassName, "Get", results, pkcolumns);
 
                 results.AppendLine("\t\t{");
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
@@ -236,7 +238,7 @@ namespace COFRS.Template
                 results.AppendLine("\t\t///\t<summary>");
                 results.AppendLine($"\t\t///\tUpdate a {nn.SingleForm} using patch commands");
                 results.AppendLine("\t\t///\t</summary>");
-                EmitEndpointExamples(entityClass.ServerType, resourceClass.ClassName, results, pkcolumns);
+                EmitEndpointExamples(resourceClass.Entity.ServerType, resourceClass.ClassName, results, pkcolumns);
                 results.AppendLine("\t\t///\t<param name=\"commands\">The patch commands to perform.</param>");
                 results.AppendLine($"\t\t///\t<remarks>Update a {nn.SingleForm} in the datastore.</remarks>");
                 results.AppendLine($"\t\t///\t<response code=\"204\">No Content - returned when the {nn.SingleForm} was successfully updated in the datastore.</response>");
@@ -251,7 +253,7 @@ namespace COFRS.Template
                 results.AppendLine($"\t\t[SwaggerRequestExample(typeof(IEnumerable<PatchCommand>), typeof({resourceClass.ClassName}PatchExample))]");
                 results.AppendLine($"\t\t[Consumes(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
                 results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
-                EmitEndpoint(entityClass.ServerType, resourceClass.ClassName, "Patch", results, pkcolumns);
+                EmitEndpoint(resourceClass.Entity.ServerType, resourceClass.ClassName, "Patch", results, pkcolumns);
 
                 results.AppendLine("\t\t{");
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\");");
@@ -273,7 +275,7 @@ namespace COFRS.Template
                 results.AppendLine("\t\t///\t<summary>");
                 results.AppendLine($"\t\t///\tDelete a {nn.SingleForm}");
                 results.AppendLine("\t\t///\t</summary>");
-                EmitEndpointExamples(entityClass.ServerType, resourceClass.ClassName, results, pkcolumns);
+                EmitEndpointExamples(resourceClass.Entity.ServerType, resourceClass.ClassName, results, pkcolumns);
                 results.AppendLine($"\t\t///\t<remarks>Deletes a {nn.SingleForm} in the datastore.</remarks>");
                 results.AppendLine($"\t\t///\t<response code=\"204\">No Content - returned when the {nn.SingleForm} was successfully deleted from the datastore.</response>");
                 results.AppendLine($"\t\t///\t<response code=\"404\">Not Found - returned when the speicifed {nn.SingleForm} does not exist in the datastore.</response>");
@@ -284,7 +286,7 @@ namespace COFRS.Template
                 if (!string.IsNullOrWhiteSpace(policy))
                     results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
-                EmitEndpoint(entityClass.ServerType, resourceClass.ClassName, "Delete", results, pkcolumns);
+                EmitEndpoint(resourceClass.Entity.ServerType, resourceClass.ClassName, "Delete", results, pkcolumns);
 
                 results.AppendLine("\t\t{");
                 results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\");");
@@ -304,11 +306,12 @@ namespace COFRS.Template
             return results.ToString();
         }
 
-        private static void BuildControllerInterface(DTE2 app, ResourceModel resourceModel)
+        private static void BuildControllerInterface(string resourceClassName, string resourceNamespace)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 
-            ProjectItem orchInterface = app.Solution.FindProjectItem("IServiceOrchestrator.cs");
+            ProjectItem orchInterface = mDte.Solution.FindProjectItem("IServiceOrchestrator.cs");
             orchInterface.Open(Constants.vsViewKindCode);
             FileCodeModel2 fileCodeModel = (FileCodeModel2)orchInterface.FileCodeModel;
 
@@ -322,8 +325,8 @@ namespace COFRS.Template
             if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Collections.Generic")) == null)
                 fileCodeModel.AddImport("System.Collections.Generic");
 
-            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(resourceModel.Namespace)) == null)
-                fileCodeModel.AddImport(resourceModel.Namespace);
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(resourceNamespace)) == null)
+                fileCodeModel.AddImport(resourceNamespace);
 
             //  Ensure all the required functions are present
             foreach (CodeNamespace orchestrationNamespace in fileCodeModel.CodeElements.OfType<CodeNamespace>())
@@ -336,19 +339,20 @@ namespace COFRS.Template
                 {
                     if (orchestrationInterface.Name.Equals("IServiceOrchestrator", StringComparison.OrdinalIgnoreCase))
                     {
-                        List<DBColumn> primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
-                        string deleteFunctionName = $"Delete{resourceModel.ClassName}Async";
-                        string patchFunctionName = $"Patch{resourceModel.ClassName}Async";
-                        string updateFunctionName = $"Update{resourceModel.ClassName}Async";
-                        string addFunctionName = $"Add{resourceModel.ClassName}Async";
-                        string getSingleFunctionName = $"Get{resourceModel.ClassName}Async";
-                        string collectionFunctionName = $"Get{resourceModel.ClassName}CollectionAsync";
+                       // List<DBColumn> primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
 
-                        string article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                         resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                         resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                         resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                         resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
+                        string deleteFunctionName = $"Delete{resourceClassName}Async";
+                        string patchFunctionName = $"Patch{resourceClassName}Async";
+                        string updateFunctionName = $"Update{resourceClassName}Async";
+                        string addFunctionName = $"Add{resourceClassName}Async";
+                        string getSingleFunctionName = $"Get{resourceClassName}Async";
+                        string collectionFunctionName = $"Get{resourceClassName}CollectionAsync";
+
+                        string article = resourceClassName.ToLower().StartsWith("a") ||
+                                         resourceClassName.ToLower().StartsWith("e") ||
+                                         resourceClassName.ToLower().StartsWith("i") ||
+                                         resourceClassName.ToLower().StartsWith("o") ||
+                                         resourceClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                         try
                         {
@@ -357,7 +361,7 @@ namespace COFRS.Template
                             {
                                 var theGetSingleFunction = (CodeFunction2)orchestrationInterface.AddFunction(getSingleFunctionName,
                                                           vsCMFunction.vsCMFunctionFunction,
-                                                          $"Task<{resourceModel.ClassName}>",
+                                                          $"Task<{resourceClassName}>",
                                                           -1);
 
                                 theGetSingleFunction.AddParameter("node", "RqlNode", -1);
@@ -366,11 +370,11 @@ namespace COFRS.Template
                                 StringBuilder doc = new StringBuilder();
                                 doc.AppendLine("<doc>");
                                 doc.AppendLine("<summary>");
-                                doc.AppendLine($"Asynchronously gets {article} {resourceModel.ClassName} resource specified by the <see cref=\"RqlNode\"/>.");
+                                doc.AppendLine($"Asynchronously gets {article} {resourceClassName} resource specified by the <see cref=\"RqlNode\"/>.");
                                 doc.AppendLine("</summary>");
                                 doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
                                 doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                                doc.AppendLine($"<returns>The specified {resourceModel.ClassName} resource.</returns>");
+                                doc.AppendLine($"<returns>The specified {resourceClassName} resource.</returns>");
                                 doc.AppendLine("</doc>");
 
                                 theGetSingleFunction.DocComment = doc.ToString();
@@ -382,7 +386,7 @@ namespace COFRS.Template
                             {
                                 var theCollectionFunction = (CodeFunction2)orchestrationInterface.AddFunction(collectionFunctionName,
                                                           vsCMFunction.vsCMFunctionFunction,
-                                                          $"Task<PagedCollection<{resourceModel.ClassName}>>",
+                                                          $"Task<PagedCollection<{resourceClassName}>>",
                                                           -1);
 
                                 theCollectionFunction.AddParameter("originalQuery", "string", -1);
@@ -392,12 +396,12 @@ namespace COFRS.Template
                                 StringBuilder doc = new StringBuilder();
                                 doc.AppendLine("<doc>");
                                 doc.AppendLine("<summary>");
-                                doc.AppendLine($"Asynchronously gets a collection of {resourceModel.ClassName} resources filtered by the <see cref=\"RqlNode\"/>.");
+                                doc.AppendLine($"Asynchronously gets a collection of {resourceClassName} resources filtered by the <see cref=\"RqlNode\"/>.");
                                 doc.AppendLine("</summary>");
                                 doc.AppendLine("<param name=\"originalQuery\">The original query string.</param>");
                                 doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection.</param>");
                                 doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
-                                doc.AppendLine($"<returns>The collection of {resourceModel.ClassName} resources filtered by the <see cref=\"RqlNode\"/>.</returns>");
+                                doc.AppendLine($"<returns>The collection of {resourceClassName} resources filtered by the <see cref=\"RqlNode\"/>.</returns>");
                                 doc.AppendLine("</doc>");
 
                                 theCollectionFunction.DocComment = doc.ToString();
@@ -409,18 +413,18 @@ namespace COFRS.Template
                             {
                                 var theAddFunction = (CodeFunction2)orchestrationInterface.AddFunction(addFunctionName,
                                                           vsCMFunction.vsCMFunctionFunction,
-                                                          $"Task<{resourceModel.ClassName}>",
+                                                          $"Task<{resourceClassName}>",
                                                           -1);
 
-                                theAddFunction.AddParameter("item", resourceModel.ClassName, -1);
+                                theAddFunction.AddParameter("item", resourceClassName, -1);
                                 theAddFunction.AddParameter("User", "ClaimsPrincipal", -1);
 
                                 StringBuilder doc = new StringBuilder();
                                 doc.AppendLine("<doc>");
                                 doc.AppendLine("<summary>");
-                                doc.AppendLine($"Asynchronously adds {article} {resourceModel.ClassName} resource.");
+                                doc.AppendLine($"Asynchronously adds {article} {resourceClassName} resource.");
                                 doc.AppendLine("</summary>");
-                                doc.AppendLine($"<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>");
+                                doc.AppendLine($"<param name=\"item\">The {resourceClassName} resource to add.</param>");
                                 doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
                                 doc.AppendLine("<returns>The newly added resource.</returns>");
                                 doc.AppendLine("</doc>");
@@ -434,18 +438,18 @@ namespace COFRS.Template
                             {
                                 var theUpdateFunction = (CodeFunction2)orchestrationInterface.AddFunction(updateFunctionName,
                                                           vsCMFunction.vsCMFunctionFunction,
-                                                          $"Task<{resourceModel.ClassName}>",
+                                                          $"Task<{resourceClassName}>",
                                                           -1);
 
-                                theUpdateFunction.AddParameter("item", resourceModel.ClassName, -1);
+                                theUpdateFunction.AddParameter("item", resourceClassName, -1);
                                 theUpdateFunction.AddParameter("User", "ClaimsPrincipal", -1);
 
                                 StringBuilder doc = new StringBuilder();
                                 doc.AppendLine("<doc>");
                                 doc.AppendLine("<summary>");
-                                doc.AppendLine($"Asynchronously updates {article} {resourceModel.ClassName} resource.");
+                                doc.AppendLine($"Asynchronously updates {article} {resourceClassName} resource.");
                                 doc.AppendLine("</summary>");
-                                doc.AppendLine($"<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>");
+                                doc.AppendLine($"<param name=\"item\">The {resourceClassName} resource to update.</param>");
                                 doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
                                 doc.AppendLine("<returns>The updated item.</returns>");
                                 doc.AppendLine("</doc>");
@@ -469,7 +473,7 @@ namespace COFRS.Template
                                 StringBuilder doc = new StringBuilder();
                                 doc.AppendLine("<doc>");
                                 doc.AppendLine("<summary>");
-                                doc.AppendLine($"Asynchronously updates {article} {resourceModel.ClassName} resource using patch commands.");
+                                doc.AppendLine($"Asynchronously updates {article} {resourceClassName} resource using patch commands.");
                                 doc.AppendLine("</summary>");
                                 doc.AppendLine("<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>");
                                 doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
@@ -493,7 +497,7 @@ namespace COFRS.Template
                                 StringBuilder doc = new StringBuilder();
                                 doc.AppendLine("<doc>");
                                 doc.AppendLine("<summary>");
-                                doc.AppendLine($"Asynchronously deletes {article} {resourceModel.ClassName} resource specified by the <see cref=\"RqlNode\"/>.");
+                                doc.AppendLine($"Asynchronously deletes {article} {resourceClassName} resource specified by the <see cref=\"RqlNode\"/>.");
                                 doc.AppendLine("</summary>");
                                 doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection of resources to delete.</param>");
                                 doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
@@ -511,11 +515,12 @@ namespace COFRS.Template
             }
         }
 
-        private static void BuildControllerOrchestration(DTE2 app, ResourceModel resourceModel, string ValidatorInterface, string ValidationNamespace)
+        private static void BuildControllerOrchestration(string resourceClassName, string resourceNamespace, string ValidatorInterface, string ValidationNamespace)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 
-            ProjectItem orchCode = app.Solution.FindProjectItem("ServiceOrchestrator.cs");
+            ProjectItem orchCode = mDte.Solution.FindProjectItem("ServiceOrchestrator.cs");
             orchCode.Open(Constants.vsViewKindCode);
             var fileCodeModel = (FileCodeModel2)orchCode.FileCodeModel;
 
@@ -538,8 +543,8 @@ namespace COFRS.Template
             if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("Serilog.Context")) == null)
                 fileCodeModel.AddImport("Serilog.Context");
 
-            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(resourceModel.Namespace)) == null)
-                fileCodeModel.AddImport(resourceModel.Namespace);
+            if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(resourceNamespace)) == null)
+                fileCodeModel.AddImport(resourceNamespace);
 
             if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(ValidationNamespace)) == null)
                 fileCodeModel.AddImport(ValidationNamespace);
@@ -553,19 +558,20 @@ namespace COFRS.Template
 
                 if (orchestratorClass != null)
                 {
-                    var primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
-                    var deleteFunctionName = $"Delete{resourceModel.ClassName}Async";
-                    var patchFunctionName = $"Patch{resourceModel.ClassName}Async";
-                    var updateFunctionName = $"Update{resourceModel.ClassName}Async";
-                    var addFunctionName = $"Add{resourceModel.ClassName}Async";
-                    var getSingleFunctionName = $"Get{resourceModel.ClassName}Async";
-                    var collectionFunctionName = $"Get{resourceModel.ClassName}CollectionAsync";
+                    //var primaryKeyColumns = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey == true).ToList();
 
-                    var article = resourceModel.ClassName.ToLower().StartsWith("a") ||
-                                  resourceModel.ClassName.ToLower().StartsWith("e") ||
-                                  resourceModel.ClassName.ToLower().StartsWith("i") ||
-                                  resourceModel.ClassName.ToLower().StartsWith("o") ||
-                                  resourceModel.ClassName.ToLower().StartsWith("u") ? "an" : "a";
+                    var deleteFunctionName = $"Delete{resourceClassName}Async";
+                    var patchFunctionName = $"Patch{resourceClassName}Async";
+                    var updateFunctionName = $"Update{resourceClassName}Async";
+                    var addFunctionName = $"Add{resourceClassName}Async";
+                    var getSingleFunctionName = $"Get{resourceClassName}Async";
+                    var collectionFunctionName = $"Get{resourceClassName}CollectionAsync";
+
+                    var article = resourceClassName.ToLower().StartsWith("a") ||
+                                  resourceClassName.ToLower().StartsWith("e") ||
+                                  resourceClassName.ToLower().StartsWith("i") ||
+                                  resourceClassName.ToLower().StartsWith("o") ||
+                                  resourceClassName.ToLower().StartsWith("u") ? "an" : "a";
 
                     var parameterName = ValidatorInterface.Substring(1, 1).ToLower() + ValidatorInterface.Substring(2);
                     var validatorInterfaceMemberName = ValidatorInterface.Substring(1, 1).ToUpper() + ValidatorInterface.Substring(2);
@@ -657,7 +663,7 @@ namespace COFRS.Template
                         {
                             var theGetSingleFunction = (CodeFunction2)orchestratorClass.AddFunction(getSingleFunctionName,
                                                       vsCMFunction.vsCMFunctionFunction,
-                                                      $"Task<{resourceModel.ClassName}>",
+                                                      $"Task<{resourceClassName}>",
                                                       -1,
                                                       vsCMAccess.vsCMAccessPublic);
 
@@ -667,11 +673,11 @@ namespace COFRS.Template
                             StringBuilder doc = new StringBuilder();
                             doc.AppendLine("<doc>");
                             doc.AppendLine("<summary>");
-                            doc.AppendLine($"Asynchronously gets {article} {resourceModel.ClassName} resource specified by the <see cref=\"RqlNode\"/>.");
+                            doc.AppendLine($"Asynchronously gets {article} {resourceClassName} resource specified by the <see cref=\"RqlNode\"/>.");
                             doc.AppendLine("</summary>");
                             doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
                             doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function</param>");
-                            doc.AppendLine($"<returns>The specified {resourceModel.ClassName} resource.</returns>");
+                            doc.AppendLine($"<returns>The specified {resourceClassName} resource.</returns>");
                             doc.AppendLine("</doc>");
 
                             theGetSingleFunction.DocComment = doc.ToString();
@@ -689,7 +695,7 @@ namespace COFRS.Template
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert($"return await GetSingleAsync<{resourceModel.ClassName}>(node);");
+                            editPoint.Insert($"return await GetSingleAsync<{resourceClassName}>(node);");
                         }
                         #endregion
 
@@ -700,7 +706,7 @@ namespace COFRS.Template
                         {
                             var theCollectionFunction = (CodeFunction2)orchestratorClass.AddFunction(collectionFunctionName,
                                                       vsCMFunction.vsCMFunctionFunction,
-                                                      $"Task<PagedCollection<{resourceModel.ClassName}>>",
+                                                      $"Task<PagedCollection<{resourceClassName}>>",
                                                       -1,
                                                       vsCMAccess.vsCMAccessPublic);
 
@@ -711,12 +717,12 @@ namespace COFRS.Template
                             StringBuilder doc = new StringBuilder();
                             doc.AppendLine("<doc>");
                             doc.AppendLine("<summary>");
-                            doc.AppendLine($"Asynchronously gets a collection of {resourceModel.ClassName} resources filtered by the <see cref=\"RqlNode\"/>.");
+                            doc.AppendLine($"Asynchronously gets a collection of {resourceClassName} resources filtered by the <see cref=\"RqlNode\"/>.");
                             doc.AppendLine("</summary>");
                             doc.AppendLine("<param name=\"originalQuery\">The original query string.</param>");
                             doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection.</param>");
                             doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
-                            doc.AppendLine($"<returns>The collection of {resourceModel.ClassName} resources filtered by the <see cref=\"RqlNode\"/>.</returns>");
+                            doc.AppendLine($"<returns>The collection of {resourceClassName} resources filtered by the <see cref=\"RqlNode\"/>.</returns>");
                             doc.AppendLine("</doc>");
 
                             theCollectionFunction.DocComment = doc.ToString();
@@ -734,7 +740,7 @@ namespace COFRS.Template
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert($"return await GetCollectionAsync<{resourceModel.ClassName}>(originalQuery, node);");
+                            editPoint.Insert($"return await GetCollectionAsync<{resourceClassName}>(originalQuery, node);");
                         }
                         #endregion
 
@@ -745,19 +751,19 @@ namespace COFRS.Template
                         {
                             var theAddFunction = (CodeFunction2)orchestratorClass.AddFunction(addFunctionName,
                                                       vsCMFunction.vsCMFunctionFunction,
-                                                      $"Task<{resourceModel.ClassName}>",
+                                                      $"Task<{resourceClassName}>",
                                                       -1,
                                                       vsCMAccess.vsCMAccessPublic);
 
-                            theAddFunction.AddParameter("item", resourceModel.ClassName, -1);
+                            theAddFunction.AddParameter("item", resourceClassName, -1);
                             theAddFunction.AddParameter("User", "ClaimsPrincipal", -1);
 
                             StringBuilder doc = new StringBuilder();
                             doc.AppendLine("<doc>");
                             doc.AppendLine("<summary>");
-                            doc.AppendLine($"Asynchronously adds {article} {resourceModel.ClassName} resource.");
+                            doc.AppendLine($"Asynchronously adds {article} {resourceClassName} resource.");
                             doc.AppendLine("</summary>");
-                            doc.AppendLine($"<param name=\"item\">The {resourceModel.ClassName} resource to add.</param>");
+                            doc.AppendLine($"<param name=\"item\">The {resourceClassName} resource to add.</param>");
                             doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
                             doc.AppendLine("<returns>The newly added resource.</returns>");
                             doc.AppendLine("</doc>");
@@ -777,7 +783,7 @@ namespace COFRS.Template
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForAddAsync(item, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert($"return await AddAsync<{resourceModel.ClassName}>(item);");
+                            editPoint.Insert($"return await AddAsync<{resourceClassName}>(item);");
                         }
                         #endregion
 
@@ -788,19 +794,19 @@ namespace COFRS.Template
                         {
                             var theUpdateFunction = (CodeFunction2)orchestratorClass.AddFunction(updateFunctionName,
                                                       vsCMFunction.vsCMFunctionFunction,
-                                                      $"Task<{resourceModel.ClassName}>",
+                                                      $"Task<{resourceClassName}>",
                                                       -1,
                                                       vsCMAccess.vsCMAccessPublic);
 
-                            theUpdateFunction.AddParameter("item", resourceModel.ClassName, -1);
+                            theUpdateFunction.AddParameter("item", resourceClassName, -1);
                             theUpdateFunction.AddParameter("User", "ClaimsPrincipal", -1);
 
                             StringBuilder doc = new StringBuilder();
                             doc.AppendLine("<doc>");
                             doc.AppendLine("<summary>");
-                            doc.AppendLine($"Asynchronously updates {article} {resourceModel.ClassName} resource.");
+                            doc.AppendLine($"Asynchronously updates {article} {resourceClassName} resource.");
                             doc.AppendLine("</summary>");
-                            doc.AppendLine($"<param name=\"item\">The {resourceModel.ClassName} resource to update.</param>");
+                            doc.AppendLine($"<param name=\"item\">The {resourceClassName} resource to update.</param>");
                             doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
                             doc.AppendLine("<returns>The updated item.</returns>");
                             doc.AppendLine("</doc>");
@@ -820,7 +826,7 @@ namespace COFRS.Template
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForUpdateAsync(item, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert($"return await UpdateAsync<{resourceModel.ClassName}>(item);");
+                            editPoint.Insert($"return await UpdateAsync<{resourceClassName}>(item);");
                         }
                         #endregion
 
@@ -842,7 +848,7 @@ namespace COFRS.Template
                             StringBuilder doc = new StringBuilder();
                             doc.AppendLine("<doc>");
                             doc.AppendLine("<summary>");
-                            doc.AppendLine($"Asynchronously updates {article} {resourceModel.ClassName} resource using patch commands.");
+                            doc.AppendLine($"Asynchronously updates {article} {resourceClassName} resource using patch commands.");
                             doc.AppendLine("</summary>");
                             doc.AppendLine("<param name=\"commands\">The list of <see cref=\"PatchCommand\"/>s to perform.</param>");
                             doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection</param>");
@@ -864,7 +870,7 @@ namespace COFRS.Template
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForPatchAsync(commands, node, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert($"await PatchAsync<{resourceModel.ClassName}>(commands, node);");
+                            editPoint.Insert($"await PatchAsync<{resourceClassName}>(commands, node);");
                         }
                         #endregion
 
@@ -885,7 +891,7 @@ namespace COFRS.Template
                             StringBuilder doc = new StringBuilder();
                             doc.AppendLine("<doc>");
                             doc.AppendLine("<summary>");
-                            doc.AppendLine($"Asynchronously deletes {article} {resourceModel.ClassName} resource specified by the <see cref=\"RqlNode\"/>.");
+                            doc.AppendLine($"Asynchronously deletes {article} {resourceClassName} resource specified by the <see cref=\"RqlNode\"/>.");
                             doc.AppendLine("</summary>");
                             doc.AppendLine("<param name=\"node\">The <see cref=\"RqlNode\"/> that further restricts the selection of resources to delete.</param>");
                             doc.AppendLine("<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> of the actor calling the function.</param>");
@@ -906,7 +912,7 @@ namespace COFRS.Template
                             editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForDeleteAsync(node, User);");
                             editPoint.InsertNewLine();
                             editPoint.Indent(null, 3);
-                            editPoint.Insert($"await DeleteAsync<{resourceModel.ClassName}>(node);");
+                            editPoint.Insert($"await DeleteAsync<{resourceClassName}>(node);");
                         }
                         #endregion
                     }

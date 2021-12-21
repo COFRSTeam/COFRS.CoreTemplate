@@ -2,6 +2,7 @@
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -13,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web.UI.Design;
 using VSLangProj;
+using Constants = EnvDTE.Constants;
 
 namespace COFRSCoreCommon.Utilities
 {
@@ -24,12 +26,13 @@ namespace COFRSCoreCommon.Utilities
 		/// </summary> 
 		/// <param name="dte2>"The <see cref="DTE2"/> Visual Studio interface</param>
 		/// <returns>The connection string used in the local settings</returns>
-		public static string GetConnectionString(DTE2 dte2)
+		public static string GetConnectionString()
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			string jsonText;
 
-			ProjectItem settingsFile = dte2.Solution.FindProjectItem("appsettings.Local.json");
+			ProjectItem settingsFile = mDte.Solution.FindProjectItem("appsettings.Local.json");
 
 			if (!settingsFile.IsOpen)
 			{
@@ -58,12 +61,13 @@ namespace COFRSCoreCommon.Utilities
 		/// </summary>
 		/// <param name="dte2>"The <see cref="DTE2"/> Visual Studio interface</param>
 		/// <param name="connectionString">The new connection string.</param>
-		public static void ReplaceConnectionString(DTE2 dte2, string connectionString)
+		public static void ReplaceConnectionString(string connectionString)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 
 			//	The first thing we need to do, is we need to load the appSettings.local.json file
-			ProjectItem settingsFile = dte2.Solution.FindProjectItem("appsettings.Local.json");
+			ProjectItem settingsFile = mDte.Solution.FindProjectItem("appsettings.Local.json");
 
 			if (settingsFile.IsOpen)
 			{
@@ -101,10 +105,10 @@ namespace COFRSCoreCommon.Utilities
 		/// </summary>
 		/// <param name="dte2>"The <see cref="DTE2"/> Visual Studio interface</param>
 		/// <returns>The default server type</returns>
-		public static DBServerType GetDefaultServerType(DTE2 dte2)
+		public static DBServerType GetDefaultServerType()
 		{
 			//	Get the location of the server configuration on disk
-			var DefaultConnectionString = GetConnectionString(dte2);
+			var DefaultConnectionString = GetConnectionString();
 			var baseFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 			var dataFolder = Path.Combine(baseFolder, "COFRS");
 
@@ -355,179 +359,153 @@ namespace COFRSCoreCommon.Utilities
 
 			//	Get the ServicesConfig.cs project item.
 			ProjectItem serviceConfig = dte.Solution.FindProjectItem("ServicesConfig.cs");
-			bool wasOpen = serviceConfig.IsOpen[Constants.vsViewKindAny];               //	Record if it was already open
-			bool wasModified = false;                                                   //	We haven't modified it yet
+			FileCodeModel2 codeModel = (FileCodeModel2)serviceConfig.FileCodeModel;
 
-			if (!wasOpen)                                                               //	If it wasn't open, open it.
-				serviceConfig.Open(Constants.vsViewKindCode);
+			if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(validationNamespace)) == null)
+				codeModel.AddImport(validationNamespace, -1);
 
-			var window = serviceConfig.Open(EnvDTE.Constants.vsViewKindTextView);       //	Get the window (so we can close it later)
-			Document doc = serviceConfig.Document;                                      //	Get the doc 
-			TextSelection sel = (TextSelection)doc.Selection;                           //	Get the current selection
-			var activePoint = sel.ActivePoint;                                          //	Get the active point
-
-			//	The code will need to reference the validation namespace. Look
-			//	to see if we have a using statement for that namespace.
-			bool hasValidationUsing = false;
-			TextPoint endOfImports = sel.ActivePoint;
-
-			foreach (CodeElement candidateUsing in serviceConfig.FileCodeModel.CodeElements)
+			foreach (var codeNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
 			{
-				if (candidateUsing.Kind == vsCMElement.vsCMElementImportStmt)
-				{
-					CodeImport codeImport = (CodeImport)candidateUsing;
-					var theNamespace = codeImport.Namespace;
-					endOfImports = codeImport.EndPoint;
+				var codeClass = codeNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceCollectionExtension"));
 
-					if (string.Equals(theNamespace, validationNamespace, StringComparison.OrdinalIgnoreCase))
+				if (codeClass != null)
+				{
+					var aFunction = codeClass.Children.OfType<CodeFunction2>().FirstOrDefault(f => f.Name.Equals("ConfigureServices"));
+
+					if (aFunction != null)
 					{
-						hasValidationUsing = true;
+						var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+						bool foundit = editPoint.FindPattern($"services.AddScoped<I{validationClass}, {validationClass}>();");
+						foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+						if ( !foundit )
+                        {
+							editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+							foundit = editPoint.FindPattern($"services.AddScoped<IServiceOrchestrator, ServiceOrchestrator>();");
+							foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+							if (foundit)
+							{
+								editPoint.EndOfLine();
+								editPoint.InsertNewLine(2);
+								editPoint.Indent(null, 3);
+								editPoint.Insert($"services.AddScoped<I{validationClass}, {validationClass}>();");
+							}
+						}
 					}
 				}
 			}
+		}
 
-			//	If we don't have the using validation statement, we need to add it.
-			//	We've kept track of the end of statement point on the last using
-			//	statement, so insert the new one there.
+		public static void RegisterComposite(string className, string entityNamespace, ElementType elementType, string tableName)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 
-			if (!hasValidationUsing)
+			if (elementType == ElementType.Undefined ||
+				elementType == ElementType.Table)
+				return;
+
+			ProjectItem serviceConfig = mDte.Solution.FindProjectItem("ServicesConfig.cs");
+			FileCodeModel2 codeModel = (FileCodeModel2)serviceConfig.FileCodeModel;
+
+			if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("Npgsql")) == null)
+				codeModel.AddImport("Npgsql", -1);
+
+			if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(entityNamespace)) == null)
+				codeModel.AddImport(entityNamespace, -1);
+
+			foreach (var codeNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
 			{
-				EditPoint2 editPoint = (EditPoint2)endOfImports.CreateEditPoint();
-				editPoint.InsertNewLine();
-				editPoint.Insert($"using {validationNamespace};");
-				wasModified = true;
-			}
+				var codeClass = codeNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceCollectionExtension"));
 
-			//	Now, we need to ensure that the code contains the AddScoped registration line. Find the namespace in this
-			//	code. Inside of the namespace, find the class "ServiceCollectionExtension". Inside that class, find the
-			//	function "ConfigureServices"
-			//
-			//	Once you have the "ConfigureServices" function, check to see if it already contains the AddScoped registration
-			//	function (we don't want to insert it more than once). If it is not there, insert it as the last line of the
-			//	function.
-			foreach (CodeNamespace namespaceElement in serviceConfig.FileCodeModel.CodeElements.OfType<CodeNamespace>())
-			{
-				foreach (CodeClass2 candidateClass in namespaceElement.Members.OfType<CodeClass2>())
+				if (codeClass != null)
 				{
-					if (string.Equals(candidateClass.Name, "ServiceCollectionExtension", StringComparison.OrdinalIgnoreCase))
+					var aFunction = codeClass.Children.OfType<CodeFunction2>().FirstOrDefault(f => f.Name.Equals("ConfigureServices"));
+
+					if (aFunction != null)
 					{
-						foreach (CodeFunction2 candidateFunction in candidateClass.Members.OfType<CodeFunction2>())
+						if (elementType == ElementType.Composite)
 						{
-							if (string.Equals(candidateFunction.Name, "ConfigureServices", StringComparison.OrdinalIgnoreCase))
-							{
-								sel.MoveToPoint(candidateFunction.StartPoint);
-								var lineOfCode = $"services.AddScoped<I{validationClass}, {validationClass}>();";
+							var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+							bool foundit = editPoint.FindPattern($"NpgsqlConnection.GlobalTypeMapper.MapComposite<{className}>(\"{tableName}\");");
+							foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
-								if (!sel.FindText(lineOfCode))
+							if ( !foundit)
+                            {
+								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								foundit = editPoint.FindPattern($"services.AddSingleton<ITranslationOptions>(TranslationOptions);");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if (foundit)
 								{
-									sel.MoveToPoint(candidateFunction.EndPoint);
-									sel.LineUp();
-									sel.EndOfLine();
+									var editPoint2 = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									foundit = editPoint2.FindPattern($"var myAssembly = Assembly.GetExecutingAssembly();");
+									foundit = foundit && editPoint2.LessThan(aFunction.EndPoint);
 
-									EditPoint2 editPoint = (EditPoint2)sel.ActivePoint.CreateEditPoint();
-									editPoint.InsertNewLine();
-									editPoint.Indent(null, 3);
-									sel.Insert(lineOfCode);
-									wasModified = true;
+									if (foundit)
+									{
+										if ( editPoint2.Line == editPoint.Line )
+                                        {
+											editPoint2.EndOfLine();
+											editPoint2.InsertNewLine(2);
+											editPoint2.Indent(null, 3);
+											editPoint2.Insert($"NpgsqlConnection.GlobalTypeMapper.MapComposite<{className}>(\"{tableName}\");");
+
+										}
+										else 
+										{
+											editPoint2.EndOfLine();
+											editPoint2.InsertNewLine();
+											editPoint2.Indent(null, 3);
+											editPoint2.Insert($"NpgsqlConnection.GlobalTypeMapper.MapComposite<{className}>(\"{tableName}\");");
+										}
+									}
+								}
+							}
+						}
+						else
+						{
+							var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+							bool foundit = editPoint.FindPattern($"NpgsqlConnection.GlobalTypeMapper.MapEnum<{className}>(\"{tableName}\");");
+							foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+							if (!foundit)
+							{
+								editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+								foundit = editPoint.FindPattern($"services.AddSingleton<ITranslationOptions>(TranslationOptions);");
+								foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+								if (foundit)
+								{
+									var editPoint2 = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+									foundit = editPoint2.FindPattern($"var myAssembly = Assembly.GetExecutingAssembly();");
+									foundit = foundit && editPoint2.LessThan(aFunction.EndPoint);
+
+									if (foundit)
+									{
+										if (editPoint2.Line == editPoint.Line)
+										{
+											editPoint2.EndOfLine();
+											editPoint2.InsertNewLine(2);
+											editPoint2.Indent(null, 3);
+											editPoint2.Insert($"NpgsqlConnection.GlobalTypeMapper.MapEnum<{className}>(\"{tableName}\");");
+
+										}
+										else
+										{
+											editPoint2.EndOfLine();
+											editPoint2.InsertNewLine();
+											editPoint2.Indent(null, 3);
+											editPoint2.Insert($"NpgsqlConnection.GlobalTypeMapper.MapEnum<{className}>(\"{tableName}\");");
+										}
+									}
 								}
 							}
 						}
 					}
 				}
 			}
-
-			//	If we modified the document, save it now.
-			if (wasModified)
-				doc.Save();
-
-			//	If we were previously open, restore the active point to what it was before we changed it.
-			//	Otherwise, if we were not previously open, the close the window.
-			if (wasOpen)
-				sel.MoveToPoint(activePoint);
-			else
-				window.Close();
-		}
-
-		public static void RegisterComposite(DTE2 dte2, EntityModel entityModel)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			if (entityModel.ElementType == ElementType.Undefined ||
-				entityModel.ElementType == ElementType.Table)
-				return;
-
-			ProjectItem serviceConfig = dte2.Solution.FindProjectItem("ServicesConfig.cs");
-
-			var window = serviceConfig.Open(EnvDTE.Constants.vsViewKindTextView);
-			Document doc = serviceConfig.Document;
-			TextSelection sel = (TextSelection)doc.Selection;
-
-			sel.StartOfDocument();
-			var hasNpgsql = sel.FindText($"using Npgsql;");
-
-			sel.StartOfDocument();
-			var hasClassNamespace = sel.FindText($"using {entityModel.Namespace};");
-
-			if (!hasNpgsql || !hasClassNamespace)
-			{
-				sel.StartOfDocument();
-				sel.FindText("namespace");
-
-				sel.LineUp();
-				sel.LineUp();
-				sel.EndOfLine();
-
-				if (!hasNpgsql)
-				{
-					sel.NewLine();
-					sel.Insert($"using Npgsql;");
-				}
-
-				if (!hasClassNamespace)
-				{
-					sel.NewLine();
-					sel.Insert($"using {entityModel.Namespace};");
-				}
-			}
-
-			string searchText = (entityModel.ElementType == ElementType.Composite) ?
-				$"NpgsqlConnection.GlobalTypeMapper.MapComposite<{entityModel.ClassName}>(\"{entityModel.TableName}\");" :
-				$"NpgsqlConnection.GlobalTypeMapper.MapEnum<{entityModel.ClassName}>(\"{entityModel.TableName}\");";
-
-			if (!sel.FindText(searchText))
-			{
-				sel.StartOfDocument();
-				sel.FindText("var myAssembly = Assembly.GetExecutingAssembly();");
-				sel.LineUp();
-				sel.LineUp();
-
-				sel.SelectLine();
-
-				if (sel.Text.Contains("services.AddSingleton<IRepositoryOptions>(RepositoryOptions);"))
-				{
-					sel.EndOfLine();
-					sel.NewLine();
-					sel.Insert($"//\tRegister Postgresql Composits and Enums");
-					sel.NewLine();
-					if (entityModel.ElementType == ElementType.Composite)
-						sel.Insert($"NpgsqlConnection.GlobalTypeMapper.MapComposite<{entityModel.ClassName}>(\"{entityModel.TableName}\");");
-					else
-						sel.Insert($"NpgsqlConnection.GlobalTypeMapper.MapEnum<{entityModel.ClassName}>(\"{entityModel.TableName}\");");
-					sel.NewLine();
-				}
-				else
-				{
-					sel.EndOfLine();
-					if (entityModel.ElementType == ElementType.Composite)
-						sel.Insert($"NpgsqlConnection.GlobalTypeMapper.MapComposite<{entityModel.ClassName}>(\"{entityModel.TableName}\");");
-					else
-						sel.Insert($"NpgsqlConnection.GlobalTypeMapper.MapEnum<{entityModel.ClassName}>(\"{entityModel.TableName}\");");
-					sel.NewLine();
-				}
-			}
-
-			doc.Save();
-			window.Close();
 		}
 
 		/// <summary>
@@ -749,6 +727,41 @@ namespace COFRSCoreCommon.Utilities
 			{
 				if (string.Equals(project.Name, projectName, StringComparison.OrdinalIgnoreCase))
 					return project;
+			}
+
+			return null;
+		}
+
+
+		public static ProjectItem GetProjectFromFolder(string folder)
+        {
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var parts = folder.Split(new char[] { '\\', ':' });
+
+			for ( int i = 0; i < parts.Count(); i++)
+			{
+				foreach (Project project in mDte.Solution.Projects.OfType<Project>())
+				{
+					if ( project.Name.Equals(parts[i], StringComparison.OrdinalIgnoreCase) )
+					{
+						if (i + 1 >= parts.Count())
+						{
+							return (ProjectItem)project;
+						}
+
+						ProjectItem projectItem = (ProjectItem)project;
+
+						for (int j = i + 1; j < parts.Count(); j++)
+						{
+							var item = (ProjectItem) projectItem.ProjectItems.OfType<ProjectFolder>().FirstOrDefault(pi => pi.Name.Equals(parts[j]));
+
+							if (item == null)
+								return projectItem;
+							else
+								projectItem = item;
+						}
+					}
+				}
 			}
 
 			return null;
@@ -1452,11 +1465,12 @@ namespace COFRSCoreCommon.Utilities
 		/// <param name="solution">The <see cref="Solution"/> that contains the projects</param>
 		/// <param name="replacementsDictionary">The dictionary of replacement values</param>
 		/// <returns>The <see cref="ProjectFolder"/> where the new item is being installed.</returns>
-		public static ProjectFolder GetInstallationFolder(DTE2 dte)
+		public static ProjectFolder GetInstallationFolder()
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 
-			var selectedItem = dte.SelectedItems.Item(1);
+			var selectedItem = mDte.SelectedItems.Item(1);
 
 			if (selectedItem.Project != null)
 			{
@@ -1666,7 +1680,7 @@ namespace COFRSCoreCommon.Utilities
 
 		private static CodeClass2 FindValidator(DTE2 dte2, ResourceModel resourceModel, string folder = "")
 		{
-			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);                        //	Contains the names and projects where various source file exist.
+			var projectMapping = COFRSCommonUtilities.OpenProjectMapping();                        //	Contains the names and projects where various source file exist.
 			var validatorModelFolder = projectMapping.GetValidatorFolder();
 
 			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? dte2.Solution.FindProjectItem(validatorModelFolder.Folder) :
@@ -1722,7 +1736,7 @@ namespace COFRSCoreCommon.Utilities
 		/// <returns>The name of the interface for the validator of the resource.</returns>
 		public static string FindValidatorInterface(DTE2 dte2, string resourceClassName, string folder = "")
 		{
-			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);                        //	Contains the names and projects where various source file exist.
+			var projectMapping = COFRSCommonUtilities.OpenProjectMapping();                        //	Contains the names and projects where various source file exist.
 			var validatorModelFolder = projectMapping.GetValidatorFolder();
 
 			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? dte2.Solution.FindProjectItem(validatorModelFolder.Folder) :
@@ -1778,20 +1792,22 @@ namespace COFRSCoreCommon.Utilities
 		/// <param name="resourceClassName">The resource class whos validator is to be found</param>
 		/// <param name="folder">The folder to search</param>
 		/// <returns>The name of the interface for the validator of the resource.</returns>
-		public static CodeClass2 FindExampleCode(DTE2 dte2, ResourceModel parentModel, string folder = "")
+		public static CodeClass2 FindExampleCode(ResourceClass parentModel, string folder = "")
 		{
-			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);                        //	Contains the names and projects where various source file exist.
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var projectMapping = codeService.LoadProjectMapping();                        //	Contains the names and projects where various source file exist.
 			var ExamplesFolder = projectMapping.GetExamplesFolder();
 
-			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? dte2.Solution.FindProjectItem(ExamplesFolder.Folder) :
-																	  dte2.Solution.FindProjectItem(folder);
+			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? mDte.Solution.FindProjectItem(ExamplesFolder.Folder) :
+																	  mDte.Solution.FindProjectItem(folder);
 
 			foreach (ProjectItem projectItem in validatorFolder.ProjectItems)
 			{
 				if (projectItem.Kind == Constants.vsProjectItemKindVirtualFolder ||
 					projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder)
 				{
-					CodeClass2 codeFile = FindExampleCode(dte2, parentModel, projectItem.Name);
+					CodeClass2 codeFile = FindExampleCode(parentModel, projectItem.Name);
 
 					if (codeFile != null)
 						return codeFile;
@@ -1827,20 +1843,21 @@ namespace COFRSCoreCommon.Utilities
 		/// <param name="resourceClassName">The resource class whos validator is to be found</param>
 		/// <param name="folder">The folder to search</param>
 		/// <returns>The name of the interface for the validator of the resource.</returns>
-		public static CodeClass2 FindProfileCode(DTE2 dte2, ResourceModel parentModel, string folder = "")
+		public static CodeClass2 FindProfileCode(ResourceClass parentModel, string folder = "")
 		{
-			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);  //	Contains the names and projects where various source file exist.
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var projectMapping = COFRSCommonUtilities.OpenProjectMapping();  //	Contains the names and projects where various source file exist.
 			var ProfileFolder = projectMapping.GetMappingFolder();
 
-			var profileFolder = string.IsNullOrWhiteSpace(folder) ? dte2.Solution.FindProjectItem(ProfileFolder.Folder) :
-																	dte2.Solution.FindProjectItem(folder);
+			var profileFolder = string.IsNullOrWhiteSpace(folder) ? mDte.Solution.FindProjectItem(ProfileFolder.Folder) :
+																	mDte.Solution.FindProjectItem(folder);
 
 			foreach (ProjectItem projectItem in profileFolder.ProjectItems)
 			{
 				if (projectItem.Kind == Constants.vsProjectItemKindVirtualFolder ||
 					projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder)
 				{
-					CodeClass2 codeFile = FindProfileCode(dte2, parentModel, projectItem.Name);
+					CodeClass2 codeFile = FindProfileCode(parentModel, projectItem.Name);
 
 					if (codeFile != null)
 						return codeFile;
@@ -1857,7 +1874,7 @@ namespace COFRSCoreCommon.Utilities
 
 							EditPoint2 editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
 
-							bool foundit = editPoint.FindPattern($"CreateMap<{parentModel.ClassName}, {parentModel.EntityModel.ClassName}>()");
+							bool foundit = editPoint.FindPattern($"CreateMap<{parentModel.ClassName}, {parentModel.Entity.ClassName}>()");
 							foundit = foundit && editPoint.LessThan(constructor.EndPoint);
 
 							if (foundit)
@@ -1878,20 +1895,22 @@ namespace COFRSCoreCommon.Utilities
 		/// <param name="resourceClassName">The resource class whos validator is to be found</param>
 		/// <param name="folder">The folder to search</param>
 		/// <returns>The name of the interface for the validator of the resource.</returns>
-		public static CodeClass2 FindCollectionExampleCode(DTE2 dte2, ResourceModel parentModel, string folder = "")
+		public static CodeClass2 FindCollectionExampleCode(ResourceClass parentModel, string folder = "")
 		{
-			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);                        //	Contains the names and projects where various source file exist.
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var projectMapping = codeService.LoadProjectMapping();                        //	Contains the names and projects where various source file exist.
 			var ExamplesFolder = projectMapping.GetExamplesFolder();
 
-			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? dte2.Solution.FindProjectItem(ExamplesFolder.Folder) :
-																	  dte2.Solution.FindProjectItem(folder);
+			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? mDte.Solution.FindProjectItem(ExamplesFolder.Folder) :
+																	  mDte.Solution.FindProjectItem(folder);
 
 			foreach (ProjectItem projectItem in validatorFolder.ProjectItems)
 			{
 				if (projectItem.Kind == Constants.vsProjectItemKindVirtualFolder ||
 					projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder)
 				{
-					CodeClass2 codeFile = FindCollectionExampleCode(dte2, parentModel, projectItem.Name);
+					CodeClass2 codeFile = FindCollectionExampleCode(parentModel, projectItem.Name);
 
 					if (codeFile != null)
 						return codeFile;
@@ -1921,7 +1940,7 @@ namespace COFRSCoreCommon.Utilities
 			return null;
 		}
 
-		public static string GetExampleModel(int skipRecords, ResourceModel resourceModel, DBServerType serverType, string connectionString)
+		public static string GetExampleModel(int skipRecords, ResourceClass resourceModel, DBServerType serverType, string connectionString)
 		{
 			if (serverType == DBServerType.MYSQL)
 				return GetMySqlExampleModel(skipRecords, resourceModel, connectionString);
@@ -1933,19 +1952,20 @@ namespace COFRSCoreCommon.Utilities
 			throw new ArgumentException("Invalid or unrecognized DBServerType", "serverType");
 		}
 
-		public static string GetMySqlExampleModel(int skipRecords, ResourceModel resourceModel, string connectionString)
+		public static string GetMySqlExampleModel(int skipRecords, ResourceClass resourceModel, string connectionString)
 		{
 			throw new NotImplementedException();
 		}
 
-		public static string GetPostgresExampleModel(int skipRecords, ResourceModel resourceModel, string connectionString)
+		public static string GetPostgresExampleModel(int skipRecords, ResourceClass resourceModel, string connectionString)
 		{
 			throw new NotImplementedException();
 		}
 
-		public static string GetSQLServerExampleModel(int skipRecords, ResourceModel resourceModel, string connectionString)
+		public static string GetSQLServerExampleModel(int skipRecords, ResourceClass resourceModel, string connectionString)
 		{
 			StringBuilder results = new StringBuilder();
+			var entityColumns = resourceModel.Entity.Columns;
 
 			using (var connection = new SqlConnection(connectionString))
 			{
@@ -1955,7 +1975,7 @@ namespace COFRSCoreCommon.Utilities
 				query.Append("select ");
 
 				bool first = true;
-				foreach (var column in resourceModel.EntityModel.Columns)
+				foreach (var column in entityColumns)
 				{
 					if (first)
 					{
@@ -1969,19 +1989,19 @@ namespace COFRSCoreCommon.Utilities
 					query.Append($"[{column.ColumnName}]");
 				}
 
-				if (string.IsNullOrWhiteSpace(resourceModel.EntityModel.SchemaName))
+				if (string.IsNullOrWhiteSpace(resourceModel.Entity.SchemaName))
 				{
-					query.Append($" from [{resourceModel.EntityModel.TableName}]");
+					query.Append($" from [{resourceModel.Entity.TableName}]");
 				}
 				else
 				{
-					query.Append($" from [{resourceModel.EntityModel.SchemaName}].[{resourceModel.EntityModel.TableName}]");
+					query.Append($" from [{resourceModel.Entity.SchemaName}].[{resourceModel.Entity.TableName}]");
 				}
 
 				query.Append(" order by ");
 
 				first = true;
-				foreach (var column in resourceModel.EntityModel.Columns)
+				foreach (var column in entityColumns)
 				{
 					if (column.IsPrimaryKey)
 					{
@@ -2010,7 +2030,7 @@ namespace COFRSCoreCommon.Utilities
 						if (reader.Read())
 						{
 							first = true;
-							foreach (var column in resourceModel.EntityModel.Columns)
+							foreach (var column in entityColumns)
 							{
 								if (first)
 									first = false;
@@ -2205,7 +2225,7 @@ namespace COFRSCoreCommon.Utilities
 						else
 						{
 							first = true;
-							foreach (var column in resourceModel.EntityModel.Columns)
+							foreach (var column in entityColumns)
 							{
 								if (first)
 									first = false;
@@ -2313,7 +2333,7 @@ namespace COFRSCoreCommon.Utilities
 			return results.ToString();
 		}
 
-		public static string ResolveMapFunction(JObject entityJson, string columnName, ResourceModel model, string mapFunction)
+		public static string ResolveMapFunction(JObject entityJson, string columnName, ResourceClass model, string mapFunction)
 		{
 			bool isDone = false;
 			var originalMapFunction = mapFunction;
@@ -2340,7 +2360,7 @@ namespace COFRSCoreCommon.Utilities
 					var textToReplace = ef.Groups["replace"];
 					var token = entityJson[entityColumnReference.Value];
 
-					var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(entityColumnReference.Value, StringComparison.OrdinalIgnoreCase));
+					var entityColumn = model.Entity.Columns.FirstOrDefault(c => c.ColumnName.Equals(entityColumnReference.Value, StringComparison.OrdinalIgnoreCase));
 					var resourceColumn = model.Columns.FirstOrDefault(c => c.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase));
 
 					switch (entityColumn.ModelDataType.ToLower())
@@ -2490,14 +2510,14 @@ namespace COFRSCoreCommon.Utilities
 			return results.ToString();
 		}
 
-		public static string ExtractWellKnownConversion(JObject entityJson, ResourceModel model, string mapFunction)
+		public static string ExtractWellKnownConversion(JObject entityJson, ResourceClass model, string mapFunction)
 		{
 			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
 
 			if (ef.Success)
 			{
 				var token = entityJson[ef.Groups["entity"].Value];
-				var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+				var entityColumn = model.Entity.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
 				var replaceText = ef.Groups["replace"].Value;
 
 				var seek = $"{replaceText}\\.HasValue[ \t]*\\?[ \t]*\\(TimeSpan\\?\\)[ \t]*TimeSpan\\.FromSeconds[ \t]*\\([ \t]*\\(double\\)[ \t]*{replaceText}[ \t]*\\)[ \t]*\\:[ \t]*null";
@@ -2713,7 +2733,7 @@ namespace COFRSCoreCommon.Utilities
 			return string.Empty;
 		}
 
-		public static string ExtractSimpleConversion(JObject entityJson, ResourceModel model, string mapFunction)
+		public static string ExtractSimpleConversion(JObject entityJson, ResourceClass model, string mapFunction)
 		{
 			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
 
@@ -2722,7 +2742,7 @@ namespace COFRSCoreCommon.Utilities
 				if (mapFunction.Equals(ef.Groups["replace"].Value))
 				{
 					var token = entityJson[ef.Groups["entity"].Value];
-					var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+					var entityColumn = model.Entity.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
 
 					switch (entityColumn.ModelDataType.ToLower())
 					{
@@ -3283,7 +3303,7 @@ namespace COFRSCoreCommon.Utilities
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var map = new List<EntityModel>();
-			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte2);                        //	Contains the names and projects where various source file exist.
+			var projectMapping = COFRSCommonUtilities.OpenProjectMapping();                        //	Contains the names and projects where various source file exist.
 
 			var entityFolder = string.IsNullOrWhiteSpace(folder) ? dte2.Solution.FindProjectItem(projectMapping.GetEntityModelsFolder().Folder) :
 																   dte2.Solution.FindProjectItem(folder);
@@ -3340,7 +3360,7 @@ namespace COFRSCoreCommon.Utilities
 									Folder = projectItem.Properties.Item("FullPath").Value.ToString()
 								};
 
-								entityModel.Columns = LoadColumns(classElement);
+								entityModel.Columns = LoadEntityColumns(classElement);
 								map.Add(entityModel);
 							}
 							else if (compositeAttribute != null)
@@ -3368,7 +3388,7 @@ namespace COFRSCoreCommon.Utilities
 									Folder = projectItem.Properties.Item("FullPath").Value.ToString()
 								};
 
-								entityModel.Columns = LoadColumns(classElement);
+								entityModel.Columns = LoadEntityColumns(classElement);
 								map.Add(entityModel);
 							}
 						}
@@ -3443,6 +3463,50 @@ namespace COFRSCoreCommon.Utilities
 			return new EntityMap() { Maps = map.ToArray() };
 		}
 
+		public static DBColumn[] LoadEntityEnumColumns(CodeEnum enumElement)
+		{
+			var columns = new List<DBColumn>();
+
+			foreach (CodeVariable2 enumVariable in enumElement.Children.OfType<CodeVariable2>())
+			{
+				var dbColumn = new DBColumn
+				{
+					ColumnName = enumVariable.Name,
+				};
+
+				CodeAttribute2 pgNameAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgName"));
+
+				if (pgNameAttribute != null)
+				{
+					var matchit = Regex.Match(pgNameAttribute.Value, "\\\"(?<pgName>[_A-Za-z][A-Za-z0-9_]*)\\\"");
+
+					if (matchit.Success)
+						dbColumn.EntityName = matchit.Groups["pgName"].Value;
+				}
+
+				columns.Add(dbColumn);
+			}
+
+			return columns.ToArray();
+		}
+		public static DBColumn[] LoadResourceEnumColumns(ResourceClass resource)
+		{
+			CodeEnum enumElement = (CodeEnum) resource.Resource;
+			var columns = new List<DBColumn>();
+
+			foreach (CodeVariable2 enumVariable in enumElement.Children.OfType<CodeVariable2>())
+			{
+				var dbColumn = new DBColumn
+				{
+					ColumnName = enumVariable.Name,
+				};
+
+				columns.Add(dbColumn);
+			}
+
+			return columns.ToArray();
+		}
+
 		/// <summary>
 		///	Load all resource models from the resource folder
 		/// </summary>
@@ -3458,12 +3522,12 @@ namespace COFRSCoreCommon.Utilities
 			LoadResourceEntityAssociations(dte, ref rmap);
 			LoadEntityTableAssociations(dte, ref emap);
 
-			var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte);                        //	Contains the names and projects where various source file exist.
+			var projectMapping = COFRSCommonUtilities.OpenProjectMapping();                        //	Contains the names and projects where various source file exist.
 			var entityModelsFolder = projectMapping.GetEntityModelsFolder();
 			var resourceModelFolder = projectMapping.GetResourceModelsFolder();
 			var entityMap = LoadEntityMap(dte);
 
-			var defaultServerType = COFRSCommonUtilities.GetDefaultServerType(dte);
+			var defaultServerType = COFRSCommonUtilities.GetDefaultServerType();
 
 
 			var resourceFolder = string.IsNullOrWhiteSpace(folder) ? dte.Solution.FindProjectItem(resourceModelFolder.Folder) :
@@ -3638,7 +3702,7 @@ namespace COFRSCoreCommon.Utilities
 
 			if (parentFolder == null)
 			{
-				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte);    //	Contains the names and projects where various source file exist.
+				var projectMapping = COFRSCommonUtilities.OpenProjectMapping();    //	Contains the names and projects where various source file exist.
 				var EntityModelsFolder = projectMapping.GetEntityModelsFolder();
 				var project = GetProject(dte, EntityModelsFolder.ProjectName);
 				projectItems = project.ProjectItems;
@@ -3686,7 +3750,7 @@ namespace COFRSCoreCommon.Utilities
 
 			if (parentFolder == null)
             {
-				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(dte);    //	Contains the names and projects where various source file exist.
+				var projectMapping = COFRSCommonUtilities.OpenProjectMapping();    //	Contains the names and projects where various source file exist.
 				var ResourceModelsFolder = projectMapping.GetResourceModelsFolder();
 				var project = GetProject(dte, ResourceModelsFolder.ProjectName);
 				projectItems = project.ProjectItems;
@@ -3728,7 +3792,7 @@ namespace COFRSCoreCommon.Utilities
 		}
 
 
-		private static DBColumn[] LoadColumns(CodeClass2 codeClass)
+		public static DBColumn[] LoadEntityColumns(CodeClass2 codeClass)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var columns = new List<DBColumn>();
@@ -3737,8 +3801,7 @@ namespace COFRSCoreCommon.Utilities
 			{
 				var parts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
 
-				CodeAttribute memberAttribute = null;
-				try { memberAttribute = (CodeAttribute)property.Children.Item("Member"); } catch (Exception) { }
+				CodeAttribute2 memberAttribute = property.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Member"));
 
 				var dbColumn = new DBColumn
 				{
@@ -3749,63 +3812,93 @@ namespace COFRSCoreCommon.Utilities
 
 				if (memberAttribute != null)
 				{
-					var matchit = Regex.Match(memberAttribute.Value, "IsPrimaryKey[ \t]*=[ \t]*(?<IsPrimary>(true|false))");
+					var isPrimaryKeyArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("IsPrimaryKey"));
 
-					if (matchit.Success)
-						if (string.Equals(matchit.Groups["IsPrimary"].Value, "true", StringComparison.OrdinalIgnoreCase))
-							dbColumn.IsPrimaryKey = true;
+					if (isPrimaryKeyArgument != null)
+						dbColumn.IsPrimaryKey = isPrimaryKeyArgument.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-					matchit = Regex.Match(memberAttribute.Value, "IsIdentity[ \t]*=[ \t]*(?<IsIdentity>(true|false))");
+					var isIdentityArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("IsIdentity"));
 
-					if (matchit.Success)
-						if (string.Equals(matchit.Groups["IsIdentity"].Value, "true", StringComparison.OrdinalIgnoreCase))
-							dbColumn.IsIdentity = true;
+					if (isIdentityArgument != null)
+						dbColumn.IsIdentity = isIdentityArgument.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-					matchit = Regex.Match(memberAttribute.Value, "AutoField[ \t]*=[ \t]*(?<AutoField>(true|false))");
+					var autoFieldArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("AutoField"));
 
-					if (matchit.Success)
-						if (string.Equals(matchit.Groups["AutoField"].Value, "true", StringComparison.OrdinalIgnoreCase))
-							dbColumn.IsComputed = true;
+					if (autoFieldArgument != null)
+						dbColumn.IsComputed = autoFieldArgument.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-					matchit = Regex.Match(memberAttribute.Value, "IsIndexed[ \t]*=[ \t]*(?<IsIndexed>(true|false))");
+					var isIndexedArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("IsIndexed"));
 
-					if (matchit.Success)
-						if (string.Equals(matchit.Groups["IsIndexed"].Value, "true", StringComparison.OrdinalIgnoreCase))
-							dbColumn.IsIndexed = true;
+					if (isIndexedArgument != null)
+						dbColumn.IsIndexed = isIndexedArgument.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-					matchit = Regex.Match(memberAttribute.Value, "IsNullable[ \t]*=[ \t]*(?<IsNullable>(true|false))");
+					var isNullableArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("IsNullable"));
 
-					if (matchit.Success)
-						if (string.Equals(matchit.Groups["IsNullable"].Value, "true", StringComparison.OrdinalIgnoreCase))
-							dbColumn.IsNullable = true;
+					if (isNullableArgument != null)
+						dbColumn.IsNullable = isNullableArgument.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-					matchit = Regex.Match(memberAttribute.Value, "IsFixed[ \t]*=[ \t]*(?<IsFixed>(true|false))");
+					var isFixedArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("IsFixed"));
 
-					if (matchit.Success)
-						if (string.Equals(matchit.Groups["IsFixed"].Value, "true", StringComparison.OrdinalIgnoreCase))
-							dbColumn.IsFixed = true;
+					if (isFixedArgument != null)
+						dbColumn.IsFixed = isFixedArgument.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-					matchit = Regex.Match(memberAttribute.Value, "IsForeignKey[ \t]*=[ \t]*(?<IsForeignKey>(true|false))");
+					var isForeignKeyArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("IsForeignKey"));
 
-					if (matchit.Success)
-						if (string.Equals(matchit.Groups["IsForeignKey"].Value, "true", StringComparison.OrdinalIgnoreCase))
-							dbColumn.IsForeignKey = true;
+					if (isForeignKeyArgument != null)
+						dbColumn.IsFixed = isForeignKeyArgument.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-					matchit = Regex.Match(memberAttribute.Value, "NativeDataType[ \t]*=[ \t]*\"(?<NativeDataType>[_a-zA-Z][_a-zA-Z0-9]*)\"");
+					var nativeDataTypeArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("NativeDataType"));
 
-					if (matchit.Success)
-						dbColumn.DBDataType = matchit.Groups["NativeDataType"].Value;
+					if (nativeDataTypeArgument != null)
+						dbColumn.DBDataType = nativeDataTypeArgument.Value.Trim(new char[] { '"' });
 
-					matchit = Regex.Match(memberAttribute.Value, "Length[ \t]*=[ \t]*(?<Length>[0-9]+)");
+					var lengthArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("Length"));
 
-					if (matchit.Success)
-						dbColumn.Length = Convert.ToInt32(matchit.Groups["Length"].Value);
+					if (lengthArgument != null)
+						dbColumn.Length = Convert.ToInt32(lengthArgument.Value);
 
-					matchit = Regex.Match(memberAttribute.Value, "ForeignTableName[ \t]*=[ \t]*\"(?<ForeignTableName>[_a-zA-Z][_a-zA-Z0-9]*)\"");
+					var foreignTableNameArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("ForeignTableName"));
 
-					if (matchit.Success)
-						dbColumn.ForeignTableName = matchit.Groups["ForeignTableName"].Value;
+					if (foreignTableNameArgument != null)
+						dbColumn.ForeignTableName = foreignTableNameArgument.Value.Trim(new char[] { '"' });
 				}
+
+				columns.Add(dbColumn);
+			}
+
+			return columns.ToArray();
+		}
+		public static DBColumn[] LoadResourceColumns(ResourceClass resource)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var columns = new List<DBColumn>();
+			var codeClass = (CodeClass2)resource.Resource;
+			var entityColumns = resource.Entity.Columns;
+
+			foreach (CodeProperty2 property in codeClass.Children.OfType<CodeProperty2>())
+			{
+				var parts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+				var dbColumn = new DBColumn
+				{
+					ColumnName = property.Name,
+					EntityName = property.Name,
+					ModelDataType = parts[parts.Count() - 1]
+				};
+
+				if (property.Name.Equals("HRef", StringComparison.OrdinalIgnoreCase))
+					dbColumn.IsPrimaryKey = true;
+				else
+                {
+					var referenceModel = codeService.GetResourceClass(parts[parts.Count() - 1]);
+
+					if ( referenceModel != null )
+                    {
+						dbColumn.IsForeignKey = true;
+						dbColumn.ForeignTableName = referenceModel.Entity.TableName;
+                    }
+                }
 
 				columns.Add(dbColumn);
 			}
@@ -3820,11 +3913,12 @@ namespace COFRSCoreCommon.Utilities
 		/// </summary>
 		/// <param name="dte>"The <see cref="DTE2"/> Visual Studio interface</param>
 		/// <returns>The <see cref="ProjectMapping"/> for the project.</returns>
-		public static ProjectMapping OpenProjectMapping(DTE2 dte)
+		public static ProjectMapping OpenProjectMapping()
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
-			var solutionPath = dte.Solution.Properties.Item("Path").Value.ToString();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var solutionPath = mDte.Solution.Properties.Item("Path").Value.ToString();
 			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs\\ProjectMap.json");
 
 			try
@@ -3838,37 +3932,38 @@ namespace COFRSCoreCommon.Utilities
 					MissingMemberHandling = MissingMemberHandling.Ignore
 				});
 
-				return AutoFillProjectMapping(dte, projectMapping);
+				return AutoFillProjectMapping(projectMapping);
 			}
 			catch (FileNotFoundException)
 			{
-				var projectMapping = AutoFillProjectMapping(dte, new ProjectMapping());
-				SaveProjectMapping(dte, projectMapping);
+				var projectMapping = AutoFillProjectMapping(new ProjectMapping());
+				SaveProjectMapping(projectMapping);
 				return projectMapping;
 			}
 			catch (DirectoryNotFoundException)
 			{
-				var projectMapping = AutoFillProjectMapping(dte, new ProjectMapping());
-				SaveProjectMapping(dte, projectMapping);
+				var projectMapping = AutoFillProjectMapping(new ProjectMapping());
+				SaveProjectMapping(projectMapping);
 				return projectMapping;
 			}
 			catch (Exception)
 			{
-				var projectMapping = AutoFillProjectMapping(dte, new ProjectMapping());
-				SaveProjectMapping(dte, projectMapping);
+				var projectMapping = AutoFillProjectMapping(new ProjectMapping());
+				SaveProjectMapping(projectMapping);
 				return projectMapping;
 			}
 		}
 
-		private static ProjectMapping AutoFillProjectMapping(DTE2 dte, ProjectMapping projectMapping)
+		private static ProjectMapping AutoFillProjectMapping(ProjectMapping projectMapping)
         {
-			var installationFolder = GetInstallationFolder(dte);
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var installationFolder = GetInstallationFolder();
 
 			if (string.IsNullOrWhiteSpace(projectMapping.EntityFolder) ||
 				string.IsNullOrWhiteSpace(projectMapping.EntityNamespace) ||
 				string.IsNullOrWhiteSpace(projectMapping.EntityProject))
 			{
-				var modelFolder = FindEntityModelsFolder(dte);
+				var modelFolder = FindEntityModelsFolder(mDte);
 				projectMapping.EntityFolder = modelFolder == null ? installationFolder.Folder : modelFolder.Folder;
 				projectMapping.EntityNamespace = modelFolder == null ? installationFolder.Namespace : modelFolder.Namespace;
 				projectMapping.EntityProject = modelFolder == null ? installationFolder.ProjectName : modelFolder.ProjectName;
@@ -3878,7 +3973,7 @@ namespace COFRSCoreCommon.Utilities
 				string.IsNullOrWhiteSpace(projectMapping.ResourceNamespace) ||
 				string.IsNullOrWhiteSpace(projectMapping.ResourceProject))
 			{
-				var modelFolder = FindResourceModelsFolder(dte);
+				var modelFolder = FindResourceModelsFolder(mDte);
 				projectMapping.ResourceFolder = modelFolder == null ? installationFolder.Folder : modelFolder.Folder;
 				projectMapping.ResourceNamespace = modelFolder == null ? installationFolder.Namespace : modelFolder.Namespace;
 				projectMapping.ResourceProject = modelFolder == null ? installationFolder.ProjectName : modelFolder.ProjectName;
@@ -3888,7 +3983,7 @@ namespace COFRSCoreCommon.Utilities
 				string.IsNullOrWhiteSpace(projectMapping.MappingNamespace) ||
 				string.IsNullOrWhiteSpace(projectMapping.MappingProject))
 			{
-				var modelFolder = FindMappingFolder(dte);
+				var modelFolder = FindMappingFolder(mDte);
 				projectMapping.MappingFolder = modelFolder == null ? installationFolder.Folder : modelFolder.Folder;
 				projectMapping.MappingNamespace = modelFolder == null ? installationFolder.Namespace : modelFolder.Namespace;
 				projectMapping.MappingProject = modelFolder == null ? installationFolder.ProjectName : modelFolder.ProjectName;
@@ -3898,7 +3993,7 @@ namespace COFRSCoreCommon.Utilities
 				string.IsNullOrWhiteSpace(projectMapping.ValidationNamespace) ||
 				string.IsNullOrWhiteSpace(projectMapping.ValidationProject))
 			{
-				var modelFolder = FindMappingFolder(dte);
+				var modelFolder = FindMappingFolder(mDte);
 				projectMapping.ValidationFolder = modelFolder == null ? installationFolder.Folder : modelFolder.Folder;
 				projectMapping.ValidationNamespace = modelFolder == null ? installationFolder.Namespace : modelFolder.Namespace;
 				projectMapping.ValidationProject = modelFolder == null ? installationFolder.ProjectName : modelFolder.ProjectName;
@@ -3908,7 +4003,7 @@ namespace COFRSCoreCommon.Utilities
 				string.IsNullOrWhiteSpace(projectMapping.ExampleNamespace) ||
 				string.IsNullOrWhiteSpace(projectMapping.ExampleProject))
 			{
-				var modelFolder = FindExampleFolder(dte);
+				var modelFolder = FindExampleFolder(mDte);
 				projectMapping.ExampleFolder = modelFolder == null ? installationFolder.Folder : modelFolder.Folder;
 				projectMapping.ExampleNamespace = modelFolder == null ? installationFolder.Namespace : modelFolder.Namespace;
 				projectMapping.ExampleProject = modelFolder == null ? installationFolder.ProjectName : modelFolder.ProjectName;
@@ -3918,7 +4013,7 @@ namespace COFRSCoreCommon.Utilities
 				string.IsNullOrWhiteSpace(projectMapping.ControllersNamespace) ||
 				string.IsNullOrWhiteSpace(projectMapping.ControllersProject))
 			{
-				var modelFolder = FindControllersFolder(dte);
+				var modelFolder = FindControllersFolder(mDte);
 				projectMapping.ControllersFolder = modelFolder == null ? installationFolder.Folder : modelFolder.Folder;
 				projectMapping.ControllersNamespace = modelFolder == null ? installationFolder.Namespace : modelFolder.Namespace;
 				projectMapping.ControllersProject = modelFolder == null ? installationFolder.ProjectName : modelFolder.ProjectName;
@@ -3927,9 +4022,10 @@ namespace COFRSCoreCommon.Utilities
 			return projectMapping;
         }
 
-		public static void SaveProjectMapping(DTE2 dte, ProjectMapping projectMapping)
+		public static void SaveProjectMapping(ProjectMapping projectMapping)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 
 			var jsonData = JsonConvert.SerializeObject(projectMapping, new JsonSerializerSettings()
 			{
@@ -3938,7 +4034,7 @@ namespace COFRSCoreCommon.Utilities
 				MissingMemberHandling = MissingMemberHandling.Ignore
 			});
 
-			var solutionPath = dte.Solution.Properties.Item("Path").Value.ToString();
+			var solutionPath = mDte.Solution.Properties.Item("Path").Value.ToString();
 			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs\\ProjectMap.json");
 
 			File.WriteAllText(mappingPath, jsonData);
@@ -3973,9 +4069,10 @@ namespace COFRSCoreCommon.Utilities
 		/// <param name="_dte2">The <see cref="DTE2"/> Visual Studio interface</param>
 		/// <param name="resourceModel">The <see cref="ResourceModel"/> whose <see cref="ProfileMap"/> is to be loaded.</param>
 		/// <returns>The <see cref="ProfileMap"/> for the <see cref="ResourceModel"/></returns>
-		public static ProfileMap OpenProfileMap(DTE2 dte2, ResourceModel resourceModel, out bool isAllDefined)
+		public static ProfileMap OpenProfileMap(ResourceClass resourceModel, out bool isAllDefined)
         {
-			CodeClass2 codeClass = FindProfileCode(dte2, resourceModel);
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			CodeClass2 codeClass = FindProfileCode(resourceModel);
 			isAllDefined = true;
 			var unmappedResources = new List<string>();
 			var unmappedEntities = new List<string>();
@@ -3983,7 +4080,7 @@ namespace COFRSCoreCommon.Utilities
 			foreach (var column in resourceModel.Columns)
 				unmappedResources.Add(column.ColumnName);
 
-			foreach(var column in resourceModel.EntityModel.Columns)
+			foreach(var column in resourceModel.Entity.Columns)
 				unmappedEntities.Add(column.ColumnName);
 
 			if (codeClass != null)
@@ -3991,7 +4088,7 @@ namespace COFRSCoreCommon.Utilities
 				var profileMap = new ProfileMap()
 				{
 					ResourceClassName = resourceModel.ClassName,
-					EntityClassName = resourceModel.EntityModel.ClassName,
+					EntityClassName = resourceModel.Entity.ClassName,
 					ResourceProfiles = new List<ResourceProfile>(),
 					EntityProfiles = new List<EntityProfile>()
 				};
@@ -4001,7 +4098,7 @@ namespace COFRSCoreCommon.Utilities
 				//	Read Edit Profile
 				EditPoint2 editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
 
-				bool foundit = editPoint.FindPattern($"CreateMap<{resourceModel.ClassName}, {resourceModel.EntityModel.ClassName}>()");
+				bool foundit = editPoint.FindPattern($"CreateMap<{resourceModel.ClassName}, {resourceModel.Entity.ClassName}>()");
 				foundit = foundit && editPoint.LessThan(constructor.EndPoint);
 
 				if (foundit)
@@ -4061,7 +4158,7 @@ namespace COFRSCoreCommon.Utilities
 				//	Read Resource Profile
 				editPoint = (EditPoint2)constructor.StartPoint.CreateEditPoint();
 
-				foundit = editPoint.FindPattern($"CreateMap<{resourceModel.EntityModel.ClassName}, {resourceModel.ClassName}>()");
+				foundit = editPoint.FindPattern($"CreateMap<{resourceModel.Entity.ClassName}, {resourceModel.ClassName}>()");
 				foundit = foundit && editPoint.LessThan(constructor.EndPoint);
 
 				if (foundit)
@@ -4195,18 +4292,18 @@ namespace COFRSCoreCommon.Utilities
 			return theText.ToString().Trim();
 		}
 
-		public static ProfileMap GenerateProfileMap(ResourceModel resourceModel, ResourceMap resourceMap)
+		public static ProfileMap GenerateProfileMap(ResourceClass resourceModel)
 		{
 			var profileMap = new ProfileMap
 			{
 				ResourceClassName = resourceModel.ClassName,
-				EntityClassName = resourceModel.EntityModel.ClassName,
+				EntityClassName = resourceModel.Entity.ClassName,
 				ResourceProfiles = new List<ResourceProfile>(),
 				EntityProfiles = new List<EntityProfile>()
 			};
 
-			profileMap.ResourceProfiles.AddRange(GenerateResourceFromEntityMapping(resourceModel, resourceMap));
-			profileMap.EntityProfiles.AddRange(GenerateEntityFromResourceMapping(resourceModel, profileMap, resourceMap));
+			profileMap.ResourceProfiles.AddRange(GenerateResourceFromEntityMapping(resourceModel));
+			profileMap.EntityProfiles.AddRange(GenerateEntityFromResourceMapping(resourceModel, profileMap));
 
 			return profileMap;
 		}
@@ -4278,16 +4375,19 @@ namespace COFRSCoreCommon.Utilities
 		/// </summary>
 		/// <param name="unmappedColumns"></param>
 		/// <param name="resourceModel"></param>
-		public static List<EntityProfile> GenerateEntityFromResourceMapping(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap)
+		public static List<EntityProfile> GenerateEntityFromResourceMapping(ResourceClass resourceModel, ProfileMap profileMap)
 		{
 			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
 			var result = new List<EntityProfile>();
 			var unmappedMembers = new List<String>();
-			foreach (var column in resourceModel.EntityModel.Columns)
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var entityColumns = resourceModel.Entity.Columns;
+
+			foreach (var column in entityColumns)
 				unmappedMembers.Add(column.ColumnName);
 
 			//  Let's create a mapping for each entity member
-			foreach (var entityMember in resourceModel.EntityModel.Columns)
+			foreach (var entityMember in entityColumns)
 			{
 				//  Now, construct the mapping
 				if (entityMember.IsPrimaryKey)
@@ -4323,7 +4423,7 @@ namespace COFRSCoreCommon.Utilities
 
 						//  We need the list of all the primary keys in the entity model, so that we know the
 						//  position of this member.
-						var primaryKeys = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
+						var primaryKeys = entityColumns.Where(c => c.IsPrimaryKey);
 
 						if (primaryKeys.Count() == 1)
 						{
@@ -4421,7 +4521,7 @@ namespace COFRSCoreCommon.Utilities
 								//  This is an href. Very much like the primary key, there can be more than one single 
 								//  element in this href. 
 
-								var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+								var foreignKeys = entityColumns.Where(c => c.IsForeignKey &&
 													string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
 
 								if (foreignKeys.Count() == 1)
@@ -4463,14 +4563,13 @@ namespace COFRSCoreCommon.Utilities
 								//  The resource member is not a URI. It should be an enum. If it is, we sould be able to
 								//  find it in our resource models list.
 
-								var referenceModel = resourceMap.Maps.FirstOrDefault(r =>
-												string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
+								var referenceModel = codeService.GetResourceClass(resourceMember.ModelDataType.ToString());
 
 								if (referenceModel != null)
 								{
 									if (referenceModel.ResourceType == ResourceType.Enum)
 									{
-										var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+										var foreignKeys = entityColumns.Where(c => c.IsForeignKey &&
 											string.Equals(c.ForeignTableName, entityMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
 
 										//  If the resource member is an enum that represents the value of the primary key of a foreign table,
@@ -4512,7 +4611,7 @@ namespace COFRSCoreCommon.Utilities
 
 						if (resourceMember != null)
 						{
-							MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember, resourceMap);
+							MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember);
 						}
 						else
 						{
@@ -4527,7 +4626,7 @@ namespace COFRSCoreCommon.Utilities
 									StringBuilder parent = new StringBuilder("");
 									string NullValue = "null";
 
-									var parentModel = GetParentModel(resourceModel, parts, resourceMap);
+									var parentModel = GetParentModel(resourceModel, parts);
 
 									if (parentModel != null)
 									{
@@ -4592,7 +4691,7 @@ namespace COFRSCoreCommon.Utilities
 									resourceMember = resourceModel.Columns.FirstOrDefault(c =>
 										string.Equals(c.ModelDataType.ToString(), rp.ResourceColumnName, StringComparison.OrdinalIgnoreCase));
 
-									MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember, resourceMap);
+									MapResourceDestinationFromSource(entityMember, entityProfile, resourceMember);
 								}
 							}
 						}
@@ -4605,11 +4704,13 @@ namespace COFRSCoreCommon.Utilities
 			return result;
 		}
 
-		public static List<ResourceProfile> GenerateResourceFromEntityMapping(ResourceModel resourceModel, ResourceMap resourceMap)
+		public static List<ResourceProfile> GenerateResourceFromEntityMapping(ResourceClass resourceModel)
 		{
 			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
 			var nn = new NameNormalizer(resourceModel.ClassName);
 			var result = new List<ResourceProfile>();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var entityColumns = resourceModel.Entity.Columns;
 			var unmappedMembers = new List<string>();
 
 			foreach (var column in resourceModel.Columns)
@@ -4632,7 +4733,7 @@ namespace COFRSCoreCommon.Utilities
 							ResourceColumnName = resourceMember.ColumnName
 						};
 
-						var primaryKeys = resourceModel.EntityModel.Columns.Where(c => c.IsPrimaryKey);
+						var primaryKeys = entityColumns.Where(c => c.IsPrimaryKey);
 						var formula = new StringBuilder($"new Uri(rootUrl, $\"{nn.PluralCamelCase}/id");
 						var sourceColumns = new List<string>();
 
@@ -4661,10 +4762,7 @@ namespace COFRSCoreCommon.Utilities
 					//  If it is an enum, there will be a resource model of type enum, whose corresponding entity model
 					//  will point to the foreign table.
 
-					var enumResource = resourceMap.Maps.FirstOrDefault(r =>
-									   r.ResourceType == ResourceType.Enum &&
-									   r.EntityModel != null &&
-									   string.Equals(r.EntityModel.TableName, resourceMember.ForeignTableName, StringComparison.OrdinalIgnoreCase));
+					var enumResource = codeService.GetResourceClassBySchema(resourceModel.Entity.SchemaName, resourceMember.ForeignTableName);
 
 					if (enumResource != null)
 					{
@@ -4682,7 +4780,7 @@ namespace COFRSCoreCommon.Utilities
 							var sourceColumns = new List<string>();
 							var formula = $"({enumResource.ClassName})source.{resourceMember.ColumnName}";
 							//  Need to think about this...
-							sourceColumns.Add(enumResource.EntityModel.ClassName);
+							sourceColumns.Add(enumResource.Entity.ClassName);
 							resourceProfile.MapFunction = formula.ToString();
 							resourceProfile.EntityColumnNames = sourceColumns.ToArray();
 							resourceProfile.IsDefined = true;
@@ -4705,7 +4803,7 @@ namespace COFRSCoreCommon.Utilities
 								};
 
 								var nnn = new NameNormalizer(resourceMember.ColumnName);
-								var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+								var foreignKeys = entityColumns.Where(c => c.IsForeignKey &&
 									string.Equals(c.ForeignTableName, resourceMember.ForeignTableName, StringComparison.Ordinal));
 
 								var formula = new StringBuilder($"new Uri(rootUrl, $\"{nnn.PluralCamelCase}/id");
@@ -4728,8 +4826,7 @@ namespace COFRSCoreCommon.Utilities
 						{
 							//  This is probably an Enum. If it is, we should be able to find it in the list of 
 							//  resource models.
-							var referenceModel = resourceMap.Maps.FirstOrDefault(r =>
-									string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.Ordinal));
+							var referenceModel = codeService.GetResourceClass(resourceMember.ModelDataType);
 
 							if (referenceModel != null)
 							{
@@ -4747,7 +4844,7 @@ namespace COFRSCoreCommon.Utilities
 										};
 
 										var nnn = new NameNormalizer(resourceMember.ColumnName);
-										var foreignKeys = resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey &&
+										var foreignKeys = entityColumns.Where(c => c.IsForeignKey &&
 												 (string.Equals(c.ForeignTableName, nnn.SingleForm, StringComparison.Ordinal) ||
 												   string.Equals(c.ForeignTableName, nnn.PluralForm, StringComparison.Ordinal)));
 
@@ -4770,7 +4867,7 @@ namespace COFRSCoreCommon.Utilities
 				else
 				{
 					//  Is there an existing entityMember whos column name matches the resource member?
-					var entityMember = resourceModel.EntityModel.Columns.FirstOrDefault(u =>
+					var entityMember = entityColumns.FirstOrDefault(u =>
 						string.Equals(u.ColumnName, resourceMember.ColumnName, StringComparison.OrdinalIgnoreCase));
 
 					if (entityMember != null)
@@ -4781,13 +4878,13 @@ namespace COFRSCoreCommon.Utilities
 							ResourceColumnName = resourceMember.ColumnName
 						};
 
-						MapEntityDestinationFromSource(resourceMember, ref resourceProfile, entityMember, resourceMap);
+						MapEntityDestinationFromSource(resourceMember, ref resourceProfile, entityMember);
 						result.Add(resourceProfile);
 					}
 					else
 					{
 						//  Is this resource member a class?
-						var model = resourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, resourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+						var model = codeService.GetResourceClass(resourceMember.ModelDataType.ToString());
 
 						if (model != null)
 						{
@@ -4799,7 +4896,7 @@ namespace COFRSCoreCommon.Utilities
 							resourceProfile.MapFunction = $"new {model.ClassName}()";
 
 							//  Now, go map all of it's children
-							MapEntityChildMembers(resourceMember, resourceProfile, model, resourceMember.ColumnName, resourceMap);
+							MapEntityChildMembers(resourceMember, resourceProfile, model, resourceMember.ColumnName);
 							result.Add(resourceProfile);
 						}
 						else
@@ -4853,9 +4950,9 @@ namespace COFRSCoreCommon.Utilities
 		}
 
 
-		public static ResourceModel GetParentModel(ResourceModel parent, string[] parts, ResourceMap resourceMap)
+		public static ResourceClass GetParentModel(ResourceClass parent, string[] parts)
 		{
-			ResourceModel result = parent;
+			ResourceClass result = parent;
 
 			for (int i = 0; i < parts.Count() - 1; i++)
 			{
@@ -4863,46 +4960,50 @@ namespace COFRSCoreCommon.Utilities
 
 				if (column != null)
 				{
-					result = resourceMap.Maps.FirstOrDefault(p => string.Equals(p.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+					var codeService = COFRSServiceFactory.GetService<ICodeService>();
+					result = codeService.GetResourceClass(column.ModelDataType.ToString());
 				}
 			}
 
 			return result;
 		}
 
-		public static void MapEntityChildMembers(DBColumn member, ResourceProfile resourceProfile, ResourceModel model, string parent, ResourceMap resourceMap)
+		public static void MapEntityChildMembers(DBColumn member, ResourceProfile resourceProfile, ResourceClass model, string parent)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var entityColumns = model.Entity.Columns;
+			var codeService = COFRSServiceFactory.GetService<ICodeService> ();
 			//  We have a model, and the parent column name.
 
 			//  Map the children
 			foreach (var childMember in model.Columns)
 			{
 				//  Do we have an existing entity member that matches the child resource column name?
-				var entityMember = model.EntityModel.Columns.FirstOrDefault(u =>
+				var entityMember = entityColumns.FirstOrDefault(u =>
 					string.Equals(u.ColumnName, childMember.ColumnName, StringComparison.OrdinalIgnoreCase));
 
 				if (entityMember != null)
 				{
 					//  We do, just assign it
-					MapEntityDestinationFromSource(childMember, ref resourceProfile, entityMember, resourceMap);
+					MapEntityDestinationFromSource(childMember, ref resourceProfile, entityMember);
 				}
 				else
 				{
-					var childModel = resourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, member.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+					var childModel = codeService.GetResourceClass(member.ModelDataType.ToString());
 
 					if (model != null)
 					{
-						MapEntityChildMembers(member, resourceProfile, model, $"{parent}?.{childMember.ColumnName}", resourceMap);
+						MapEntityChildMembers(member, resourceProfile, model, $"{parent}?.{childMember.ColumnName}");
 					}
 				}
 			}
 		}
 
-		public static void MapEntityDestinationFromSource(DBColumn destinationMember, ref ResourceProfile resourceProfile, DBColumn sourceMember, ResourceMap resourceMap)
+		public static void MapEntityDestinationFromSource(DBColumn destinationMember, ref ResourceProfile resourceProfile, DBColumn sourceMember)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-			var resourceModel = resourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, destinationMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var resourceModel = codeService.GetResourceClass(destinationMember.ModelDataType.ToString());
 
 			if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
 			{
@@ -5213,10 +5314,11 @@ namespace COFRSCoreCommon.Utilities
 			}
 		}
 
-		public static void MapResourceDestinationFromSource(DBColumn destinationMember, EntityProfile entityProfile, DBColumn sourceMember, ResourceMap resourceMap)
+		public static void MapResourceDestinationFromSource(DBColumn destinationMember, EntityProfile entityProfile, DBColumn sourceMember)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-			var model = resourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var model = codeService.GetResourceClass(sourceMember.ModelDataType.ToString());
 
 			if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
 			{
@@ -5527,12 +5629,16 @@ namespace COFRSCoreCommon.Utilities
 			}
 		}
 
-		public static bool ContainsParseFunction(ResourceModel model)
+		public static bool ContainsParseFunction(ResourceClass model)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+			ThreadHelper.ThrowIfNotOnUIThread();
 
+			if (model.Resource.Kind == vsCMElement.vsCMElementEnum)
+				return false;
+
+			var codeClass = (CodeClass2) model.Resource;
 			//  Search for a static function called Parse
-			var theParseFunction = model.Functions.FirstOrDefault(f => f.IsShared && string.Equals(f.Name, "parse", StringComparison.OrdinalIgnoreCase));
+			var theParseFunction = codeClass.Children.OfType<CodeFunction2>().FirstOrDefault(f => f.IsShared && string.Equals(f.Name, "parse", StringComparison.OrdinalIgnoreCase));
 
 			if (theParseFunction != null)
 			{

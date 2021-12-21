@@ -1,4 +1,5 @@
-﻿using COFRSCoreCommon.Models;
+﻿using COFRS.Template.Common.Models;
+using COFRS.Template.Common.ServiceUtilities;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -28,9 +29,6 @@ namespace COFRS.Template.Common.Forms
 		public JObject Examples { get; set; }
 		public string DefaultConnectionString { get; set; }
 		public string ConnectionString { get; set; }
-
-		public EntityMap EntityMap { get; set; }
-		public ResourceMap ResourceMap { get; set; }
 		public DBServerType ServerType { get; set; }
 		public List<string> Policies { get; set; }
 		#endregion
@@ -43,6 +41,7 @@ namespace COFRS.Template.Common.Forms
 
 		private void OnLoad(object sender, EventArgs e)
 		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			_portNumber.Location = new Point(103, 60);
 
 			if (InstallType == 1)
@@ -90,10 +89,10 @@ namespace COFRS.Template.Common.Forms
 			_entityModelList.Items.Clear();
 			_resourceModelList.Items.Clear();
 
-			foreach (var entityModel in EntityMap.Maps)
+			foreach (var entityModel in codeService.EntityClassList)
 				_entityModelList.Items.Add(entityModel);
 
-			foreach (var resourceModel in ResourceMap.Maps)
+			foreach (var resourceModel in codeService.ResourceClassList)
 				_resourceModelList.Items.Add(resourceModel);
 
 			if (_entityModelList.Items.Count == 0)

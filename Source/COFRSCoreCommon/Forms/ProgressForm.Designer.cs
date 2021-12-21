@@ -40,18 +40,22 @@
             this.Message.TabIndex = 0;
             this.Message.Text = "label1";
             // 
-            // ProgressDialog
+            // ProgressForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(266, 33);
+            this.ControlBox = false;
             this.Controls.Add(this.Message);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Name = "ProgressDialog";
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Name = "ProgressForm";
             this.ShowIcon = false;
             this.ShowInTaskbar = false;
+            this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Visual Studio";
+            this.Text = "Microsoft Visual Studio";
             this.TopMost = true;
             this.Load += new System.EventHandler(this.OnLoad);
             this.ResumeLayout(false);

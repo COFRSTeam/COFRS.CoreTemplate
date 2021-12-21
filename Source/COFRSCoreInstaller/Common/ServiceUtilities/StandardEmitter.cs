@@ -1,22 +1,16 @@
-﻿using COFRSCoreCommon.Models;
+﻿using COFRS.Template.Common.Models;
 using EnvDTE;
+using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
-using MySql.Data.MySqlClient;
-using Newtonsoft.Json;
+using Microsoft.VisualStudio.Shell.Interop;
 using Newtonsoft.Json.Linq;
-using Npgsql;
-using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using COFRSCoreCommon.Utilities;
-using EnvDTE80;
 
 namespace COFRS.Template.Common.ServiceUtilities
 {
@@ -30,7 +24,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="validatorClassName">The name of the validator class</param>
 		/// <param name="validatorInterface">The output parameter returning the validator interface name.</param>
 		/// <returns>The code for the validator class in a string.</returns>
-		public string EmitValidationModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, EntityMap entityMap, string validatorClassName, out string validatorInterface)
+		public string EmitValidationModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, string validatorClassName, out string validatorInterface)
 		{
 			//	Instantiate a string builder. We will use the string builder to construct our code.
 			var results = new StringBuilder();
@@ -412,7 +406,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return results.ToString();
 		}
 
-		public string EmitExampleModel(ResourceModel resourceModel, ProfileMap profileMap, EntityMap entityMap, string exampleClassName, DBServerType serverType, string connectionString)
+		public string EmitExampleModel(ResourceModel resourceModel, ProfileMap profileMap, string exampleClassName, DBServerType serverType, string connectionString)
         {
             var results = new StringBuilder();          
 			
@@ -672,58 +666,63 @@ namespace COFRS.Template.Common.ServiceUtilities
             return results.ToString();
         }
 
-		public string EmitResourceEnum(ResourceModel model, DBServerType serverType, string connectionString)
+		public string EmitResourceEnum(EntityClass model, string connectionString)
         {
-			if (serverType == DBServerType.MYSQL)
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (model.ServerType == DBServerType.MYSQL)
 				return EmitResourceMySqlEnum(model, connectionString);
-			else if (serverType == DBServerType.POSTGRESQL)
+			else if (model.ServerType == DBServerType.POSTGRESQL)
 				return EmitResourcePostgresqlEnum(model, connectionString);
-			else if (serverType == DBServerType.SQLSERVER)
+			else if (model.ServerType == DBServerType.SQLSERVER)
 				return EmitResourceSqlServerEnum(model, connectionString);
 
 			return "Invalid DB Server Type";
         }
 
-		private static string EmitResourceMySqlEnum(ResourceModel model, string connectionString)
+		private static string EmitResourceMySqlEnum(EntityClass model, string connectionString)
 		{
 			throw new NotImplementedException("not implemented yet");
 		}
-		private static string EmitResourcePostgresqlEnum(ResourceModel model, string connectionString)
+		private static string EmitResourcePostgresqlEnum(EntityClass model, string connectionString)
 		{
 			throw new NotImplementedException("not implemented yet");
 		}
-		private static string EmitResourceSqlServerEnum(ResourceModel resourceModel, string connectionString)
+		private static string EmitResourceSqlServerEnum(EntityClass entityModel, string connectionString)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			StringBuilder results = new StringBuilder();
+			var ResourceClassName = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityModel.TableName))}";
 
 			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\t{resourceModel.ClassName}");
+			results.AppendLine($"\t///\t{ResourceClassName}");
 			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\t[Entity(typeof({resourceModel.EntityModel.ClassName}))]");
+			results.AppendLine($"\t[Entity(typeof({entityModel.ClassName}))]");
 
-			var dataType = resourceModel.EntityModel.Columns[0].ModelDataType;
+			var dataType = entityModel.Columns[0].ModelDataType;
 
-			results.AppendLine($"\tpublic enum {resourceModel.ClassName} : {dataType}");
+			results.AppendLine($"\tpublic enum {ResourceClassName} : {dataType}");
 			results.AppendLine("\t{");
 
 			bool firstColumn = true;
 
 			string query = "select ";
 
-			foreach ( var col in resourceModel.EntityModel.Columns)
+			foreach ( var col in entityModel.Columns)
             {
 				if (firstColumn)
 					firstColumn = false;
 				else
 				{
-						query += ", ";
+					query += ", ";
 				}
 
 				query += col.ColumnName;
             }
 
 			query += " from ";
-			query += resourceModel.EntityModel.TableName;
+			query += entityModel.TableName;
 
 			firstColumn = true;
 
@@ -747,7 +746,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine();
                             }
 
-							if ( string.Equals(resourceModel.EntityModel.Columns[0].DBDataType, "tinyint", StringComparison.OrdinalIgnoreCase))
+							if ( string.Equals(entityModel.Columns[0].DBDataType, "tinyint", StringComparison.OrdinalIgnoreCase))
 							{
 								var theValue = reader.GetByte(0);
 								var name = reader.GetString(1);
@@ -757,7 +756,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine("\t\t///\t</summary>");
 								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
 							}
-							else if (string.Equals(resourceModel.EntityModel.Columns[0].DBDataType, "smallint", StringComparison.OrdinalIgnoreCase))
+							else if (string.Equals(entityModel.Columns[0].DBDataType, "smallint", StringComparison.OrdinalIgnoreCase))
 							{
 								var theValue = reader.GetInt16(0);
 								var name = reader.GetString(1);
@@ -767,7 +766,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine("\t\t///\t</summary>");
 								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
 							}
-							else if (string.Equals(resourceModel.EntityModel.Columns[0].DBDataType, "int", StringComparison.OrdinalIgnoreCase))
+							else if (string.Equals(entityModel.Columns[0].DBDataType, "int", StringComparison.OrdinalIgnoreCase))
 							{
 								var theValue = reader.GetInt32(0);
 								var name = reader.GetString(1);
@@ -777,7 +776,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine("\t\t///\t</summary>");
 								results.Append($"\t\t{name.Replace(" ", "")} = {theValue}");
 							}
-							else if (string.Equals(resourceModel.EntityModel.Columns[0].DBDataType, "bigint", StringComparison.OrdinalIgnoreCase))
+							else if (string.Equals(entityModel.Columns[0].DBDataType, "bigint", StringComparison.OrdinalIgnoreCase))
 							{
 								var theValue = reader.GetInt64(0);
 								var name = reader.GetString(1);
@@ -1928,9 +1927,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return results.ToString();
 		}
 
-		public string EmitMappingModel(ResourceModel resourceModel, EntityModel entityModel, ProfileMap profileMap, string mappingClassName, Dictionary<string, string> replacementsDictionary)
+		public string EmitMappingModel(ResourceClass resourceModel, string mappingClassName, Dictionary<string, string> replacementsDictionary)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var ImageConversionRequired = false;
 			var results = new StringBuilder();
 			var nn = new NameNormalizer(resourceModel.ClassName);
@@ -1953,10 +1953,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 			#region Create the Resource to Entity Mapping
 			results.AppendLine();
 			results.AppendLine($"\t\t\t//\tCreates a mapping to transform a {resourceModel.ClassName} model instance (the source)");
-			results.AppendLine($"\t\t\t//\tinto a {entityModel.ClassName} model instance (the destination).");
-			results.AppendLine($"\t\t\tCreateMap<{resourceModel.ClassName}, {entityModel.ClassName}>()");
+			results.AppendLine($"\t\t\t//\tinto a {resourceModel.Entity.ClassName} model instance (the destination).");
+			results.AppendLine($"\t\t\tCreateMap<{resourceModel.ClassName}, {resourceModel.Entity.ClassName}>()");
 
 			bool first = true;
+
+			var profileMap = codeService.GenerateProfileMap(resourceModel);
 
 			foreach ( var resourceMap in profileMap.EntityProfiles)
             {
@@ -1976,9 +1978,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			#region Create Entity to Resource Mapping
 
-			results.AppendLine($"\t\t\t//\tCreates a mapping to transform a {entityModel.ClassName} model instance (the source)");
+			results.AppendLine($"\t\t\t//\tCreates a mapping to transform a {resourceModel.Entity.ClassName} model instance (the source)");
 			results.AppendLine($"\t\t\t//\tinto a {resourceModel.ClassName} model instance (the destination).");
-			results.AppendLine($"\t\t\tCreateMap<{entityModel.ClassName}, {resourceModel.ClassName}>()");
+			results.AppendLine($"\t\t\tCreateMap<{resourceModel.Entity.ClassName}, {resourceModel.ClassName}>()");
 
 			first = true;
 
@@ -2017,9 +2019,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			#endregion
 
-			results.AppendLine($"\t\t\t//\tCreates a mapping to transform a collection of {entityModel.ClassName} model instances (the source)");
+			results.AppendLine($"\t\t\t//\tCreates a mapping to transform a collection of {resourceModel.Entity.ClassName} model instances (the source)");
 			results.AppendLine($"\t\t\t//\tinto a collection of {resourceModel.ClassName} model instances (the destination).");
-			results.AppendLine($"\t\t\tCreateMap<PagedCollection<{entityModel.ClassName}>, PagedCollection<{resourceModel.ClassName}>>()");
+			results.AppendLine($"\t\t\tCreateMap<PagedCollection<{resourceModel.Entity.ClassName}>, PagedCollection<{resourceModel.ClassName}>>()");
 			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.HRef, opts => opts.MapFrom(source => new Uri(rootUrl, $\"{nn.PluralCamelCase}{{source.HRef.Query}}\")))");
 			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.First, opts => opts.MapFrom(source => source.First == null ? null : new Uri(rootUrl, $\"{nn.PluralCamelCase}{{source.First.Query}}\")))");
 			results.AppendLine($"\t\t\t\t.ForMember(destination => destination.Next, opts => opts.MapFrom(source => source.Next == null ? null : new Uri(rootUrl, $\"{nn.PluralCamelCase}{{source.Next.Query}}\")))");
@@ -2168,7 +2170,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="replacementsDictionary">List of replacements key/value pairs for the solution</param>
 		/// <param name="connectionString">The connection string to connect to the database, if necessary</param>
 		/// <returns>A model of the entity data table</returns>
-		public string EmitEntityModel(EntityModel entityModel, EntityMap entityMap, Dictionary<string, string> replacementsDictionary)
+		public string EmitEntityModel(string entityClassName, string schema, string tablename, DBServerType serverType, DBColumn[] columns, Dictionary<string, string> replacementsDictionary)
 		{
 			var result = new StringBuilder();
 			replacementsDictionary.Add("$image$", "false");
@@ -2177,19 +2179,19 @@ namespace COFRS.Template.Common.ServiceUtilities
 			replacementsDictionary.Add("$barray$", "false");
 
 			result.AppendLine("\t///\t<summary>");
-			result.AppendLine($"\t///\t{entityModel.ClassName}");
+			result.AppendLine($"\t///\t{entityClassName}");
 			result.AppendLine("\t///\t</summary>");
 
-			if (string.IsNullOrWhiteSpace(entityModel.SchemaName))
-				result.AppendLine($"\t[Table(\"{entityModel.TableName}\", DBType = \"{entityModel.ServerType}\")]");
+			if (string.IsNullOrWhiteSpace(schema))
+				result.AppendLine($"\t[Table(\"{tablename}\", DBType = \"{serverType}\")]");
 			else
-				result.AppendLine($"\t[Table(\"{entityModel.TableName}\", Schema = \"{entityModel.SchemaName}\", DBType = \"{entityModel.ServerType}\")]");
+				result.AppendLine($"\t[Table(\"{tablename}\", Schema = \"{schema}\", DBType = \"{serverType}\")]");
 
-			result.AppendLine($"\tpublic class {entityModel.ClassName}");
+			result.AppendLine($"\tpublic class {entityClassName}");
 			result.AppendLine("\t{");
 
 			bool firstColumn = true;
-			foreach (var column in entityModel.Columns)
+			foreach (var column in columns)
 			{
 				if (firstColumn)
 					firstColumn = false;
@@ -2227,63 +2229,63 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				AppendNullable(result, column.IsNullable, ref first);
 
-				if (entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NVarChar", StringComparison.OrdinalIgnoreCase))
+				if (serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NVarChar", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if (entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NChar", StringComparison.OrdinalIgnoreCase))
+				else if (serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NChar", StringComparison.OrdinalIgnoreCase))
 				{
 					if (column.Length > 1)
 						AppendFixed(result, column.Length, true, ref first);
 				}
 
-				else if (entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NText", StringComparison.OrdinalIgnoreCase))
+				else if (serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "NText", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendFixed(result, -1, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "VarChar", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Varchar", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Name", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Varchar", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "VarChar", StringComparison.OrdinalIgnoreCase)))
+				else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "VarChar", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Varchar", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Name", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Varchar", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "VarChar", StringComparison.OrdinalIgnoreCase)))
 				{
-					if (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Varchar", StringComparison.OrdinalIgnoreCase) && column.Length < 0)
+					if (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Varchar", StringComparison.OrdinalIgnoreCase) && column.Length < 0)
 						AppendFixed(result, -1, false, ref first);
 					else
 						AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Bit", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Bit", StringComparison.OrdinalIgnoreCase)))
+				else if ((serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Bit", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Bit", StringComparison.OrdinalIgnoreCase)))
 				{
 					//	Insert the column definition
 					AppendFixed(result, column.Length, true, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Varbit", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Varbit", StringComparison.OrdinalIgnoreCase)))
+				else if ((serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Varbit", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Varbit", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Citext", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Text", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)))
+				else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Citext", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Text", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Text", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendFixed(result, -1, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Char", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Char", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Char", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "String", StringComparison.OrdinalIgnoreCase)))
+				else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Char", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Char", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "_Char", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "String", StringComparison.OrdinalIgnoreCase)))
 				{
 					//	Insert the column definition
-					if (entityModel.ServerType == DBServerType.POSTGRESQL)
+					if (serverType == DBServerType.POSTGRESQL)
 					{
 						if (string.Equals(column.DBDataType, "bpchar", StringComparison.OrdinalIgnoreCase))
 						{
@@ -2294,7 +2296,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							AppendFixed(result, column.Length, true, ref first);
 						}
 					}
-					else if (entityModel.ServerType == DBServerType.MYSQL)
+					else if (serverType == DBServerType.MYSQL)
 					{
 						if (column.Length != 1)
 							AppendFixed(result, column.Length, true, ref first);
@@ -2306,28 +2308,28 @@ namespace COFRS.Template.Common.ServiceUtilities
 					}
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "VarBinary", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Bytea", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "VarBinary", StringComparison.OrdinalIgnoreCase)))
+				else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "VarBinary", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Bytea", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "VarBinary", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendFixed(result, column.Length, false, ref first);
 				}
 
-				else if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Binary", StringComparison.OrdinalIgnoreCase)) ||
-						 (entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Binary", StringComparison.OrdinalIgnoreCase)))
+				else if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Binary", StringComparison.OrdinalIgnoreCase)) ||
+						 (serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Binary", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendFixed(result, column.Length, true, ref first);
 				}
 
-				else if (entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Timestamp", StringComparison.OrdinalIgnoreCase))
+				else if (serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Timestamp", StringComparison.OrdinalIgnoreCase))
 				{
 					AppendFixed(result, column.Length, true, ref first);
 					AppendAutofield(result, ref first);
 				}
 
-				if ((entityModel.ServerType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Decimal", StringComparison.OrdinalIgnoreCase)) ||
-					(entityModel.ServerType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Decimal", StringComparison.OrdinalIgnoreCase)) ||
-					(entityModel.ServerType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Numeric", StringComparison.OrdinalIgnoreCase)))
+				if ((serverType == DBServerType.SQLSERVER && string.Equals(column.DBDataType, "Decimal", StringComparison.OrdinalIgnoreCase)) ||
+					(serverType == DBServerType.MYSQL && string.Equals(column.DBDataType, "Decimal", StringComparison.OrdinalIgnoreCase)) ||
+					(serverType == DBServerType.POSTGRESQL && string.Equals(column.DBDataType, "Numeric", StringComparison.OrdinalIgnoreCase)))
 				{
 					AppendPrecision(result, column.NumericPrecision, column.NumericScale, ref first);
 				}
@@ -2335,7 +2337,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 				AppendDatabaseType(result, column, ref first);
 				AppendEntityName(result, column, ref first);
 
-				if (entityModel.ServerType == DBServerType.POSTGRESQL)
+				if (serverType == DBServerType.POSTGRESQL)
 				{
 					if (string.Equals(column.DBDataType, "Inet", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$net$"] = "true";
@@ -2379,7 +2381,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					if (string.Equals(column.DBDataType, "Polygon", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$npgsqltypes$"] = "true";
 				}
-				else if (entityModel.ServerType == DBServerType.SQLSERVER)
+				else if (serverType == DBServerType.SQLSERVER)
 				{
 					if (string.Equals(column.DBDataType, "Image", StringComparison.OrdinalIgnoreCase))
 						replacementsDictionary["$image$"] = "true";
@@ -2388,17 +2390,17 @@ namespace COFRS.Template.Common.ServiceUtilities
 				result.AppendLine(")]");
 
 				//	Insert the column definition
-				if (entityModel.ServerType == DBServerType.POSTGRESQL)
+				if (serverType == DBServerType.POSTGRESQL)
 				{
 					column.ModelDataType = column.ModelDataType;
 					result.AppendLine($"\t\tpublic {column.ModelDataType} {column.ColumnName} {{ get; set; }}");
 				}
-				else if (entityModel.ServerType == DBServerType.MYSQL)
+				else if (serverType == DBServerType.MYSQL)
 				{
 					column.ModelDataType = column.ModelDataType;
 					result.AppendLine($"\t\tpublic {column.ModelDataType} {column.ColumnName} {{ get; set; }}");
 				}
-				else if (entityModel.ServerType == DBServerType.SQLSERVER)
+				else if (serverType == DBServerType.SQLSERVER)
 				{
 					column.ModelDataType = column.ModelDataType;
 					result.AppendLine($"\t\tpublic {column.ModelDataType} {column.ColumnName} {{ get; set; }}");
@@ -2413,12 +2415,16 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <summary>
 		/// Generates a resource model from a given entity model
 		/// </summary>
-		/// <param name="resourceModel">The <see cref="ResourceModel"/> to generate</param>
+		/// <param name="resourceClass">The <see cref="ResourceClass"/> to generate</param>
 		/// <param name="replacementsDictionary">The replacements dictionary</param>
 		/// <returns></returns>
-		public string EmitResourceModel(ResourceModel resourceModel, ResourceMap resourceMap, Dictionary<string, string> replacementsDictionary)
+		public string EmitResourceModel(EntityClass entityModel, Dictionary<string, string> replacementsDictionary)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
 			List<DBColumn> resourceColumns = new List<DBColumn>();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var ResourceClassName = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityModel.TableName))}";
+
 
 			replacementsDictionary.Add("$resourceimage$", "false");
 			replacementsDictionary.Add("$resourcenet$", "false");
@@ -2431,17 +2437,17 @@ namespace COFRS.Template.Common.ServiceUtilities
 			bool hasPrimary = false;
 
 			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\t{resourceModel.ClassName}");
+			results.AppendLine($"\t///\t{ResourceClassName}");
 			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\t[Entity(typeof({resourceModel.EntityModel.ClassName}))]");
+			results.AppendLine($"\t[Entity(typeof({entityModel.ClassName}))]");
 
-			if (resourceModel.EntityModel.ElementType == ElementType.Enum)
+			if (entityModel.ElementType == ElementType.Enum)
 			{
-				results.AppendLine($"\tpublic enum {resourceModel.ClassName}");
+				results.AppendLine($"\tpublic enum {ResourceClassName}");
 				results.AppendLine("\t{");
 
 				bool firstColumn = true;
-				foreach ( var member in resourceModel.EntityModel.Columns)
+				foreach ( var member in entityModel.Columns)
                 {
 					if (firstColumn)
 						firstColumn = false;
@@ -2451,7 +2457,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						results.AppendLine();
 					}
 
-					var membername = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(member.ColumnName));
+					var membername = codeService.CorrectForReservedNames(codeService.NormalizeClassName(member.ColumnName));
 
 					results.AppendLine("\t\t///\t<summary>");
 					results.AppendLine($"\t\t///\t{membername}");
@@ -2469,12 +2475,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 			else
 			{
-				results.AppendLine($"\tpublic class {resourceModel.ClassName}");
+				results.AppendLine($"\tpublic class {ResourceClassName}");
 				results.AppendLine("\t{");
 				var foreignTableList = new List<string>();
 
 				bool firstColumn = true;
-				foreach (var member in resourceModel.EntityModel.Columns)
+				foreach (var member in entityModel.Columns)
 				{
 					if (firstColumn)
 						firstColumn = false;
@@ -2519,10 +2525,8 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 						//	If such a resource model exists, it will have a resource type of Enum, and it's corresponding
 						//	entity model will have the same table name as the foreign table name
-						var enumResourceModel = resourceMap.Maps.FirstOrDefault(m =>
-									m.ResourceType == ResourceType.Enum &&
-									m.EntityModel != null &&
-									string.Equals(m.EntityModel.TableName, member.ForeignTableName, StringComparison.OrdinalIgnoreCase));
+
+						var enumResourceModel = codeService.GetResourceClassBySchema(entityModel.SchemaName, member.ForeignTableName);
 
 						if (enumResourceModel != null)
 						{
@@ -2552,7 +2556,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							//	This is just the plain old foreign key reference
 							if (!foreignTableList.Contains(member.ForeignTableName))
 							{
-								var childResource = resourceMap.Maps.FirstOrDefault(m => m.EntityModel != null && m.EntityModel.TableName.Equals(member.ForeignTableName));
+								var childResource = codeService.GetResourceClassBySchema(entityModel.SchemaName, member.ForeignTableName);
 								string memberName;
 
 								if (childResource != null)
@@ -2563,7 +2567,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 									memberName = nn.SingleForm;
 								}
 
-								memberName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(memberName));
+								memberName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(memberName));
 
 								results.AppendLine("\t\t///\t<summary>");
 								results.AppendLine($"\t\t///\tA hypertext reference that identifies the associated {memberName}");
@@ -2592,13 +2596,13 @@ namespace COFRS.Template.Common.ServiceUtilities
 					}
 					else
 					{
-						var membername = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(member.ColumnName));
+						var membername = codeService.CorrectForReservedNames(codeService.NormalizeClassName(member.ColumnName));
 
 						results.AppendLine("\t\t///\t<summary>");
 						results.AppendLine($"\t\t///\t{membername}");
 						results.AppendLine("\t\t///\t</summary>");
 
-						if (resourceModel.ServerType == DBServerType.SQLSERVER)
+						if (entityModel.ServerType == DBServerType.SQLSERVER)
 						{
 							if (string.Equals(member.DBDataType, "Image", StringComparison.OrdinalIgnoreCase))
 							{
@@ -2610,7 +2614,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								replacementsDictionary["$annotations$"] = "true";
 							}
 						}
-						else if (resourceModel.ServerType == DBServerType.POSTGRESQL)
+						else if (entityModel.ServerType == DBServerType.POSTGRESQL)
 						{
 							if (string.Equals(member.DBDataType, "Inet", StringComparison.OrdinalIgnoreCase) ||
 								string.Equals(member.DBDataType, "Cidr", StringComparison.OrdinalIgnoreCase) ||
@@ -2652,7 +2656,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								replacementsDictionary["$annotations$"] = "true";
 							}
 						}
-						else if (resourceModel.ServerType == DBServerType.MYSQL)
+						else if (entityModel.ServerType == DBServerType.MYSQL)
 						{
 							if (string.Equals(member.DBDataType, "Date", StringComparison.OrdinalIgnoreCase))
 							{
@@ -2684,13 +2688,13 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			results.AppendLine("\t}");
 
-			resourceModel.Columns = resourceColumns.ToArray();
 			return results.ToString();
 		}
 
-		public string EmitEntityEnum(EntityModel entityModel)
+		public string EmitEntityEnum(string className, string schema, string tablename, DBColumn[] columns)
 		{
-			var nn = new NameNormalizer(entityModel.ClassName);
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var nn = new NameNormalizer(className);
 			var builder = new StringBuilder();
 
 			builder.Clear();
@@ -2698,16 +2702,16 @@ namespace COFRS.Template.Common.ServiceUtilities
 			builder.AppendLine($"\t///\tEnumerates a list of {nn.PluralForm}");
 			builder.AppendLine("\t///\t</summary>");
 
-			if (string.IsNullOrWhiteSpace(entityModel.SchemaName))
-				builder.AppendLine($"\t[PgEnum(\"{entityModel.TableName}\")]");
+			if (string.IsNullOrWhiteSpace(schema))
+				builder.AppendLine($"\t[PgEnum(\"{tablename}\")]");
 			else
-				builder.AppendLine($"\t[PgEnum(\"{entityModel.TableName}\", Schema = \"{entityModel.SchemaName}\")]");
+				builder.AppendLine($"\t[PgEnum(\"{tablename}\", Schema = \"{schema}\")]");
 
-			builder.AppendLine($"\tpublic enum {entityModel.ClassName}");
+			builder.AppendLine($"\tpublic enum {className}");
 			builder.AppendLine("\t{");
 			bool firstUse = true;
 
-			foreach (var column in entityModel.Columns)
+			foreach (var column in columns)
 			{
 				if (firstUse)
 					firstUse = false;
@@ -2718,11 +2722,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 				}
 
 				builder.AppendLine("\t\t///\t<summary>");
-				builder.AppendLine($"\t\t///\t{COFRSCommonUtilities.NormalizeClassName(column.ColumnName)}");
+				builder.AppendLine($"\t\t///\t{codeService.NormalizeClassName(column.ColumnName)}");
 				builder.AppendLine("\t\t///\t</summary>");
 				builder.AppendLine($"\t\t[PgName(\"{column.EntityName}\")]");
 
-				var elementName = COFRSCommonUtilities.NormalizeClassName(column.ColumnName);
+				var elementName = codeService.NormalizeClassName(column.ColumnName);
 				builder.Append($"\t\t{elementName}");
 			}
 
@@ -2731,8 +2735,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return builder.ToString();
 		}
+
 		public string EmitResourceEnum(ResourceModel resourceModel)
 		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var nn = new NameNormalizer(resourceModel.ClassName);
 			var builder = new StringBuilder();
 
@@ -2758,9 +2764,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 				}
 
 				builder.AppendLine("\t\t///\t<summary>");
-				builder.AppendLine($"\t\t///\t{COFRSCommonUtilities.NormalizeClassName(column.ColumnName)}");
+				builder.AppendLine($"\t\t///\t{codeService.NormalizeClassName(column.ColumnName)}");
 				builder.AppendLine("\t\t///\t</summary>");
-				var elementName = COFRSCommonUtilities.NormalizeClassName(column.ColumnName);
+				var elementName = codeService.NormalizeClassName(column.ColumnName);
 				builder.Append($"\t\t{elementName}");
 			}
 
@@ -2770,69 +2776,28 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return builder.ToString();
 		}
 
-		public string EmitComposite(DTE2 dte2, EntityModel undefinedModel, string connectionString, Dictionary<string, string> replacementsDictionary, EntityMap entityMap, ref List<EntityModel> undefinedElements, ProjectFolder entityModelsFolder)
+		public string EmitComposite(string className, string schema, string tableName, ElementType elementType, DBColumn[] columns, string connectionString, Dictionary<string, string> replacementsDictionary, ProjectFolder entityModelsFolder)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-
-			var nn = new NameNormalizer(undefinedModel.ClassName);
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var result = new StringBuilder();
 
 			result.Clear();
 			result.AppendLine("\t///\t<summary>");
-			result.AppendLine($"\t///\t{undefinedModel.ClassName}");
+			result.AppendLine($"\t///\t{className}");
 			result.AppendLine("\t///\t</summary>");
 
-			if (string.IsNullOrWhiteSpace(undefinedModel.SchemaName))
-				result.AppendLine($"\t[PgComposite(\"{undefinedModel.TableName}\")]");
+			if (string.IsNullOrWhiteSpace(schema))
+				result.AppendLine($"\t[PgComposite(\"{tableName}\")]");
 			else
-				result.AppendLine($"\t[PgComposite(\"{undefinedModel.TableName}\", Schema = \"{undefinedModel.SchemaName}\")]");
+				result.AppendLine($"\t[PgComposite(\"{tableName}\", Schema = \"{schema}\")]");
 
-			result.AppendLine($"\tpublic class {undefinedModel.ClassName}");
+			result.AppendLine($"\tpublic class {className}");
 			result.AppendLine("\t{");
-
-			var candidates = new List<EntityModel>();
-
-			foreach (var column in undefinedModel.Columns)
-			{
-				if (string.IsNullOrWhiteSpace(column.ModelDataType))
-				{
-					//	Is it already defined?
-					if (entityMap.Maps.ToList().FirstOrDefault(m =>
-						string.Equals(m.SchemaName, undefinedModel.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-						string.Equals(m.TableName, column.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
-					{
-						//	It's not defined. Is is already included in the undefined list?
-						if (undefinedElements.FirstOrDefault(m =>
-							string.Equals(m.SchemaName, undefinedModel.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-							string.Equals(m.TableName, column.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
-						{
-							//	It's not in the list. We need to add it...
-							var classFile = new EntityModel
-							{
-								ClassName = $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.DBDataType))}",
-								SchemaName = undefinedModel.SchemaName,
-								TableName = column.DBDataType,
-								Namespace = entityModelsFolder.Namespace,
-								ServerType = undefinedModel.ServerType,
-								Folder = Path.Combine(entityModelsFolder.Folder, $"E{COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.DBDataType))}.cs"),
-								ElementType = DBHelper.GetElementType(undefinedModel.SchemaName, column.DBDataType, entityMap, connectionString),
-								ProjectName = undefinedModel.ProjectName
-							};
-
-							if (classFile.ElementType == ElementType.Enum)
-								DBHelper.GenerateEnumColumns(classFile, connectionString);
-							else
-								DBHelper.GenerateColumns(classFile, connectionString);
-
-							undefinedElements.Add(classFile);
-						}
-					}
-				}
-			}
 
 			bool firstColumn = true;
 
-			foreach (var column in undefinedModel.Columns)
+			foreach (var column in columns)
 			{
 				if (firstColumn)
 					firstColumn = false;
@@ -2970,13 +2935,8 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				result.AppendLine(")]");
 
-				var memberName = COFRSCommonUtilities.CorrectForReservedNames(COFRSCommonUtilities.NormalizeClassName(column.ColumnName));
+				var memberName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(column.ColumnName));
 				result.AppendLine($"\t\t[PgName(\"{column.ColumnName}\")]");
-
-				var knownEntityModels = new EntityMap();
-				var theList = entityMap.Maps.ToList();
-				theList.AddRange(undefinedElements);
-				knownEntityModels.Maps = theList.ToArray();
 
 				//	Insert the column definition
 				result.AppendLine($"\t\tpublic {DBHelper.GetPostgresDataType(column)} {memberName} {{ get; set; }}");
@@ -2987,9 +2947,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return result.ToString();
 		}
 
-		public void GenerateResourceComposites(DTE2 dte2, List<ResourceModel> undefinedModels, ProjectFolder resourceModelFolder, EntityMap entityMap, ResourceMap resourceMap)
+		public void GenerateResourceComposites(List<ResourceClass> undefinedModels, ProjectFolder resourceModelFolder, string connectionString)
         {
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
 			while ( undefinedModels.Count > 0)
             {
@@ -2999,29 +2960,37 @@ namespace COFRS.Template.Common.ServiceUtilities
 				//	Generate the model
 				var result = new StringBuilder();
 
-				if (undefinedModel.EntityModel.ElementType == ElementType.Enum)
+				if (undefinedModel.Entity.ElementType == ElementType.Enum)
 				{
 					result.AppendLine("using COFRS;");
 					result.AppendLine("using NpgsqlTypes;");
-					result.AppendLine($"using {undefinedModel.EntityModel.Namespace};");
+					result.AppendLine($"using {undefinedModel.Entity.Namespace};");
 					result.AppendLine();
-					result.AppendLine($"namespace {undefinedModel.Namespace}");
+					result.AppendLine($"namespace {resourceModelFolder.Namespace}");
 					result.AppendLine("{");
-					result.Append(EmitResourceEnum(undefinedModel));
+					result.Append(EmitResourceEnum(undefinedModel.Entity, connectionString));
 					result.AppendLine("}");
 
 					//	Save the model to disk
-					if (!Directory.Exists(Path.GetDirectoryName(undefinedModel.Folder)))
-						Directory.CreateDirectory(Path.GetDirectoryName(undefinedModel.Folder));
+					if (!Directory.Exists(Path.GetDirectoryName(resourceModelFolder.Folder)))
+						Directory.CreateDirectory(Path.GetDirectoryName(resourceModelFolder.Folder));
 
-					File.WriteAllText(undefinedModel.Folder, result.ToString());
+					var className = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(undefinedModel.Entity.TableName))}";
+					var fullPath = Path.Combine(resourceModelFolder.Folder, $"{className}.cs");
+
+
+					File.WriteAllText(fullPath, result.ToString());
 
 					//	Add the model to the project
-					var parentProject = COFRSCommonUtilities.GetProject(dte2, undefinedModel.ProjectName);
-					parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
+					var parentProject = codeService.GetProjectFromFolder(resourceModelFolder.Folder);
+					ProjectItem resourceItem;
 
-					//	Now, it's no longer undefined. Add it to the list of defined models
-					resourceMap.AddModel(undefinedModel);
+					if (parentProject.GetType() == typeof(Project))
+						resourceItem = ((Project)parentProject).ProjectItems.AddFromFile(resourceModelFolder.Folder);
+					else
+						resourceItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(resourceModelFolder.Folder);
+
+					codeService.AddResource(resourceItem);
 				}
 			}
 		}
@@ -3033,9 +3002,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="undefinedEntityModels">The list of elements to be defined"/></param>
 		/// <param name="connectionString">The connection string to the database server</param>
 		/// <param name="replacementsDictionary">The replacements dictionary</param>
-		public void GenerateComposites(DTE2 dte2, List<EntityModel> undefinedEntityModels, string connectionString, Dictionary<string, string> replacementsDictionary, EntityMap entityMap, ProjectFolder entityModelsFolder)
+		public void GenerateComposites(List<EntityModel> undefinedEntityModels, string connectionString, Dictionary<string, string> replacementsDictionary, ProjectFolder entityModelsFolder)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
 			//	As we generate each model, the model itself may contain undefined types, which in turn need to be added
 			//	to the list of undefinedEntityModels so that they too can be generated. Because of this, each successive
@@ -3048,32 +3018,24 @@ namespace COFRS.Template.Common.ServiceUtilities
 			//	Therefore, we simply pop the top one off the list, treating the list as a todo stack. And we keep doing that until
 			//	the stack is empty.
 
-			while (undefinedEntityModels.Count > 0 )
+			foreach ( var undefinedModel in undefinedEntityModels )
 			{
-				var undefinedModel = undefinedEntityModels[0];
-				undefinedEntityModels.RemoveAt(0);
-
-				undefinedModel.ElementType = DBHelper.GetElementType(undefinedModel.SchemaName,
-																undefinedModel.TableName,
-																entityMap,
-																connectionString);
-
 				if (undefinedModel.ElementType == ElementType.Enum)
 				{
 					//	Has it already been previously defined? We don't want two of these...
-					if (entityMap.Maps.ToList().FirstOrDefault(m => 
-						string.Equals(m.SchemaName, undefinedModel.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-						string.Equals(m.TableName, undefinedModel.TableName, StringComparison.OrdinalIgnoreCase)) == null)
+					if ( codeService.GetEntityClass(undefinedModel.ClassName) == null)
 					{
 						//	Generate the model
 						var result = new StringBuilder();
-
+						
 						result.AppendLine("using COFRS;");
 						result.AppendLine("using NpgsqlTypes;");
 						result.AppendLine();
 						result.AppendLine($"namespace {undefinedModel.Namespace}");
 						result.AppendLine("{");
-						result.Append(EmitEntityEnum(undefinedModel));
+
+						var columns = DBHelper.GenerateColumns(undefinedModel.SchemaName, undefinedModel.TableName, undefinedModel.ServerType, connectionString);
+						result.Append(EmitEntityEnum(undefinedModel.ClassName, undefinedModel.SchemaName, undefinedModel.TableName, columns));
 						result.AppendLine("}");
 
 						//	Save the model to disk
@@ -3083,33 +3045,41 @@ namespace COFRS.Template.Common.ServiceUtilities
 						File.WriteAllText(undefinedModel.Folder, result.ToString());
 
 						//	Add the model to the project
-						var parentProject = COFRSCommonUtilities.GetProject(dte2, entityModelsFolder.ProjectName);
-						parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
+						var parentProject = codeService.GetProjectFromFolder(undefinedModel.Folder);
+						ProjectItem entityItem;
+
+						if (parentProject.GetType() == typeof(Project))
+							entityItem = ((Project)parentProject).ProjectItems.AddFromFile(undefinedModel.Folder);
+						else
+							entityItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(undefinedModel.Folder);
+
+						codeService.AddEntity(entityItem);
 
 						//	Register the composite model
-						COFRSCommonUtilities.RegisterComposite(dte2, undefinedModel);
-
-						//	Now, it's no longer undefined. Add it to the list of defined models
-						entityMap.AddModel(undefinedModel);
+						codeService.RegisterComposite(undefinedModel.ClassName, 
+							                          undefinedModel.Namespace,
+													  undefinedModel.ElementType,
+													  undefinedModel.TableName);
 					}
 				}
 				else if (undefinedModel.ElementType == ElementType.Composite)
 				{
 					//	Has it already been defined? We don't want two of these...
-					if (entityMap.Maps.ToList().FirstOrDefault(m =>
-						string.Equals(m.SchemaName, undefinedModel.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-						string.Equals(m.TableName, undefinedModel.TableName, StringComparison.OrdinalIgnoreCase)) == null)
+					if (codeService.GetEntityClass(undefinedModel.ClassName) == null)
 					{
 						var result = new StringBuilder();
 
 						//	Generate the model (and any child models that might be necessary)
 
-						var body = EmitComposite(dte2,
-												 undefinedModel,
+						var columns = DBHelper.GenerateColumns(undefinedModel.SchemaName, undefinedModel.TableName, undefinedModel.ServerType, connectionString);
+
+						var body = EmitComposite(undefinedModel.ClassName,
+							                     undefinedModel.SchemaName,
+												 undefinedModel.TableName,
+												 undefinedModel.ElementType,
+												 columns,
 												 connectionString,
 												 replacementsDictionary,
-												 entityMap,
-												 ref undefinedEntityModels,
 												 entityModelsFolder);
 
 						result.AppendLine("using COFRS;");
@@ -3152,14 +3122,21 @@ namespace COFRS.Template.Common.ServiceUtilities
 						File.WriteAllText(undefinedModel.Folder, result.ToString());
 
 						//	Add the model to the project
-						var parentProject = COFRSCommonUtilities.GetProject(dte2, entityModelsFolder.ProjectName);
-						parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
+						var parentProject = codeService.GetProjectFromFolder(undefinedModel.Folder);
+						ProjectItem entityItem;
+
+						if (parentProject.GetType() == typeof(Project))
+							entityItem = ((Project)parentProject).ProjectItems.AddFromFile(undefinedModel.Folder);
+						else
+							entityItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(undefinedModel.Folder);
+
+						codeService.AddEntity(entityItem);
 
 						//	Register the composite model
-						COFRSCommonUtilities.RegisterComposite(dte2, undefinedModel);
-
-						//	Now, it's no longer undefined. Add it to the list of defined models
-						entityMap.AddModel(undefinedModel);
+						codeService.RegisterComposite(undefinedModel.ClassName,
+							                          undefinedModel.Namespace,
+													  undefinedModel.ElementType,
+													  undefinedModel.TableName);
 					}
 				}
 			}

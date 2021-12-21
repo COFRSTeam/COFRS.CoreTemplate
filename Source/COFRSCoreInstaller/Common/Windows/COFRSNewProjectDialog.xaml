@@ -1,0 +1,45 @@
+﻿<ui:DialogWindow x:Class="COFRS.Template.Common.Windows.COFRSNewProjectDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:vsui="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             ShowInTaskbar="False"
+             WindowStartupLocation="CenterOwner"
+             SizeToContent="WidthAndHeight" Loaded="OnLoad"
+             WindowStyle="ToolWindow" Title="COFRS REST Service (.NET Core)" >
+    <ui:DialogWindow.Resources>
+        <Style TargetType="{x:Type Grid}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+        </Style>
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolWindowTextKey}}" />
+        </Style>
+    </ui:DialogWindow.Resources>
+    <Grid x:Name="MainGrid" Width="629" Height="254">
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="MainLabel" Content="COFRS RESTful Service" HorizontalAlignment="Left" Margin="10,5,0,0" VerticalAlignment="Top" FontSize="20" FontWeight="Bold"/>
+        <TextBlock x:Name="LabelA" HorizontalAlignment="Left" Margin="360,68,0,0" TextWrapping="Wrap" Text="The Cookbook For RESTFul Services (COFRS) assists the developer in the creation of RESTful Services. " VerticalAlignment="Top" Height="54" Width="251"/>
+        <TextBlock x:Name="LabelB" HorizontalAlignment="Left" Margin="360,127,0,0" TextWrapping="Wrap" Text="We recommend that you protect your service using the OAuth2 / OpenID Connect protocol. However, this functionality can be added later if you choose not to do so initially." VerticalAlignment="Top" Height="73" Width="251"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="OKButton" Content="OK" HorizontalAlignment="Left" Margin="457,219,0,0" VerticalAlignment="Top" Width="66" Click="OnOK"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="CancelButton" Content="Cancel" HorizontalAlignment="Left" Margin="535,219,0,0" VerticalAlignment="Top" Click="OnCancel" Width="65"/>
+
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="FrameworkLabel" Content="Framework" HorizontalAlignment="Left" Margin="10,61,0,0" VerticalAlignment="Top"/>
+        <ComboBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" x:Name="frameworkCombobox" HorizontalAlignment="Left" Margin="146,68,0,0" VerticalAlignment="Top" Width="194" SelectedIndex="1">
+            <ComboBoxItem Content=".NET 5.0"/>
+            <ComboBoxItem Content=".NET 6.0"/>
+        </ComboBox>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="SecurityModelLabel" Content="Security Model" HorizontalAlignment="Left" Margin="10,98,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.258,0.322"/>
+        <ComboBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" x:Name="SecurityModelCombobox" HorizontalAlignment="Left" Margin="146,100,0,0" VerticalAlignment="Top" Width="194" SelectedIndex="1">
+            <ComboBoxItem Content="None"/>
+            <ComboBoxItem Content="OAuth2 / Open Id Connect"/>
+        </ComboBox>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="DatabaseLabel" Content="Database" HorizontalAlignment="Left" Margin="10,132,0,0" VerticalAlignment="Top"/>
+        <ComboBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" x:Name="DatabaseTechnologyCombobox" HorizontalAlignment="Left" Margin="146,133,0,0" VerticalAlignment="Top" Width="194" SelectedIndex="2">
+            <ComboBoxItem Content="My SQL"/>
+            <ComboBoxItem Content="Postgresql"/>
+            <ComboBoxItem Content="SQL Server"/>
+        </ComboBox>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}"  x:Name="CompanyMonikerLabel" Content="Company Moniker" HorizontalAlignment="Left" Margin="10,165,0,0" VerticalAlignment="Top"/>
+        <TextBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.TextBoxStyleKey}}" x:Name="CompanyMonikerTextBox" HorizontalAlignment="Left" Margin="146,169,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="194" AutomationProperties.HelpText="The company moniker is a short name for your company, much like a Stock Market ticker symbol. Try to keep this value less than 12 characters in length." Height="21.96"/>
+    </Grid>
+</ui:DialogWindow>

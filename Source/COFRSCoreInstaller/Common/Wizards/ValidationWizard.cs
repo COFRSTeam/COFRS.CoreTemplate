@@ -1,16 +1,13 @@
 ﻿using COFRS.Template.Common.Forms;
+using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
-using COFRSCoreCommon.Forms;
-using COFRSCoreCommon.Models;
-using COFRSCoreCommon.Utilities;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
@@ -45,36 +42,26 @@ namespace COFRS.Template.Common.Wizards
 			WizardRunKind runKind, object[] customParams)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
-			ProgressForm progressDialog = new ProgressForm("Loading classes and preparing project...");
+			DTE2 _appObject = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
 			try
 			{
 				//	Show the user that we are busy doing things...
-				progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
 				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
-				var projectMapping = COFRSCommonUtilities.OpenProjectMapping(_appObject);
-				HandleMessages();
-
+				var projectMapping = codeService.LoadProjectMapping();
 				var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
-
-				var installationFolder = COFRSCommonUtilities.GetInstallationFolder(_appObject);
-				HandleMessages();
-
-				var connectionString = COFRSCommonUtilities.GetConnectionString(_appObject);
-				HandleMessages();
+				var installationFolder = codeService.InstallationFolder;
+				var connectionString = codeService.ConnectionString;
 
 				//  Make sure we are where we're supposed to be
-				if (!COFRSCommonUtilities.IsChildOf(projectMapping.ValidationFolder, installationFolder.Folder))
+				if (!codeService.IsChildOf(projectMapping.ValidationFolder, installationFolder.Folder))
 				{
-					HandleMessages();
-
-					progressDialog.Close();
 					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					var validationFolder = projectMapping.GetValidatorFolder();
 
-					var result = MessageBox.Show($"You are attempting to install a validator model into {COFRSCommonUtilities.GetRelativeFolder(_appObject, installationFolder)}. Typically, validator models reside in {COFRSCommonUtilities.GetRelativeFolder(_appObject, validationFolder)}.\r\n\r\nDo you wish to place the new validator model in this non-standard location?",
+					var result = MessageBox.Show($"You are attempting to install a validator model into {codeService.GetRelativeFolder(installationFolder)}. Typically, validator models reside in {codeService.GetRelativeFolder(validationFolder)}.\r\n\r\nDo you wish to place the new validator model in this non-standard location?",
 						"Warning: Non-Standard Location",
 						MessageBoxButtons.YesNo,
 						MessageBoxIcon.Warning);
@@ -85,10 +72,7 @@ namespace COFRS.Template.Common.Wizards
 						return;
 					}
 
-					progressDialog = new ProgressForm("Loading classes and preparing project...");
-					progressDialog.Show(new WindowClass((IntPtr)_appObject.ActiveWindow.HWnd));
 					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-					HandleMessages();
 
 					validationFolder = installationFolder;
 
@@ -96,50 +80,34 @@ namespace COFRS.Template.Common.Wizards
 					projectMapping.ValidationNamespace = validationFolder.Namespace;
 					projectMapping.ValidationProject = validationFolder.ProjectName;
 
-					COFRSCommonUtilities.SaveProjectMapping(_appObject, projectMapping);
+					codeService.SaveProjectMapping();
 				}
-
-				var entityMap = COFRSCommonUtilities.LoadEntityMap(_appObject);
-				HandleMessages();
-
-				var defultServerType = COFRSCommonUtilities.GetDefaultServerType(_appObject);
-
-				var resourceMap = COFRSCommonUtilities.LoadResourceMap(_appObject);
-				HandleMessages();
 
 				var form = new UserInputGeneral()
 				{
 					DefaultConnectionString = connectionString,
-					EntityMap = entityMap,
-					ResourceMap = resourceMap,
 					InstallType = 3
 				};
 
-				HandleMessages();
-
-				progressDialog.Close();
 				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-				progressDialog = null;
 
 				if (form.ShowDialog() == DialogResult.OK)
 				{
-					var entityModel = (EntityModel)form._entityModelList.SelectedItem;
-					var resourceModel = (ResourceModel)form._resourceModelList.SelectedItem;
-					var profileMap = COFRSCommonUtilities.OpenProfileMap(_appObject, resourceModel, out bool isAllDefined);
+					var resourceModel = (ResourceClass)form._resourceModelList.SelectedItem;
+					var profileMap = codeService.OpenProfileMap(resourceModel, out bool isAllDefined);
 
 					var emitter = new StandardEmitter();
-					var model = emitter.EmitValidationModel(resourceModel, profileMap, resourceMap, entityMap, replacementsDictionary["$safeitemname$"], out string ValidatorInterface);
+					//var model = emitter.EmitValidationModel(resourceModel, profileMap, resourceMap, replacementsDictionary["$safeitemname$"], out string ValidatorInterface);
 
-					var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(_appObject);
+					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
 
 					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
-					replacementsDictionary.Add("$model$", model);
-					replacementsDictionary.Add("$entitynamespace$", entityModel.Namespace);
+					replacementsDictionary.Add("$model$", "");
+					replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
 
-					COFRSCommonUtilities.RegisterValidationModel(_appObject,
-													  replacementsDictionary["$safeitemname$"],
-													  replacementsDictionary["$rootnamespace$"]);
+					codeService.RegisterValidationModel(replacementsDictionary["$safeitemname$"],
+													    replacementsDictionary["$rootnamespace$"]);
 					Proceed = true;
 				}
 				else
@@ -157,14 +125,6 @@ namespace COFRS.Template.Common.Wizards
 		public bool ShouldAddProjectItem(string filePath)
 		{
 			return Proceed;
-		}
-
-		private void HandleMessages()
-		{
-			while (WinNative.PeekMessage(out WinNative.NativeMessage msg, IntPtr.Zero, 0, (uint)0xFFFFFFFF, 1) != 0)
-			{
-				WinNative.SendMessage(msg.handle, msg.msg, msg.wParam, msg.lParam);
-			}
 		}
 	}
 }
