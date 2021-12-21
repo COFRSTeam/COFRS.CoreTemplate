@@ -1253,35 +1253,51 @@ namespace COFRS.Template.Common.ServiceUtilities
 		}
 
 
-		public ProjectItem GetProjectFromFolder(string folder)
+		public object GetProjectFromFolder(string folder)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-			var parts = folder.Split(new char[] { '\\', ':' });
 
-			for (int i = 0; i < parts.Count(); i++)
+			foreach (Project project in mDte.Solution.Projects.OfType<Project>())
 			{
-				foreach (Project project in mDte.Solution.Projects.OfType<Project>())
+				var projectPath = project.Properties.OfType<Property>().First(p =>
 				{
-					if (project.Name.Equals(parts[i], StringComparison.OrdinalIgnoreCase))
+					ThreadHelper.ThrowIfNotOnUIThread();
+					return p.Name.Equals("FullPath", StringComparison.OrdinalIgnoreCase);
+				}).Value.ToString().Trim('\\');
+
+				if (folder.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
+				{
+					var remainder = folder.Substring(projectPath.Length).Trim('\\');
+
+					if (string.IsNullOrWhiteSpace(remainder))
+						return project;
+
+					var parts = remainder.Split(new char[] { '\\', ':' });
+					var projectItem = project.ProjectItems.OfType<ProjectItem>().FirstOrDefault(p =>
 					{
-						if (i + 1 >= parts.Count())
+						ThreadHelper.ThrowIfNotOnUIThread();
+						return p.Name.Equals(parts[0]);
+					});
+
+					if (projectItem != null && 1 >= parts.Count())
+						return projectItem;
+
+					for (int j = 1; j < parts.Count(); j++)
+					{
+						var item = projectItem.ProjectItems.OfType<ProjectItem>().FirstOrDefault(pi =>
 						{
-							return (ProjectItem)project;
-						}
+							ThreadHelper.ThrowIfNotOnUIThread();
+							return pi.Name.Equals(parts[j]);
+						});
 
-						ProjectItem projectItem = (ProjectItem)project;
-
-						for (int j = i + 1; j < parts.Count(); j++)
-						{
-							var item = (ProjectItem)projectItem.ProjectItems.OfType<ProjectFolder>().FirstOrDefault(pi => pi.Name.Equals(parts[j]));
-
-							if (item == null)
-								return projectItem;
-							else
-								projectItem = item;
-						}
+						if (item == null)
+							return projectItem;
+						else
+							projectItem = item;
 					}
+
+					return projectItem;
 				}
 			}
 
@@ -2825,7 +2841,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return results.ToString();
 		}
 
-		public static string ResolveMapFunction(JObject entityJson, string columnName, ResourceClass model, string mapFunction)
+		public string ResolveMapFunction(JObject entityJson, string columnName, ResourceClass model, string mapFunction)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -4013,33 +4029,34 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// </summary>
 		/// <param name="folder">The child folder to search</param>
 		/// <returns>A collection of all resource models in the solution</returns>
-		public ResourceMap LoadResourceMap(DTE2 dte, string folder = "")
+		public ResourceMap LoadResourceMap(string folder = "")
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			var map = new List<ResourceModel>();
 			Dictionary<string, string> rmap = new Dictionary<string, string>();
 			Dictionary<string, string> emap = new Dictionary<string, string>();
 
-			LoadResourceEntityAssociations(dte, ref rmap);
-			LoadEntityTableAssociations(dte, ref emap);
+			LoadResourceEntityAssociations(mDte, ref rmap);
+			LoadEntityTableAssociations(mDte, ref emap);
 
 			var projectMapping = LoadProjectMapping();                        //	Contains the names and projects where various source file exist.
 			var entityModelsFolder = projectMapping.GetEntityModelsFolder();
 			var resourceModelFolder = projectMapping.GetResourceModelsFolder();
-			var entityMap = LoadEntityMap(dte);
+			var entityMap = LoadEntityMap(mDte);
 
 			var defaultServerType = DefaultServerType;
 
 
-			var resourceFolder = string.IsNullOrWhiteSpace(folder) ? dte.Solution.FindProjectItem(resourceModelFolder.Folder) :
-																	 dte.Solution.FindProjectItem(folder);
+			var resourceFolder = string.IsNullOrWhiteSpace(folder) ? mDte.Solution.FindProjectItem(resourceModelFolder.Folder) :
+																	 mDte.Solution.FindProjectItem(folder);
 
 			foreach (ProjectItem projectItem in resourceFolder.ProjectItems)
 			{
 				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
 					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
 				{
-					var resourceMap = LoadResourceMap(dte, projectItem.Name);
+					var resourceMap = LoadResourceMap(projectItem.Name);
 					map.AddRange(resourceMap.Maps);
 				}
 				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile &&

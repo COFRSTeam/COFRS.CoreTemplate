@@ -1,4 +1,5 @@
 ﻿using COFRS.Template.Common.Models;
+using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -2982,7 +2983,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 					//	Add the model to the project
 					var parentProject = codeService.GetProjectFromFolder(resourceModelFolder.Folder);
-					var resourceItem = parentProject.ProjectItems.AddFromFile(resourceModelFolder.Folder);
+					ProjectItem resourceItem;
+
+					if (parentProject.GetType() == typeof(Project))
+						resourceItem = ((Project)parentProject).ProjectItems.AddFromFile(resourceModelFolder.Folder);
+					else
+						resourceItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(resourceModelFolder.Folder);
 
 					codeService.AddResource(resourceItem);
 				}
@@ -3040,13 +3046,20 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 						//	Add the model to the project
 						var parentProject = codeService.GetProjectFromFolder(undefinedModel.Folder);
-						parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
+						ProjectItem entityItem;
+
+						if (parentProject.GetType() == typeof(Project))
+							entityItem = ((Project)parentProject).ProjectItems.AddFromFile(undefinedModel.Folder);
+						else
+							entityItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(undefinedModel.Folder);
+
+						codeService.AddEntity(entityItem);
 
 						//	Register the composite model
 						codeService.RegisterComposite(undefinedModel.ClassName, 
-							                                   undefinedModel.Namespace,
-															   undefinedModel.ElementType,
-															   undefinedModel.TableName);
+							                          undefinedModel.Namespace,
+													  undefinedModel.ElementType,
+													  undefinedModel.TableName);
 					}
 				}
 				else if (undefinedModel.ElementType == ElementType.Composite)
@@ -3110,13 +3123,20 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 						//	Add the model to the project
 						var parentProject = codeService.GetProjectFromFolder(undefinedModel.Folder);
-						parentProject.ProjectItems.AddFromFile(undefinedModel.Folder);
+						ProjectItem entityItem;
+
+						if (parentProject.GetType() == typeof(Project))
+							entityItem = ((Project)parentProject).ProjectItems.AddFromFile(undefinedModel.Folder);
+						else
+							entityItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(undefinedModel.Folder);
+
+						codeService.AddEntity(entityItem);
 
 						//	Register the composite model
 						codeService.RegisterComposite(undefinedModel.ClassName,
-							                                   undefinedModel.Namespace,
-															   undefinedModel.ElementType,
-															   undefinedModel.TableName);
+							                          undefinedModel.Namespace,
+													  undefinedModel.ElementType,
+													  undefinedModel.TableName);
 					}
 				}
 			}

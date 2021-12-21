@@ -1,6 +1,7 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
@@ -74,14 +75,16 @@ namespace COFRS.Template.Common.Wizards
                 }
 
                 //	Construct the form, and fill in all the prerequisite data
-                var form = new UserInputEntity
+                var form = new NewEntityDialog
                 {
                     ReplacementsDictionary = replacementsDictionary,
                     EntityModelsFolder = projectMapping.GetEntityModelsFolder(),
                     DefaultConnectionString = connectionString,
                 };
 
-                if (form.ShowDialog() == DialogResult.OK)
+                var isok = form.ShowDialog();
+
+                if (isok.HasValue && isok.Value == true)
                 {
                     try
                     {

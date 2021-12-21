@@ -1,6 +1,7 @@
 ﻿using COFRS.Template.Common.Models;
 using EnvDTE;
 using EnvDTE80;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,12 +60,20 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 
         Project GetProject(string projectName);
-        ProjectItem GetProjectFromFolder(string folder);
+        object GetProjectFromFolder(string folder);
         string FindValidatorInterface(string resourceClassName, string folder = "");
 
         void RegisterValidationModel(string validationClass, string validationNamespace);
         void RegisterComposite(string className, string entityNamespace, ElementType elementType, string tableName);
 
         ProfileMap OpenProfileMap(ResourceClass resourceModel, out bool isAllDefined);
+
+        CodeClass2 FindCollectionExampleCode(ResourceClass parentModel, string folder = "");
+        ResourceMap LoadResourceMap(string folder = "");
+        string GetExampleModel(int skipRecords, ResourceClass resourceModel, DBServerType serverType, string connectionString);
+        string ResolveMapFunction(JObject entityJson, string columnName, ResourceClass model, string mapFunction);
+        CodeClass2 FindExampleCode(ResourceClass parentModel, string folder = "");
+
+
     }
 }

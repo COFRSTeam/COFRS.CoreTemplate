@@ -1,6 +1,7 @@
 ﻿using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
 using EnvDTE80;
+using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using MySql.Data.MySqlClient;
@@ -9,19 +10,31 @@ using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using Path = System.IO.Path;
 
-namespace COFRS.Template.Common.Forms
+namespace COFRS.Template.Common.Windows
 {
-    public partial class UserInputEntity : Form
+	/// <summary>
+	/// Interaction logic for NewEntityDialog.xaml
+	/// </summary>
+	public partial class NewEntityDialog : DialogWindow
 	{
 		#region Variables
 		private ServerConfig _serverConfig;
-		private bool Populating = false;
+		private bool Populating = true;
 		public DBTable DatabaseTable { get; set; }
 		public List<DBColumn> DatabaseColumns { get; set; }
 		public string ConnectionString { get; set; }
@@ -31,187 +44,45 @@ namespace COFRS.Template.Common.Forms
 		public List<EntityModel> UndefinedEntityModels { get; set; }
 		public DBServerType ServerType { get; set; }
 		public ElementType EType { get; set; }
-
 		#endregion
 
-		#region Utility functions
-		/// <summary>
-		/// Instantiates a User Input Entity form
-		/// </summary>
-		public UserInputEntity()
+		public NewEntityDialog()
 		{
 			InitializeComponent();
 		}
 
-		/// <summary>
-		/// Called when the form loads
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void OnLoad(object sender, EventArgs e)
+		private void OnLoad(object sender, RoutedEventArgs e)
 		{
-			_portNumber.Location = new Point(93, 60);
+			Combobox_ServerType.Items.Clear();
+			Combobox_ServerType.Items.Add("My SQL");
+			Combobox_ServerType.Items.Add("Postgresql");
+			Combobox_ServerType.Items.Add("SQL Server");
+
+			Combobox_Authentication.Items.Clear();
+			Combobox_Authentication.Items.Add("Windows Authority");
+			Combobox_Authentication.Items.Add("SQL Server Authority");
+
 			DatabaseColumns = new List<DBColumn>();
 			UndefinedEntityModels = new List<EntityModel>();
 			ReadServerList();
 
+			Button_Cancel.IsDefault = true;
+			Button_OK.IsEnabled = false;
 		}
-		#endregion
 
-		#region User interactions
-		private void OnServerTypeChanged(object sender, EventArgs e)
+		private void Databases_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			try
 			{
-				if (_serverTypeList.SelectedIndex == 0 || _serverTypeList.SelectedIndex == 1)
-				{
-					_authenticationList.Enabled = false;
-					_authenticationList.Hide();
-					_authenticationLabel.Text = "Port Number";
-					_portNumber.Show();
-					_portNumber.Enabled = true;
-					_userName.Enabled = true;
-					_userNameLabel.Enabled = true;
-					_password.Enabled = true;
-					_passwordLabel.Enabled = true;
-					_rememberPassword.Enabled = true;
-				}
-				else
-				{
-					_authenticationList.Enabled = true;
-					_authenticationList.Show();
-					_authenticationLabel.Text = "Authentication";
-					_portNumber.Hide();
-					_portNumber.Enabled = false;
-				}
+				Listbox_Tables.SelectedIndex = -1;
 
-				if (!Populating)
-				{
-					PopulateServers();
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void OnServerChanged(object sender, EventArgs e)
-		{
-			try
-			{
-				if (!Populating)
-				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					var server = (DBServer)_serverList.SelectedItem;
-					ServerType = server.DBType;
-
-					if (server != null)
-					{
-						if (server.DBType == DBServerType.SQLSERVER)
-						{
-							_authenticationLabel.Enabled = true;
-							_authenticationLabel.Text = "Authentication";
-							_authenticationList.Enabled = true;
-							_authenticationList.Show();
-
-							_authenticationList.SelectedIndex = (server.DBAuth == DBAuthentication.SQLSERVERAUTH) ? 0 : 1;
-
-							if (server.DBAuth == DBAuthentication.SQLSERVERAUTH)
-							{
-								_userNameLabel.Enabled = true;
-								_userName.Enabled = true;
-								_userName.Text = server.Username;
-
-								_passwordLabel.Enabled = true;
-								_password.Enabled = true;
-								_password.Text = (server.RememberPassword) ? server.Password : string.Empty;
-
-								_rememberPassword.Enabled = true;
-								_rememberPassword.Checked = server.RememberPassword;
-							}
-							else
-							{
-								_userNameLabel.Enabled = false;
-								_userName.Enabled = false;
-								_userName.Text = string.Empty;
-
-								_passwordLabel.Enabled = false;
-								_password.Enabled = false;
-								_password.Text = string.Empty;
-
-								_rememberPassword.Enabled = false;
-								_rememberPassword.Checked = false;
-							}
-						}
-						else if (server.DBType == DBServerType.POSTGRESQL)
-						{
-							_authenticationLabel.Enabled = true;
-							_authenticationLabel.Text = "Port Number";
-							_authenticationList.Enabled = false;
-							_authenticationList.Hide();
-
-							_portNumber.Enabled = true;
-							_portNumber.Value = server.PortNumber;
-
-							_userNameLabel.Enabled = true;
-							_userName.Enabled = true;
-							_userName.Text = server.Username;
-
-							_passwordLabel.Enabled = true;
-							_password.Enabled = true;
-							_password.Text = (server.RememberPassword) ? server.Password : string.Empty;
-
-							_rememberPassword.Enabled = true;
-							_rememberPassword.Checked = server.RememberPassword;
-						}
-						else if (server.DBType == DBServerType.MYSQL)
-						{
-							_authenticationLabel.Enabled = true;
-							_authenticationLabel.Text = "Port Number";
-							_authenticationList.Enabled = false;
-							_authenticationList.Hide();
-
-							_portNumber.Enabled = true;
-							_portNumber.Value = server.PortNumber;
-
-							_userNameLabel.Enabled = true;
-							_userName.Enabled = true;
-							_userName.Text = server.Username;
-
-							_passwordLabel.Enabled = true;
-							_password.Enabled = true;
-							_password.Text = (server.RememberPassword) ? server.Password : string.Empty;
-
-							_rememberPassword.Enabled = true;
-							_rememberPassword.Checked = server.RememberPassword;
-						}
-
-						if (TestConnection(server))
-							PopulateDatabases();
-					}
-				}
-			}
-			catch (Exception error)
-			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		private void OnSelectedDatabaseChanged(object sender, EventArgs e)
-		{
-			try
-			{
-				_tableList.SelectedIndex = -1;
-
-				var server = (DBServer)_serverList.SelectedItem;
-				var db = (string)_dbList.SelectedItem;
+				var server = (DBServer)Combobox_Server.SelectedItem;
+				var db = (string)Listbox_Databases.SelectedItem;
 
 				if (server.DBType == DBServerType.POSTGRESQL)
 				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
-					_tableList.Items.Clear();
+					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={Textbox_Password.Password};";
+					Listbox_Tables.Items.Clear();
 
 					ConnectionString = connectionString;
 					using (var connection = new NpgsqlConnection(connectionString))
@@ -259,7 +130,7 @@ order by schemaname, elementname";
 										Table = reader.GetString(1)
 									};
 
-									_tableList.Items.Add(dbTable);
+									Listbox_Tables.Items.Add(dbTable);
 								}
 							}
 						}
@@ -267,8 +138,8 @@ order by schemaname, elementname";
 				}
 				else if (server.DBType == DBServerType.MYSQL)
 				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
-					_tableList.Items.Clear();
+					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={Textbox_Password.Password};";
+					Listbox_Tables.Items.Clear();
 
 					ConnectionString = connectionString;
 					using (var connection = new MySqlConnection(connectionString))
@@ -296,7 +167,7 @@ SELECT TABLE_SCHEMA, TABLE_NAME FROM information_schema.tables
 										Table = reader.GetString(1)
 									};
 
-									_tableList.Items.Add(dbTable);
+									Listbox_Tables.Items.Add(dbTable);
 								}
 							}
 						}
@@ -309,11 +180,11 @@ SELECT TABLE_SCHEMA, TABLE_NAME FROM information_schema.tables
 					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
 						connectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
 					else
-						connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
+						connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={Textbox_Password.Password};";
 
 					ConnectionString = connectionString;
 
-					_tableList.Items.Clear();
+					Listbox_Tables.Items.Clear();
 
 					using (var connection = new SqlConnection(connectionString))
 					{
@@ -336,33 +207,36 @@ select s.name, t.name
 										Schema = reader.GetString(0),
 										Table = reader.GetString(1)
 									};
-									_tableList.Items.Add(dbTable);
+									Listbox_Tables.Items.Add(dbTable);
 								}
 							}
 						}
 					}
 				}
 
-				_tableList.SelectedIndex = -1;
+				Listbox_Tables.SelectedIndex = -1;
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 			}
 		}
 
-		private void OnSelectedTableChanged(object sender, EventArgs e)
+		private void Tables_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
-			_okButton.Enabled = true;
+
+			Button_OK.IsEnabled = false;
+			Button_OK.IsDefault = false;
+			Button_Cancel.IsDefault = true;
 
 			try
 			{
-				var server = (DBServer)_serverList.SelectedItem;
+				var server = (DBServer)Combobox_Server.SelectedItem;
 				ServerType = server.DBType;
-				var db = (string)_dbList.SelectedItem;
-				var table = (DBTable)_tableList.SelectedItem;
+				var db = (string)Listbox_Databases.SelectedItem;
+				var table = (DBTable)Listbox_Tables.SelectedItem;
 				DatabaseColumns.Clear();
 
 				if (server == null)
@@ -374,10 +248,14 @@ select s.name, t.name
 				if (table == null)
 					return;
 
+				Button_OK.IsEnabled = true;
+				Button_OK.IsDefault = true;
+				Button_Cancel.IsDefault = false;
+
 				if (server.DBType == DBServerType.POSTGRESQL)
 				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={_password.Text};";
-					
+					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={Textbox_Password.Password};";
+
 					UndefinedEntityModels.Clear();
 					EType = DBHelper.GetElementType(mDte, table.Schema, table.Table, connectionString);
 
@@ -454,10 +332,10 @@ select a.attname as columnname,
 										using (var reader = command.ExecuteReader())
 										{
 											while (reader.Read())
-                                            {
-                                                ConstructPostgresqlColumn(table, reader);
-                                            }
-                                        }
+											{
+												ConstructPostgresqlColumn(table, reader);
+											}
+										}
 									}
 								}
 
@@ -543,17 +421,17 @@ select a.attname as columnname,
 									}
 
 									if (UndefinedEntityModels.Count > 0)
-                                    {
-                                        WarnUndefinedContent(table, connectionString);
-                                    }
-                                }
+									{
+										WarnUndefinedContent(table, connectionString);
+									}
+								}
 							}
 							break;
 					}
 				}
 				else if (server.DBType == DBServerType.MYSQL)
 				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={_password.Text};";
+					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={Textbox_Password.Password};";
 
 					using (var connection = new MySqlConnection(connectionString))
 					{
@@ -623,7 +501,7 @@ ORDER BY c.ORDINAL_POSITION;
 					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
 						connectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
 					else
-						connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={_password.Text};";
+						connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={Textbox_Password.Password};";
 
 					using (var connection = new SqlConnection(connectionString))
 					{
@@ -689,22 +567,22 @@ select c.name as column_name,
 
 									if (string.Equals(dbColumn.DBDataType, "geometry", StringComparison.OrdinalIgnoreCase))
 									{
-										_tableList.SelectedIndex = -1;
-										MessageBox.Show(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+										Listbox_Tables.SelectedIndex = -1;
+										MessageBox.Show(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
 										return;
 									}
 
 									if (string.Equals(dbColumn.DBDataType, "geography", StringComparison.OrdinalIgnoreCase))
 									{
-										_tableList.SelectedIndex = -1;
-										MessageBox.Show(".NET Core does not support the SQL Server geography data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+										Listbox_Tables.SelectedIndex = -1;
+										MessageBox.Show(".NET Core does not support the SQL Server geography data type. You cannot create an entity model from this table.", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
 										return;
 									}
 
 									if (string.Equals(dbColumn.DBDataType, "variant", StringComparison.OrdinalIgnoreCase))
 									{
-										_tableList.SelectedIndex = -1;
-										MessageBox.Show("COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+										Listbox_Tables.SelectedIndex = -1;
+										MessageBox.Show("COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
 										return;
 									}
 
@@ -718,176 +596,200 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 			}
 		}
 
-        private void ConstructPostgresqlColumn(DBTable table, NpgsqlDataReader reader)
-        {
-			var codeService = COFRSServiceFactory.GetService<ICodeService>();
-            var entityName = reader.GetString(0);
-            var columnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0)));
 
-            var dbColumn = new DBColumn
-            {
-                ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
-                EntityName = entityName,
-                DBDataType = reader.GetString(1),
-                Length = Convert.ToInt64(reader.GetValue(2)),
-                NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
-                NumericScale = Convert.ToInt32(reader.GetValue(4)),
-                IsNullable = Convert.ToBoolean(reader.GetValue(5)),
-                IsComputed = Convert.ToBoolean(reader.GetValue(6)),
-                IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
-                IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
-                IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
-                IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
-                ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
-            };
 
-			dbColumn.ModelDataType = DBHelper.GetPostgresDataType(dbColumn);
+		private void OK_Click(object sender, RoutedEventArgs e)
+		{
+			if (Listbox_Tables.SelectedIndex == -1)
+			{
+				MessageBox.Show("You must select a database table in order to create an entity model", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				return;
+			}
 
-            if (string.IsNullOrWhiteSpace(dbColumn.ModelDataType))
-            {
-				var theChildEntityClass = codeService.GetEntityClassBySchema(table.Schema, dbColumn.DBDataType);
+			Save();
 
-                //	See if this column type is already defined...
-				if (theChildEntityClass == null )
-                {
-                    //	It's not defined. See if it is already included in the undefined list...
-                    if (UndefinedEntityModels.FirstOrDefault(ent =>
-                       string.Equals(ent.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
-                       string.Equals(ent.TableName, dbColumn.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
-                    {
-                        //	It's not defined, and it's not in the undefined list, so it is unknown. Let's make it known
-                        //	by constructing it and including it in the undefined list.
-                        entityName = dbColumn.DBDataType;
-                        var className = $"E{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityName))}";
+			var server = (DBServer)Combobox_Server.SelectedItem;
+			DatabaseTable = (DBTable)Listbox_Tables.SelectedItem;
 
-                        var entity = new EntityModel()
-                        {
-                            SchemaName = table.Schema,
-                            ClassName = className,
-                            TableName = entityName,
-                            Folder = Path.Combine(EntityModelsFolder.Folder, $"{className}.cs"),
-                            Namespace = EntityModelsFolder.Namespace,
-                            ServerType = DBServerType.POSTGRESQL,
-                            ProjectName = EntityModelsFolder.ProjectName
-                        };
+			if (server.DBType == DBServerType.POSTGRESQL)
+			{
+				UndefinedEntityModels = DBHelper.GenerateEntityClassList(UndefinedEntityModels,
+																		 EntityModelsFolder.Folder,
+																		 ConnectionString);
+			}
 
-                        UndefinedEntityModels.Add(entity);
-                    }
-                }
+			DialogResult = true;
+			Close();
+		}
 
-				dbColumn.ModelDataType = dbColumn.DBDataType;
-            }
+		private void Cancel_Click(object sender, RoutedEventArgs e)
+		{
+			DialogResult = false;
+			Close();
+		}
 
-            DatabaseColumns.Add(dbColumn);
-        }
+		#region Database Functions
+		private void ServerType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			try
+			{
+				if (Combobox_ServerType.SelectedIndex == 0 || Combobox_ServerType.SelectedIndex == 1)
+				{
+					Combobox_Authentication.IsEnabled = false;
+					Combobox_Authentication.Visibility = Visibility.Hidden;
+					Label_Authentication.Content = "Port Number";
+					Textbox_PortNumber.Visibility = Visibility.Visible;
+					Textbox_PortNumber.IsEnabled = true;
+					Textbox_UserName.IsEnabled = true;
+					Label_UserName.IsEnabled = true;
+					Textbox_Password.IsEnabled = true;
+					Label_Password.IsEnabled = true;
+					Checkbox_RememberPassword.IsEnabled = true;
+				}
+				else
+				{
+					Combobox_Authentication.IsEnabled = true;
+					Combobox_Authentication.Visibility = Visibility.Visible;
+					Label_Authentication.Content = "Authentication";
+					Textbox_PortNumber.Visibility = Visibility.Hidden;
+					Textbox_PortNumber.IsEnabled = false;
+				}
 
-        private void WarnUndefinedContent(DBTable table, string connectionString)
-        {
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-			var message = new StringBuilder();
-            message.Append($"The entity model {table.Table} uses ");
+				if (!Populating)
+				{
+					PopulateServers();
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+			}
+		}
 
-            var unknownEnums = new List<string>();
-            var unknownComposits = new List<string>();
-            var unknownTables = new List<string>();
-
-            foreach (var unknownClass in UndefinedEntityModels)
-            {
-                unknownClass.ElementType = DBHelper.GetElementType(mDte, unknownClass.SchemaName, unknownClass.TableName, connectionString);
-
-                if (unknownClass.ElementType == ElementType.Enum)
-                    unknownEnums.Add(unknownClass.TableName);
-                else if (unknownClass.ElementType == ElementType.Composite)
-                    unknownComposits.Add(unknownClass.TableName);
-                else if (unknownClass.ElementType == ElementType.Table)
-                    unknownTables.Add(unknownClass.TableName);
-            }
-
-            if (unknownEnums.Count > 0)
-            {
-                if (unknownEnums.Count > 1)
-                    message.Append("enum types of ");
-                else
-                    message.Append("an enum type of ");
-
-                for (int index = 0; index < unknownEnums.Count(); index++)
-                {
-                    if (index == unknownEnums.Count() - 1 && unknownEnums.Count > 1)
-                        message.Append($" and {unknownEnums[index]}");
-                    else if (index > 0)
-                        message.Append($", {unknownEnums[index]}");
-                    else if (index == 0)
-                        message.Append(unknownEnums[index]);
-                }
-            }
-
-            if (unknownComposits.Count > 0)
-            {
-                if (unknownEnums.Count > 0)
-                    message.Append("and ");
-
-                if (unknownComposits.Count > 1)
-                    message.Append("composite types of ");
-                else
-                    message.Append("a composite type of ");
-
-                for (int index = 0; index < unknownComposits.Count(); index++)
-                {
-                    if (index == unknownComposits.Count() - 1 && unknownComposits.Count > 1)
-                        message.Append($" and {unknownComposits[index]}");
-                    else if (index > 0)
-                        message.Append($", {unknownComposits[index]}");
-                    else if (index == 0)
-                        message.Append(unknownComposits[index]);
-                }
-            }
-
-            if (unknownTables.Count > 0)
-            {
-                if (unknownEnums.Count > 0 || unknownComposits.Count > 0)
-                    message.Append("and ");
-
-                if (unknownTables.Count > 1)
-                    message.Append("table types of ");
-                else
-                    message.Append("a table type of ");
-
-                for (int index = 0; index < unknownTables.Count(); index++)
-                {
-                    if (index == unknownTables.Count() - 1 && unknownTables.Count > 1)
-                        message.Append($" and {unknownTables[index]}");
-                    else if (index > 0)
-                        message.Append($", {unknownTables[index]}");
-                    else if (index == 0)
-                        message.Append(unknownTables[index]);
-                }
-            }
-
-            message.Append(".\r\n\r\nYou cannot generate this class until all the dependencies have been generated. Would you like to generate the undefined entities as part of generating this class?");
-
-            var answer = MessageBox.Show(message.ToString(), "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-            if (answer == DialogResult.No)
-                _okButton.Enabled = false;
-        }
-
-        private void OnUserNameChanged(object sender, EventArgs e)
+		private void Server_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			try
 			{
 				if (!Populating)
 				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					var server = (DBServer)_serverList.SelectedItem;
+					Listbox_Databases.Items.Clear();
+					Listbox_Tables.Items.Clear();
+					var server = (DBServer)Combobox_Server.SelectedItem;
+					ServerType = server.DBType;
 
 					if (server != null)
 					{
-						server.Username = _userName.Text;
+						if (server.DBType == DBServerType.SQLSERVER)
+						{
+							Label_Authentication.IsEnabled = true;
+							Label_Authentication.Content = "Authentication";
+							Combobox_Authentication.IsEnabled = true;
+							Combobox_Authentication.Visibility = Visibility.Visible;
+							Textbox_PortNumber.Visibility = Visibility.Hidden;
+							Textbox_PortNumber.IsEnabled = false;
+
+							Combobox_Authentication.SelectedIndex = (server.DBAuth == DBAuthentication.SQLSERVERAUTH) ? 0 : 1;
+
+							if (server.DBAuth == DBAuthentication.SQLSERVERAUTH)
+							{
+								Label_UserName.IsEnabled = true;
+								Textbox_UserName.IsEnabled = true;
+								Textbox_UserName.Text = server.Username;
+
+								Label_Password.IsEnabled = true;
+								Textbox_Password.IsEnabled = true;
+								Textbox_Password.Password = (server.RememberPassword) ? server.Password : string.Empty;
+
+								Checkbox_RememberPassword.IsEnabled = true;
+								Checkbox_RememberPassword.IsChecked = server.RememberPassword;
+							}
+							else
+							{
+								Label_UserName.IsEnabled = false;
+								Textbox_UserName.IsEnabled = false;
+								Textbox_UserName.Text = string.Empty;
+
+								Label_Password.IsEnabled = false;
+								Textbox_Password.IsEnabled = false;
+								Textbox_Password.Password = string.Empty;
+
+								Checkbox_RememberPassword.IsEnabled = false;
+								Checkbox_RememberPassword.IsChecked = false;
+							}
+						}
+						else if (server.DBType == DBServerType.POSTGRESQL)
+						{
+							Label_Authentication.IsEnabled = true;
+							Label_Authentication.Content = "Port Number";
+							Combobox_Authentication.IsEnabled = false;
+							Combobox_Authentication.Visibility = Visibility.Hidden;
+
+							Textbox_PortNumber.IsEnabled = true;
+							Textbox_PortNumber.Text = server.PortNumber.ToString();
+							Textbox_PortNumber.Visibility = Visibility.Visible;
+
+							Label_UserName.IsEnabled = true;
+							Textbox_UserName.IsEnabled = true;
+							Textbox_UserName.Text = server.Username;
+
+							Label_Password.IsEnabled = true;
+							Textbox_Password.IsEnabled = true;
+							Textbox_Password.Password = (server.RememberPassword) ? server.Password : string.Empty;
+
+							Checkbox_RememberPassword.IsEnabled = true;
+							Checkbox_RememberPassword.IsChecked = server.RememberPassword;
+						}
+						else if (server.DBType == DBServerType.MYSQL)
+						{
+							Label_Authentication.IsEnabled = true;
+							Label_Authentication.Content = "Port Number";
+							Combobox_Authentication.IsEnabled = false;
+							Combobox_Authentication.Visibility = Visibility.Hidden;
+
+							Textbox_PortNumber.IsEnabled = true;
+							Textbox_PortNumber.Text = server.PortNumber.ToString();
+							Textbox_PortNumber.Visibility = Visibility.Visible;
+
+							Label_UserName.IsEnabled = true;
+							Textbox_UserName.IsEnabled = true;
+							Textbox_UserName.Text = server.Username;
+
+							Label_Password.IsEnabled = true;
+							Textbox_Password.IsEnabled = true;
+							Textbox_Password.Password = (server.RememberPassword) ? server.Password : string.Empty;
+
+							Checkbox_RememberPassword.IsEnabled = true;
+							Checkbox_RememberPassword.IsChecked = server.RememberPassword;
+						}
+
+						if (TestConnection(server))
+							PopulateDatabases();
+					}
+				}
+			}
+			catch (Exception error)
+			{
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+			}
+		}
+
+		private void UserName_TextChanged(object sender, TextChangedEventArgs e)
+		{
+			try
+			{
+				if (!Populating)
+				{
+					Listbox_Databases.Items.Clear();
+					Listbox_Tables.Items.Clear();
+					var server = (DBServer)Combobox_Server.SelectedItem;
+
+					if (server != null)
+					{
+						server.Username = Textbox_UserName.Text;
 
 						var otherServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
 
@@ -900,24 +802,24 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 			}
 		}
 
-		private void OnPasswordChanged(object sender, EventArgs e)
+		private void Password_PasswordChanged(object sender, RoutedEventArgs e)
 		{
 			try
 			{
 				if (!Populating)
 				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					var server = (DBServer)_serverList.SelectedItem;
+					Listbox_Databases.Items.Clear();
+					Listbox_Tables.Items.Clear();
+					var server = (DBServer)Combobox_Server.SelectedItem;
 
 					if (server != null)
 					{
 						if (server.RememberPassword)
-							server.Password = _password.Text;
+							server.Password = Textbox_Password.Password;
 						else
 							server.Password = string.Empty;
 
@@ -932,23 +834,23 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 			}
 		}
 
-		private void OnPortNumberChanged(object sender, EventArgs e)
+		private void PortNumber_TextChanged(object sender, TextChangedEventArgs e)
 		{
 			try
 			{
 				if (!Populating)
 				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					var server = (DBServer)_serverList.SelectedItem;
+					Listbox_Databases.Items.Clear();
+					Listbox_Tables.Items.Clear();
+					var server = (DBServer)Combobox_Server.SelectedItem;
 
 					if (server != null)
 					{
-						server.PortNumber = Convert.ToInt32(_portNumber.Value);
+						server.PortNumber = Convert.ToInt32(Textbox_PortNumber.Text);
 
 						var otherServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
 
@@ -961,29 +863,38 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 			}
 		}
 
+		private void RememberPassword_Checked(object sender, RoutedEventArgs e)
+		{
+			RememberPassword_Changed(true);
+		}
 
-		private void OnSavePasswordChanged(object sender, EventArgs e)
+		private void RememberPassword_Unchecked(object sender, RoutedEventArgs e)
+		{
+			RememberPassword_Changed(false);
+		}
+
+		private void RememberPassword_Changed(bool isChecked)
 		{
 			try
 			{
 				if (!Populating)
 				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
-					var server = (DBServer)_serverList.SelectedItem;
+					Listbox_Databases.Items.Clear();
+					Listbox_Tables.Items.Clear();
+					var server = (DBServer)Combobox_Server.SelectedItem;
 
 					if (server != null)
 					{
-						server.RememberPassword = _rememberPassword.Checked;
+						server.RememberPassword = isChecked;
 
 						if (!server.RememberPassword)
 							server.Password = string.Empty;
 						else
-							server.Password = _password.Text;
+							server.Password = Textbox_Password.Password;
 
 						var savedServer = _serverConfig.Servers.FirstOrDefault(s => string.Equals(s.ServerName, server.ServerName, StringComparison.OrdinalIgnoreCase));
 
@@ -996,45 +907,45 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 			}
 		}
 
-		private void OnAuthenticationChanged(object sender, EventArgs e)
+		private void Authentication_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			if (!Populating)
 			{
-				_dbList.Items.Clear();
-				_tableList.Items.Clear();
-				var server = (DBServer)_serverList.SelectedItem;
+				Listbox_Databases.Items.Clear();
+				Listbox_Tables.Items.Clear();
+				var server = (DBServer)Combobox_Server.SelectedItem;
 
 				if (server != null)
 				{
-					server.DBAuth = _authenticationList.SelectedIndex == 0 ? DBAuthentication.SQLSERVERAUTH : DBAuthentication.WINDOWSAUTH;
+					server.DBAuth = Combobox_Authentication.SelectedIndex == 0 ? DBAuthentication.SQLSERVERAUTH : DBAuthentication.WINDOWSAUTH;
 
 					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
 					{
-						_userName.Text = string.Empty;
-						_userName.Enabled = false;
-						_userNameLabel.Enabled = false;
+						Textbox_UserName.Text = string.Empty;
+						Textbox_UserName.IsEnabled = false;
+						Label_UserName.IsEnabled = false;
 
-						_password.Text = string.Empty;
-						_password.Enabled = false;
-						_passwordLabel.Enabled = false;
+						Textbox_Password.Password = string.Empty;
+						Textbox_Password.IsEnabled = false;
+						Label_Password.IsEnabled = false;
 
-						_rememberPassword.Checked = false;
-						_rememberPassword.Enabled = false;
+						Checkbox_RememberPassword.IsChecked = false;
+						Checkbox_RememberPassword.IsEnabled = false;
 					}
 					else
 					{
-						_userName.Enabled = true;
-						_userNameLabel.Enabled = true;
+						Textbox_UserName.IsEnabled = true;
+						Label_UserName.IsEnabled = true;
 
-						_password.Enabled = true;
-						_passwordLabel.Enabled = true;
+						Textbox_Password.IsEnabled = true;
+						Label_Password.IsEnabled = true;
 
-						_rememberPassword.Checked = server.RememberPassword;
-						_rememberPassword.Enabled = true;
+						Checkbox_RememberPassword.IsChecked = server.RememberPassword;
+						Checkbox_RememberPassword.IsEnabled = true;
 					}
 
 					Save();
@@ -1045,36 +956,38 @@ select c.name as column_name,
 			}
 		}
 
-		private void OnAddServer(object sender, EventArgs e)
+		private void AddNewServer_Click(object sender, RoutedEventArgs e)
 		{
 			try
 			{
-				var dialog = new AddConnection
+				var dialog = new AddConnectionDialog
 				{
-					LastServerUsed = (DBServer)_serverList.SelectedItem
+					LastServerUsed = (DBServer)Combobox_Server.SelectedItem
 				};
 
-				if (dialog.ShowDialog() == DialogResult.OK)
+				var result = dialog.ShowDialog();
+
+				if (result.HasValue && result.Value == true)
 				{
-					_dbList.Items.Clear();
-					_tableList.Items.Clear();
+					Listbox_Databases.Items.Clear();
+					Listbox_Tables.Items.Clear();
 					_serverConfig.Servers.Add(dialog.Server);
 					Save();
 
 					switch (dialog.Server.DBType)
 					{
-						case DBServerType.MYSQL: _serverTypeList.SelectedIndex = 0; break;
-						case DBServerType.POSTGRESQL: _serverTypeList.SelectedIndex = 1; break;
-						case DBServerType.SQLSERVER: _serverTypeList.SelectedIndex = 2; break;
+						case DBServerType.MYSQL: Combobox_ServerType.SelectedIndex = 0; break;
+						case DBServerType.POSTGRESQL: Combobox_ServerType.SelectedIndex = 1; break;
+						case DBServerType.SQLSERVER: Combobox_ServerType.SelectedIndex = 2; break;
 					}
 
-					OnServerTypeChanged(this, new EventArgs());
+					ServerType_SelectionChanged(this, new SelectionChangedEventArgs(e.RoutedEvent, null, null));
 
-					for (int index = 0; index < _serverList.Items.Count; index++)
+					for (int index = 0; index < Combobox_Server.Items.Count; index++)
 					{
-						if (string.Equals((_serverList.Items[index] as DBServer).ServerName, dialog.Server.ServerName, StringComparison.OrdinalIgnoreCase))
+						if (string.Equals((Combobox_Server.Items[index] as DBServer).ServerName, dialog.Server.ServerName, StringComparison.OrdinalIgnoreCase))
 						{
-							_serverList.SelectedIndex = index;
+							Combobox_Server.SelectedIndex = index;
 							break;
 						}
 					}
@@ -1082,15 +995,15 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 			}
 		}
 
-		private void OnRemoveServer(object sender, EventArgs e)
+		private void RemoveServer_Click(object sender, RoutedEventArgs e)
 		{
 			try
 			{
-				var deprecatedServer = (DBServer)_serverList.SelectedItem;
+				var deprecatedServer = (DBServer)Combobox_Server.SelectedItem;
 				var newList = new List<DBServer>();
 
 				foreach (var server in _serverConfig.Servers)
@@ -1110,47 +1023,19 @@ select c.name as column_name,
 
 				Save();
 
-				OnServerTypeChanged(this, new EventArgs());
+				ServerType_SelectionChanged(this, new SelectionChangedEventArgs(e.RoutedEvent, null, null));
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 			}
 		}
 
-		private void OnOK(object sender, EventArgs e)
-		{
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-
-			if (_tableList.SelectedIndex == -1)
-			{
-				MessageBox.Show("You must select a database table in order to create an entity model", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				return;
-			}
-
-			Save();
-
-			var server = (DBServer)_serverList.SelectedItem;
-			DatabaseTable = (DBTable) _tableList.SelectedItem;
-
-            if (server.DBType == DBServerType.POSTGRESQL)
-            {
-                UndefinedEntityModels = DBHelper.GenerateEntityClassList(UndefinedEntityModels,
-                                                                         EntityModelsFolder.Folder,
-                                                                         ConnectionString);
-            }
-
-            DialogResult = DialogResult.OK;
-			Close();
-		}
-		#endregion
-
-		#region Helper functions
 		private void PopulateServers()
 		{
 			DBServerType serverType;
 
-			switch (_serverTypeList.SelectedIndex)
+			switch (Combobox_ServerType.SelectedIndex)
 			{
 				case 0: serverType = DBServerType.MYSQL; break;
 				case 1: serverType = DBServerType.POSTGRESQL; break;
@@ -1160,96 +1045,96 @@ select c.name as column_name,
 
 			var serverList = _serverConfig.Servers.Where(s => s.DBType == serverType);
 
-			_serverList.Items.Clear();
-			_dbList.Items.Clear();
-			_tableList.Items.Clear();
+			Combobox_Server.Items.Clear();
+			Listbox_Databases.Items.Clear();
+			Listbox_Tables.Items.Clear();
 
 			if (serverList.Count() == 0)
 			{
-				_serverList.Enabled = false;
-				_serverList.SelectedIndex = -1;
+				Combobox_Server.IsEnabled = false;
+				Combobox_Server.SelectedIndex = -1;
 
 				if (serverType == DBServerType.SQLSERVER)
 				{
-					_authenticationList.SelectedIndex = -1;
-					_authenticationList.Enabled = false;
-					_authenticationList.Show();
+					Combobox_Authentication.SelectedIndex = -1;
+					Combobox_Authentication.IsEnabled = false;
+					Combobox_Authentication.Visibility = Visibility.Visible;
 
-					_portNumber.Enabled = false;
-					_portNumber.Hide();
+					Textbox_PortNumber.IsEnabled = false;
+					Textbox_PortNumber.Visibility = Visibility.Hidden;
 				}
 
 				else if (serverType == DBServerType.POSTGRESQL)
 				{
-					_portNumber.Enabled = false;
-					_portNumber.Value = 1024;
-					_portNumber.Show();
+					Textbox_PortNumber.IsEnabled = false;
+					Textbox_PortNumber.Text = "1024";
+					Textbox_PortNumber.Visibility = Visibility.Visible;
 
-					_authenticationList.Enabled = false;
-					_authenticationList.Hide();
+					Combobox_Authentication.IsEnabled = false;
+					Combobox_Authentication.Visibility = Visibility.Hidden;
 				}
 
 				else if (serverType == DBServerType.MYSQL)
 				{
-					_portNumber.Enabled = false;
-					_portNumber.Value = 3306;
-					_portNumber.Show();
+					Textbox_PortNumber.IsEnabled = false;
+					Textbox_PortNumber.Text = "3306";
+					Textbox_PortNumber.Visibility = Visibility.Visible;
 
-					_authenticationList.Enabled = false;
-					_authenticationList.Hide();
+					Combobox_Authentication.IsEnabled = false;
+					Combobox_Authentication.Visibility = Visibility.Hidden;
 				}
 
-				_userName.Enabled = false;
-				_userName.Text = string.Empty;
+				Textbox_UserName.IsEnabled = false;
+				Textbox_UserName.Text = string.Empty;
 
-				_password.Enabled = false;
-				_password.Text = string.Empty;
+				Textbox_Password.IsEnabled = false;
+				Textbox_Password.Password = string.Empty;
 
-				_rememberPassword.Enabled = false;
-				_rememberPassword.Checked = false;
+				Checkbox_RememberPassword.IsEnabled = false;
+				Checkbox_RememberPassword.IsChecked = false;
 			}
 			else
 			{
-				_serverList.Enabled = true;
+				Combobox_Server.IsEnabled = true;
 
 				if (serverType == DBServerType.POSTGRESQL)
 				{
-					_portNumber.Enabled = true;
-					_portNumber.Show();
-					_authenticationList.Enabled = false;
-					_authenticationList.Hide();
+					Textbox_PortNumber.IsEnabled = true;
+					Textbox_PortNumber.Visibility = Visibility.Visible;
+					Combobox_Authentication.IsEnabled = false;
+					Combobox_Authentication.Visibility = Visibility.Hidden;
 				}
 
 				else if (serverType == DBServerType.MYSQL)
 				{
-					_portNumber.Enabled = true;
-					_portNumber.Show();
-					_authenticationList.Enabled = false;
-					_authenticationList.Hide();
+					Textbox_PortNumber.IsEnabled = true;
+					Textbox_PortNumber.Visibility = Visibility.Visible;
+					Combobox_Authentication.IsEnabled = false;
+					Combobox_Authentication.Visibility = Visibility.Hidden;
 				}
 
 				else if (serverType == DBServerType.SQLSERVER)
 				{
-					_portNumber.Enabled = false;
-					_portNumber.Hide();
-					_authenticationList.Enabled = true;
-					_authenticationList.Show();
+					Textbox_PortNumber.IsEnabled = false;
+					Textbox_PortNumber.Visibility = Visibility.Hidden;
+					Combobox_Authentication.IsEnabled = true;
+					Combobox_Authentication.Visibility = Visibility.Visible;
 				}
 
 				foreach (var server in serverList)
 				{
-					_serverList.Items.Add(server);
+					Combobox_Server.Items.Add(server);
 				}
 
-				if (_serverList.Items.Count > 0)
-					_serverList.SelectedIndex = 0;
+				if (Combobox_Server.Items.Count > 0)
+					Combobox_Server.SelectedIndex = 0;
 			}
 		}
 
 		private void Save()
 		{
 			int index = 0;
-			var server = (DBServer)_serverList.SelectedItem;
+			var server = (DBServer)Combobox_Server.SelectedItem;
 
 			if (server != null)
 			{
@@ -1290,17 +1175,17 @@ select c.name as column_name,
 
 		private void PopulateDatabases()
 		{
-			var server = (DBServer)_serverList.SelectedItem;
+			var server = (DBServer)Combobox_Server.SelectedItem;
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
-				if (string.IsNullOrWhiteSpace(_password.Text))
+				if (string.IsNullOrWhiteSpace(Textbox_Password.Password))
 					return;
 
-				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=postgres;User ID={server.Username};Password={_password.Text};";
+				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=postgres;User ID={server.Username};Password={Textbox_Password.Password};";
 
-				_dbList.Items.Clear();
-				_tableList.Items.Clear();
+				Listbox_Databases.Items.Clear();
+				Listbox_Tables.Items.Clear();
 				int selectedItem = -1;
 
 				try
@@ -1326,9 +1211,9 @@ SELECT datname
 								{
 									var databaseName = reader.GetString(0);
 
-									_dbList.Items.Add(databaseName);
+									Listbox_Databases.Items.Add(databaseName);
 
-									string cs = $"Server={server.ServerName};Port={server.PortNumber};Database={databaseName};User ID={server.Username};Password={_password.Text};";
+									string cs = $"Server={server.ServerName};Port={server.PortNumber};Database={databaseName};User ID={server.Username};Password={Textbox_Password.Password};";
 
 									if (DefaultConnectionString.StartsWith(cs, StringComparison.OrdinalIgnoreCase))
 										selectedItem = itemindex;
@@ -1339,23 +1224,23 @@ SELECT datname
 						}
 					}
 
-					if (_dbList.Items.Count > 0)
-						_dbList.SelectedIndex = selectedItem;
+					if (Listbox_Databases.Items.Count > 0)
+						Listbox_Databases.SelectedIndex = selectedItem;
 				}
 				catch (Exception error)
 				{
-					MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 				}
 			}
 			else if (server.DBType == DBServerType.MYSQL)
 			{
-				if (string.IsNullOrWhiteSpace(_password.Text))
+				if (string.IsNullOrWhiteSpace(Textbox_Password.Password))
 					return;
 
-				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=mysql;UID={server.Username};PWD={_password.Text};";
+				string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=mysql;UID={server.Username};PWD={Textbox_Password.Password};";
 
-				_dbList.Items.Clear();
-				_tableList.Items.Clear();
+				Listbox_Databases.Items.Clear();
+				Listbox_Tables.Items.Clear();
 				int selectedItem = -1;
 
 				try
@@ -1378,9 +1263,9 @@ select SCHEMA_NAME from information_schema.SCHEMATA
 								{
 									var databaseName = reader.GetString(0);
 
-									_dbList.Items.Add(databaseName);
+									Listbox_Databases.Items.Add(databaseName);
 
-									string cs = $"Server={server.ServerName};Port={server.PortNumber};Database={databaseName};UID={server.Username};PWD={_password.Text};";
+									string cs = $"Server={server.ServerName};Port={server.PortNumber};Database={databaseName};UID={server.Username};PWD={Textbox_Password.Password};";
 
 									if (DefaultConnectionString.StartsWith(cs, StringComparison.OrdinalIgnoreCase))
 										selectedItem = itemindex;
@@ -1391,28 +1276,28 @@ select SCHEMA_NAME from information_schema.SCHEMATA
 						}
 					}
 
-					if (_dbList.Items.Count > 0)
-						_dbList.SelectedIndex = selectedItem;
+					if (Listbox_Databases.Items.Count > 0)
+						Listbox_Databases.SelectedIndex = selectedItem;
 				}
 				catch (Exception error)
 				{
-					MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 				}
 			}
 			else
 			{
 				string connectionString;
 
-				if (server.DBAuth == DBAuthentication.SQLSERVERAUTH && string.IsNullOrWhiteSpace(_password.Text))
+				if (server.DBAuth == DBAuthentication.SQLSERVERAUTH && string.IsNullOrWhiteSpace(Textbox_Password.Password))
 					return;
 
 				if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
 					connectionString = $"Server={server.ServerName};Database=master;Trusted_Connection=True;";
 				else
-					connectionString = $"Server={server.ServerName};Database=master;uid={server.Username};pwd={_password.Text};";
+					connectionString = $"Server={server.ServerName};Database=master;uid={server.Username};pwd={Textbox_Password.Password};";
 
-				_dbList.Items.Clear();
-				_tableList.Items.Clear();
+				Listbox_Databases.Items.Clear();
+				Listbox_Tables.Items.Clear();
 				int selectedItem = -1;
 
 				try
@@ -1437,13 +1322,13 @@ select name
 								{
 									var databaseName = reader.GetString(0);
 
-									_dbList.Items.Add(databaseName);
+									Listbox_Databases.Items.Add(databaseName);
 									string cs;
 
 									if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
 										cs = $"Server={server.ServerName};Database={databaseName};Trusted_Connection=True;";
 									else
-										cs = $"Server={server.ServerName};Database={databaseName};uid={server.Username};pwd={_password.Text};";
+										cs = $"Server={server.ServerName};Database={databaseName};uid={server.Username};pwd={Textbox_Password.Password};";
 
 									if (DefaultConnectionString.StartsWith(cs, StringComparison.OrdinalIgnoreCase))
 										selectedItem = itemindex;
@@ -1454,12 +1339,12 @@ select name
 						}
 					}
 
-					if (_dbList.Items.Count > 0)
-						_dbList.SelectedIndex = selectedItem;
+					if (Listbox_Databases.Items.Count > 0)
+						Listbox_Databases.SelectedIndex = selectedItem;
 				}
 				catch (Exception error)
 				{
-					MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
 				}
 			}
 		}
@@ -1472,13 +1357,13 @@ select name
 		/// <returns></returns>
 		private bool TestConnection(DBServer server)
 		{
-			_tableList.Items.Clear();
-			_dbList.Items.Clear();
+			Listbox_Tables.Items.Clear();
+			Listbox_Databases.Items.Clear();
 
 			if (server.DBType == DBServerType.POSTGRESQL)
 			{
 				string connectionString;
-				connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=postgres;User ID={server.Username};Password={_password.Text};";
+				connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=postgres;User ID={server.Username};Password={Textbox_Password.Password};";
 
 				//	Attempt to connect to the database.
 				try
@@ -1498,7 +1383,7 @@ select name
 			else if (server.DBType == DBServerType.MYSQL)
 			{
 				string connectionString;
-				connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=mysql;UID={server.Username};PWD={_password.Text};";
+				connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database=mysql;UID={server.Username};PWD={Textbox_Password.Password};";
 
 				//	Attempt to connect to the database.
 				try
@@ -1523,7 +1408,7 @@ select name
 				if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
 					connectionString = $"Server={server.ServerName};Database=master;Trusted_Connection=True;";
 				else
-					connectionString = $"Server={server.ServerName};Database=master;uid={server.Username};pwd={_password.Text};";
+					connectionString = $"Server={server.ServerName};Database=master;uid={server.Username};pwd={Textbox_Password.Password};";
 
 
 				//	Attempt to connect to the database.
@@ -1557,6 +1442,7 @@ select name
 			//	There is no user interaction at this point, so there are certain actions we 
 			//	do not want to run while populating.
 			Populating = true;
+			Combobox_Server.Items.Clear();
 
 			//	Get the location of the server configuration on disk
 			var baseFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -1625,9 +1511,9 @@ select name
 
 				switch (dbServer.DBType)
 				{
-					case DBServerType.MYSQL: _serverTypeList.SelectedIndex = 0; break;
-					case DBServerType.POSTGRESQL: _serverTypeList.SelectedIndex = 1; break;
-					case DBServerType.SQLSERVER: _serverTypeList.SelectedIndex = 2; break;
+					case DBServerType.MYSQL: Combobox_ServerType.SelectedIndex = 0; break;
+					case DBServerType.POSTGRESQL: Combobox_ServerType.SelectedIndex = 1; break;
+					case DBServerType.SQLSERVER: Combobox_ServerType.SelectedIndex = 2; break;
 				}
 
 				var serverList = _serverConfig.Servers.Where(s => s.DBType == selectedType);
@@ -1636,7 +1522,7 @@ select name
 
 				foreach (var server in serverList)
 				{
-					_serverList.Items.Add(server);
+					Combobox_Server.Items.Add(server);
 
 					if (string.Equals(server.ServerName, dbServer.ServerName, StringComparison.OrdinalIgnoreCase))
 						selectedIndex = index;
@@ -1644,81 +1530,81 @@ select name
 					index++;
 				}
 
-				if (_serverList.Items.Count > 0)
+				if (Combobox_Server.Items.Count > 0)
 				{
-					_serverList.SelectedIndex = selectedIndex;
+					Combobox_Server.SelectedIndex = selectedIndex;
 
 					if (dbServer.DBType == DBServerType.SQLSERVER)
 					{
-						_authenticationList.SelectedIndex = dbServer.DBAuth == DBAuthentication.WINDOWSAUTH ? 0 : 1;
+						Combobox_Authentication.SelectedIndex = dbServer.DBAuth == DBAuthentication.WINDOWSAUTH ? 0 : 1;
 
-						if (_authenticationList.SelectedIndex == 0)
+						if (Combobox_Authentication.SelectedIndex == 0)
 						{
-							_userName.Text = string.Empty;
-							_userName.Enabled = false;
+							Textbox_UserName.Text = string.Empty;
+							Textbox_UserName.IsEnabled = false;
 
-							_password.Text = string.Empty;
-							_password.Enabled = false;
+							Textbox_Password.Password = string.Empty;
+							Textbox_Password.IsEnabled = false;
 
-							_rememberPassword.Checked = false;
-							_rememberPassword.Enabled = false;
+							Checkbox_RememberPassword.IsChecked = false;
+							Checkbox_RememberPassword.IsEnabled = false;
 						}
 						else
 						{
-							_userName.Text = dbServer.Username;
-							_userName.Enabled = true;
+							Textbox_UserName.Text = dbServer.Username;
+							Textbox_UserName.IsEnabled = true;
 
-							_rememberPassword.Checked = dbServer.RememberPassword;
-							_rememberPassword.Enabled = true;
+							Checkbox_RememberPassword.IsChecked = dbServer.RememberPassword;
+							Checkbox_RememberPassword.IsEnabled = true;
 
 							if (dbServer.RememberPassword)
 							{
-								_password.Text = dbServer.Password;
-								_password.Enabled = true;
+								Textbox_Password.Password = dbServer.Password;
+								Textbox_Password.IsEnabled = true;
 							}
 							else
 							{
-								_password.Text = string.Empty;
-								_password.Enabled = true;
+								Textbox_Password.Password = string.Empty;
+								Textbox_Password.IsEnabled = true;
 							}
 						}
 					}
 					else if (dbServer.DBType == DBServerType.POSTGRESQL)
 					{
-						_portNumber.Value = dbServer.PortNumber;
-						_userName.Text = dbServer.Username;
-						_userName.Enabled = true;
+						Textbox_PortNumber.Text = dbServer.PortNumber.ToString();
+						Textbox_UserName.Text = dbServer.Username;
+						Textbox_UserName.IsEnabled = true;
 
-						_rememberPassword.Checked = dbServer.RememberPassword;
-						_rememberPassword.Enabled = true;
-						_password.Enabled = true;
+						Checkbox_RememberPassword.IsChecked = dbServer.RememberPassword;
+						Checkbox_RememberPassword.IsEnabled = true;
+						Textbox_Password.IsEnabled = true;
 
 						if (dbServer.RememberPassword)
 						{
-							_password.Text = dbServer.Password;
+							Textbox_Password.Password = dbServer.Password;
 						}
 						else
 						{
-							_password.Text = string.Empty;
+							Textbox_Password.Password = string.Empty;
 						}
 					}
 					else if (dbServer.DBType == DBServerType.MYSQL)
 					{
-						_portNumber.Value = dbServer.PortNumber;
-						_userName.Text = dbServer.Username;
-						_userName.Enabled = true;
+						Textbox_PortNumber.Text = dbServer.PortNumber.ToString();
+						Textbox_UserName.Text = dbServer.Username;
+						Textbox_UserName.IsEnabled = true;
 
-						_rememberPassword.Checked = dbServer.RememberPassword;
-						_rememberPassword.Enabled = true;
-						_password.Enabled = true;
+						Checkbox_RememberPassword.IsChecked = dbServer.RememberPassword;
+						Checkbox_RememberPassword.IsEnabled = true;
+						Textbox_Password.IsEnabled = true;
 
 						if (dbServer.RememberPassword)
 						{
-							_password.Text = dbServer.Password;
+							Textbox_Password.Password = dbServer.Password;
 						}
 						else
 						{
-							_password.Text = string.Empty;
+							Textbox_Password.Password = string.Empty;
 						}
 					}
 
@@ -1728,27 +1614,183 @@ select name
 			else
 			{
 				//	There were no servers in the list, make sure everything is empty
-				_serverTypeList.SelectedIndex = 1;
+				Combobox_ServerType.SelectedIndex = 1;
 
-				_authenticationList.Enabled = false;
-				_authenticationList.SelectedIndex = -1;
+				Combobox_Authentication.IsEnabled = false;
+				Combobox_Authentication.SelectedIndex = -1;
 
-				_serverList.Enabled = false;
-				_serverList.Items.Clear();
+				Combobox_Server.IsEnabled = false;
+				Combobox_Server.Items.Clear();
 
-				_userName.Enabled = false;
-				_userName.Text = string.Empty;
+				Textbox_UserName.IsEnabled = false;
+				Textbox_UserName.Text = string.Empty;
 
-				_password.Enabled = false;
-				_password.Text = string.Empty;
+				Textbox_Password.IsEnabled = false;
+				Textbox_Password.Password = string.Empty;
 
-				_rememberPassword.Enabled = false;
-				_rememberPassword.Checked = false;
+				Checkbox_RememberPassword.IsEnabled = false;
+				Checkbox_RememberPassword.IsChecked = false;
 			}
 
 			//	We're done. Turn off the populating flag.
 			Populating = false;
 		}
+		#endregion
+
+		#region Utility Functions
+		private void ConstructPostgresqlColumn(DBTable table, NpgsqlDataReader reader)
+		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var entityName = reader.GetString(0);
+			var columnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0)));
+
+			var dbColumn = new DBColumn
+			{
+				ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
+				EntityName = entityName,
+				DBDataType = reader.GetString(1),
+				Length = Convert.ToInt64(reader.GetValue(2)),
+				NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
+				NumericScale = Convert.ToInt32(reader.GetValue(4)),
+				IsNullable = Convert.ToBoolean(reader.GetValue(5)),
+				IsComputed = Convert.ToBoolean(reader.GetValue(6)),
+				IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
+				IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
+				IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
+				IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
+				ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
+			};
+
+			dbColumn.ModelDataType = DBHelper.GetPostgresDataType(dbColumn);
+
+			if (string.IsNullOrWhiteSpace(dbColumn.ModelDataType))
+			{
+				var theChildEntityClass = codeService.GetEntityClassBySchema(table.Schema, dbColumn.DBDataType);
+
+				//	See if this column type is already defined...
+				if (theChildEntityClass == null)
+				{
+					//	It's not defined. See if it is already included in the undefined list...
+					if (UndefinedEntityModels.FirstOrDefault(ent =>
+					   string.Equals(ent.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
+					   string.Equals(ent.TableName, dbColumn.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
+					{
+						//	It's not defined, and it's not in the undefined list, so it is unknown. Let's make it known
+						//	by constructing it and including it in the undefined list.
+						entityName = dbColumn.DBDataType;
+						var className = $"E{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityName))}";
+
+						var entity = new EntityModel()
+						{
+							SchemaName = table.Schema,
+							ClassName = className,
+							TableName = entityName,
+							Folder = Path.Combine(EntityModelsFolder.Folder, $"{className}.cs"),
+							Namespace = EntityModelsFolder.Namespace,
+							ServerType = DBServerType.POSTGRESQL,
+							ProjectName = EntityModelsFolder.ProjectName
+						};
+
+						UndefinedEntityModels.Add(entity);
+					}
+				}
+
+				dbColumn.ModelDataType = dbColumn.DBDataType;
+			}
+
+			DatabaseColumns.Add(dbColumn);
+		}
+
+		private void WarnUndefinedContent(DBTable table, string connectionString)
+		{
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var message = new StringBuilder();
+			message.Append($"The entity model {table.Table} uses ");
+
+			var unknownEnums = new List<string>();
+			var unknownComposits = new List<string>();
+			var unknownTables = new List<string>();
+
+			foreach (var unknownClass in UndefinedEntityModels)
+			{
+				unknownClass.ElementType = DBHelper.GetElementType(mDte, unknownClass.SchemaName, unknownClass.TableName, connectionString);
+
+				if (unknownClass.ElementType == ElementType.Enum)
+					unknownEnums.Add(unknownClass.TableName);
+				else if (unknownClass.ElementType == ElementType.Composite)
+					unknownComposits.Add(unknownClass.TableName);
+				else if (unknownClass.ElementType == ElementType.Table)
+					unknownTables.Add(unknownClass.TableName);
+			}
+
+			if (unknownEnums.Count > 0)
+			{
+				if (unknownEnums.Count > 1)
+					message.Append("enum types of ");
+				else
+					message.Append("an enum type of ");
+
+				for (int index = 0; index < unknownEnums.Count(); index++)
+				{
+					if (index == unknownEnums.Count() - 1 && unknownEnums.Count > 1)
+						message.Append($" and {unknownEnums[index]}");
+					else if (index > 0)
+						message.Append($", {unknownEnums[index]}");
+					else if (index == 0)
+						message.Append(unknownEnums[index]);
+				}
+			}
+
+			if (unknownComposits.Count > 0)
+			{
+				if (unknownEnums.Count > 0)
+					message.Append("and ");
+
+				if (unknownComposits.Count > 1)
+					message.Append("composite types of ");
+				else
+					message.Append("a composite type of ");
+
+				for (int index = 0; index < unknownComposits.Count(); index++)
+				{
+					if (index == unknownComposits.Count() - 1 && unknownComposits.Count > 1)
+						message.Append($" and {unknownComposits[index]}");
+					else if (index > 0)
+						message.Append($", {unknownComposits[index]}");
+					else if (index == 0)
+						message.Append(unknownComposits[index]);
+				}
+			}
+
+			if (unknownTables.Count > 0)
+			{
+				if (unknownEnums.Count > 0 || unknownComposits.Count > 0)
+					message.Append("and ");
+
+				if (unknownTables.Count > 1)
+					message.Append("table types of ");
+				else
+					message.Append("a table type of ");
+
+				for (int index = 0; index < unknownTables.Count(); index++)
+				{
+					if (index == unknownTables.Count() - 1 && unknownTables.Count > 1)
+						message.Append($" and {unknownTables[index]}");
+					else if (index > 0)
+						message.Append($", {unknownTables[index]}");
+					else if (index == 0)
+						message.Append(unknownTables[index]);
+				}
+			}
+
+			message.Append(".\r\n\r\nYou cannot generate this class until all the dependencies have been generated. Would you like to generate the undefined entities as part of generating this class?");
+
+			var answer = MessageBox.Show(message.ToString(), "Microsoft Visual Studio", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+			if (answer == MessageBoxResult.No)
+				Button_OK.IsEnabled = false;
+		}
+
 		#endregion
 	}
 }

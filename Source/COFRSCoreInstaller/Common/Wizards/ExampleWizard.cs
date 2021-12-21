@@ -119,13 +119,5 @@ namespace COFRS.Template.Common.Wizards
 		{
 			return Proceed;
 		}
-
-		private ProfileMap LoadMapping(string solutionPath, ResourceModel resourceModel, EntityModel entityModel)
-		{
-			var filePath = Path.Combine(Path.Combine(Path.GetDirectoryName(solutionPath), ".cofrs"), $"{resourceModel.ClassName}.{entityModel.ClassName}.json");
-			var jsonValue = File.ReadAllText(filePath);
-
-			return JsonConvert.DeserializeObject<ProfileMap>(jsonValue);
-		}
 	}
 }

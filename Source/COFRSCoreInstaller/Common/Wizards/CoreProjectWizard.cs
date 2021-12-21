@@ -1,4 +1,5 @@
 ﻿using COFRS.Template.Common.Models;
+using COFRS.Template.Common.Windows;
 using EnvDTE;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
@@ -12,10 +13,11 @@ namespace COFRS.Template
     public class CoreProjectWizard : IWizard
 	{
 		private bool Proceed;
-		private UserInputProject inputForm;
+		private COFRSNewProjectDialog inputForm;
 		private string framework;
 		private string securityModel;
 		private string databaseTechnology;
+		private string moniker;
 		private string logPath;
 		private string projectMapPath;
 
@@ -44,19 +46,26 @@ namespace COFRS.Template
 			Dictionary<string, string> replacementsDictionary,
 			WizardRunKind runKind, object[] customParams)
 		{
+			string solutionDirectory = replacementsDictionary["$solutiondirectory$"];
+			string destinationDirectory = replacementsDictionary["$destinationdirectory$"];
+
 			try
 			{
 				Proceed = true;
 				Random randomNumberGenerator = new Random(Convert.ToInt32(0x0000ffffL & DateTime.Now.ToFileTimeUtc()));
 				// Display a form to the user. The form collects
 				// input for the custom message.
-				inputForm = new UserInputProject();
+				inputForm = new COFRSNewProjectDialog();
 
-				if (inputForm.ShowDialog() == DialogResult.OK)
+				var result = inputForm.ShowModal();
+
+				if ( result.HasValue && result.Value == true )
 				{
 					framework = inputForm.Framework;
 					securityModel = inputForm.SecurityModel;
 					databaseTechnology = inputForm.DatabaseTechnology;
+					moniker = inputForm.CompanyMoniker;
+
 					logPath = Path.Combine(replacementsDictionary["$destinationdirectory$"], "App_Data\\log-{Date}.json").Replace("\\", "\\\\");
 
 					if ( string.IsNullOrWhiteSpace(replacementsDictionary["$specifiedsolutionname$"]))
@@ -125,7 +134,7 @@ namespace COFRS.Template
 					replacementsDictionary.Add("$databaseTechnology$", databaseTechnology);
 					replacementsDictionary.Add("$logPath$", logPath);
 					replacementsDictionary.Add("$portNumber$", portNumber.ToString());
-					replacementsDictionary.Add("$companymoniker$", inputForm.companyMoniker.Text);
+					replacementsDictionary.Add("$companymoniker$", moniker);
 
 					if (string.Equals(securityModel, "OAuth", StringComparison.OrdinalIgnoreCase))
 					{
@@ -137,12 +146,23 @@ namespace COFRS.Template
 				else
 				{
 					Proceed = false;
+					throw new Exception("User canceled the operation. Aborting project creation.");
 				}
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
-				MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				if (Directory.Exists(destinationDirectory))
+				{
+					Directory.Delete(destinationDirectory, true);
+				}
+
+				if (Directory.Exists(solutionDirectory))
+				{
+					Directory.Delete(solutionDirectory, true);
+				}
+
 				Proceed = false;
+				throw;
 			}
 		}
 
@@ -152,5 +172,5 @@ namespace COFRS.Template
 		{
 			return Proceed;
 		}
-	}
+    }
 }
