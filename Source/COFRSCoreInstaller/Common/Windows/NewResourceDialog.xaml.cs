@@ -7,22 +7,14 @@ using Microsoft.VisualStudio.Shell.Interop;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Path = System.IO.Path;
 
 namespace COFRS.Template.Common.Windows
@@ -38,12 +30,13 @@ namespace COFRS.Template.Common.Windows
         public DBTable DatabaseTable { get; set; }
         public List<DBColumn> DatabaseColumns { get; set; }
         public string ConnectionString { get; set; }
-        public ProjectFolder EntityModelsFolder { get; set; }
+        public ProjectFolder ResourceModelsFolder { get; set; }
         public string DefaultConnectionString { get; set; }
-        public Dictionary<string, string> ReplacementsDictionary { get; set; }
-        public List<EntityModel> UndefinedEntityModels { get; set; }
+        public List<ResourceClass> UndefinedResources { get; set; }
+		public EntityClass EntityModel { get; set; }
         public DBServerType ServerType { get; set; }
-        public ElementType EType { get; set; }
+		public IServiceProvider ServiceProvider { get; set; }
+		public bool GenerateAsEnum { get; set; }
         #endregion
 
         public NewResourceDialog()
@@ -53,7 +46,25 @@ namespace COFRS.Template.Common.Windows
 
         private void OnLoad(object sender, RoutedEventArgs e)
         {
-            Combobox_ServerType.Items.Clear();
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+
+			if (codeService.EntityClassList.Count == 0)
+			{
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												"No entity models were found in the project. Please create a corresponding entity model before attempting to create the resource model.",
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+
+				DialogResult = false;
+				Close();
+			}
+
+			foreach (var entityClass in codeService.EntityClassList)
+				Combobox_EntityClasses.Items.Add(entityClass);
+
+			Combobox_ServerType.Items.Clear();
             Combobox_ServerType.Items.Add("My SQL");
             Combobox_ServerType.Items.Add("Postgresql");
             Combobox_ServerType.Items.Add("SQL Server");
@@ -62,10 +73,14 @@ namespace COFRS.Template.Common.Windows
             Combobox_Authentication.Items.Add("Windows Authority");
             Combobox_Authentication.Items.Add("SQL Server Authority");
 
-
             DatabaseColumns = new List<DBColumn>();
-            UndefinedEntityModels = new List<EntityModel>();
-            ReadServerList();
+			UndefinedResources = new List<ResourceClass>();
+
+			Button_OK.IsEnabled = false;
+			Button_OK.IsDefault = false;
+			Button_Cancel.IsDefault = true;
+
+			ReadServerList();
         }
 
 		private void Databases_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -222,396 +237,228 @@ select s.name, t.name
 
 		private void Tables_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+
+			Button_Cancel.IsDefault = false;
 			Button_OK.IsEnabled = true;
+			Button_OK.IsDefault = true;
 
 			try
 			{
 				var server = (DBServer)Combobox_Server.SelectedItem;
-				ServerType = server.DBType;
-				var db = (string)Listbox_Databases.SelectedItem;
-				var table = (DBTable)Listbox_Tables.SelectedItem;
-				DatabaseColumns.Clear();
 
 				if (server == null)
-					return;
+				{
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+								"You must select a database server to create a new resource model. Please select a database server and try again.",
+								"Microsoft Visual Studio",
+								OLEMSGICON.OLEMSGICON_WARNING,
+								OLEMSGBUTTON.OLEMSGBUTTON_OK,
+								OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
-				if (string.IsNullOrWhiteSpace(db))
+					Button_OK.IsEnabled = false;
+					Button_OK.IsDefault = false;
+					Button_Cancel.IsDefault = true;
+
 					return;
+				}
+
+				var db = (string)Listbox_Databases.SelectedItem;
+				if (string.IsNullOrWhiteSpace(db))
+				{
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+								"You must select a database to create a new resource model. Please select a database and try again.",
+								"Microsoft Visual Studio",
+								OLEMSGICON.OLEMSGICON_WARNING,
+								OLEMSGBUTTON.OLEMSGBUTTON_OK,
+								OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+
+					Button_OK.IsEnabled = false;
+					Button_OK.IsDefault = false;
+					Button_Cancel.IsDefault = true;
+
+					return;
+				}
+				var table = (DBTable)Listbox_Tables.SelectedItem;
 
 				if (table == null)
-					return;
-
-				if (server.DBType == DBServerType.POSTGRESQL)
 				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};User ID={server.Username};Password={Textbox_Password.Password};";
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+								"You must select a database table to create a new resource model. Please select a database table and try again.",
+								"Microsoft Visual Studio",
+								OLEMSGICON.OLEMSGICON_WARNING,
+								OLEMSGBUTTON.OLEMSGBUTTON_OK,
+								OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
-					UndefinedEntityModels.Clear();
-					EType = DBHelper.GetElementType(mDte, table.Schema, table.Table, connectionString);
+					Button_OK.IsEnabled = false;
+					Button_OK.IsDefault = false;
+					Button_Cancel.IsDefault = true;
 
-					switch (EType)
+					return;
+				}
+
+				Populating = true;
+
+				bool foundit = false;
+
+				for (int i = 0; i < Combobox_EntityClasses.Items.Count; i++)
+				{
+					var entity = (EntityClass)Combobox_EntityClasses.Items[i];
+
+					if (string.Equals(entity.TableName, table.Table, StringComparison.OrdinalIgnoreCase))
 					{
-						case ElementType.Enum:
-							break;
-
-						case ElementType.Composite:
-							{
-								using (var connection = new NpgsqlConnection(connectionString))
-								{
-									connection.Open();
-
-									var query = @"
-select a.attname as columnname,
-	   t.typname as datatype,
-	   case when t.typname = 'varchar' then a.atttypmod-4
-	        when t.typname = 'bpchar' then a.atttypmod-4
-			when t.typname = '_varchar' then a.atttypmod-4
-			when t.typname = '_bpchar' then a.atttypmod-4
-	        when a.atttypmod > -1 then a.atttypmod
-	        else a.attlen end as max_len,
-	   case atttypid
-            when 21 /*int2*/ then 16
-            when 23 /*int4*/ then 32
-            when 20 /*int8*/ then 64
-         	when 1700 /*numeric*/ then
-              	case when atttypmod = -1
-                     then 0
-                     else ((atttypmod - 4) >> 16) & 65535     -- calculate the precision
-                     end
-         	when 700 /*float4*/ then 24 /*FLT_MANT_DIG*/
-         	when 701 /*float8*/ then 53 /*DBL_MANT_DIG*/
-         	else 0
-  			end as numeric_precision,
-  		case when atttypid in (21, 23, 20) then 0
-    		 when atttypid in (1700) then            
-        		  case when atttypmod = -1 then 0       
-            		   else (atttypmod - 4) & 65535            -- calculate the scale  
-        			   end
-       		else 0
-  			end as numeric_scale,		
-	   not a.attnotnull as is_nullable,
-	   case when ( a.attgenerated = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
-                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
-                 || '''::regclass)')
-	        then true else false end as is_computed,
-
-	   case when ( a.attidentity = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
-                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
-                 || '''::regclass)')
-	        then true else false end as is_identity,
-
-	   case when (select indrelid from pg_index as px where px.indisprimary = true and px.indrelid = c.oid and a.attnum = ANY(px.indkey)) = c.oid then true else false end as is_primary,
-	   case when (select indrelid from pg_index as ix where ix.indrelid = c.oid and a.attnum = ANY(ix.indkey)) = c.oid then true else false end as is_indexed,
-	   case when (select conrelid from pg_constraint as cx where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) = c.oid then true else false end as is_foreignkey,
-       (  select cc.relname from pg_constraint as cx inner join pg_class as cc on cc.oid = cx.confrelid where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) as foeigntablename
-   from pg_class as c
-  inner join pg_namespace as ns on ns.oid = c.relnamespace
-  inner join pg_attribute as a on a.attrelid = c.oid and not a.attisdropped and attnum > 0
-  inner join pg_type as t on t.oid = a.atttypid
-  left outer join pg_attrdef as ad on ad.adrelid = a.attrelid and ad.adnum = a.attnum 
-  where ns.nspname = @schema
-    and c.relname = @tablename
- order by a.attnum
-";
-
-									using (var command = new NpgsqlCommand(query, connection))
-									{
-										command.Parameters.AddWithValue("@schema", table.Schema);
-										command.Parameters.AddWithValue("@tablename", table.Table);
-
-										using (var reader = command.ExecuteReader())
-										{
-											while (reader.Read())
-											{
-												ConstructPostgresqlColumn(table, reader);
-											}
-										}
-									}
-								}
-
-								if (UndefinedEntityModels.Count > 0)
-								{
-									WarnUndefinedContent(table, connectionString);
-								}
-							}
-							break;
-
-						case ElementType.Table:
-							{
-								using (var connection = new NpgsqlConnection(connectionString))
-								{
-									connection.Open();
-
-									var query = @"
-select a.attname as columnname,
-	   t.typname as datatype,
-	   case when t.typname = 'varchar' then a.atttypmod-4
-	        when t.typname = 'bpchar' then a.atttypmod-4
-			when t.typname = '_varchar' then a.atttypmod-4
-			when t.typname = '_bpchar' then a.atttypmod-4
-	        when a.atttypmod > -1 then a.atttypmod
-	        else a.attlen end as max_len,
-	   case atttypid
-            when 21 /*int2*/ then 16
-            when 23 /*int4*/ then 32
-            when 20 /*int8*/ then 64
-         	when 1700 /*numeric*/ then
-              	case when atttypmod = -1
-                     then 0
-                     else ((atttypmod - 4) >> 16) & 65535     -- calculate the precision
-                     end
-         	when 700 /*float4*/ then 24 /*FLT_MANT_DIG*/
-         	when 701 /*float8*/ then 53 /*DBL_MANT_DIG*/
-         	else 0
-  			end as numeric_precision,
-  		case when atttypid in (21, 23, 20) then 0
-    		 when atttypid in (1700) then            
-        		  case when atttypmod = -1 then 0       
-            		   else (atttypmod - 4) & 65535            -- calculate the scale  
-        			   end
-       		else 0
-  			end as numeric_scale,		
-	   not a.attnotnull as is_nullable,
-	   case when ( a.attgenerated = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
-                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
-                 || '''::regclass)')
-	        then true else false end as is_computed,
-
-	   case when ( a.attidentity = 'a' ) or  ( pg_get_expr(ad.adbin, ad.adrelid) = 'nextval('''
-                 || (pg_get_serial_sequence (a.attrelid::regclass::text, a.attname))::regclass
-                 || '''::regclass)')
-	        then true else false end as is_identity,
-
-	   case when (select indrelid from pg_index as px where px.indisprimary = true and px.indrelid = c.oid and a.attnum = ANY(px.indkey)) = c.oid then true else false end as is_primary,
-	   case when (select indrelid from pg_index as ix where ix.indrelid = c.oid and a.attnum = ANY(ix.indkey)) = c.oid then true else false end as is_indexed,
-	   case when (select conrelid from pg_constraint as cx where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) = c.oid then true else false end as is_foreignkey,
-       (  select cc.relname from pg_constraint as cx inner join pg_class as cc on cc.oid = cx.confrelid where cx.conrelid = c.oid and cx.contype = 'f' and a.attnum = ANY(cx.conkey)) as foeigntablename
-   from pg_class as c
-  inner join pg_namespace as ns on ns.oid = c.relnamespace
-  inner join pg_attribute as a on a.attrelid = c.oid and not a.attisdropped and attnum > 0
-  inner join pg_type as t on t.oid = a.atttypid
-  left outer join pg_attrdef as ad on ad.adrelid = a.attrelid and ad.adnum = a.attnum 
-  where ns.nspname = @schema
-    and c.relname = @tablename
- order by a.attnum
-";
-
-									using (var command = new NpgsqlCommand(query, connection))
-									{
-										command.Parameters.AddWithValue("@schema", table.Schema);
-										command.Parameters.AddWithValue("@tablename", table.Table);
-
-										using (var reader = command.ExecuteReader())
-										{
-											while (reader.Read())
-											{
-												ConstructPostgresqlColumn(table, reader);
-											}
-										}
-									}
-
-									if (UndefinedEntityModels.Count > 0)
-									{
-										WarnUndefinedContent(table, connectionString);
-									}
-								}
-							}
-							break;
+						Combobox_EntityClasses.SelectedIndex = i;
+						foundit = true;
+						break;
 					}
 				}
-				else if (server.DBType == DBServerType.MYSQL)
+
+				if (!foundit)
 				{
-					string connectionString = $"Server={server.ServerName};Port={server.PortNumber};Database={db};UID={server.Username};PWD={Textbox_Password.Password};";
+					Combobox_EntityClasses.SelectedIndex = -1;
+					Listbox_Tables.SelectedIndex = -1;
 
-					using (var connection = new MySqlConnection(connectionString))
-					{
-						connection.Open();
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+								"No matching entity class found. You will not be able to create a resource model without a matching entity model.",
+								"Microsoft Visual Studio",
+								OLEMSGICON.OLEMSGICON_WARNING,
+								OLEMSGBUTTON.OLEMSGBUTTON_OK,
+								OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
-						var query = @"
-SELECT c.COLUMN_NAME as 'columnName',
-       c.COLUMN_TYPE as 'datatype',
-       case when c.CHARACTER_MAXIMUM_LENGTH is null then -1 else c.CHARACTER_MAXIMUM_LENGTH end as 'max_len',
-       case when c.NUMERIC_PRECISION is null then 0 else c.NUMERIC_PRECISION end as 'precision',
-       case when c.NUMERIC_SCALE is null then 0 else c.NUMERIC_SCALE end as 'scale',       
-	   case when c.GENERATION_EXPRESSION != '' then 1 else 0 end as 'is_computed',
-       case when c.EXTRA = 'auto_increment' then 1 else 0 end as 'is_identity',
-       case when c.COLUMN_KEY = 'PRI' then 1 else 0 end as 'is_primary',
-       case when c.COLUMN_KEY != '' then 1 else 0 end as 'is_indexed',
-       case when c.IS_NULLABLE = 'no' then 0 else 1 end as 'is_nullable',
-       case when cu.REFERENCED_TABLE_NAME is not null then 1 else 0 end as 'is_foreignkey',
-       cu.REFERENCED_TABLE_NAME as 'foreigntablename'
-  FROM `INFORMATION_SCHEMA`.`COLUMNS` as c
-left outer join information_schema.KEY_COLUMN_USAGE as cu on cu.CONSTRAINT_SCHEMA = c.TABLE_SCHEMA
-                                                         and cu.TABLE_NAME = c.TABLE_NAME
-														 and cu.COLUMN_NAME = c.COLUMN_NAME
-                                                         and cu.REFERENCED_TABLE_NAME is not null
- WHERE c.TABLE_SCHEMA=@schema
-  AND c.TABLE_NAME=@tablename
-ORDER BY c.ORDINAL_POSITION;
-";
-
-						using (var command = new MySqlCommand(query, connection))
-						{
-							command.Parameters.AddWithValue("@schema", db);
-							command.Parameters.AddWithValue("@tablename", table.Table);
-							using (var reader = command.ExecuteReader())
-							{
-								while (reader.Read())
-								{
-									var x = reader.GetValue(8);
-
-									var dbColumn = new DBColumn
-									{
-										ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
-										EntityName = reader.GetString(0),
-										DBDataType = reader.GetString(1),
-										Length = Convert.ToInt64(reader.GetValue(2)),
-										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
-										NumericScale = Convert.ToInt32(reader.GetValue(4)),
-										IsComputed = Convert.ToBoolean(reader.GetValue(5)),
-										IsIdentity = Convert.ToBoolean(reader.GetValue(6)),
-										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(7)),
-										IsIndexed = Convert.ToBoolean(reader.GetValue(8)),
-										IsNullable = Convert.ToBoolean(reader.GetValue(9)),
-										IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
-										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
-									};
-
-									dbColumn.ModelDataType = DBHelper.GetMySqlDataType(dbColumn);
-									DatabaseColumns.Add(dbColumn);
-								}
-							}
-						}
-					}
+					Button_OK.IsEnabled = false;
+					Button_OK.IsDefault = false;
+					Button_Cancel.IsDefault = true;
 				}
 				else
 				{
-					string connectionString;
+					EntityClass entityModel = Combobox_EntityClasses.SelectedItem as EntityClass;
+					UndefinedResources.Clear();
 
-					if (server.DBAuth == DBAuthentication.WINDOWSAUTH)
-						connectionString = $"Server={server.ServerName};Database={db};Trusted_Connection=True;";
-					else
-						connectionString = $"Server={server.ServerName};Database={db};uid={server.Username};pwd={Textbox_Password.Password};";
-
-					using (var connection = new SqlConnection(connectionString))
+					foreach (var column in entityModel.Columns)
 					{
-						connection.Open();
-
-						var query = @"
-select c.name as column_name, 
-       x.name as datatype, 
-	   case when x.name = 'nchar' then c.max_length / 2
-	        when x.name = 'nvarchar' then c.max_length / 2
-			when x.name = 'text' then -1
-			when x.name = 'ntext' then -1
-			else c.max_length 
-			end as max_length,
-       case when c.precision is null then 0 else c.precision end as precision,
-       case when c.scale is null then 0 else c.scale end as scale,
-	   c.is_nullable, 
-	   c.is_computed, 
-	   c.is_identity,
-	   case when ( select i.is_primary_key from sys.indexes as i inner join sys.index_columns as ic on ic.object_id = i.object_id and ic.index_id = i.index_id and i.is_primary_key = 1 where i.object_id = t.object_id and ic.column_id = c.column_id ) is not null  
-	        then 1 
-			else 0
-			end as is_primary_key,
-       case when ( select count(*) from sys.index_columns as ix where ix.object_id = c.object_id and ix.column_id = c.column_id ) > 0 then 1 else 0 end as is_indexed,
-	   case when ( select count(*) from sys.foreign_key_columns as f where f.parent_object_id = c.object_id and f.parent_column_id = c.column_id ) > 0 then 1 else 0 end as is_foreignkey,
-	   ( select t.name from sys.foreign_key_columns as f inner join sys.tables as t on t.object_id = f.referenced_object_id where f.parent_object_id = c.object_id and f.parent_column_id = c.column_id ) as foreigntablename
-  from sys.columns as c
- inner join sys.tables as t on t.object_id = c.object_id
- inner join sys.schemas as s on s.schema_id = t.schema_id
- inner join sys.types as x on x.system_type_id = c.system_type_id and x.user_type_id = c.user_type_id
- where t.name = @tablename
-   and s.name = @schema
-   and x.name != 'sysname'
- order by t.name, c.column_id
-";
-
-						using (var command = new SqlCommand(query, connection))
+						if (column.ModelDataType != null && column.ModelDataType.Equals(NpgsqlDbType.Unknown))
 						{
-							command.Parameters.AddWithValue("@schema", table.Schema);
-							command.Parameters.AddWithValue("@tablename", table.Table);
+							var entityType = column.ModelDataType;
+							var childEntityModel = codeService.GetEntityClassBySchema(table.Schema, table.Table);
 
-							using (var reader = command.ExecuteReader())
+							if (childEntityModel != null)
 							{
-								while (reader.Read())
+								var resourceModel = codeService.GetResourceClass(childEntityModel.ClassName);
+
+								if (resourceModel == null)
 								{
-									var dbColumn = new DBColumn
+									var className = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(childEntityModel.TableName))}";
+									//UndefinedResources.Add(className);
+
+
+									var r = new ResourceClass
 									{
-										ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
-										EntityName = reader.GetString(0),
-										DBDataType = reader.GetString(1),
-										Length = Convert.ToInt64(reader.GetValue(2)),
-										NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
-										NumericScale = Convert.ToInt32(reader.GetValue(4)),
-										IsNullable = Convert.ToBoolean(reader.GetValue(5)),
-										IsComputed = Convert.ToBoolean(reader.GetValue(6)),
-										IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
-										IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
-										IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
-										IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
-										ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
+										Entity = childEntityModel
 									};
+									UndefinedResources.Add(r);
 
 
-									if (string.Equals(dbColumn.DBDataType, "geometry", StringComparison.OrdinalIgnoreCase))
-									{
-										Listbox_Tables.SelectedIndex = -1;
-										MessageBox.Show(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
-										return;
-									}
+									//resourceModel = new ResourceModel()
+									//{
+									//	ProjectName = ResourceModelsFolder.ProjectName,
+									//	Namespace = ResourceModelsFolder.Namespace,
+									//	Folder = Path.Combine(ResourceModelsFolder.Folder, $"{className}.cs"),
+									//	ClassName = className,
+									//	ServerType = server.DBType,
+									//	EntityModel = childEntityModel,
+									//	Columns = new DBColumn[] { }
+									//};
 
-									if (string.Equals(dbColumn.DBDataType, "geography", StringComparison.OrdinalIgnoreCase))
-									{
-										Listbox_Tables.SelectedIndex = -1;
-										MessageBox.Show(".NET Core does not support the SQL Server geography data type. You cannot create an entity model from this table.", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
-										return;
-									}
+									//UndefinedResources.Add(resourceModel);
+								}
+							}
+							else
+							{
+								VsShellUtilities.ShowMessageBox(ServiceProvider,
+											$"The entity class {entityModel.ClassName} references the column {entityType}, a database composite or enumeration that is not defined.\r\n\r\nPlease ensure all dependent composites and enumerations are defined as entity classes before attempting to produce a resource class for this entity.",
+											"Microsoft Visual Studio",
+											OLEMSGICON.OLEMSGICON_WARNING,
+											OLEMSGBUTTON.OLEMSGBUTTON_OK,
+											OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
-									if (string.Equals(dbColumn.DBDataType, "variant", StringComparison.OrdinalIgnoreCase))
-									{
-										Listbox_Tables.SelectedIndex = -1;
-										MessageBox.Show("COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
-										return;
-									}
+								Button_OK.IsEnabled = false;
+								Button_OK.IsDefault = false;
+								Button_Cancel.IsDefault = true;
 
-									dbColumn.ModelDataType = DBHelper.GetSQLServerDataType(dbColumn);
-									DatabaseColumns.Add(dbColumn);
+								Listbox_Tables.SelectedIndex = -1;
+								UndefinedResources.Clear();
+							}
+						}
+					}
+
+					if (UndefinedResources.Count() > 0)
+					{
+						var className = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityModel.TableName))}";
+
+						if (!VsShellUtilities.PromptYesNo(
+								$"The class {className} contains references to composits or enumerations for which therer is no defined resource model.\r\n\r\nWould you like COFRS to generate the missing resource models as part of generating this model?",
+								"Microsoft Visual Studio",
+								OLEMSGICON.OLEMSGICON_WARNING,
+								shell))
+						{
+							Listbox_Tables.SelectedIndex = -1;
+							UndefinedResources.Clear();
+						}
+					}
+
+					Checkbox_RenderAsEnum.IsChecked = false;
+					Checkbox_RenderAsEnum.IsEnabled = false;
+					Checkbox_RenderAsEnum.Visibility = Visibility.Hidden;
+
+					if (entityModel.Columns.Count() == 2)
+					{
+						if (entityModel.Columns[0].IsPrimaryKey)
+						{
+							if (string.Equals(entityModel.Columns[0].ModelDataType, "byte", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "sbyte", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "short", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "ushort", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "int", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "uint", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "long", StringComparison.OrdinalIgnoreCase) ||
+								string.Equals(entityModel.Columns[0].ModelDataType, "ulong", StringComparison.OrdinalIgnoreCase))
+							{
+								if (string.Equals(entityModel.Columns[1].ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
+								{
+									Checkbox_RenderAsEnum.IsEnabled = true;
+									Checkbox_RenderAsEnum.Visibility = Visibility.Visible;
 								}
 							}
 						}
 					}
 				}
+
+				Populating = false;
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+							error.Message,
+							"Microsoft Visual Studio",
+							OLEMSGICON.OLEMSGICON_CRITICAL,
+							OLEMSGBUTTON.OLEMSGBUTTON_OK,
+							OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+
+				Button_OK.IsEnabled = false;
+				Button_OK.IsDefault = false;
+				Button_Cancel.IsDefault = true;
 			}
 		}
 
-
-
 		private void OK_Click(object sender, RoutedEventArgs e)
 		{
-			if (Listbox_Tables.SelectedIndex == -1)
-			{
-				MessageBox.Show("You must select a database table in order to create an entity model", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
-				return;
-			}
-
 			Save();
 
-			var server = (DBServer)Combobox_Server.SelectedItem;
-			DatabaseTable = (DBTable)Listbox_Tables.SelectedItem;
-
-			if (server.DBType == DBServerType.POSTGRESQL)
-			{
-				UndefinedEntityModels = DBHelper.GenerateEntityClassList(UndefinedEntityModels,
-																		 EntityModelsFolder.Folder,
-																		 ConnectionString);
-			}
+			EntityModel = (EntityClass) Combobox_EntityClasses.SelectedItem;
+			GenerateAsEnum = Checkbox_RenderAsEnum.IsChecked.HasValue && Checkbox_RenderAsEnum.IsChecked.Value;
 
 			DialogResult = true;
 			Close();
@@ -1626,162 +1473,6 @@ select name
 			//	We're done. Turn off the populating flag.
 			Populating = false;
 		}
-		#endregion
-
-		#region Utility Functions
-		private void ConstructPostgresqlColumn(DBTable table, NpgsqlDataReader reader)
-		{
-			var codeService = COFRSServiceFactory.GetService<ICodeService>();
-			var entityName = reader.GetString(0);
-			var columnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0)));
-
-			var dbColumn = new DBColumn
-			{
-				ColumnName = codeService.CorrectForReservedNames(codeService.NormalizeClassName(reader.GetString(0))),
-				EntityName = entityName,
-				DBDataType = reader.GetString(1),
-				Length = Convert.ToInt64(reader.GetValue(2)),
-				NumericPrecision = Convert.ToInt32(reader.GetValue(3)),
-				NumericScale = Convert.ToInt32(reader.GetValue(4)),
-				IsNullable = Convert.ToBoolean(reader.GetValue(5)),
-				IsComputed = Convert.ToBoolean(reader.GetValue(6)),
-				IsIdentity = Convert.ToBoolean(reader.GetValue(7)),
-				IsPrimaryKey = Convert.ToBoolean(reader.GetValue(8)),
-				IsIndexed = Convert.ToBoolean(reader.GetValue(9)),
-				IsForeignKey = Convert.ToBoolean(reader.GetValue(10)),
-				ForeignTableName = reader.IsDBNull(11) ? string.Empty : reader.GetString(11)
-			};
-
-			dbColumn.ModelDataType = DBHelper.GetPostgresDataType(dbColumn);
-
-			if (string.IsNullOrWhiteSpace(dbColumn.ModelDataType))
-			{
-				var theChildEntityClass = codeService.GetEntityClassBySchema(table.Schema, dbColumn.DBDataType);
-
-				//	See if this column type is already defined...
-				if (theChildEntityClass == null)
-				{
-					//	It's not defined. See if it is already included in the undefined list...
-					if (UndefinedEntityModels.FirstOrDefault(ent =>
-					   string.Equals(ent.SchemaName, table.Schema, StringComparison.OrdinalIgnoreCase) &&
-					   string.Equals(ent.TableName, dbColumn.DBDataType, StringComparison.OrdinalIgnoreCase)) == null)
-					{
-						//	It's not defined, and it's not in the undefined list, so it is unknown. Let's make it known
-						//	by constructing it and including it in the undefined list.
-						entityName = dbColumn.DBDataType;
-						var className = $"E{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityName))}";
-
-						var entity = new EntityModel()
-						{
-							SchemaName = table.Schema,
-							ClassName = className,
-							TableName = entityName,
-							Folder = Path.Combine(EntityModelsFolder.Folder, $"{className}.cs"),
-							Namespace = EntityModelsFolder.Namespace,
-							ServerType = DBServerType.POSTGRESQL,
-							ProjectName = EntityModelsFolder.ProjectName
-						};
-
-						UndefinedEntityModels.Add(entity);
-					}
-				}
-
-				dbColumn.ModelDataType = dbColumn.DBDataType;
-			}
-
-			DatabaseColumns.Add(dbColumn);
-		}
-
-		private void WarnUndefinedContent(DBTable table, string connectionString)
-		{
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-			var message = new StringBuilder();
-			message.Append($"The entity model {table.Table} uses ");
-
-			var unknownEnums = new List<string>();
-			var unknownComposits = new List<string>();
-			var unknownTables = new List<string>();
-
-			foreach (var unknownClass in UndefinedEntityModels)
-			{
-				unknownClass.ElementType = DBHelper.GetElementType(mDte, unknownClass.SchemaName, unknownClass.TableName, connectionString);
-
-				if (unknownClass.ElementType == ElementType.Enum)
-					unknownEnums.Add(unknownClass.TableName);
-				else if (unknownClass.ElementType == ElementType.Composite)
-					unknownComposits.Add(unknownClass.TableName);
-				else if (unknownClass.ElementType == ElementType.Table)
-					unknownTables.Add(unknownClass.TableName);
-			}
-
-			if (unknownEnums.Count > 0)
-			{
-				if (unknownEnums.Count > 1)
-					message.Append("enum types of ");
-				else
-					message.Append("an enum type of ");
-
-				for (int index = 0; index < unknownEnums.Count(); index++)
-				{
-					if (index == unknownEnums.Count() - 1 && unknownEnums.Count > 1)
-						message.Append($" and {unknownEnums[index]}");
-					else if (index > 0)
-						message.Append($", {unknownEnums[index]}");
-					else if (index == 0)
-						message.Append(unknownEnums[index]);
-				}
-			}
-
-			if (unknownComposits.Count > 0)
-			{
-				if (unknownEnums.Count > 0)
-					message.Append("and ");
-
-				if (unknownComposits.Count > 1)
-					message.Append("composite types of ");
-				else
-					message.Append("a composite type of ");
-
-				for (int index = 0; index < unknownComposits.Count(); index++)
-				{
-					if (index == unknownComposits.Count() - 1 && unknownComposits.Count > 1)
-						message.Append($" and {unknownComposits[index]}");
-					else if (index > 0)
-						message.Append($", {unknownComposits[index]}");
-					else if (index == 0)
-						message.Append(unknownComposits[index]);
-				}
-			}
-
-			if (unknownTables.Count > 0)
-			{
-				if (unknownEnums.Count > 0 || unknownComposits.Count > 0)
-					message.Append("and ");
-
-				if (unknownTables.Count > 1)
-					message.Append("table types of ");
-				else
-					message.Append("a table type of ");
-
-				for (int index = 0; index < unknownTables.Count(); index++)
-				{
-					if (index == unknownTables.Count() - 1 && unknownTables.Count > 1)
-						message.Append($" and {unknownTables[index]}");
-					else if (index > 0)
-						message.Append($", {unknownTables[index]}");
-					else if (index == 0)
-						message.Append(unknownTables[index]);
-				}
-			}
-
-			message.Append(".\r\n\r\nYou cannot generate this class until all the dependencies have been generated. Would you like to generate the undefined entities as part of generating this class?");
-
-			var answer = MessageBox.Show(message.ToString(), "Microsoft Visual Studio", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-			if (answer == MessageBoxResult.No)
-				Button_OK.IsEnabled = false;
-		}
-
 		#endregion
 	}
 }

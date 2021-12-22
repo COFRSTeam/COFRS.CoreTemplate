@@ -175,7 +175,7 @@ namespace COFRS.Template.Common.Wizards
             }
             catch (Exception error)
 			{
-                var result = VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
+                VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
                                                 error.Message,
                                                 "Microsoft Visual Studio",
                                                 OLEMSGICON.OLEMSGICON_CRITICAL,

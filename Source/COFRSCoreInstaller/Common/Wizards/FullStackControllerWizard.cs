@@ -185,7 +185,7 @@ namespace COFRS.Template.Common.Wizards
 
 						theFile.AppendLine("using COFRS;");
 						theFile.AppendLine();
-						theFile.AppendLine($"namespace {projectMapping.ExampleNamespace}");
+						theFile.AppendLine($"namespace {projectMapping.EntityNamespace}");
 						theFile.AppendLine("{");
 
 						theFile.Append(emodel);
