@@ -12,14 +12,11 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Constants = EnvDTE.Constants;
 using Task = System.Threading.Tasks.Task;
 
@@ -35,17 +32,24 @@ namespace COFRS.Template
         /// </summary>
 		public const int AddCollectionId = 0x0100;
         public const int EditMappingId = 0x0101;
-        public const int AddEntityModelId = 0x102;
+		public const int AddEntityModelId = 0x102;
+		public const int AddResourceModelId = 0x103;
+		public const int AddControllerId = 0x104;
+		public const int AddFullControllerId = 0x105;
 
-        /// <summary>
-        /// Command menu group (command set GUID).
-        /// </summary>
-        public static readonly Guid CommandSet = new Guid("2badb8a1-54a6-4ad8-8f80-4c67668ee954");
+		/// <summary>
+		/// Command menu group (command set GUID).
+		/// </summary>
+		public static readonly Guid CommandSet = new Guid("2badb8a1-54a6-4ad8-8f80-4c67668ee954");
 
         /// <summary>
         /// VS Package that provides this command, not null.
         /// </summary>
         private readonly AsyncPackage package;
+
+		private static Events2 _events2 = null;
+		private static SolutionEvents _solutionEvents = null;
+		private static ProjectItemsEvents _projectItemsEvents = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="COFRSMenuExtensions"/> class.
@@ -55,7 +59,7 @@ namespace COFRS.Template
         /// <param name="commandService">Command service to add command to, not null.</param>
         private COFRSMenuExtensions(AsyncPackage package, OleMenuCommandService commandService)
         {
-            this.package = package ?? throw new ArgumentNullException(nameof(package));
+			this.package = package ?? throw new ArgumentNullException(nameof(package));
             commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
 
             var addCollectionCommandId = new CommandID(CommandSet, AddCollectionId);
@@ -68,16 +72,31 @@ namespace COFRS.Template
             EditMappingMenu.BeforeQueryStatus += new EventHandler(OnBeforeResetMapping);
             commandService.AddCommand(EditMappingMenu);
 
-            var addEntityModelCommandId = new CommandID(CommandSet, AddEntityModelId);
-            OleMenuCommand AddEntityModelMenu = new OleMenuCommand(new EventHandler(OnAddEntityModel), addEntityModelCommandId);
-            AddEntityModelMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddEntityModel);
-            commandService.AddCommand(AddEntityModelMenu);
-        }
+			var addEntityModelCommandId = new CommandID(CommandSet, AddEntityModelId);
+			OleMenuCommand AddEntityModelMenu = new OleMenuCommand(new EventHandler(OnAddEntityModel), addEntityModelCommandId);
+			AddEntityModelMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddEntityModel);
+			commandService.AddCommand(AddEntityModelMenu);
 
-        /// <summary>
-        /// Gets the instance of the command.
-        /// </summary>
-        public static COFRSMenuExtensions Instance
+			var addResourceModelCommandId = new CommandID(CommandSet, AddResourceModelId);
+			OleMenuCommand AddResourceModelMenu = new OleMenuCommand(new EventHandler(OnAddResourceModel), addResourceModelCommandId);
+			AddResourceModelMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddResourceModel);
+			commandService.AddCommand(AddResourceModelMenu);
+
+			var addControllerCommandId = new CommandID(CommandSet, AddControllerId);
+			OleMenuCommand AddControllerMenu = new OleMenuCommand(new EventHandler(OnAddController), addControllerCommandId);
+			AddControllerMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddController);
+			commandService.AddCommand(AddControllerMenu);
+
+			var addFullControllerCommandId = new CommandID(CommandSet, AddFullControllerId);
+			OleMenuCommand AddFullControllerMenu = new OleMenuCommand(new EventHandler(OnAddFullController), addFullControllerCommandId);
+			AddFullControllerMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddFullController);
+			commandService.AddCommand(AddFullControllerMenu);
+		}
+
+		/// <summary>
+		/// Gets the instance of the command.
+		/// </summary>
+		public static COFRSMenuExtensions Instance
         {
             get;
             private set;
@@ -104,9 +123,302 @@ namespace COFRS.Template
             // the UI thread.
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
 
-            OleMenuCommandService commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
+			var mDte = (DTE2)Package.GetGlobalService(typeof(SDTE));
+
+			_events2 = (Events2)mDte.Events;
+			_solutionEvents = _events2.SolutionEvents;
+			_projectItemsEvents = _events2.ProjectItemsEvents;
+
+			OleMenuCommandService commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
             Instance = new COFRSMenuExtensions(package, commandService);
-        }
+
+			_solutionEvents.Opened += Instance.OnSolutionOpened;
+			_projectItemsEvents.ItemRemoved += Instance.OnProjectItemRemoved;
+		}
+
+		private void OnProjectItemRemoved(ProjectItem ProjectItem)
+		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			codeService.OnProjectItemRemoved(ProjectItem);
+		}
+
+		private void OnSolutionOpened()
+		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			codeService.OnSolutionOpened();
+		}
+
+		private void OnBeforeAddFullController(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+
+
+			if (selectedItems.Length > 1 || selectedItems.Length == 0)
+			{
+				var myCommand = sender as OleMenuCommand;
+				myCommand.Visible = false;
+			}
+			else
+			{
+				ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+
+				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
+					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
+				{
+					var codeService = COFRSServiceFactory.GetService<ICodeService>();
+					var projectMap = codeService.LoadProjectMapping();
+
+					var controllersFolder = projectMap.ControllersFolder;
+					var projectItemPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+					{
+						ThreadHelper.ThrowIfNotOnUIThread();
+						return p.Name.Equals("FullPath");
+					})?.Value.ToString().Trim('\\');
+
+					if (projectItemPath.Equals(controllersFolder))
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = true;
+					}
+					else
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = false;
+					}
+				}
+				else
+				{
+					var myCommand = sender as OleMenuCommand;
+					myCommand.Visible = false;
+				}
+			}
+		}
+
+
+		private void OnAddFullController(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+
+			ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+
+			var projectFolderNamespace = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+			{
+				ThreadHelper.ThrowIfNotOnUIThread();
+				return p.Name.Equals("DefaultNamespace", StringComparison.OrdinalIgnoreCase);
+			});
+
+			var projectFolderPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+			{
+				ThreadHelper.ThrowIfNotOnUIThread();
+				return p.Name.Equals("FullPath", StringComparison.OrdinalIgnoreCase);
+			});
+
+
+			var dialog = new GetClassNameDialog("COFRS Full Stack Generator", "Resource");
+			var result = dialog.ShowDialog();
+
+			if (result.HasValue && result.Value == true)
+			{
+				var replacementsDictionary = new Dictionary<string, string>();
+
+				for (int i = 0; i < 10; i++)
+				{
+					replacementsDictionary.Add($"$guid{i + 1}$", Guid.NewGuid().ToString());
+				}
+
+				var className = dialog.ClassName;
+				if (className.EndsWith(".cs"))
+					className = className.Substring(0, className.Length - 3);
+
+				replacementsDictionary.Add("$time$", DateTime.Now.ToString());
+				replacementsDictionary.Add("$year$", DateTime.Now.Year.ToString());
+				replacementsDictionary.Add("$username$", Environment.UserName);
+				replacementsDictionary.Add("$userdomain$", Environment.UserDomainName);
+				replacementsDictionary.Add("$machinename$", Environment.MachineName);
+				replacementsDictionary.Add("$clrversion$", GetRunningFrameworkVersion());
+				replacementsDictionary.Add("$registeredorganization$", GetOrganization());
+				replacementsDictionary.Add("$runsilent$", "True");
+				replacementsDictionary.Add("$solutiondirectory$", Path.GetDirectoryName(mDte.Solution.FullName));
+				replacementsDictionary.Add("$rootname$", $"{className}.cs");
+				replacementsDictionary.Add("$targetframeworkversion$", "6.0");
+				replacementsDictionary.Add("$targetframeworkidentifier", ".NETCoreApp");
+				replacementsDictionary.Add("$safeitemname$", codeService.NormalizeClassName(codeService.CorrectForReservedNames(className)));
+				replacementsDictionary.Add("$rootnamespace$", projectFolderNamespace.Value.ToString());
+
+				var wizard = new FullStackControllerWizard();
+
+				wizard.RunStarted(mDte, replacementsDictionary, Microsoft.VisualStudio.TemplateWizard.WizardRunKind.AsNewItem, null);
+
+				var projectItemPath = Path.Combine(projectFolderPath.Value.ToString(), replacementsDictionary["$rootname$"]);
+
+				if (wizard.ShouldAddProjectItem("Controllers"))
+				{
+					var theFile = new StringBuilder();
+
+					theFile.AppendLine("using System;");
+
+					if (replacementsDictionary.ContainsKey("$barray$"))
+						if (replacementsDictionary["$barray$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Collections;");
+
+					theFile.AppendLine("using System.Collections.Generic;");
+
+					if (replacementsDictionary.ContainsKey("$image$"))
+						if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Drawing;");
+
+					if (replacementsDictionary.ContainsKey("$net$"))
+						if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Net;");
+
+					if (replacementsDictionary.ContainsKey("$netinfo$"))
+						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Net.NetworkInformation;");
+
+					if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
+						if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using NpgsqlTypes;");
+
+
+					theFile.AppendLine("using COFRS;");
+					theFile.AppendLine();
+					theFile.AppendLine($"namespace {projectFolderNamespace.Value}");
+					theFile.AppendLine("{");
+
+					theFile.Append(replacementsDictionary["$controllermodel$"]);
+					theFile.AppendLine("}");
+
+					File.WriteAllText(projectItemPath, theFile.ToString());
+
+					var parentProject = codeService.GetProjectFromFolder(projectFolderPath.Value.ToString());
+					ProjectItem controllerItem;
+
+					if (parentProject.GetType() == typeof(Project))
+						controllerItem = ((Project)parentProject).ProjectItems.AddFromFile(projectItemPath);
+					else
+						controllerItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(projectItemPath);
+
+					wizard.ProjectItemFinishedGenerating(controllerItem);
+					wizard.BeforeOpeningFile(controllerItem);
+
+					var window = controllerItem.Open();
+					window.Activate();
+
+					wizard.RunFinished();
+				}
+			}
+		}
+
+		private void OnBeforeAddController(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+
+
+			if (selectedItems.Length > 1 || selectedItems.Length == 0)
+			{
+				var myCommand = sender as OleMenuCommand;
+				myCommand.Visible = false;
+			}
+			else
+			{
+				ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+
+				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
+					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
+				{
+					var codeService = COFRSServiceFactory.GetService<ICodeService>();
+					var projectMap = codeService.LoadProjectMapping();
+
+					var controllersFolder = projectMap.ControllersFolder;
+					var projectItemPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+					{
+						ThreadHelper.ThrowIfNotOnUIThread();
+						return p.Name.Equals("FullPath");
+					})?.Value.ToString().Trim('\\');
+
+					if (projectItemPath.Equals(controllersFolder))
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = true;
+					}
+					else
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = false;
+					}
+				}
+				else
+				{
+					var myCommand = sender as OleMenuCommand;
+					myCommand.Visible = false;
+				}
+			}
+		}
+
+
+		private void OnAddController(object sender, EventArgs e)
+		{
+
+		}
+
+		private void OnBeforeAddResourceModel(object sender, EventArgs e)
+        {
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+
+
+			if (selectedItems.Length > 1 || selectedItems.Length == 0)
+			{
+				var myCommand = sender as OleMenuCommand;
+				myCommand.Visible = false;
+			}
+			else
+			{
+				ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+
+				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
+					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
+				{
+					var codeService = COFRSServiceFactory.GetService<ICodeService>();
+					var projectMap = codeService.LoadProjectMapping();
+
+					var resourceModelsFolder = projectMap.ResourceFolder;
+					var projectItemPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+					{
+						ThreadHelper.ThrowIfNotOnUIThread();
+						return p.Name.Equals("FullPath");
+					})?.Value.ToString().Trim('\\');
+
+					if (projectItemPath.Equals(resourceModelsFolder))
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = true;
+					}
+					else
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = false;
+					}
+				}
+				else
+				{
+					var myCommand = sender as OleMenuCommand;
+					myCommand.Visible = false;
+				}
+			}
+		}
+
+		private void OnAddResourceModel(object sender, EventArgs e)
+		{ 
+		}
 
 		private void OnBeforeAddEntityModel(object sender, EventArgs e)
 		{
@@ -141,6 +453,11 @@ namespace COFRS.Template
 					{
 						var myCommand = sender as OleMenuCommand;
 						myCommand.Visible = true;
+					}
+					else
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = false;
 					}
 				}
 				else
@@ -268,41 +585,6 @@ namespace COFRS.Template
 		}
 
 
-		public string GetRunningFrameworkVersion()
-		{
-			string netVer = Environment.Version.ToString();
-			Assembly assObj = typeof(Object).GetTypeInfo().Assembly;
-			if (assObj != null)
-			{
-				AssemblyFileVersionAttribute attr;
-				attr = (AssemblyFileVersionAttribute)assObj.GetCustomAttribute(typeof(AssemblyFileVersionAttribute));
-				if (attr != null)
-				{
-					netVer = attr.Version;
-				}
-			}
-			return netVer;
-		}
-
-		public string GetOrganization()
-        {
-			string organization;
-
-			var regSoftware = Registry.LocalMachine.OpenSubKey("SOFTWARE");
-			var regMicrosoft = regSoftware.OpenSubKey("Microsoft");
-			var regWindowsNT = regMicrosoft.OpenSubKey("Windows NT");
-			var regCurrentVersion = regWindowsNT.OpenSubKey("CurrentVersion");
-
-			organization = regCurrentVersion.GetValue("RegisteredOrganization").ToString();
-
-			regCurrentVersion.Close();
-			regWindowsNT.Close();
-			regMicrosoft.Close();
-			regSoftware.Close();
-
-			return organization;
-		}
-
 		private void OnBeforeAddCollection(object sender, EventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -317,20 +599,29 @@ namespace COFRS.Template
 			else
 			{
 				EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
-				var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
 
-				if (theNamespace != null)
+				if (item.FileCodeModel != null && item.FileCodeModel.CodeElements != null)
 				{
-					var theClass = theNamespace.Children.OfType<CodeClass2>().First();
+					var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
 
-					if (theClass != null)
+					if (theNamespace != null)
 					{
-						var theAttribute = theClass.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+						var theClass = theNamespace.Children.OfType<CodeClass2>().First();
 
-						if (theAttribute != null)
+						if (theClass != null)
 						{
-							myCommand.Enabled = true;
-							myCommand.Visible = true;
+							var theAttribute = theClass.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+
+							if (theAttribute != null)
+							{
+								myCommand.Enabled = true;
+								myCommand.Visible = true;
+							}
+							else
+							{
+								myCommand.Enabled = false;
+								myCommand.Visible = false;
+							}
 						}
 						else
 						{
@@ -343,11 +634,6 @@ namespace COFRS.Template
 						myCommand.Enabled = false;
 						myCommand.Visible = false;
 					}
-				}
-				else
-				{
-					myCommand.Enabled = false;
-					myCommand.Visible = false;
 				}
 			}
 		}
@@ -501,7 +787,7 @@ namespace COFRS.Template
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var myCommand = sender as OleMenuCommand;
-			var mDte = (DTE2)Package.GetGlobalService(typeof(SDTE));
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
 
 			if (selectedItems.Length > 1)
@@ -510,21 +796,30 @@ namespace COFRS.Template
 			}
 			else
 			{
-				EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
-				var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
+				ProjectItem item = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
 
-				if (theNamespace != null)
+				if (item.FileCodeModel != null && item.FileCodeModel.CodeElements != null)
 				{
-					var theClass = theNamespace.Children.OfType<CodeClass2>().First();
+					var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
 
-					if (theClass != null)
+					if (theNamespace != null)
 					{
-						var theBaseClass = theClass.Bases.OfType<CodeClass2>().FirstOrDefault(a => a.Name.Equals("Profile"));
+						var theClass = theNamespace.Children.OfType<CodeClass2>().First();
 
-						if (theBaseClass != null)
+						if (theClass != null)
 						{
-							myCommand.Enabled = true;
-							myCommand.Visible = true;
+							var theBaseClass = theClass.Bases.OfType<CodeClass2>().FirstOrDefault(a => a.Name.Equals("Profile"));
+
+							if (theBaseClass != null)
+							{
+								myCommand.Enabled = true;
+								myCommand.Visible = true;
+							}
+							else
+							{
+								myCommand.Enabled = false;
+								myCommand.Visible = false;
+							}
 						}
 						else
 						{
@@ -537,11 +832,6 @@ namespace COFRS.Template
 						myCommand.Enabled = false;
 						myCommand.Visible = false;
 					}
-				}
-				else
-				{
-					myCommand.Enabled = false;
-					myCommand.Visible = false;
 				}
 			}
 		}
@@ -697,6 +987,41 @@ namespace COFRS.Template
 
 
 		#region Helper Functions
+		public string GetRunningFrameworkVersion()
+		{
+			string netVer = Environment.Version.ToString();
+			Assembly assObj = typeof(Object).GetTypeInfo().Assembly;
+			if (assObj != null)
+			{
+				AssemblyFileVersionAttribute attr;
+				attr = (AssemblyFileVersionAttribute)assObj.GetCustomAttribute(typeof(AssemblyFileVersionAttribute));
+				if (attr != null)
+				{
+					netVer = attr.Version;
+				}
+			}
+			return netVer;
+		}
+
+		public string GetOrganization()
+        {
+			string organization;
+
+			var regSoftware = Registry.LocalMachine.OpenSubKey("SOFTWARE");
+			var regMicrosoft = regSoftware.OpenSubKey("Microsoft");
+			var regWindowsNT = regMicrosoft.OpenSubKey("Windows NT");
+			var regCurrentVersion = regWindowsNT.OpenSubKey("CurrentVersion");
+
+			organization = regCurrentVersion.GetValue("RegisteredOrganization").ToString();
+
+			regCurrentVersion.Close();
+			regWindowsNT.Close();
+			regMicrosoft.Close();
+			regSoftware.Close();
+
+			return organization;
+		}
+
 		private static bool IsLineEmpty(EditPoint2 editPoint)
 		{
 			EditPoint2 startOfLine = (EditPoint2)editPoint.CreateEditPoint();

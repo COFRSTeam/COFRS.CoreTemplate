@@ -1,10 +1,10 @@
-﻿using COFRS.Template.Common.Forms;
-using COFRS.Template.Common.Models;
+﻿using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
 using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
@@ -46,6 +46,7 @@ namespace COFRS.Template.Common.Wizards
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = automationObject as DTE2;
             var codeService = COFRSServiceFactory.GetService<ICodeService>();
+            var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
 
             try
             {
@@ -56,12 +57,11 @@ namespace COFRS.Template.Common.Wizards
                 //  Make sure we are where we're supposed to be
                 if ( !codeService.IsChildOf(projectMapping.EntityFolder, installationFolder.Folder))
                 {
-                    var result = MessageBox.Show($"You are attempting to install an entity model into {codeService.GetRelativeFolder(installationFolder)}. Typically, entity models reside in {codeService.GetRelativeFolder(projectMapping.GetEntityModelsFolder())}.\r\n\r\nDo you wish to place the new entity model in this non-standard location?", 
-                        "Warning: Non-Standard Location", 
-                        MessageBoxButtons.YesNo, 
-                        MessageBoxIcon.Warning);
-
-                    if (result == DialogResult.No)
+                    if (!VsShellUtilities.PromptYesNo(
+                                $"You are attempting to install an entity model into {codeService.GetRelativeFolder(installationFolder)}. Typically, entity models reside in {codeService.GetRelativeFolder(projectMapping.GetEntityModelsFolder())}.\r\n\r\nDo you wish to place the new entity model in this non-standard location?",
+                                "Microsoft Visual Studio",
+                                OLEMSGICON.OLEMSGICON_WARNING,
+                                shell))
                     {
                         Proceed = false;
                         return;
@@ -175,8 +175,14 @@ namespace COFRS.Template.Common.Wizards
             }
             catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				Proceed = false;
+                var result = VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
+                                                error.Message,
+                                                "Microsoft Visual Studio",
+                                                OLEMSGICON.OLEMSGICON_CRITICAL,
+                                                OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                                                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+
+                Proceed = false;
 			}
 		}
 

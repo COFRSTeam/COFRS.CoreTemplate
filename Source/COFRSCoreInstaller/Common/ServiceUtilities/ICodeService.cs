@@ -26,6 +26,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 
         void SaveProjectMapping();
 
+        void OnProjectItemRemoved(ProjectItem ProjectItem);
+
+        void OnSolutionOpened();
+
         EntityClass GetEntityClassBySchema(string schema, string tableName);
 
         ResourceClass GetResourceClassBySchema(string schema, string tableName);
