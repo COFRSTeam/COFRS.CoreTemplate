@@ -21,42 +21,30 @@ namespace COFRS.Template.Common.ServiceUtilities
         private ProjectMapping projectMapping = null;
         private readonly List<EntityClass> entityClassList = new List<EntityClass>();
         private readonly List<ResourceClass> resourceClassList = new List<ResourceClass>();
-        private readonly Events2 _events2 = null;
-        private readonly SolutionEvents _solutionEvents = null;
-        private readonly ProjectItemsEvents _projectItemsEvents = null;
-        private ProjectItem _settingsFile = null;
+		private ProjectItem _localSettingsFile = null;
+		private ProjectItem _globalSettingsFile = null;
 
-        public CodeService()
+		public CodeService()
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var mDte = (DTE2)Package.GetGlobalService(typeof(SDTE));
+		}
 
-            _events2 = (Events2)mDte.Events;
-            _solutionEvents = _events2.SolutionEvents;
-            _projectItemsEvents = _events2.ProjectItemsEvents;
-
-            _solutionEvents.Opened += OnSolutionOpened;
-            _projectItemsEvents.ItemRemoved += OnProjectItemRemoved;
-            _settingsFile = mDte.Solution.FindProjectItem("appsettings.Local.json");
-        }
-
-        #region Properties
-        public string ConnectionString
+		#region Properties
+		public string ConnectionString
         {
             get
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
                 string jsonText;
 
-				if (_settingsFile == null)
+				if (_localSettingsFile == null)
 				{
 					var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-					_settingsFile = mDte.Solution.FindProjectItem("appSettings.json");
+					_localSettingsFile = mDte.Solution.FindProjectItem("appSettings.Local.json");
 				}
 
-				if (!_settingsFile.IsOpen)
+				if (!_localSettingsFile.IsOpen)
                 {
-                    var filePath = _settingsFile.Properties.OfType<Property>().FirstOrDefault(p =>
+                    var filePath = _localSettingsFile.Properties.OfType<Property>().FirstOrDefault(p =>
                     {
                         ThreadHelper.ThrowIfNotOnUIThread();
                         return p.Name.Equals("FullPath");
@@ -69,18 +57,18 @@ namespace COFRS.Template.Common.ServiceUtilities
                     }
                     else
                     {
-                        _settingsFile.Open();
+                        _localSettingsFile.Open();
 
-                        TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+                        TextSelection sel = (TextSelection)_localSettingsFile.Document.Selection;
                         sel.SelectAll();
                         jsonText = sel.Text;
 
-                        _settingsFile.Document.Close();
+                        _localSettingsFile.Document.Close();
                     }
                 }
                 else
                 {
-                    TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+                    TextSelection sel = (TextSelection)_localSettingsFile.Document.Selection;
                     sel.SelectAll();
                     jsonText = sel.Text;
                 }
@@ -93,9 +81,9 @@ namespace COFRS.Template.Common.ServiceUtilities
             set
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
-                if (_settingsFile.IsOpen)
+                if (_localSettingsFile.IsOpen)
                 {
-                    TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+                    TextSelection sel = (TextSelection)_localSettingsFile.Document.Selection;
 
                     sel.StartOfDocument();
 
@@ -103,13 +91,13 @@ namespace COFRS.Template.Common.ServiceUtilities
                     {
                         sel.SelectLine();
                         sel.Text = $"\t\t\"DefaultConnection\": \"{value}\"\r\n";
-                        _settingsFile.Document.Save();
+                        _localSettingsFile.Document.Save();
                     }
                 }
                 else
                 {
-                    _settingsFile.Open();
-                    TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+                    _localSettingsFile.Open();
+                    TextSelection sel = (TextSelection)_localSettingsFile.Document.Selection;
 
                     sel.StartOfDocument();
 
@@ -117,10 +105,10 @@ namespace COFRS.Template.Common.ServiceUtilities
                     {
                         sel.SelectLine();
                         sel.Text = $"\t\t\"DefaultConnection\": \"{value}\"\r\n";
-                        _settingsFile.Document.Save();
+                        _localSettingsFile.Document.Save();
                     }
 
-                    _settingsFile.Document.Close();
+                    _localSettingsFile.Document.Close();
                 }
             }
         }
@@ -269,15 +257,15 @@ namespace COFRS.Template.Common.ServiceUtilities
 				var results = new List<string>();
 				string jsonText;
 
-				if (_settingsFile == null)
+				if (_globalSettingsFile == null)
 				{
 					var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-					_settingsFile = mDte.Solution.FindProjectItem("appSettings.json");
+					_globalSettingsFile = mDte.Solution.FindProjectItem("appSettings.json");
 				}
 
-				if (!_settingsFile.IsOpen)
+				if (!_globalSettingsFile.IsOpen)
 				{
-					var filePath = _settingsFile.Properties.OfType<Property>().FirstOrDefault(p =>
+					var filePath = _globalSettingsFile.Properties.OfType<Property>().FirstOrDefault(p =>
 					{
 						ThreadHelper.ThrowIfNotOnUIThread();
 						return p.Name.Equals("FullPath");
@@ -290,18 +278,18 @@ namespace COFRS.Template.Common.ServiceUtilities
 					}
 					else
 					{
-						_settingsFile.Open();
+						_globalSettingsFile.Open();
 
-						TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+						TextSelection sel = (TextSelection)_localSettingsFile.Document.Selection;
 						sel.SelectAll();
 						jsonText = sel.Text;
 
-						_settingsFile.Document.Close();
+						_globalSettingsFile.Document.Close();
 					}
 				}
 				else
 				{
-					TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+					TextSelection sel = (TextSelection)_globalSettingsFile.Document.Selection;
 					sel.SelectAll();
 					jsonText = sel.Text;
 				}
@@ -334,15 +322,15 @@ namespace COFRS.Template.Common.ServiceUtilities
 				var results = new List<string>();
 				string jsonText;
 
-				if (_settingsFile == null)
+				if (_globalSettingsFile == null)
 				{
 					var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-					_settingsFile = mDte.Solution.FindProjectItem("appSettings.json");
+					_globalSettingsFile = mDte.Solution.FindProjectItem("appSettings.json");
 				}
 
-				if (!_settingsFile.IsOpen)
+				if (!_globalSettingsFile.IsOpen)
 				{
-					var filePath = _settingsFile.Properties.OfType<Property>().FirstOrDefault(p =>
+					var filePath = _globalSettingsFile.Properties.OfType<Property>().FirstOrDefault(p =>
 					{
 						ThreadHelper.ThrowIfNotOnUIThread();
 						return p.Name.Equals("FullPath");
@@ -355,18 +343,18 @@ namespace COFRS.Template.Common.ServiceUtilities
 					}
 					else
 					{
-						_settingsFile.Open();
+						_globalSettingsFile.Open();
 
-						TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+						TextSelection sel = (TextSelection)_globalSettingsFile.Document.Selection;
 						sel.SelectAll();
 						jsonText = sel.Text;
 
-						_settingsFile.Document.Close();
+						_globalSettingsFile.Document.Close();
 					}
 				}
 				else
 				{
-					TextSelection sel = (TextSelection)_settingsFile.Document.Selection;
+					TextSelection sel = (TextSelection)_globalSettingsFile.Document.Selection;
 					sel.SelectAll();
 					jsonText = sel.Text;
 				}
@@ -410,7 +398,7 @@ namespace COFRS.Template.Common.ServiceUtilities
         }
         #endregion
 
-        private void OnProjectItemRemoved(ProjectItem ProjectItem)
+        public void OnProjectItemRemoved(ProjectItem ProjectItem)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -433,9 +421,11 @@ namespace COFRS.Template.Common.ServiceUtilities
                 resourceClassList.Remove(resource);
         }
 
-        private void OnSolutionOpened()
+        public void OnSolutionOpened()
         {
 			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+
 			entityClassList.Clear();
             resourceClassList.Clear();
             projectMapping = null;
@@ -443,9 +433,12 @@ namespace COFRS.Template.Common.ServiceUtilities
             projectMapping = LoadProjectMapping();
             LoadEntityClassList();
             LoadResourceClassList();
-        }
 
-        public ProjectMapping LoadProjectMapping()
+			_localSettingsFile = mDte.Solution.FindProjectItem("appsettings.Local.json");
+			_globalSettingsFile = mDte.Solution.FindProjectItem("appsettings.json");
+		}
+
+		public ProjectMapping LoadProjectMapping()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 

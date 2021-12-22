@@ -81,6 +81,33 @@
 				  <ButtonText>Add COFRS Entity Model...</ButtonText>
 			  </Strings>
 		  </Button>
+
+		  <Button guid="guidCOFRSCoresInstallerPackageCmdSet" id="COFRSAddResourceId" priority="0x0100" type="Button">
+			  <Parent guid="guidCOFRSCoresInstallerPackageCmdSet" id="MyFolderGroup" />
+			  <CommandFlag>DefaultInvisible</CommandFlag>
+			  <CommandFlag>DynamicVisibility</CommandFlag>
+			  <Strings>
+				  <ButtonText>Add COFRS Resource Model...</ButtonText>
+			  </Strings>
+		  </Button>
+
+		  <Button guid="guidCOFRSCoresInstallerPackageCmdSet" id="COFRSAddControllerId" priority="0x0100" type="Button">
+			  <Parent guid="guidCOFRSCoresInstallerPackageCmdSet" id="MyFolderGroup" />
+			  <CommandFlag>DefaultInvisible</CommandFlag>
+			  <CommandFlag>DynamicVisibility</CommandFlag>
+			  <Strings>
+				  <ButtonText>Add COFRS Controller...</ButtonText>
+			  </Strings>
+		  </Button>
+
+		  <Button guid="guidCOFRSCoresInstallerPackageCmdSet" id="COFRSAddFullControllerId" priority="0x0100" type="Button">
+			  <Parent guid="guidCOFRSCoresInstallerPackageCmdSet" id="MyFolderGroup" />
+			  <CommandFlag>DefaultInvisible</CommandFlag>
+			  <CommandFlag>DynamicVisibility</CommandFlag>
+			  <Strings>
+				  <ButtonText>Add COFRS Controller (with full stack)...</ButtonText>
+			  </Strings>
+		  </Button>
 	  </Buttons>
 
 	  <!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
@@ -105,6 +132,9 @@
 		<IDSymbol name="COFRSAddCollectionId" value="0x0100" />
 		<IDSymbol name="COFRSEditMappingId" value="0x0101" />
 		<IDSymbol name="COFRSAddEntityId" value="0x0102" />
+		<IDSymbol name="COFRSAddResourceId" value="0x0103" />
+		<IDSymbol name="COFRSAddControllerId" value="0x0104" />
+		<IDSymbol name="COFRSAddFullControllerId" value="0x0105" />
 	</GuidSymbol>
 
     <GuidSymbol name="guidImages" value="{b525c1f4-42ee-4226-8338-edc1e4260127}" >

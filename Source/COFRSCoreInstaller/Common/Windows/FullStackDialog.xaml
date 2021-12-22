@@ -1,0 +1,64 @@
+﻿<ui:DialogWindow x:Class="COFRS.Template.Common.Windows.FullStackDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:vsui="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             ShowInTaskbar="False"
+             WindowStartupLocation="CenterOwner"
+             SizeToContent="WidthAndHeight" Loaded="OnLoad"
+             WindowStyle="ToolWindow" Title="COFRS REST Service (.NET Core)" >
+    <ui:DialogWindow.Resources>
+        <Style TargetType="{x:Type Grid}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+        </Style>
+        <Style TargetType="{x:Type PasswordBox}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolWindowTextKey}}" />
+        </Style>
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolWindowTextKey}}" />
+        </Style>
+    </ui:DialogWindow.Resources>
+    <Grid x:Name="MainGrid" Width="910" Height="573" HorizontalAlignment="Center" VerticalAlignment="Top">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_ServerType" Content="Server Type" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="Combobox_ServerType" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" HorizontalAlignment="Left" Margin="156,10,0,0" VerticalAlignment="Top" Width="294" SelectionChanged="ServerType_SelectionChanged"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Lable_Server" Content="Server" HorizontalAlignment="Left" Margin="10,42,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="Combobox_Server" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" HorizontalAlignment="Left" Margin="156,42,0,0" VerticalAlignment="Top" Width="294" SelectionChanged="Server_SelectionChanged"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_Authentication" Content="Authentication" HorizontalAlignment="Left" Margin="10,74,0,0" VerticalAlignment="Top"/>
+        <TextBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.TextBoxStyleKey}}" x:Name="Textbox_PortNumber" HorizontalAlignment="Left" Margin="156,74,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120" Height="22" IsEnabled="False" Visibility="Visible" TextChanged="PortNumber_TextChanged"/>
+        <ComboBox x:Name="Combobox_Authentication" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" HorizontalAlignment="Left" Margin="156,74,0,0" VerticalAlignment="Top" Width="294" SelectionChanged="Authentication_SelectionChanged"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_UserName" Content="User Name" HorizontalAlignment="Left" Margin="10,104,0,0" VerticalAlignment="Top"/>
+        <TextBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.TextBoxStyleKey}}" x:Name="Textbox_UserName" HorizontalAlignment="Left" Margin="156,104,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="294" Height="22" TextChanged="UserName_TextChanged"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_Password" Content="Password" HorizontalAlignment="Left" Margin="10,136,0,0" VerticalAlignment="Top"/>
+        <PasswordBox x:Name="Textbox_Password" HorizontalAlignment="Left" Margin="156,136,0,0" VerticalAlignment="Top" Width="294" Height="22" PasswordChanged="Password_PasswordChanged"/>
+        <CheckBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogCheckBoxStyleKey}}" x:Name="Checkbox_RememberPassword" Content="Remember Password" HorizontalAlignment="Left" Margin="156,171,0,0" VerticalAlignment="Top" Checked="RememberPassword_Checked" Unchecked="RememberPassword_Unchecked"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_AddNewServer" Content="Add New Server" HorizontalAlignment="Left" Margin="156,200,0,0" VerticalAlignment="Top" Width="111" Click="AddNewServer_Click"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_RemoveServer" Content="Remove Server" HorizontalAlignment="Left" Margin="282,200,0,0" VerticalAlignment="Top" Width="108" Click="RemoveServer_Click"/>
+
+        <Label x:Name="Label_Title" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" Content="COFRS Controller Class Generator Full Stack" HorizontalAlignment="Left" Margin="460,10,0,0" VerticalAlignment="Top" FontSize="20" Width="426"/>
+        <TextBlock x:Name="Label_Directions" HorizontalAlignment="Left" Margin="466,45,0,0" TextWrapping="Wrap" Text="Select the database and table that contains the resource/entity combination you wish to create a controller for. Verify that the Singular and Plural names are appropriate (change them if they are not). Then press OK to generate the files. This will generate the entity model, the resource model, the mapping between them, an example model, and a validator class along with the controller. " VerticalAlignment="Top" Width="431" />
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_Databases" Content="Databases" HorizontalAlignment="Left" Margin="10,279,0,0" VerticalAlignment="Top"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_Tables" Content="Tables" HorizontalAlignment="Left" Margin="466,279,0,0" VerticalAlignment="Top"/>
+        <ListBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogListBoxStyleKey}}" x:Name="Listbox_Databases" Margin="10,305,0,0" SelectionChanged="Databases_SelectionChanged" HorizontalAlignment="Left" Width="440" VerticalAlignment="Top" Height="225"/>
+        <ListBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogListBoxStyleKey}}" x:Name="Listbox_Tables" Margin="466,305,0,0" SelectionChanged="Tables_SelectionChanged" HorizontalAlignment="Left" Width="434" VerticalAlignment="Top" Height="225"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_OK" Content="OK" HorizontalAlignment="Left" Margin="735,542,0,0" VerticalAlignment="Top" Width="65" Click="OK_Click" Height="21"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_Cancel" Content="Cancel" HorizontalAlignment="Left" Margin="821,542,0,0" VerticalAlignment="Top" Width="65" Click="Cancel_Click" Height="21"/>
+        <CheckBox x:Name="Checkbox_EntityModel" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogCheckBoxStyleKey}}" Content="Entity Model" HorizontalAlignment="Left" Margin="466,142,0,0" VerticalAlignment="Top" IsChecked="True"/>
+        <CheckBox x:Name="Checkbox_ResourceModel" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogCheckBoxStyleKey}}" Content="Resource Model" HorizontalAlignment="Left" Margin="466,162,0,0" VerticalAlignment="Top" IsChecked="True"/>
+        <CheckBox x:Name="Checkbox_MappingModel" Content="Mapping Model" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogCheckBoxStyleKey}}" HorizontalAlignment="Left" Margin="466,182,0,0" VerticalAlignment="Top" IsChecked="True"/>
+        <CheckBox x:Name="Checkbox_Validator" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogCheckBoxStyleKey}}" Content="Validator" HorizontalAlignment="Left" Margin="646,142,0,0" VerticalAlignment="Top" IsChecked="True"/>
+        <CheckBox x:Name="Checkbox_ExampleData" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogCheckBoxStyleKey}}" Content="Example Data" HorizontalAlignment="Left" Margin="646,162,0,0" VerticalAlignment="Top" IsChecked="True"/>
+        <CheckBox x:Name="Checkbox_Controller" Content="Controller" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogCheckBoxStyleKey}}" HorizontalAlignment="Left" Margin="646,182,0,0" VerticalAlignment="Top" IsChecked="True"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_Policy" Content="Policy" HorizontalAlignment="Left" Margin="466,214,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="Combobox_Policy" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" HorizontalAlignment="Left" Margin="524,214,0,0" VerticalAlignment="Top" Width="183"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_Singular" Content="Singluar" HorizontalAlignment="Left" Margin="466,240,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="Textbox_Singular" Style="{DynamicResource {x:Static vsui:VsResourceKeys.TextBoxStyleKey}}" HorizontalAlignment="Left" Margin="524,244,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="183" Height="22"/>
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_Plural" Content="Plural" HorizontalAlignment="Left" Margin="715,244,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="Textbox_Plural" Style="{DynamicResource {x:Static vsui:VsResourceKeys.TextBoxStyleKey}}" HorizontalAlignment="Left" Margin="760,244,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="140" Height="22"/>
+
+    </Grid>
+</ui:DialogWindow>

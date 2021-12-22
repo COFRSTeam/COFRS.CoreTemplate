@@ -1,6 +1,7 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
@@ -8,6 +9,8 @@ using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
@@ -54,25 +57,11 @@ namespace COFRS.Template.Common.Wizards
 
 			try
 			{
-				//	Full stack must start at the root namespace. Insure that we do...
-				if (!codeService.IsRootNamespace(replacementsDictionary["$rootnamespace$"]))
-				{
-					MessageBox.Show("The COFRS Controller Full Stack should be placed at the project root. It will add the appropriate components in the appropriate folders.", "COFRS", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					Proceed = false;
-					return;
-				}
-
-				//	Show the user that we are busy doing things...
-				var parent = new WindowClass((IntPtr)dte.ActiveWindow.HWnd);
-				dte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-
 				//  Load the project mapping information
 				var installationFolder = codeService.InstallationFolder;
 				var connectionString = codeService.ConnectionString;
 				var projectMapping = codeService.LoadProjectMapping();
-
 				var defaultServerType = codeService.DefaultServerType;
-
 				var policies = codeService.Policies;
 
 				//	Get folders and namespaces
@@ -87,28 +76,28 @@ namespace COFRS.Template.Common.Wizards
 
 				var candidateName = replacementsDictionary["$safeitemname$"];
 
+				if (candidateName.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+					candidateName = candidateName.Substring(0, candidateName.Length - 3);
+
 				if (candidateName.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
 					candidateName = candidateName.Substring(0, candidateName.Length - 10);
 
 				var resourceName = new NameNormalizer(candidateName);
 
-				var form = new UserInputFullStack
+				var form = new FullStackDialog
 				{
 					SingularResourceName = resourceName.SingleForm,
 					PluralResourceName = resourceName.PluralForm,
-					RootNamespace = rootNamespace,
 					ReplacementsDictionary = replacementsDictionary,
 					EntityModelsFolder = projectMapping.GetEntityModelsFolder(),
 					Policies = policies,
 					DefaultConnectionString = connectionString,
-					dte2 = dte
 				};
 
-				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-
 				EntityClass entityModel = null;
+				var result = form.ShowDialog();
 
-				if (form.ShowDialog() == DialogResult.OK)
+				if (result.HasValue && result.Value == true)
 				{
 					codeService.ConnectionString = $"{form.ConnectionString}Application Name={projectMapping.ControllersProject}";
 
@@ -138,7 +127,7 @@ namespace COFRS.Template.Common.Wizards
 
 					#region Entity Model Operations
 					//	Should we generate an entity model?
-					if (form.EntityModelCheckBox.Checked)
+					if (form.GenerateEntityModel)
 					{
 						GenerateEntity = true;
 
@@ -154,34 +143,80 @@ namespace COFRS.Template.Common.Wizards
 						}
 
 						//	Emit Entity Model
-						var columns = DBHelper.GenerateColumns(form.DatabaseTable.Schema, 
-							                                   form.DatabaseTable.Table,
+						var columns = DBHelper.GenerateColumns(form.DatabaseTable.Schema,
+															   form.DatabaseTable.Table,
 															   form.ServerType,
 															   form.ConnectionString);
 
 						var emodel = standardEmitter.EmitEntityModel(entityClassName,
-							                                         form.DatabaseTable.Schema,
+																	 form.DatabaseTable.Schema,
 																	 form.DatabaseTable.Table,
 																	 form.ServerType,
 																	 columns,
-																     replacementsDictionary);
+																	 replacementsDictionary);
 
+						var entityFilePath = Path.Combine(projectMapping.GetEntityModelsFolder().Folder, $"{entityClassName}.cs");
 
-						replacementsDictionary.Add("$entityModel$", emodel);
-					}
+						var theFile = new StringBuilder();
 
-					if (entityModel == null)
-					{
-						MessageBox.Show($"No entity model was found for {entityClassName}. Generation canceled.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-						Proceed = false;
-						return;
+						theFile.AppendLine("using System;");
+
+						if (replacementsDictionary.ContainsKey("$barray$"))
+							if (replacementsDictionary["$barray$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Collections;");
+
+						theFile.AppendLine("using System.Collections.Generic;");
+
+						if (replacementsDictionary.ContainsKey("$image$"))
+							if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Drawing;");
+
+						if (replacementsDictionary.ContainsKey("$net$"))
+							if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net;");
+
+						if (replacementsDictionary.ContainsKey("$netinfo$"))
+							if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net.NetworkInformation;");
+
+						if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
+							if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using NpgsqlTypes;");
+
+						theFile.AppendLine("using COFRS;");
+						theFile.AppendLine();
+						theFile.AppendLine($"namespace {projectMapping.ExampleNamespace}");
+						theFile.AppendLine("{");
+
+						theFile.Append(emodel);
+						theFile.AppendLine("}");
+
+						File.WriteAllText(entityFilePath, theFile.ToString());
+
+						var parentProject = codeService.GetProjectFromFolder(entityFilePath);
+						ProjectItem entityItem;
+
+						if (parentProject.GetType() == typeof(Project))
+							entityItem = ((Project)parentProject).ProjectItems.AddFromFile(entityFilePath);
+						else
+							entityItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(entityFilePath);
+
+						codeService.AddEntity(entityItem);
+
+						ProjectItemFinishedGenerating(entityItem);
+						BeforeOpeningFile(entityItem);
+
+						var window = entityItem.Open();
+						window.Activate();
 					}
 					#endregion
 
 					#region Resource Model Operations
-					if (form.ResourceModelCheckBox.Checked)
+					if (form.GenerateResourceModel)
 					{
 						GenerateResource = true;
+
+						entityModel = codeService.GetEntityClass(entityClassName);
 
 						var rmodel = standardEmitter.EmitResourceModel(entityModel,
 																	   replacementsDictionary);
@@ -191,7 +226,7 @@ namespace COFRS.Template.Common.Wizards
 					#endregion
 
 					#region Mapping Operations
-					if (form.MappingProfileCheckBox.Checked)
+					if (form.GenerateMappingModel)
 					{
 						GenerateMapping = true;
 
@@ -207,7 +242,7 @@ namespace COFRS.Template.Common.Wizards
 
 					#region Validation Operations
      //               var validatorInterface = string.Empty;
-					//if (form.ValidatorCheckBox.Checked)
+					//if (form.GenerateValidator)
 					//{
 					//	GenerateValidator = true;
 
@@ -233,7 +268,7 @@ namespace COFRS.Template.Common.Wizards
 					#endregion
 
 					#region Example Operations
-					//if (form.ExampleCheckBox.Checked)
+					//if (form.GenerateExampleData)
 					//{
 					//	GenerateExample = true;
 
@@ -248,7 +283,7 @@ namespace COFRS.Template.Common.Wizards
 					#endregion
 
 					#region Controller Operations
-					//if (form.ControllerCheckbox.Checked)
+					//if (form.GenerateController)
 					//{
 					//	GenerateController = true;
 
@@ -269,12 +304,10 @@ namespace COFRS.Template.Common.Wizards
 					#endregion
 				}
 
-				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 				Proceed = true;
 			}
 			catch (Exception ex)
 			{
-				dte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 				MessageBox.Show(ex.ToString());
 				Proceed = false;
 			}
