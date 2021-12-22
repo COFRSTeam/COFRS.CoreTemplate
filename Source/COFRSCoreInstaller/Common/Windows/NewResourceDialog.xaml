@@ -44,6 +44,8 @@
         <ListBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogListBoxStyleKey}}" x:Name="Listbox_Tables" Margin="431,272,23,61" SelectionChanged="Tables_SelectionChanged"/>
         <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_OK" Content="OK" HorizontalAlignment="Left" Margin="651,518,0,0" VerticalAlignment="Top" Width="65" Click="OK_Click"/>
         <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_Cancel" Content="Cancel" HorizontalAlignment="Left" Margin="739,517,0,0" VerticalAlignment="Top" Width="65" Click="Cancel_Click"/>
-
+        <Label x:Name="Label_EntityClass" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" Content="Entity Class" HorizontalAlignment="Left" Margin="497,188,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="Combobox_EntityClasses" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogComboBoxStyleKey}}" HorizontalAlignment="Left" Margin="572,190,0,0" VerticalAlignment="Top" Width="245"/>
+        <CheckBox x:Name="Checkbox_RenderAsEnum" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogCheckBoxStyleKey}}" Content="Render as Enum" HorizontalAlignment="Left" Margin="572,224,0,0" VerticalAlignment="Top"/>
     </Grid>
 </ui:DialogWindow>

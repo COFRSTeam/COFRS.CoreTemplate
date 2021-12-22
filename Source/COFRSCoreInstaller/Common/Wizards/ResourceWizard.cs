@@ -1,9 +1,11 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
@@ -38,8 +40,9 @@ namespace COFRS.Template.Common.Wizards
 			ThreadHelper.ThrowIfNotOnUIThread();
             var mDte = automationObject as DTE2;
             var codeService = COFRSServiceFactory.GetService<ICodeService>();
+            var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
 
-			try
+            try
             {
                 var projectMapping = codeService.LoadProjectMapping();
                 var installationFolder = codeService.InstallationFolder;
@@ -51,18 +54,14 @@ namespace COFRS.Template.Common.Wizards
                     mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
                     var resourceModelsFolder = projectMapping.GetResourceModelsFolder();
 
-                    var result = MessageBox.Show($"You are attempting to install a resource model into {codeService.GetRelativeFolder(installationFolder)}. Typically, resource models reside in {codeService.GetRelativeFolder(resourceModelsFolder)}.\r\n\r\nDo you wish to place the new resource model in this non-standard location?",
-                        "Warning: Non-Standard Location",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Warning);
-
-                    if (result == DialogResult.No)
+                    if (!VsShellUtilities.PromptYesNo(
+                            $"You are attempting to install a resource model into {codeService.GetRelativeFolder(installationFolder)}. Typically, resource models reside in {codeService.GetRelativeFolder(resourceModelsFolder)}.\r\n\r\nDo you wish to place the new resource model in this non-standard location?",                            "Microsoft Visual Studio",
+                            OLEMSGICON.OLEMSGICON_WARNING,
+                            shell))
                     {
                         Proceed = false;
                         return;
                     }
-
-                    mDte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
                     resourceModelsFolder = installationFolder;
 
@@ -73,13 +72,16 @@ namespace COFRS.Template.Common.Wizards
                     codeService.SaveProjectMapping();
                 }
 
-                var form = new UserInputResource()
+                var form = new NewResourceDialog()
                 {
                     DefaultConnectionString = connectionString,
-                    ResourceModelsFolder = projectMapping.GetResourceModelsFolder()
+                    ResourceModelsFolder = projectMapping.GetResourceModelsFolder(),
+                    ServiceProvider = ServiceProvider.GlobalProvider
                 };
 
-                if (form.ShowDialog() == DialogResult.OK)
+                var result = form.ShowDialog();
+
+                if (form.DialogResult.HasValue && form.DialogResult.Value == true)
                 {
                     var standardEmitter = new StandardEmitter();
                     var undefinedModels = form.UndefinedResources;
@@ -88,12 +90,12 @@ namespace COFRS.Template.Common.Wizards
                                                                projectMapping.GetResourceModelsFolder(),
                                                                form.ConnectionString);
 
-                    var entityModel = (EntityClass)form._entityModelList.SelectedItem;
+                    var entityModel = form.EntityModel;
                     var resourceClassName = replacementsDictionary["$safeitemname$"];
 
                     string model;
 
-                    if (form._GenerateAsEnum.Checked)
+                    if (form.GenerateAsEnum)
                         model = standardEmitter.EmitResourceEnum(entityModel,
                                                                  form.ConnectionString);
                     else
@@ -109,10 +111,16 @@ namespace COFRS.Template.Common.Wizards
             }
             catch ( Exception error)
             {
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				Proceed = false;
-			}
-		}
+                VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
+                                                error.Message,
+                                                "Microsoft Visual Studio",
+                                                OLEMSGICON.OLEMSGICON_CRITICAL,
+                                                OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                                                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+
+                Proceed = false;
+            }
+        }
 
         public bool ShouldAddProjectItem(string filePath)
 		{
