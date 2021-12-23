@@ -231,7 +231,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -503,7 +508,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -610,7 +620,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -639,7 +654,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -671,7 +691,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -700,7 +725,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -744,7 +774,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -832,7 +867,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -864,7 +904,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -1066,7 +1111,12 @@ SELECT datname
 				}
 				catch (Exception error)
 				{
-					MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+													error.Message,
+													"Microsoft Visual Studio",
+													OLEMSGICON.OLEMSGICON_CRITICAL,
+													OLEMSGBUTTON.OLEMSGBUTTON_OK,
+													OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				}
 			}
 			else if (server.DBType == DBServerType.MYSQL)
@@ -1118,7 +1168,12 @@ select SCHEMA_NAME from information_schema.SCHEMATA
 				}
 				catch (Exception error)
 				{
-					MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+													error.Message,
+													"Microsoft Visual Studio",
+													OLEMSGICON.OLEMSGICON_CRITICAL,
+													OLEMSGBUTTON.OLEMSGBUTTON_OK,
+													OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				}
 			}
 			else
@@ -1181,7 +1236,12 @@ select name
 				}
 				catch (Exception error)
 				{
-					MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+													error.Message,
+													"Microsoft Visual Studio",
+													OLEMSGICON.OLEMSGICON_CRITICAL,
+													OLEMSGBUTTON.OLEMSGBUTTON_OK,
+													OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				}
 			}
 		}

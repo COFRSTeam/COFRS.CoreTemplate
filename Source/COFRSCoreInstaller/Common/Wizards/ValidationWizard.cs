@@ -1,6 +1,7 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
@@ -44,12 +45,10 @@ namespace COFRS.Template.Common.Wizards
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 _appObject = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
 
 			try
 			{
-				//	Show the user that we are busy doing things...
-				_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-
 				var projectMapping = codeService.LoadProjectMapping();
 				var solutionPath = _appObject.Solution.Properties.Item("Path").Value.ToString();
 				var installationFolder = codeService.InstallationFolder;
@@ -58,21 +57,16 @@ namespace COFRS.Template.Common.Wizards
 				//  Make sure we are where we're supposed to be
 				if (!codeService.IsChildOf(projectMapping.ValidationFolder, installationFolder.Folder))
 				{
-					_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					var validationFolder = projectMapping.GetValidatorFolder();
 
-					var result = MessageBox.Show($"You are attempting to install a validator model into {codeService.GetRelativeFolder(installationFolder)}. Typically, validator models reside in {codeService.GetRelativeFolder(validationFolder)}.\r\n\r\nDo you wish to place the new validator model in this non-standard location?",
-						"Warning: Non-Standard Location",
-						MessageBoxButtons.YesNo,
-						MessageBoxIcon.Warning);
-
-					if (result == DialogResult.No)
+					if (!VsShellUtilities.PromptYesNo(
+							$"You are attempting to install a validator model into {codeService.GetRelativeFolder(installationFolder)}. Typically, validator models reside in {codeService.GetRelativeFolder(validationFolder)}.\r\n\r\nDo you wish to place the new validator model in this non-standard location?",                            "Microsoft Visual Studio",
+							OLEMSGICON.OLEMSGICON_WARNING,
+							shell))
 					{
 						Proceed = false;
 						return;
 					}
-
-					_appObject.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 					validationFolder = installationFolder;
 
@@ -83,26 +77,24 @@ namespace COFRS.Template.Common.Wizards
 					codeService.SaveProjectMapping();
 				}
 
-				var form = new UserInputGeneral()
+				var form = new ValidationDialog()
 				{
 					DefaultConnectionString = connectionString,
-					InstallType = 3
+					ServiceProvider = ServiceProvider.GlobalProvider
 				};
 
-				_appObject.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				var result = form.ShowDialog();	
 
-				if (form.ShowDialog() == DialogResult.OK)
+				if (result.HasValue && result.Value == true)
 				{
-					var resourceModel = (ResourceClass)form._resourceModelList.SelectedItem;
+					var resourceModel = form.ResourceModel;
 					var profileMap = codeService.OpenProfileMap(resourceModel, out bool isAllDefined);
 
 					var emitter = new StandardEmitter();
-					//var model = emitter.EmitValidationModel(resourceModel, profileMap, resourceMap, replacementsDictionary["$safeitemname$"], out string ValidatorInterface);
+					var model = emitter.EmitValidationModel(resourceModel, profileMap, replacementsDictionary["$safeitemname$"]);
 
-					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
-
-					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
-					replacementsDictionary.Add("$model$", "");
+					replacementsDictionary.Add("$orchestrationnamespace$", codeService.FindOrchestrationNamespace());
+					replacementsDictionary.Add("$model$", model);
 					replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
 
@@ -113,9 +105,14 @@ namespace COFRS.Template.Common.Wizards
 				else
 					Proceed = false;
 			}
-			catch (Exception ex)
+			catch (Exception error)
 			{
-				MessageBox.Show(ex.ToString());
+				VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				Proceed = false;
 			}
 		}

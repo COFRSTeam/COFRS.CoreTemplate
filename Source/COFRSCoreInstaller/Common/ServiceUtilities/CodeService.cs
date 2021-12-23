@@ -144,6 +144,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 				else
 				{
 					ProjectItem projectItem = selectedItem.ProjectItem;
+
+					if (projectItem == null)
+						return null;
+
 					var project = projectItem.ContainingProject;
 
 					var projectFolder = new ProjectFolder
@@ -4402,12 +4406,15 @@ namespace COFRS.Template.Common.ServiceUtilities
 					dbColumn.IsPrimaryKey = true;
 				else
 				{
-					var referenceModel = codeService.GetResourceClass(parts[parts.Count() - 1]);
-
-					if (referenceModel != null)
+					if (parts[parts.Count() - 1].Equals("Uri", StringComparison.OrdinalIgnoreCase))
 					{
-						dbColumn.IsForeignKey = true;
-						dbColumn.ForeignTableName = referenceModel.Entity.TableName;
+						var referenceModel = codeService.GetResourceClass(property.Name);
+
+						if (referenceModel != null)
+						{
+							dbColumn.IsForeignKey = true;
+							dbColumn.ForeignTableName = referenceModel.Entity.TableName;
+						}
 					}
 				}
 
@@ -5157,7 +5164,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 		public static List<ResourceProfile> GenerateResourceFromEntityMapping(ResourceClass resourceModel)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+			ThreadHelper.ThrowIfNotOnUIThread();
 			var nn = new NameNormalizer(resourceModel.ClassName);
 			var result = new List<ResourceProfile>();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
@@ -5215,7 +5222,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 					var enumResource = codeService.GetResourceClassBySchema(resourceModel.Entity.SchemaName, resourceMember.ForeignTableName);
 
-					if (enumResource != null)
+					if (enumResource != null && enumResource.ResourceType == ResourceType.Enum)
 					{
 						var matchedColumn = unmappedMembers.FirstOrDefault(c => c.Equals(resourceMember.ColumnName));
 
