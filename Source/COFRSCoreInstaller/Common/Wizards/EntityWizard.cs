@@ -80,6 +80,7 @@ namespace COFRS.Template.Common.Wizards
                     ReplacementsDictionary = replacementsDictionary,
                     EntityModelsFolder = projectMapping.GetEntityModelsFolder(),
                     DefaultConnectionString = connectionString,
+                    ServiceProvider = ServiceProvider.GlobalProvider
                 };
 
                 var isok = form.ShowDialog();

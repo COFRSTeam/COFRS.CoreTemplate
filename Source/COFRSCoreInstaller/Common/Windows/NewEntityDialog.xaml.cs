@@ -13,24 +13,16 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Path = System.IO.Path;
 
 namespace COFRS.Template.Common.Windows
 {
-	/// <summary>
-	/// Interaction logic for NewEntityDialog.xaml
-	/// </summary>
-	public partial class NewEntityDialog : DialogWindow
+    /// <summary>
+    /// Interaction logic for NewEntityDialog.xaml
+    /// </summary>
+    public partial class NewEntityDialog : DialogWindow
 	{
 		#region Variables
 		private ServerConfig _serverConfig;
@@ -44,6 +36,7 @@ namespace COFRS.Template.Common.Windows
 		public List<EntityModel> UndefinedEntityModels { get; set; }
 		public DBServerType ServerType { get; set; }
 		public ElementType EType { get; set; }
+		public IServiceProvider ServiceProvider { get; set; }
 		#endregion
 
 		public NewEntityDialog()
@@ -218,7 +211,12 @@ select s.name, t.name
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -568,21 +566,36 @@ select c.name as column_name,
 									if (string.Equals(dbColumn.DBDataType, "geometry", StringComparison.OrdinalIgnoreCase))
 									{
 										Listbox_Tables.SelectedIndex = -1;
-										MessageBox.Show(".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+										VsShellUtilities.ShowMessageBox(ServiceProvider,
+																		".NET Core does not support the SQL Server geometry data type. You cannot create an entity model from this table.",
+																		"Microsoft Visual Studio",
+																		OLEMSGICON.OLEMSGICON_CRITICAL,
+																		OLEMSGBUTTON.OLEMSGBUTTON_OK,
+																		OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 										return;
 									}
 
 									if (string.Equals(dbColumn.DBDataType, "geography", StringComparison.OrdinalIgnoreCase))
 									{
 										Listbox_Tables.SelectedIndex = -1;
-										MessageBox.Show(".NET Core does not support the SQL Server geography data type. You cannot create an entity model from this table.", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+										VsShellUtilities.ShowMessageBox(ServiceProvider,
+												".NET Core does not support the SQL Server geography data type. You cannot create an entity model from this table.",
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 										return;
 									}
 
 									if (string.Equals(dbColumn.DBDataType, "variant", StringComparison.OrdinalIgnoreCase))
 									{
 										Listbox_Tables.SelectedIndex = -1;
-										MessageBox.Show("COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+										VsShellUtilities.ShowMessageBox(ServiceProvider,
+												"COFRS does not support the SQL Server sql_variant data type. You cannot create an entity model from this table.",
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 										return;
 									}
 
@@ -596,20 +609,28 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
-
-
 
 		private void OK_Click(object sender, RoutedEventArgs e)
 		{
 			if (Listbox_Tables.SelectedIndex == -1)
 			{
-				MessageBox.Show("You must select a database table in order to create an entity model", "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+												"You must select a database table in order to create an entity model.",
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				return;
 			}
-
+			
 			Save();
 
 			var server = (DBServer)Combobox_Server.SelectedItem;
@@ -666,7 +687,12 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+											error.Message,
+											"Microsoft Visual Studio",
+											OLEMSGICON.OLEMSGICON_CRITICAL,
+											OLEMSGBUTTON.OLEMSGBUTTON_OK,
+											OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -773,7 +799,12 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+											error.Message,
+											"Microsoft Visual Studio",
+											OLEMSGICON.OLEMSGICON_CRITICAL,
+											OLEMSGBUTTON.OLEMSGBUTTON_OK,
+											OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -802,7 +833,12 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+											error.Message,
+											"Microsoft Visual Studio",
+											OLEMSGICON.OLEMSGICON_CRITICAL,
+											OLEMSGBUTTON.OLEMSGBUTTON_OK,
+											OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -834,7 +870,12 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+											error.Message,
+											"Microsoft Visual Studio",
+											OLEMSGICON.OLEMSGICON_CRITICAL,
+											OLEMSGBUTTON.OLEMSGBUTTON_OK,
+											OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -863,7 +904,12 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+											error.Message,
+											"Microsoft Visual Studio",
+											OLEMSGICON.OLEMSGICON_CRITICAL,
+											OLEMSGBUTTON.OLEMSGBUTTON_OK,
+											OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -907,7 +953,12 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+											error.Message,
+											"Microsoft Visual Studio",
+											OLEMSGICON.OLEMSGICON_CRITICAL,
+											OLEMSGBUTTON.OLEMSGBUTTON_OK,
+											OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -995,7 +1046,12 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+											error.Message,
+											"Microsoft Visual Studio",
+											OLEMSGICON.OLEMSGICON_CRITICAL,
+											OLEMSGBUTTON.OLEMSGBUTTON_OK,
+											OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -1027,7 +1083,12 @@ select c.name as column_name,
 			}
 			catch (Exception error)
 			{
-				MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider,
+											error.Message,
+											"Microsoft Visual Studio",
+											OLEMSGICON.OLEMSGICON_CRITICAL,
+											OLEMSGBUTTON.OLEMSGBUTTON_OK,
+											OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 			}
 		}
 
@@ -1229,7 +1290,12 @@ SELECT datname
 				}
 				catch (Exception error)
 				{
-					MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				}
 			}
 			else if (server.DBType == DBServerType.MYSQL)
@@ -1281,7 +1347,12 @@ select SCHEMA_NAME from information_schema.SCHEMATA
 				}
 				catch (Exception error)
 				{
-					MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				}
 			}
 			else
@@ -1344,7 +1415,12 @@ select name
 				}
 				catch (Exception error)
 				{
-					MessageBox.Show(error.Message, "Microsoft Visual Studio", MessageBoxButton.OK, MessageBoxImage.Error);
+					VsShellUtilities.ShowMessageBox(ServiceProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				}
 			}
 		}
@@ -1703,7 +1779,8 @@ select name
 
 		private void WarnUndefinedContent(DBTable table, string connectionString)
 		{
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			var message = new StringBuilder();
 			message.Append($"The entity model {table.Table} uses ");
 
@@ -1784,11 +1861,18 @@ select name
 			}
 
 			message.Append(".\r\n\r\nYou cannot generate this class until all the dependencies have been generated. Would you like to generate the undefined entities as part of generating this class?");
+			var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
 
-			var answer = MessageBox.Show(message.ToString(), "Microsoft Visual Studio", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-			if (answer == MessageBoxResult.No)
+			if (!VsShellUtilities.PromptYesNo(
+						message.ToString(),
+						"Microsoft Visual Studio",
+						OLEMSGICON.OLEMSGICON_WARNING,
+						shell))
+			{
 				Button_OK.IsEnabled = false;
+				Button_OK.IsDefault = false;
+				Button_Cancel.IsDefault = true;
+			}
 		}
 
 		#endregion
