@@ -238,7 +238,6 @@ select s.name, t.name
 		private void Tables_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
 

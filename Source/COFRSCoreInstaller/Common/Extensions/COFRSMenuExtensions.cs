@@ -680,7 +680,7 @@ namespace COFRS.Template
 
 					theFile.AppendLine("using COFRS;");
 					theFile.AppendLine();
-					theFile.AppendLine($"namespace {projectFolderNamespace.Value.ToString()}");
+					theFile.AppendLine($"namespace {projectFolderNamespace.Value}");
 					theFile.AppendLine("{");
 
 					theFile.Append(replacementsDictionary["$entityModel$"]);
