@@ -132,6 +132,11 @@ namespace COFRS.Template
 			OleMenuCommandService commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
             Instance = new COFRSMenuExtensions(package, commandService);
 
+			if ( mDte.Solution.IsOpen)
+            {
+				Instance.OnSolutionOpened();
+			}
+
 			_solutionEvents.Opened += Instance.OnSolutionOpened;
 			_projectItemsEvents.ItemRemoved += Instance.OnProjectItemRemoved;
 		}
@@ -281,10 +286,13 @@ namespace COFRS.Template
 						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
 							theFile.AppendLine("using System.Net.NetworkInformation;");
 
+					if (replacementsDictionary.ContainsKey("$annotations$"))
+						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
+
 					if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
 						if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
 							theFile.AppendLine("using NpgsqlTypes;");
-
 
 					theFile.AppendLine("using COFRS;");
 					theFile.AppendLine();
