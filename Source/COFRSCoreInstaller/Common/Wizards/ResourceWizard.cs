@@ -96,10 +96,12 @@ namespace COFRS.Template.Common.Wizards
                     string model;
 
                     if (form.GenerateAsEnum)
-                        model = standardEmitter.EmitResourceEnum(entityModel,
+                        model = standardEmitter.EmitResourceEnum(resourceClassName, 
+                                                                 entityModel,
                                                                  form.ConnectionString);
                     else
-                        model = standardEmitter.EmitResourceModel(entityModel,
+                        model = standardEmitter.EmitResourceModel(resourceClassName, 
+                                                                  entityModel,
                                                                   replacementsDictionary);
 
                     replacementsDictionary.Add("$model$", model);

@@ -18,12 +18,6 @@ namespace COFRS.Template.Common.Wizards
     public class FullStackControllerWizard : IWizard
 	{
 		private bool Proceed = false;
-		private bool GenerateEntity = false;
-		private bool GenerateResource = false;
-		private readonly bool GenerateController = false;
-		private readonly bool GenerateExample = false;
-		private readonly bool GenerateValidator = false;
-		private bool GenerateMapping = false;
 
 		// This method is called before opening any item that
 		// has the OpenInEditor attribute.
@@ -37,8 +31,7 @@ namespace COFRS.Template.Common.Wizards
 
 		// This method is only called for item templates,
 		// not for project templates.
-		public void ProjectItemFinishedGenerating(ProjectItem
-			projectItem)
+		public void ProjectItemFinishedGenerating(ProjectItem projectItem)
 		{
 		}
 
@@ -52,7 +45,6 @@ namespace COFRS.Template.Common.Wizards
 			WizardRunKind runKind, object[] customParams)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 
 			try
@@ -129,8 +121,6 @@ namespace COFRS.Template.Common.Wizards
 					//	Should we generate an entity model?
 					if (form.GenerateEntityModel)
 					{
-						GenerateEntity = true;
-
 						if (form.ServerType == DBServerType.POSTGRESQL)
 						{
 							//	Generate any undefined composits before we construct our entity model (because, 
@@ -214,11 +204,10 @@ namespace COFRS.Template.Common.Wizards
 					#region Resource Model Operations
 					if (form.GenerateResourceModel)
 					{
-						GenerateResource = true;
-
 						entityModel = codeService.GetEntityClass(entityClassName);
 
-						var rmodel = standardEmitter.EmitResourceModel(entityModel,
+						var rmodel = standardEmitter.EmitResourceModel(resourceClassName,
+							                                           entityModel,
 																	   replacementsDictionary);
 
 						var resourceFilePath = Path.Combine(projectMapping.GetResourceModelsFolder().Folder, $"{resourceClassName}.cs");
@@ -286,83 +275,181 @@ namespace COFRS.Template.Common.Wizards
 					#region Mapping Operations
 					if (form.GenerateMappingModel)
 					{
-						GenerateMapping = true;
-
 						var resourceModel = codeService.GetResourceClass(resourceClassName);
 
 						var mappingModel = standardEmitter.EmitMappingModel(resourceModel, mappingClassName, replacementsDictionary);
 
-						replacementsDictionary.Add("$mappingModel$", mappingModel);
+						var projectItemPath = Path.Combine(projectMapping.MappingFolder, $"{mappingClassName}.cs");
+
+						var theFile = new StringBuilder();
+
+						theFile.AppendLine("using System;");
+						theFile.AppendLine("using System.Linq;");
+						theFile.AppendLine("using Microsoft.Extensions.Configuration;");
+
+						if (replacementsDictionary.ContainsKey("$barray$"))
+							if (replacementsDictionary["$barray$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Collections;");
+
+						theFile.AppendLine("using System.Collections.Generic;");
+
+						if (replacementsDictionary.ContainsKey("$image$"))
+							if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Drawing;");
+
+						if (replacementsDictionary.ContainsKey("$net$"))
+							if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net;");
+
+						if (replacementsDictionary.ContainsKey("$netinfo$"))
+							if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net.NetworkInformation;");
+
+						if (replacementsDictionary.ContainsKey("$annotations$"))
+							if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
+
+						if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
+							if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using NpgsqlTypes;");
+
+						theFile.AppendLine($"using {projectMapping.EntityNamespace};");
+						theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
+
+						theFile.AppendLine("using AutoMapper;");
+						theFile.AppendLine("using COFRS;");
+						theFile.AppendLine();
+						theFile.AppendLine($"namespace {projectMapping.MappingNamespace}");
+						theFile.AppendLine("{");
+
+						theFile.Append(mappingModel);
+						theFile.AppendLine("}");
+
+						File.WriteAllText(projectItemPath, theFile.ToString());
+
+						var parentProject = codeService.GetProjectFromFolder(Path.GetDirectoryName(projectItemPath));
+						ProjectItem mappingItem;
+
+						if (parentProject.GetType() == typeof(Project))
+							mappingItem = ((Project)parentProject).ProjectItems.AddFromFile(projectItemPath);
+						else
+							mappingItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(projectItemPath);
+
+						var window = mappingItem.Open();
+						window.Activate();
 					}
-					else
-						GenerateMapping = false;
                     #endregion
 
-					#region Validation Operations
-     //               var validatorInterface = string.Empty;
-					//if (form.GenerateValidator)
-					//{
-					//	GenerateValidator = true;
+                    #region Validation Operations
+                    if (form.GenerateValidator)
+                    {
+                        var resourceModel = codeService.GetResourceClass(resourceClassName);
+                        var profileMap = codeService.OpenProfileMap(resourceModel, out bool IsAllDefined);
+                        var orchestrationNamespace = codeService.FindOrchestrationNamespace();
 
-					//	var resourceModel = codeService.GetResourceClass(resourceClassName);
+                        //	Emit Validation Model
+                        var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, validationClassName);
+						var projectItemPath = Path.Combine(projectMapping.ValidationFolder, $"{validationClassName}.cs");
 
-					//	if ( profileMap == null)
-					//		profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
-					//	var orchestrationNamespace = COFRSCommonUtilities.FindOrchestrationNamespace(dte);
+						var theFile = new StringBuilder();
 
-					//	//	Emit Validation Model
-					//	var validationModel = standardEmitter.EmitValidationModel(resourceModel, profileMap, resourceMap, validationClassName, out validatorInterface);
-					//	replacementsDictionary.Add("$validationModel$", validationModel);
+						theFile.AppendLine("using System;");
+						theFile.AppendLine("using System.Collections.Generic;");
+						theFile.AppendLine("using System.Linq;");
+						theFile.AppendLine("using System.Security.Claims;");
+						theFile.AppendLine("using System.Threading.Tasks;");
 
-					//	//	Register the validation model
-					//	COFRSCommonUtilities.RegisterValidationModel(dte,
-					//									  validationClassName,
-					//									  replacementsDictionary["$validatornamespace$"]);
-					//}
-					//else
-     //               {
-					//	validatorInterface = COFRSCommonUtilities.FindValidatorInterface(dte, resourceModel.ClassName);
-     //               }
-					#endregion
+						if (replacementsDictionary.ContainsKey("$barray$"))
+							if (replacementsDictionary["$barray$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Collections;");
 
-					#region Example Operations
-					//if (form.GenerateExampleData)
-					//{
-					//	GenerateExample = true;
+						if (replacementsDictionary.ContainsKey("$image$"))
+							if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Drawing;");
 
-					//	var resourceModel = codeService.GetResourceClass(resourceClassName);
+						if (replacementsDictionary.ContainsKey("$net$"))
+							if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net;");
 
-					//	if ( profileMap== null)
-					//		profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
+						if (replacementsDictionary.ContainsKey("$netinfo$"))
+							if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net.NetworkInformation;");
 
-					//	var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, exampleClassName, defaultServerType, connectionString);
-					//	replacementsDictionary.Add("$examplemodel$", exampleModel);
-					//}
-					#endregion
+						if (replacementsDictionary.ContainsKey("$annotations$"))
+							if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
 
-					#region Controller Operations
-					//if (form.GenerateController)
-					//{
-					//	GenerateController = true;
+						if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
+							if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using NpgsqlTypes;");
 
-					//	var resourceModel = codeService.GetResourceClass(resourceClassName);
+						theFile.AppendLine($"using {projectMapping.EntityNamespace};");
+						theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
+						theFile.AppendLine($"using {orchestrationNamespace};");
+						theFile.AppendLine("using COFRS;");
+						theFile.AppendLine();
+						theFile.AppendLine($"namespace {projectMapping.ValidationNamespace}");
+						theFile.AppendLine("{");
 
-					//	var controllerModel = emitter.EmitController(
-					//		dte,
-					//		entityModel,
-					//		resourceModel,
-					//		moniker,
-					//		controllerClassName,
-					//		validatorInterface,
-					//		policy,
-					//		projectMapping.ValidationNamespace);
+						theFile.Append(validationModel);
+						theFile.AppendLine("}");
 
-					//	replacementsDictionary.Add("$controllerModel$", controllerModel);
-					//}
-					#endregion
-				}
+						File.WriteAllText(projectItemPath, theFile.ToString());
 
-				Proceed = true;
+						var parentProject = codeService.GetProjectFromFolder(Path.GetDirectoryName(projectItemPath));
+						ProjectItem validationItem;
+
+						if (parentProject.GetType() == typeof(Project))
+							validationItem = ((Project)parentProject).ProjectItems.AddFromFile(projectItemPath);
+						else
+							validationItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(projectItemPath);
+
+						var window = validationItem.Open();
+						window.Activate();
+
+						codeService.RegisterValidationModel(validationClassName,
+															projectMapping.ValidationNamespace);
+					}
+                    #endregion
+
+                    #region Example Operations
+                    //if (form.GenerateExampleData)
+                    //{
+                    //	GenerateExample = true;
+
+                    //	var resourceModel = codeService.GetResourceClass(resourceClassName);
+
+                    //	if ( profileMap== null)
+                    //		profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
+
+                    //	var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, exampleClassName, defaultServerType, connectionString);
+                    //	replacementsDictionary.Add("$examplemodel$", exampleModel);
+                    //}
+                    #endregion
+
+                    #region Controller Operations
+                    //if (form.GenerateController)
+                    //{
+                    //	GenerateController = true;
+
+                    //	var resourceModel = codeService.GetResourceClass(resourceClassName);
+
+                    //	var controllerModel = emitter.EmitController(
+                    //		dte,
+                    //		entityModel,
+                    //		resourceModel,
+                    //		moniker,
+                    //		controllerClassName,
+                    //		validatorInterface,
+                    //		policy,
+                    //		projectMapping.ValidationNamespace);
+
+                    //	replacementsDictionary.Add("$controllerModel$", controllerModel);
+                    //}
+                    #endregion
+                }
+
+                Proceed = true;
 			}
 			catch (Exception ex)
 			{
@@ -375,27 +462,6 @@ namespace COFRS.Template.Common.Wizards
         // not for project templates.
         public bool ShouldAddProjectItem(string filePath)
 		{
-			if (string.Equals(filePath, "Controllers"))
-				return Proceed && GenerateController;
-
-			if (string.Equals(filePath, "Validation"))
-				return Proceed && GenerateValidator;
-
-			if (string.Equals(filePath, "Mapping"))
-				return Proceed && GenerateMapping;
-
-			if (string.Equals(filePath, "Examples"))
-				return Proceed && GenerateExample;
-
-			if (string.Equals(filePath, "Models"))
-				return Proceed;
-
-			if (string.Equals(filePath, "EntityModels"))
-				return Proceed && GenerateEntity;
-
-			if (string.Equals(filePath, "ResourceModels"))
-				return Proceed && GenerateResource;
-
 			return Proceed;
 		}
 	}

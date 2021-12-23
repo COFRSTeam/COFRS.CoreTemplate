@@ -69,7 +69,7 @@
 			  <Parent guid="guidCOFRSCoresInstallerPackageCmdSet" id="MyItemGroup" />
 			  <CommandFlag>DynamicVisibility</CommandFlag>
 			  <Strings>
-				  <ButtonText>Edit Mapping...</ButtonText>
+				  <ButtonText>Reset Mapping...</ButtonText>
 			  </Strings>
 		  </Button>
 
@@ -88,6 +88,24 @@
 			  <CommandFlag>DynamicVisibility</CommandFlag>
 			  <Strings>
 				  <ButtonText>Add COFRS Resource Model...</ButtonText>
+			  </Strings>
+		  </Button>
+
+		  <Button guid="guidCOFRSCoresInstallerPackageCmdSet" id="COFRSAddProfileId" priority="0x0100" type="Button">
+			  <Parent guid="guidCOFRSCoresInstallerPackageCmdSet" id="MyFolderGroup" />
+			  <CommandFlag>DefaultInvisible</CommandFlag>
+			  <CommandFlag>DynamicVisibility</CommandFlag>
+			  <Strings>
+				  <ButtonText>Add COFRS Mapping...</ButtonText>
+			  </Strings>
+		  </Button>
+
+		  <Button guid="guidCOFRSCoresInstallerPackageCmdSet" id="COFRSAddValidatorId" priority="0x0100" type="Button">
+			  <Parent guid="guidCOFRSCoresInstallerPackageCmdSet" id="MyFolderGroup" />
+			  <CommandFlag>DefaultInvisible</CommandFlag>
+			  <CommandFlag>DynamicVisibility</CommandFlag>
+			  <Strings>
+				  <ButtonText>Add COFRS Validator...</ButtonText>
 			  </Strings>
 		  </Button>
 
@@ -134,7 +152,9 @@
 		<IDSymbol name="COFRSAddEntityId" value="0x0102" />
 		<IDSymbol name="COFRSAddResourceId" value="0x0103" />
 		<IDSymbol name="COFRSAddControllerId" value="0x0104" />
-		<IDSymbol name="COFRSAddFullControllerId" value="0x0105" />
+		<IDSymbol name="COFRSAddFullControllerId" value="0x0105" /> 
+		<IDSymbol name="COFRSAddProfileId" value="0x0106" />
+		<IDSymbol name="COFRSAddValidatorId" value="0x0107" />
 	</GuidSymbol>
 
     <GuidSymbol name="guidImages" value="{b525c1f4-42ee-4226-8338-edc1e4260127}" >

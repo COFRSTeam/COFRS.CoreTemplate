@@ -1,9 +1,11 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
@@ -36,6 +38,7 @@ namespace COFRS.Template.Common.Wizards
 			ThreadHelper.ThrowIfNotOnUIThread();
 			DTE2 mDte = automationObject as DTE2;
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
 
 			try
 			{
@@ -50,18 +53,15 @@ namespace COFRS.Template.Common.Wizards
 					mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					var mappingFolder = projectMapping.GetMappingFolder();
 
-					var result = MessageBox.Show($"You are attempting to install a resource/entity mapping model into {codeService.GetRelativeFolder(installationFolder)}. Typically, resource/entity mapping models reside in {codeService.GetRelativeFolder(mappingFolder)}.\r\n\r\nDo you wish to place the new resource/entity mapping model in this non-standard location?",
-						"Warning: Non-Standard Location",
-						MessageBoxButtons.YesNo,
-						MessageBoxIcon.Warning);
-
-					if (result == DialogResult.No)
+					if (!VsShellUtilities.PromptYesNo(
+							$"You are attempting to install a resource/entity mapping model into {codeService.GetRelativeFolder(installationFolder)}. Typically, resource/entity mapping models reside in {codeService.GetRelativeFolder(mappingFolder)}.\r\n\r\nDo you wish to place the new resource/entity mapping model in this non-standard location?", 
+							"Microsoft Visual Studio",
+							OLEMSGICON.OLEMSGICON_WARNING,
+							shell))
 					{
 						Proceed = false;
 						return;
 					}
-
-					mDte.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
 
 					projectMapping.MappingFolder = installationFolder.Folder;
 					projectMapping.MappingNamespace = installationFolder.Namespace;
@@ -70,15 +70,17 @@ namespace COFRS.Template.Common.Wizards
 					codeService.SaveProjectMapping();
 				}
 
-				var form = new UserInputGeneral()
+				var form = new NewProfileDialog()
 				{
 					DefaultConnectionString = connectionString,
-					InstallType = 1
+					ServiceProvider = ServiceProvider.GlobalProvider
 				};
 
-				if (form.ShowDialog() == DialogResult.OK)
+				var result = form.ShowDialog();
+
+				if (result.HasValue && result.Value == true)
 				{
-					var resourceModel = (ResourceClass)form._resourceModelList.SelectedItem;
+					var resourceModel = form.ResourceModel;
 
 					var emitter = new StandardEmitter();
 					var model = emitter.EmitMappingModel(resourceModel, replacementsDictionary["$safeitemname$"], replacementsDictionary);
@@ -94,7 +96,12 @@ namespace COFRS.Template.Common.Wizards
 			}
 			catch ( Exception error )
             {
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				Proceed = false;
 			}
 		}

@@ -24,13 +24,19 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="validatorClassName">The name of the validator class</param>
 		/// <param name="validatorInterface">The output parameter returning the validator interface name.</param>
 		/// <returns>The code for the validator class in a string.</returns>
-		public string EmitValidationModel(ResourceModel resourceModel, ProfileMap profileMap, ResourceMap resourceMap, string validatorClassName, out string validatorInterface)
+		public string EmitValidationModel(ResourceClass resourceModel, ProfileMap profileMap, string validatorClassName)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
 			//	Instantiate a string builder. We will use the string builder to construct our code.
 			var results = new StringBuilder();
 
 			//	The validator interface is nothing more than I followed by the validator class name.
-			validatorInterface = $"I{validatorClassName}";
+			var validatorInterface = $"I{validatorClassName}";
+
+
+			var resourceColumns = resourceModel.Columns;
+			var entityColumns = resourceModel.Entity.Columns;
 
 			//	Define the IValidator interface. This is nothing more than an interface that is derrived from
 			//	the IValidator<T> interface. The IValidator<T> interface has all the important methods defined
@@ -104,7 +110,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			foreach (ResourceProfile resourceProfile in profileMap.ResourceProfiles)
             {
-				var resourceColumn = resourceModel.Columns.FirstOrDefault(rc => rc.ColumnName.Equals(resourceProfile.ResourceColumnName));
+				var resourceColumn = resourceColumns.FirstOrDefault(rc => rc.ColumnName.Equals(resourceProfile.ResourceColumnName));
 
 				if ( resourceColumn != null )
                 {
@@ -116,7 +122,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                     {
 						if (resourceProfile.EntityColumnNames.Count() == 1)
 						{
-							var entityColumn = resourceModel.EntityModel.Columns.FirstOrDefault(ec => ec.ColumnName.Equals(resourceProfile.EntityColumnNames.ToList()[0]));
+							var entityColumn = entityColumns.FirstOrDefault(ec => ec.ColumnName.Equals(resourceProfile.EntityColumnNames.ToList()[0]));
 
 							if (entityColumn != null)
 							{
@@ -132,7 +138,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                     {
 						if (resourceProfile.EntityColumnNames.Count() == 1)
 						{
-							var entityColumn = resourceModel.EntityModel.Columns.FirstOrDefault(ec => ec.ColumnName.Equals(resourceProfile.EntityColumnNames.ToList()[0]));
+							var entityColumn = entityColumns.FirstOrDefault(ec => ec.ColumnName.Equals(resourceProfile.EntityColumnNames.ToList()[0]));
 
 							if (entityColumn != null)
 							{
@@ -189,7 +195,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, User, parms);");
 			foreach (ResourceProfile resourceProfile in profileMap.ResourceProfiles)
 			{
-				var resourceColumn = resourceModel.Columns.FirstOrDefault(rc => rc.ColumnName.Equals(resourceProfile.ResourceColumnName));
+				var resourceColumn = resourceColumns.FirstOrDefault(rc => rc.ColumnName.Equals(resourceProfile.ResourceColumnName));
 
 				if (resourceColumn != null)
 				{
@@ -666,43 +672,41 @@ namespace COFRS.Template.Common.ServiceUtilities
             return results.ToString();
         }
 
-		public string EmitResourceEnum(EntityClass model, string connectionString)
+		public string EmitResourceEnum(string resourceClassName, EntityClass model, string connectionString)
         {
 			ThreadHelper.ThrowIfNotOnUIThread();
 
 			if (model.ServerType == DBServerType.MYSQL)
-				return EmitResourceMySqlEnum(model, connectionString);
+				return EmitResourceMySqlEnum(resourceClassName, model, connectionString);
 			else if (model.ServerType == DBServerType.POSTGRESQL)
-				return EmitResourcePostgresqlEnum(model, connectionString);
+				return EmitResourcePostgresqlEnum(resourceClassName, model, connectionString);
 			else if (model.ServerType == DBServerType.SQLSERVER)
-				return EmitResourceSqlServerEnum(model, connectionString);
+				return EmitResourceSqlServerEnum(resourceClassName, model, connectionString);
 
 			return "Invalid DB Server Type";
         }
 
-		private static string EmitResourceMySqlEnum(EntityClass model, string connectionString)
+		private static string EmitResourceMySqlEnum(string resourceClassName, EntityClass model, string connectionString)
 		{
 			throw new NotImplementedException("not implemented yet");
 		}
-		private static string EmitResourcePostgresqlEnum(EntityClass model, string connectionString)
+		private static string EmitResourcePostgresqlEnum(string resourceClassName, EntityClass model, string connectionString)
 		{
 			throw new NotImplementedException("not implemented yet");
 		}
-		private static string EmitResourceSqlServerEnum(EntityClass entityModel, string connectionString)
+		private static string EmitResourceSqlServerEnum(string resourceClassName, EntityClass entityModel, string connectionString)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			StringBuilder results = new StringBuilder();
-			var ResourceClassName = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityModel.TableName))}";
 
 			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\t{ResourceClassName}");
+			results.AppendLine($"\t///\t{resourceClassName}");
 			results.AppendLine("\t///\t</summary>");
 			results.AppendLine($"\t[Entity(typeof({entityModel.ClassName}))]");
 
 			var dataType = entityModel.Columns[0].ModelDataType;
 
-			results.AppendLine($"\tpublic enum {ResourceClassName} : {dataType}");
+			results.AppendLine($"\tpublic enum {resourceClassName} : {dataType}");
 			results.AppendLine("\t{");
 
 			bool firstColumn = true;
@@ -2418,13 +2422,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="resourceClass">The <see cref="ResourceClass"/> to generate</param>
 		/// <param name="replacementsDictionary">The replacements dictionary</param>
 		/// <returns></returns>
-		public string EmitResourceModel(EntityClass entityModel, Dictionary<string, string> replacementsDictionary)
+		public string EmitResourceModel(string resourceClassName, EntityClass entityModel, Dictionary<string, string> replacementsDictionary)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			List<DBColumn> resourceColumns = new List<DBColumn>();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
-			var ResourceClassName = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(entityModel.TableName))}";
-
 
 			replacementsDictionary.Add("$resourceimage$", "false");
 			replacementsDictionary.Add("$resourcenet$", "false");
@@ -2437,13 +2439,13 @@ namespace COFRS.Template.Common.ServiceUtilities
 			bool hasPrimary = false;
 
 			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\t{ResourceClassName}");
+			results.AppendLine($"\t///\t{resourceClassName}");
 			results.AppendLine("\t///\t</summary>");
 			results.AppendLine($"\t[Entity(typeof({entityModel.ClassName}))]");
 
 			if (entityModel.ElementType == ElementType.Enum)
 			{
-				results.AppendLine($"\tpublic enum {ResourceClassName}");
+				results.AppendLine($"\tpublic enum {resourceClassName}");
 				results.AppendLine("\t{");
 
 				bool firstColumn = true;
@@ -2475,7 +2477,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 			else
 			{
-				results.AppendLine($"\tpublic class {ResourceClassName}");
+				results.AppendLine($"\tpublic class {resourceClassName}");
 				results.AppendLine("\t{");
 				var foreignTableList = new List<string>();
 
@@ -2962,22 +2964,24 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				if (undefinedModel.Entity.ElementType == ElementType.Enum)
 				{
+					var nn = new NameNormalizer(undefinedModel.Entity.TableName); 
+
+					var className = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(nn.SingleForm))}";
+
 					result.AppendLine("using COFRS;");
 					result.AppendLine("using NpgsqlTypes;");
 					result.AppendLine($"using {undefinedModel.Entity.Namespace};");
 					result.AppendLine();
 					result.AppendLine($"namespace {resourceModelFolder.Namespace}");
 					result.AppendLine("{");
-					result.Append(EmitResourceEnum(undefinedModel.Entity, connectionString));
+					result.Append(EmitResourceEnum(className, undefinedModel.Entity, connectionString));
 					result.AppendLine("}");
 
 					//	Save the model to disk
 					if (!Directory.Exists(Path.GetDirectoryName(resourceModelFolder.Folder)))
 						Directory.CreateDirectory(Path.GetDirectoryName(resourceModelFolder.Folder));
 
-					var className = $"{codeService.CorrectForReservedNames(codeService.NormalizeClassName(undefinedModel.Entity.TableName))}";
 					var fullPath = Path.Combine(resourceModelFolder.Folder, $"{className}.cs");
-
 
 					File.WriteAllText(fullPath, result.ToString());
 

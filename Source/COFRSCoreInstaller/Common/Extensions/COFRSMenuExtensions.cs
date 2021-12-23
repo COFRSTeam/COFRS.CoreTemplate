@@ -36,6 +36,8 @@ namespace COFRS.Template
 		public const int AddResourceModelId = 0x103;
 		public const int AddControllerId = 0x104;
 		public const int AddFullControllerId = 0x105;
+		public const int AddProfileId = 0x0106;
+		public const int AddValidatorId = 0x0107;
 
 		/// <summary>
 		/// Command menu group (command set GUID).
@@ -91,6 +93,16 @@ namespace COFRS.Template
 			OleMenuCommand AddFullControllerMenu = new OleMenuCommand(new EventHandler(OnAddFullController), addFullControllerCommandId);
 			AddFullControllerMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddFullController);
 			commandService.AddCommand(AddFullControllerMenu);
+
+			var addProfileMapCommandId = new CommandID(CommandSet, AddProfileId);
+			OleMenuCommand AddProfileMapMenu = new OleMenuCommand(new EventHandler(OnAddProfileMap), addProfileMapCommandId);
+			AddProfileMapMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddProfileMap);
+			commandService.AddCommand(AddProfileMapMenu);
+
+			var addValidatorCommandId = new CommandID(CommandSet, AddValidatorId);
+			OleMenuCommand AddValidatorMenu = new OleMenuCommand(new EventHandler(OnAddValidator), addValidatorCommandId);
+			AddValidatorMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddValidator);
+			commandService.AddCommand(AddValidatorMenu);
 		}
 
 		/// <summary>
@@ -153,6 +165,357 @@ namespace COFRS.Template
 			codeService.OnSolutionOpened();
 		}
 
+		private void OnBeforeAddValidator(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+
+
+			if (selectedItems.Length > 1 || selectedItems.Length == 0)
+			{
+				var myCommand = sender as OleMenuCommand;
+				myCommand.Visible = false;
+			}
+			else
+			{
+				ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+
+				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
+					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
+				{
+					var codeService = COFRSServiceFactory.GetService<ICodeService>();
+					var projectMap = codeService.LoadProjectMapping();
+
+					var candidateFolder = projectMap.ValidationFolder;
+					var projectItemPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+					{
+						ThreadHelper.ThrowIfNotOnUIThread();
+						return p.Name.Equals("FullPath");
+					})?.Value.ToString().Trim('\\');
+
+					if (projectItemPath.Equals(candidateFolder))
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = true;
+					}
+					else
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = false;
+					}
+				}
+				else
+				{
+					var myCommand = sender as OleMenuCommand;
+					myCommand.Visible = false;
+				}
+			}
+		}
+
+		private void OnAddValidator(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+			var projectMapping = codeService.LoadProjectMapping();
+
+			ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+
+			var projectFolderNamespace = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+			{
+				ThreadHelper.ThrowIfNotOnUIThread();
+				return p.Name.Equals("DefaultNamespace", StringComparison.OrdinalIgnoreCase);
+			});
+
+			var projectFolderPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+			{
+				ThreadHelper.ThrowIfNotOnUIThread();
+				return p.Name.Equals("FullPath", StringComparison.OrdinalIgnoreCase);
+			});
+
+
+			var dialog = new GetClassNameDialog("COFRS Validator Generator", "ResourceValidator.cs");
+			var result = dialog.ShowDialog();
+
+			if (result.HasValue && result.Value == true)
+			{
+				var replacementsDictionary = new Dictionary<string, string>();
+
+				for (int i = 0; i < 10; i++)
+				{
+					replacementsDictionary.Add($"$guid{i + 1}$", Guid.NewGuid().ToString());
+				}
+
+				var className = dialog.ClassName;
+				if (className.EndsWith(".cs"))
+					className = className.Substring(0, className.Length - 3);
+
+				replacementsDictionary.Add("$time$", DateTime.Now.ToString());
+				replacementsDictionary.Add("$year$", DateTime.Now.Year.ToString());
+				replacementsDictionary.Add("$username$", Environment.UserName);
+				replacementsDictionary.Add("$userdomain$", Environment.UserDomainName);
+				replacementsDictionary.Add("$machinename$", Environment.MachineName);
+				replacementsDictionary.Add("$clrversion$", GetRunningFrameworkVersion());
+				replacementsDictionary.Add("$registeredorganization$", GetOrganization());
+				replacementsDictionary.Add("$runsilent$", "True");
+				replacementsDictionary.Add("$solutiondirectory$", Path.GetDirectoryName(mDte.Solution.FullName));
+				replacementsDictionary.Add("$rootname$", $"{className}.cs");
+				replacementsDictionary.Add("$targetframeworkversion$", "6.0");
+				replacementsDictionary.Add("$targetframeworkidentifier", ".NETCoreApp");
+				replacementsDictionary.Add("$safeitemname$", codeService.NormalizeClassName(codeService.CorrectForReservedNames(className)));
+				replacementsDictionary.Add("$rootnamespace$", projectFolderNamespace.Value.ToString());
+
+				var wizard = new ValidationWizard();
+
+				wizard.RunStarted(mDte, replacementsDictionary, Microsoft.VisualStudio.TemplateWizard.WizardRunKind.AsNewItem, null);
+
+				var projectItemPath = Path.Combine(projectFolderPath.Value.ToString(), replacementsDictionary["$rootname$"]);
+
+				if (wizard.ShouldAddProjectItem("Validator"))
+				{
+					var theFile = new StringBuilder();
+
+					theFile.AppendLine("using System;");
+					theFile.AppendLine("using System.Collections.Generic;");
+					theFile.AppendLine("using System.Linq;");
+					theFile.AppendLine("using System.Security.Claims;");
+					theFile.AppendLine("using System.Threading.Tasks;");
+
+					if (replacementsDictionary.ContainsKey("$barray$"))
+						if (replacementsDictionary["$barray$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Collections;");
+
+					if (replacementsDictionary.ContainsKey("$image$"))
+						if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Drawing;");
+
+					if (replacementsDictionary.ContainsKey("$net$"))
+						if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Net;");
+
+					if (replacementsDictionary.ContainsKey("$netinfo$"))
+						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Net.NetworkInformation;");
+
+					if (replacementsDictionary.ContainsKey("$annotations$"))
+						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
+
+					if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
+						if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using NpgsqlTypes;");
+
+					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
+
+					theFile.AppendLine($"using {projectMapping.EntityNamespace};");
+					theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
+					theFile.AppendLine($"using {orchestrationNamespace};");
+					theFile.AppendLine("using COFRS;");
+					theFile.AppendLine();
+					theFile.AppendLine($"namespace {projectMapping.ValidationNamespace}");
+					theFile.AppendLine("{");
+
+					theFile.Append(replacementsDictionary["$model$"]);
+					theFile.AppendLine("}");
+
+					File.WriteAllText(projectItemPath, theFile.ToString());
+
+					var parentProject = codeService.GetProjectFromFolder(projectFolderPath.Value.ToString());
+					ProjectItem validationItem;
+
+					if (parentProject.GetType() == typeof(Project))
+						validationItem = ((Project)parentProject).ProjectItems.AddFromFile(projectItemPath);
+					else
+						validationItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(projectItemPath);
+
+					wizard.ProjectItemFinishedGenerating(validationItem);
+					wizard.BeforeOpeningFile(validationItem);
+
+					var window = validationItem.Open();
+					window.Activate();
+
+					wizard.RunFinished();
+				}
+			}
+		}
+
+		private void OnBeforeAddProfileMap(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+
+
+			if (selectedItems.Length > 1 || selectedItems.Length == 0)
+			{
+				var myCommand = sender as OleMenuCommand;
+				myCommand.Visible = false;
+			}
+			else
+			{
+				ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+
+				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
+					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
+				{
+					var codeService = COFRSServiceFactory.GetService<ICodeService>();
+					var projectMap = codeService.LoadProjectMapping();
+
+					var candidateFolder = projectMap.MappingFolder;
+					var projectItemPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+					{
+						ThreadHelper.ThrowIfNotOnUIThread();
+						return p.Name.Equals("FullPath");
+					})?.Value.ToString().Trim('\\');
+
+					if (projectItemPath.Equals(candidateFolder))
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = true;
+					}
+					else
+					{
+						var myCommand = sender as OleMenuCommand;
+						myCommand.Visible = false;
+					}
+				}
+				else
+				{
+					var myCommand = sender as OleMenuCommand;
+					myCommand.Visible = false;
+				}
+			}
+		}
+
+		private void OnAddProfileMap(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+			var projectMapping = codeService.LoadProjectMapping();
+
+			ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+
+			var projectFolderNamespace = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+			{
+				ThreadHelper.ThrowIfNotOnUIThread();
+				return p.Name.Equals("DefaultNamespace", StringComparison.OrdinalIgnoreCase);
+			});
+
+			var projectFolderPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
+			{
+				ThreadHelper.ThrowIfNotOnUIThread();
+				return p.Name.Equals("FullPath", StringComparison.OrdinalIgnoreCase);
+			});
+
+
+			var dialog = new GetClassNameDialog("COFRS Mapping Generator", "ResourceProfile.cs");
+			var result = dialog.ShowDialog();
+
+			if (result.HasValue && result.Value == true)
+			{
+				var replacementsDictionary = new Dictionary<string, string>();
+
+				for (int i = 0; i < 10; i++)
+				{
+					replacementsDictionary.Add($"$guid{i + 1}$", Guid.NewGuid().ToString());
+				}
+
+				var className = dialog.ClassName;
+				if (className.EndsWith(".cs"))
+					className = className.Substring(0, className.Length - 3);
+
+				replacementsDictionary.Add("$time$", DateTime.Now.ToString());
+				replacementsDictionary.Add("$year$", DateTime.Now.Year.ToString());
+				replacementsDictionary.Add("$username$", Environment.UserName);
+				replacementsDictionary.Add("$userdomain$", Environment.UserDomainName);
+				replacementsDictionary.Add("$machinename$", Environment.MachineName);
+				replacementsDictionary.Add("$clrversion$", GetRunningFrameworkVersion());
+				replacementsDictionary.Add("$registeredorganization$", GetOrganization());
+				replacementsDictionary.Add("$runsilent$", "True");
+				replacementsDictionary.Add("$solutiondirectory$", Path.GetDirectoryName(mDte.Solution.FullName));
+				replacementsDictionary.Add("$rootname$", $"{className}.cs");
+				replacementsDictionary.Add("$targetframeworkversion$", "6.0");
+				replacementsDictionary.Add("$targetframeworkidentifier", ".NETCoreApp");
+				replacementsDictionary.Add("$safeitemname$", codeService.NormalizeClassName(codeService.CorrectForReservedNames(className)));
+				replacementsDictionary.Add("$rootnamespace$", projectFolderNamespace.Value.ToString());
+
+				var wizard = new MapperWizard();
+
+				wizard.RunStarted(mDte, replacementsDictionary, Microsoft.VisualStudio.TemplateWizard.WizardRunKind.AsNewItem, null);
+
+				var projectItemPath = Path.Combine(projectFolderPath.Value.ToString(), replacementsDictionary["$rootname$"]);
+
+				if (wizard.ShouldAddProjectItem("Mapping"))
+				{
+					var theFile = new StringBuilder();
+
+					theFile.AppendLine("using System;");
+					theFile.AppendLine("using System.Linq;");
+					theFile.AppendLine("using Microsoft.Extensions.Configuration;");
+
+					if (replacementsDictionary.ContainsKey("$barray$"))
+						if (replacementsDictionary["$barray$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Collections;");
+
+					theFile.AppendLine("using System.Collections.Generic;");
+
+					if (replacementsDictionary.ContainsKey("$image$"))
+						if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Drawing;");
+
+					if (replacementsDictionary.ContainsKey("$net$"))
+						if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Net;");
+
+					if (replacementsDictionary.ContainsKey("$netinfo$"))
+						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.Net.NetworkInformation;");
+
+					if (replacementsDictionary.ContainsKey("$annotations$"))
+						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
+
+					if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
+						if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using NpgsqlTypes;");
+
+					theFile.AppendLine($"using {projectMapping.EntityNamespace};");
+					theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
+
+					theFile.AppendLine("using AutoMapper;");
+					theFile.AppendLine("using COFRS;");
+					theFile.AppendLine();
+					theFile.AppendLine($"namespace {projectMapping.MappingNamespace}");
+					theFile.AppendLine("{");
+
+					theFile.Append(replacementsDictionary["$model$"]);
+					theFile.AppendLine("}");
+
+					File.WriteAllText(projectItemPath, theFile.ToString());
+
+					var parentProject = codeService.GetProjectFromFolder(projectFolderPath.Value.ToString());
+					ProjectItem mappingItem;
+
+					if (parentProject.GetType() == typeof(Project))
+						mappingItem = ((Project)parentProject).ProjectItems.AddFromFile(projectItemPath);
+					else
+						mappingItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(projectItemPath);
+
+					wizard.ProjectItemFinishedGenerating(mappingItem);
+					wizard.BeforeOpeningFile(mappingItem);
+
+					var window = mappingItem.Open();
+					window.Activate();
+
+					wizard.RunFinished();
+				}
+			}
+		}
+
 		private void OnBeforeAddFullController(object sender, EventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -200,7 +563,6 @@ namespace COFRS.Template
 				}
 			}
 		}
-
 
 		private void OnAddFullController(object sender, EventArgs e)
 		{

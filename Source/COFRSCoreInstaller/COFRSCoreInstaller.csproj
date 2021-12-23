@@ -70,8 +70,14 @@
     <Compile Include="Common\Windows\NewEntityDialog.xaml.cs">
       <DependentUpon>NewEntityDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Common\Windows\NewProfileDialog.xaml.cs">
+      <DependentUpon>NewProfileDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Common\Windows\NewResourceDialog.xaml.cs">
       <DependentUpon>NewResourceDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Common\Windows\ValidationDialog.xaml.cs">
+      <DependentUpon>ValidationDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Common\Wizards\COFRSModelsProjectWizard.cs" />
     <Compile Include="Common\Wizards\COFRSSDKProjectWizard.cs" />
@@ -385,7 +391,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Common\Windows\NewProfileDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Common\Windows\NewResourceDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Common\Windows\ValidationDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
