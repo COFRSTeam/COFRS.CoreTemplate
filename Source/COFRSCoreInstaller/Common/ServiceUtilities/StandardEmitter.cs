@@ -2528,7 +2528,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 						var enumResourceModel = codeService.GetResourceClassBySchema(entityModel.SchemaName, member.ForeignTableName);
 
-						if (enumResourceModel != null)
+						if (enumResourceModel != null && enumResourceModel.ResourceType == ResourceType.Enum)
 						{
 							//	This is the enum version
 							results.AppendLine("\t\t///\t<summary>");

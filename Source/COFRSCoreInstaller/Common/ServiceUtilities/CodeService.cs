@@ -378,7 +378,7 @@ namespace COFRS.Template.Common.ServiceUtilities
             get
             {
 				ThreadHelper.ThrowIfNotOnUIThread();
-				if (entityClassList.Count == 0)
+				if (entityClassList == null || entityClassList.Count == 0)
                     LoadEntityClassList();
 
                 return entityClassList;
@@ -515,10 +515,11 @@ namespace COFRS.Template.Common.ServiceUtilities
         public ResourceClass GetResourceClassBySchema(string schema, string tableName)
         {
 			ThreadHelper.ThrowIfNotOnUIThread();
-			if (resourceClassList.Count == 0)
+			if (resourceClassList == null || resourceClassList.Count == 0)
                 LoadResourceClassList();
 
-            return resourceClassList.FirstOrDefault(c => c.Entity.SchemaName.Equals(schema, StringComparison.OrdinalIgnoreCase) &&
+            return resourceClassList.FirstOrDefault(c => c.Entity != null &&
+			                                             c.Entity.SchemaName.Equals(schema, StringComparison.OrdinalIgnoreCase) &&
                                                          c.Entity.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -4356,7 +4357,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					var isForeignKeyArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("IsForeignKey"));
 
 					if (isForeignKeyArgument != null)
-						dbColumn.IsFixed = isForeignKeyArgument.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
+						dbColumn.IsForeignKey = isForeignKeyArgument.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
 
 					var nativeDataTypeArgument = memberAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals("NativeDataType"));
 

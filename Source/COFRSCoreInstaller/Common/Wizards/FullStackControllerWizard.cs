@@ -193,7 +193,7 @@ namespace COFRS.Template.Common.Wizards
 
 						File.WriteAllText(entityFilePath, theFile.ToString());
 
-						var parentProject = codeService.GetProjectFromFolder(entityFilePath);
+						var parentProject = codeService.GetProjectFromFolder(Path.GetDirectoryName(entityFilePath));
 						ProjectItem entityItem;
 
 						if (parentProject.GetType() == typeof(Project))
@@ -221,7 +221,65 @@ namespace COFRS.Template.Common.Wizards
 						var rmodel = standardEmitter.EmitResourceModel(entityModel,
 																	   replacementsDictionary);
 
-						replacementsDictionary.Add("$resourceModel$", rmodel);
+						var resourceFilePath = Path.Combine(projectMapping.GetResourceModelsFolder().Folder, $"{resourceClassName}.cs");
+
+						var theFile = new StringBuilder();
+
+						theFile.AppendLine("using System;");
+
+						if (replacementsDictionary.ContainsKey("$barray$"))
+							if (replacementsDictionary["$barray$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Collections;");
+
+						theFile.AppendLine("using System.Collections.Generic;");
+
+						if (replacementsDictionary.ContainsKey("$image$"))
+							if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Drawing;");
+
+						if (replacementsDictionary.ContainsKey("$net$"))
+							if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net;");
+
+						if (replacementsDictionary.ContainsKey("$netinfo$"))
+							if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net.NetworkInformation;");
+
+						if (replacementsDictionary.ContainsKey("$annotations$"))
+							if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
+
+						theFile.AppendLine($"using {projectMapping.EntityNamespace};");
+
+						if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
+							if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using NpgsqlTypes;");
+
+						theFile.AppendLine("using COFRS;");
+						theFile.AppendLine();
+						theFile.AppendLine($"namespace {projectMapping.ResourceNamespace}");
+						theFile.AppendLine("{");
+
+						theFile.Append(rmodel);
+						theFile.AppendLine("}");
+
+						File.WriteAllText(resourceFilePath, theFile.ToString());
+
+						var parentProject = codeService.GetProjectFromFolder(Path.GetDirectoryName(resourceFilePath));
+						ProjectItem resourceItem;
+
+						if (parentProject.GetType() == typeof(Project))
+							resourceItem = ((Project)parentProject).ProjectItems.AddFromFile(resourceFilePath);
+						else
+							resourceItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(resourceFilePath);
+
+						codeService.AddResource(resourceItem);
+
+						ProjectItemFinishedGenerating(resourceItem);
+						BeforeOpeningFile(resourceItem);
+
+						var window = resourceItem.Open();
+						window.Activate();
 					}
 					#endregion
 
