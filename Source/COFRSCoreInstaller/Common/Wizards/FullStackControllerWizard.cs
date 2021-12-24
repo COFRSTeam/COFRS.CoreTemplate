@@ -58,14 +58,6 @@ namespace COFRS.Template.Common.Wizards
 
 				//	Get folders and namespaces
 				var rootNamespace = replacementsDictionary["$rootnamespace$"];
-				replacementsDictionary["$entitynamespace$"] = projectMapping.EntityNamespace;
-				replacementsDictionary["$resourcenamespace$"] = projectMapping.ResourceNamespace;
-				replacementsDictionary["$mappingnamespace$"] = projectMapping.MappingNamespace;
-				replacementsDictionary["$orchestrationnamespace$"] = $"{rootNamespace}.Orchestration";
-				replacementsDictionary["$validatornamespace$"] = projectMapping.ValidationNamespace;
-				replacementsDictionary["$validationnamespace$"] = projectMapping.ValidationNamespace;
-				replacementsDictionary["$examplesnamespace$"] = projectMapping.ExampleNamespace;
-
 				var candidateName = replacementsDictionary["$safeitemname$"];
 
 				if (candidateName.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
@@ -477,35 +469,46 @@ namespace COFRS.Template.Common.Wizards
 						var window = exampleItem.Open();
 						window.Activate();
 					}
-                    #endregion
+					#endregion
 
-                    #region Controller Operations
-                    //if (form.GenerateController)
-                    //{
-                    //    GenerateController = true;
+					#region Controller Operations
+					if (form.GenerateController)
+					{
+						Proceed = true;
+						var resourceModel = codeService.GetResourceClass(resourceClassName);
+						var validatorInterface = codeService.FindValidatorInterface(resourceModel.ClassName);
+						var orchestrationNamespace = codeService.FindOrchestrationNamespace();
 
-                    //    var resourceModel = codeService.GetResourceClass(resourceClassName);
+						var controllerModel = emitter.EmitController(resourceModel,
+																	 moniker,
+																	 controllerClassName,
+																	 validatorInterface,
+																	 policy,
+																	 projectMapping.ValidationNamespace);
 
-                    //    var controllerModel = emitter.EmitController(
-                    //        dte,
-                    //        entityModel,
-                    //        resourceModel,
-                    //        moniker,
-                    //        controllerClassName,
-                    //        validatorInterface,
-                    //        policy,
-                    //        projectMapping.ValidationNamespace);
-
-                    //    replacementsDictionary.Add("$controllerModel$", controllerModel);
-                    //}
+						replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
+						replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
+						replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
+						replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
+						replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
+						replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
+						replacementsDictionary.Add("$validationnamespace$", projectMapping.ValidationNamespace);
+						replacementsDictionary.Add("$examplesnamespace$", projectMapping.ExampleNamespace);
+						replacementsDictionary.Add("$model$", controllerModel);
+					}
+					else
+						Proceed = false;
                     #endregion
                 }
-
-                Proceed = true;
 			}
-			catch (Exception ex)
+			catch (Exception error)
 			{
-				MessageBox.Show(ex.ToString());
+				VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				Proceed = false;
 			}
 		}

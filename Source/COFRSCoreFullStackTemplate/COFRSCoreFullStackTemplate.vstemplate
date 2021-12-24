@@ -10,7 +10,7 @@
     <NumberOfParentCategoriesToRollUp>2</NumberOfParentCategoriesToRollUp>
     <ShowByDefault>false</ShowByDefault>
     <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
-    <DefaultName>ResourceName</DefaultName>
+    <DefaultName>Resource</DefaultName>
   </TemplateData>
   <TemplateContent>
     <References>

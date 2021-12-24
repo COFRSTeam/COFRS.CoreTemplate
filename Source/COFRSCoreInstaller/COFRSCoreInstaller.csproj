@@ -61,6 +61,9 @@
     <Compile Include="Common\Windows\AddConnectionDialog.xaml.cs">
       <DependentUpon>AddConnectionDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Common\Windows\ControllerDialog.xaml.cs">
+      <DependentUpon>ControllerDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Common\Windows\ExamplesDialog.xaml.cs">
       <DependentUpon>ExamplesDialog.xaml</DependentUpon>
     </Compile>
@@ -379,6 +382,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Common\Windows\COFRSNewProjectDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Common\Windows\ControllerDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
