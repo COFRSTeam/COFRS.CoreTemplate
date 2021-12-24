@@ -70,8 +70,6 @@ namespace COFRS.Template.Common.Wizards
 						return;
 					}
 
-					dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-
 					controllersFolder = installationFolder;
 
 					projectMapping.ControllersFolder = controllersFolder.Folder;

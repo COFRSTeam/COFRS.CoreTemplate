@@ -58,7 +58,7 @@ namespace COFRS.Template.Common.Windows
 			foreach (var resourceClass in codeService.ResourceClassList)
 				Combobox_ResourceClasses.Items.Add(resourceClass);
 
-			Combobox_Policy.Items.Add("Anonomous");
+			Combobox_Policy.Items.Add("Anonymous");
 
 			if ( Policies != null )
 				foreach (var policy in Policies)
