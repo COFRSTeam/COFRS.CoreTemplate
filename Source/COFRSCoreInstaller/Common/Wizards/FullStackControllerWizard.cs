@@ -103,8 +103,7 @@ namespace COFRS.Template.Common.Wizards
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
 					replacementsDictionary.Add("$policy$", string.IsNullOrWhiteSpace(policy) ? "none" : "using");
 
-					var emitter = new Emitter();
-					var standardEmitter = new StandardEmitter();
+					var standardEmitter = new Emitter();
 
 					#region Entity Model Operations
 					//	Should we generate an entity model?
@@ -476,7 +475,7 @@ namespace COFRS.Template.Common.Wizards
 						var validatorInterface = codeService.FindValidatorInterface(resourceModel.ClassName);
 						var orchestrationNamespace = codeService.FindOrchestrationNamespace();
 
-						var controllerModel = emitter.EmitController(resourceModel,
+						var controllerModel = standardEmitter.EmitController(resourceModel,
 																	 moniker,
 																	 controllerClassName,
 																	 validatorInterface,

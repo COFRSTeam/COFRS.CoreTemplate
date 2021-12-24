@@ -57,7 +57,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Common\Extensions\COFRSMenuExtensions.cs" />
-    <Compile Include="Common\ServiceUtilities\WinNative.cs" />
     <Compile Include="Common\Windows\AddCollection.xaml.cs">
       <DependentUpon>AddCollection.xaml</DependentUpon>
     </Compile>
@@ -115,9 +114,8 @@
     <Compile Include="Common\ServiceUtilities\ICodeService.cs" />
     <Compile Include="Common\ServiceUtilities\NameNormalizer.cs" />
     <Compile Include="Common\ServiceUtilities\SourceConverter.cs" />
-    <Compile Include="Common\ServiceUtilities\StandardEmitter.cs" />
+    <Compile Include="Common\ServiceUtilities\Emitter.cs" />
     <Compile Include="Common\Extensions\StringExtensions.cs" />
-    <Compile Include="Common\ServiceUtilities\WindowClass.cs" />
     <Compile Include="Common\Windows\COFRSNewProjectDialog.xaml.cs">
       <DependentUpon>COFRSNewProjectDialog.xaml</DependentUpon>
     </Compile>
@@ -129,7 +127,6 @@
     <Compile Include="Common\Wizards\ResourceWizard.cs" />
     <Compile Include="Common\Wizards\ValidationWizard.cs" />
     <Compile Include="Common\Wizards\CoreProjectWtihSDKWizard.cs" />
-    <Compile Include="Common\ServiceUtilities\Emitter.cs" />
     <Compile Include="Common\ServiceUtilities\ProviderOptions.cs" />
     <Compile Include="Common\Wizards\COFRSServiceProjectWizard.cs" />
     <Compile Include="Common\Wizards\CoreProjectWizard.cs" />

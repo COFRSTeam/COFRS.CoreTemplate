@@ -80,7 +80,7 @@ namespace COFRS.Template.Common.Wizards
 
                 if (form.DialogResult.HasValue && form.DialogResult.Value == true)
                 {
-                    var standardEmitter = new StandardEmitter();
+                    var standardEmitter = new Emitter();
                     var undefinedModels = form.UndefinedResources;
 
                     standardEmitter.GenerateResourceComposites(undefinedModels,

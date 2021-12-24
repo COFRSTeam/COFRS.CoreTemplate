@@ -98,8 +98,7 @@ namespace COFRS.Template.Common.Wizards
                         var className = replacementsDictionary["$safeitemname$"];
                         replacementsDictionary["$entityClass$"] = className;
 
-                        var emitter = new Emitter();
-                        var standardEmitter = new StandardEmitter();
+                        var standardEmitter = new Emitter();
 
                         if (form.ServerType == DBServerType.POSTGRESQL)
                         {
