@@ -1,0 +1,31 @@
+﻿<ui:DialogWindow x:Class="COFRS.Template.Common.Windows.AddCollection"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:vsui="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             ShowInTaskbar="False"
+             WindowStartupLocation="CenterOwner"
+             SizeToContent="WidthAndHeight" Loaded="OnLoad"
+             WindowStyle="ToolWindow" Title="COFRS REST Service (.NET Core)" Height="351" >
+    <ui:DialogWindow.Resources>
+        <Style TargetType="{x:Type Grid}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+        </Style>
+        <Style TargetType="{x:Type PasswordBox}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolWindowTextKey}}" />
+        </Style>
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolWindowTextKey}}" />
+        </Style>
+    </ui:DialogWindow.Resources>
+    <Grid x:Name="MainGrid" Width="539" Height="340">
+        <Label Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" x:Name="Label_ChildResources" Content="Child Resources" HorizontalAlignment="Left" Margin="10,57,0,0" VerticalAlignment="Top"/>
+        <ListBox Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogListBoxStyleKey}}" x:Name="Listbox_ChildResources" Margin="118,57,0,0" Height="231" VerticalAlignment="Top" HorizontalAlignment="Left" Width="411"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_OK" Content="OK" HorizontalAlignment="Left" Margin="382,302,0,0" VerticalAlignment="Top" Width="65" Click="OK_Click"/>
+        <Button Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogButtonStyleKey}}" x:Name="Button_Cancel" Content="Cancel" HorizontalAlignment="Left" Margin="464,302,0,0" VerticalAlignment="Top" Width="65" Click="Cancel_Click"/>
+        <Label x:Name="Label_ResourceClass" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" Content="Resource" HorizontalAlignment="Left" Margin="10,12,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="Label_ResourceName" Content="Label" Style="{DynamicResource {x:Static vsui:VsResourceKeys.ThemedDialogLabelStyleKey}}" HorizontalAlignment="Left" Margin="118,12,0,0" VerticalAlignment="Top" Width="320"/>
+    </Grid>
+</ui:DialogWindow>

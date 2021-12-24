@@ -1,5 +1,4 @@
-﻿using COFRS.Template.Common.Forms;
-using COFRS.Template.Common.Models;
+﻿using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
 using COFRS.Template.Common.Windows;
 using EnvDTE;

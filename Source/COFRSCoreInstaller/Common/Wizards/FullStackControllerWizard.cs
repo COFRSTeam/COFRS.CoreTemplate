@@ -1,9 +1,7 @@
-﻿using COFRS.Template.Common.Forms;
-using COFRS.Template.Common.Models;
+﻿using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
 using COFRS.Template.Common.Windows;
 using EnvDTE;
-using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
@@ -11,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Windows.Forms;
 
 namespace COFRS.Template.Common.Wizards
 {

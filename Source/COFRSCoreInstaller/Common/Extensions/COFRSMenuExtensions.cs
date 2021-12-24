@@ -1,5 +1,4 @@
-﻿using COFRS.Template.Common.Forms;
-using COFRS.Template.Common.Models;
+﻿using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
 using COFRS.Template.Common.Windows;
 using COFRS.Template.Common.Wizards;
@@ -1459,10 +1458,14 @@ namespace COFRS.Template
 						//	The parent resource is the resource selected by the user. This is the resource we will be adding the collection to.
 						//	Get the resource model for the parent resource.
 						var parentModel = codeService.GetResourceClass(theClass.Name);
-						var dialog = new AddCollectionDialog();
-						dialog.ResourceName.Text = theClass.Name;
+                        var dialog = new AddCollection
+                        {
+                            ResourceModel = parentModel
+                        };
 
-						if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                        var result = dialog.ShowDialog();
+
+						if (result.HasValue && result.Value == true)
 						{
 							var projectMapping = codeService.LoadProjectMapping();  //	Contains the names and projects where various source file exist.
 							ProjectItem orchestrator = mDte.Solution.FindProjectItem("ServiceOrchestrator.cs");
@@ -1480,10 +1483,10 @@ namespace COFRS.Template
 							if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System")) == null)
 								codeModel.AddImport("System", -1);
 
-							foreach (var childItem in dialog.ChildResourceList.CheckedItems)
+							foreach (string childItem in dialog.SelectedItems)
 							{
 								//	Get the child model from the resource map
-								var childModel = codeService.GetResourceClass(childItem.ToString());
+								var childModel = codeService.GetResourceClass(childItem);
 
 								//	Setup the default name of our new member
 								var nn = new NameNormalizer(childModel.ClassName);
@@ -1657,8 +1660,6 @@ namespace COFRS.Template
 
 					if (theClass != null)
 					{
-						var resourceMap = codeService.LoadResourceMap();
-
 						var constructor = theClass.Children
 												  .OfType<CodeFunction2>()
 												  .First(c => c.FunctionKind == vsCMFunction.vsCMFunctionConstructor);

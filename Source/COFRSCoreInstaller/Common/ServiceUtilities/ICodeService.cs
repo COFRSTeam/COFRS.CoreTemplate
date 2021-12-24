@@ -56,7 +56,6 @@ namespace COFRS.Template.Common.ServiceUtilities
         DBColumn[] LoadEntityEnumColumns(CodeEnum enumElement);
 
         bool IsChildOf(string parentPath, string candidateChildPath);
-        bool IsRootNamespace(string candidateNamespace);
 
         string GetRelativeFolder(ProjectFolder folder);
         string FindOrchestrationNamespace();
@@ -73,7 +72,6 @@ namespace COFRS.Template.Common.ServiceUtilities
         ProfileMap OpenProfileMap(ResourceClass resourceModel, out bool isAllDefined);
 
         CodeClass2 FindCollectionExampleCode(ResourceClass parentModel, string folder = "");
-        ResourceMap LoadResourceMap(string folder = "");
         string GetExampleModel(int skipRecords, ResourceClass resourceModel, DBServerType serverType, string connectionString);
         string ResolveMapFunction(JObject entityJson, string columnName, ResourceClass model, string mapFunction);
         CodeClass2 FindExampleCode(ResourceClass parentModel, string folder = "");

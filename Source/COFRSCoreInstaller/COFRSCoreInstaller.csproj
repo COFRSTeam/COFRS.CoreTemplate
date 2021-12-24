@@ -58,6 +58,9 @@
   <ItemGroup>
     <Compile Include="Common\Extensions\COFRSMenuExtensions.cs" />
     <Compile Include="Common\ServiceUtilities\WinNative.cs" />
+    <Compile Include="Common\Windows\AddCollection.xaml.cs">
+      <DependentUpon>AddCollection.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Common\Windows\AddConnectionDialog.xaml.cs">
       <DependentUpon>AddConnectionDialog.xaml</DependentUpon>
     </Compile>
@@ -87,42 +90,6 @@
     </Compile>
     <Compile Include="Common\Wizards\COFRSModelsProjectWizard.cs" />
     <Compile Include="Common\Wizards\COFRSSDKProjectWizard.cs" />
-    <Compile Include="Common\Forms\AddCollectionDialog.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\AddCollectionDialog.Designer.cs">
-      <DependentUpon>AddCollectionDialog.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Common\Forms\AddConnection.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\AddConnection.Designer.cs">
-      <DependentUpon>AddConnection.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputEntity.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputEntity.Designer.cs">
-      <DependentUpon>UserInputEntity.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputFullStack.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputFullStack.Designer.cs">
-      <DependentUpon>UserInputFullStack.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputGeneral.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputGeneral.Designer.cs">
-      <DependentUpon>UserInputGeneral.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputResource.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputResource.Designer.cs">
-      <DependentUpon>UserInputResource.cs</DependentUpon>
-    </Compile>
     <Compile Include="Common\Models\DBAuthentication.cs" />
     <Compile Include="Common\Models\DBColumn.cs" />
     <Compile Include="Common\Models\DBServerType.cs" />
@@ -165,12 +132,6 @@
     <Compile Include="Common\ServiceUtilities\Emitter.cs" />
     <Compile Include="Common\ServiceUtilities\ProviderOptions.cs" />
     <Compile Include="Common\Wizards\COFRSServiceProjectWizard.cs" />
-    <Compile Include="Common\Forms\UserInputProject.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Common\Forms\UserInputProject.Designer.cs">
-      <DependentUpon>UserInputProject.cs</DependentUpon>
-    </Compile>
     <Compile Include="Common\Wizards\CoreProjectWizard.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="COFRSCoresInstallerPackage.cs" />
@@ -283,27 +244,6 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Common\Forms\AddCollectionDialog.resx">
-      <DependentUpon>AddCollectionDialog.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\AddConnection.resx">
-      <DependentUpon>AddConnection.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\UserInputEntity.resx">
-      <DependentUpon>UserInputEntity.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\UserInputFullStack.resx">
-      <DependentUpon>UserInputFullStack.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\UserInputGeneral.resx">
-      <DependentUpon>UserInputGeneral.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\UserInputResource.resx">
-      <DependentUpon>UserInputResource.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Common\Forms\UserInputProject.resx">
-      <DependentUpon>UserInputProject.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -377,6 +317,10 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <Page Include="Common\Windows\AddCollection.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Common\Windows\AddConnectionDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

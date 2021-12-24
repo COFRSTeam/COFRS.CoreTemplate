@@ -1,4 +1,5 @@
 ﻿using COFRS.Template.Common.Models;
+using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.TemplateWizard;
@@ -14,7 +15,6 @@ namespace COFRS.Template
     public class CoreProjectWithSDKWizard : IWizard
 	{
 		private bool Proceed;
-		private UserInputProject inputForm;
 		private string framework;
 		private string securityModel;
 		private string databaseTechnology;
@@ -154,9 +154,10 @@ namespace COFRS.Template
 
 				// Display a form to the user. The form collects
 				// input for the custom message.
-				inputForm = new UserInputProject();
+				var inputForm = new COFRSNewProjectDialog();
+				var result = inputForm.ShowDialog();	
 
-				if (inputForm.ShowDialog() == DialogResult.OK)
+				if (result.HasValue && result.Value == true)
 				{
 					framework = inputForm.Framework;
 					securityModel = inputForm.SecurityModel;
@@ -229,7 +230,7 @@ namespace COFRS.Template
 					GlobalDictionary.Add("$databaseTechnology$", databaseTechnology);
 					GlobalDictionary.Add("$logPath$", logPath);
 					GlobalDictionary.Add("$portNumber$", portNumber.ToString());
-					GlobalDictionary.Add("$companymoniker$", inputForm.companyMoniker.Text);
+					GlobalDictionary.Add("$companymoniker$", inputForm.CompanyMoniker);
 
 					if (string.Equals(securityModel, "OAuth", StringComparison.OrdinalIgnoreCase))
 					{
