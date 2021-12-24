@@ -1,9 +1,11 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
@@ -44,12 +46,10 @@ namespace COFRS.Template.Common.Wizards
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			DTE2 dte2 = Package.GetGlobalService(typeof(DTE)) as DTE2;
+			var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
 
 			try
 			{
-				//	Show the user that we are busy doing things...
-				dte2.StatusBar.Animate(true, vsStatusAnimation.vsStatusAnimationBuild);
-
 				var projectMapping = codeService.LoadProjectMapping();
 				var solutionPath = dte2.Solution.Properties.Item("Path").Value.ToString();
 				var installationFolder = codeService.InstallationFolder;
@@ -58,15 +58,13 @@ namespace COFRS.Template.Common.Wizards
 				//  Make sure we are where we're supposed to be
 				if (!codeService.IsChildOf(projectMapping.ControllersFolder, installationFolder.Folder))
 				{
-					dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					var controllersFolder = projectMapping.GetControllersFolder();
 
-					var result = MessageBox.Show($"You are attempting to install a controller model into {codeService.GetRelativeFolder(installationFolder)}. Typically, controller models reside in {codeService.GetRelativeFolder(controllersFolder)}.\r\n\r\nDo you wish to place the new controller model in this non-standard location?",
-						"Warning: Non-Standard Location",
-						MessageBoxButtons.YesNo,
-						MessageBoxIcon.Warning);
-
-					if (result == DialogResult.No)
+					if (!VsShellUtilities.PromptYesNo(
+							$"You are attempting to install a controller model into {codeService.GetRelativeFolder(installationFolder)}. Typically, controller models reside in {codeService.GetRelativeFolder(controllersFolder)}.\r\n\r\nDo you wish to place the new controller model in this non-standard location?",
+							"Microsoft Visual Studio",
+							OLEMSGICON.OLEMSGICON_WARNING,
+							shell))
 					{
 						Proceed = false;
 						return;
@@ -83,23 +81,21 @@ namespace COFRS.Template.Common.Wizards
 					codeService.SaveProjectMapping();
 				}
 
-				var form = new UserInputGeneral()
+				var form = new ControllerDialog()
 				{
-					DefaultConnectionString = connectionString,
-					InstallType = 3
+					DefaultConnectionString = connectionString,	
+					ServiceProvider = ServiceProvider.GlobalProvider,
+					Policies = codeService.Policies
 				};
 
-				dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
+				var result = form.ShowDialog();
 
-				if (form.ShowDialog() == DialogResult.OK)
+				if (result.HasValue && result.Value == true)
 				{
-					var resourceModel = (ResourceClass)form._resourceModelList.SelectedItem;
+					var resourceModel = form.ResourceModel;
 					var moniker = codeService.Moniker;
-					string policy = string.Empty;
+					string policy = form.Policy;
 
-					if ( form.policyCombo.Items.Count > 0 )
-						policy = form.policyCombo.SelectedItem.ToString();
-					
 					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
 					var validatorInterface = codeService.FindValidatorInterface(resourceModel.ClassName);
 
@@ -129,8 +125,12 @@ namespace COFRS.Template.Common.Wizards
 			}
 			catch (Exception error)
 			{
-				dte2.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-				MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				Proceed = false;
 			}
 		}
