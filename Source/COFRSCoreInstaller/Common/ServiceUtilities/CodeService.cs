@@ -3985,6 +3985,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 				var dbColumn = new DBColumn
 				{
 					ColumnName = enumVariable.Name,
+					DBDataType = enumVariable.InitExpression.ToString()
 				};
 
 				CodeAttribute2 pgNameAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgName"));
@@ -4014,6 +4015,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 				var dbColumn = new DBColumn
 				{
 					ColumnName = enumVariable.Name,
+					DBDataType = enumVariable.InitExpression.ToString()
 				};
 
 				columns.Add(dbColumn);
@@ -5461,7 +5463,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
-			var resourceModel = codeService.GetResourceClass(destinationMember.ModelDataType.ToString());
+			var EnumClassName = destinationMember.ModelDataType.ToString().Trim('?');
+
+			var resourceModel = codeService.GetResourceClass(EnumClassName);
 
 			if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
 			{
@@ -5486,11 +5490,33 @@ namespace COFRS.Template.Common.ServiceUtilities
 						resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
 						resourceProfile.IsDefined = true;
 					}
-					else if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(sourceMember.ModelDataType, "byte?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(sourceMember.ModelDataType, "sbyte?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(sourceMember.ModelDataType, "short?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(sourceMember.ModelDataType, "ushort?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(sourceMember.ModelDataType, "int?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(sourceMember.ModelDataType, "uint?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(sourceMember.ModelDataType, "long?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(sourceMember.ModelDataType, "ulong?", StringComparison.OrdinalIgnoreCase))
 					{
-						resourceProfile.MapFunction = $"Enum.Parse<{resourceModel.ClassName}>(source.{sourceMember.ColumnName})";
+						resourceProfile.MapFunction = $"source.{sourceMember.ColumnName}.HasValue ? ({resourceModel.ClassName}) source.{sourceMember.ColumnName}.Value : ({resourceModel.ClassName}?) null";
 						resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
 						resourceProfile.IsDefined = true;
+					}
+					else if (string.Equals(sourceMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
+					{
+						if (destinationMember.ModelDataType.EndsWith("?"))
+						{
+							resourceProfile.MapFunction = $"string.IsNullOrWhiteSpace(source.{sourceMember.ColumnName}) ? ({resourceModel.ClassName}?) null : Enum.Parse<{resourceModel.ClassName}>(source.{sourceMember.ColumnName})";
+							resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+							resourceProfile.IsDefined = true;
+						}
+						else
+						{
+							resourceProfile.MapFunction = $"Enum.Parse<{resourceModel.ClassName}>(source.{sourceMember.ColumnName})";
+							resourceProfile.EntityColumnNames = new string[] { sourceMember.ColumnName };
+							resourceProfile.IsDefined = true;
+						}
 					}
 					else
 					{
@@ -5776,7 +5802,8 @@ namespace COFRS.Template.Common.ServiceUtilities
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
-			var model = codeService.GetResourceClass(sourceMember.ModelDataType.ToString());
+			var enumClassName = sourceMember.ModelDataType.ToString().Trim('?');
+			var model = codeService.GetResourceClass(enumClassName);
 
 			if (string.Equals(destinationMember.ModelDataType.ToString(), sourceMember.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase))
 			{
@@ -5801,11 +5828,33 @@ namespace COFRS.Template.Common.ServiceUtilities
 						entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
 						entityProfile.IsDefined = true;
 					}
-					else if (string.Equals(destinationMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
+					else if (string.Equals(destinationMember.ModelDataType, "byte?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(destinationMember.ModelDataType, "sbyte?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(destinationMember.ModelDataType, "short?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(destinationMember.ModelDataType, "ushort?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(destinationMember.ModelDataType, "int?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(destinationMember.ModelDataType, "uint?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(destinationMember.ModelDataType, "long?", StringComparison.OrdinalIgnoreCase) ||
+						string.Equals(destinationMember.ModelDataType, "ulong?", StringComparison.OrdinalIgnoreCase))
 					{
-						entityProfile.MapFunction = $"source.{sourceMember.ColumnName}.ToString()";
+						entityProfile.MapFunction = $"source.{sourceMember.ColumnName}.HasValue ? ({destinationMember.ModelDataType}) source.{sourceMember.ColumnName}.Value : ({destinationMember.ModelDataType}) null";
 						entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
 						entityProfile.IsDefined = true;
+					}
+					else if (string.Equals(destinationMember.ModelDataType, "string", StringComparison.OrdinalIgnoreCase))
+					{
+						if (sourceMember.ModelDataType.EndsWith("?"))
+						{
+							entityProfile.MapFunction = $"source.{sourceMember.ColumnName}.HasValue ? source.{sourceMember.ColumnName}.Value.ToString() : (string) null";
+							entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+							entityProfile.IsDefined = true;
+						}
+						else
+						{
+							entityProfile.MapFunction = $"source.{sourceMember.ColumnName}.ToString()";
+							entityProfile.ResourceColumns = new string[] { sourceMember.ColumnName };
+							entityProfile.IsDefined = true;
+						}
 					}
 					else
 					{

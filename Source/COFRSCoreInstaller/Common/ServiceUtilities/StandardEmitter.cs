@@ -853,6 +853,17 @@ namespace COFRS.Template.Common.ServiceUtilities
             var originalMapFunction = mapFunction;
             var valueNumber = 1;
             List<string> valueAssignments = new List<string>();
+			var resourceColumns = model.Columns;
+
+			var linkConversion = ExtractLinkConversion(entityJson, columnName, model, resourceColumns, entityColumns);
+
+			if (!string.IsNullOrWhiteSpace(linkConversion))
+				return linkConversion;
+
+			var enumConversion = ExtractEnumConversion(entityJson, columnName, model, resourceColumns, entityColumns);
+
+			if (!string.IsNullOrWhiteSpace(enumConversion))
+				return enumConversion;
 
 			var simpleConversion = ExtractSimpleConversion(entityJson, model, entityColumns, mapFunction);
 
@@ -1024,9 +1035,95 @@ namespace COFRS.Template.Common.ServiceUtilities
             return results.ToString();
         }
 
+		private static string ExtractEnumConversion(JObject entityJson, string columnName, ResourceClass model, DBColumn[] resourceColumns, DBColumn[] entityColumns)
+        {
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var column = resourceColumns.FirstOrDefault(c => c.ColumnName.Equals(columnName));
+			var enumClassName = column.ModelDataType.Trim('?');
+			var parentResource = codeService.ResourceClassList.FirstOrDefault(r => r.ClassName.Equals(enumClassName));
+
+			if (parentResource != null && parentResource.ResourceType == ResourceType.Enum)
+            {
+				StringBuilder conversion = new StringBuilder($"{parentResource.ClassName}.");
+				var jsonValue = entityJson[columnName].Value<string>();
+
+				if (jsonValue == null)
+					return "null";
+
+				foreach (var colValue in parentResource.Columns)
+				{
+					if (jsonValue.Equals(colValue.ToString(), StringComparison.OrdinalIgnoreCase))
+					{
+						conversion.Append(colValue);
+						return conversion.ToString();
+					}
+				}
+
+				if (Int64.TryParse(jsonValue, out long jValue))
+				{
+					foreach (var colValue in parentResource.Columns)
+					{
+						if (Int64.TryParse(colValue.DBDataType, out long cValue))
+						{
+							if (jValue == cValue)
+							{
+								conversion.Append(colValue);
+								return conversion.ToString();
+							}
+						}
+					}
+				}
+
+				conversion.Append(parentResource.Columns.ToList()[0]);
+				return conversion.ToString();
+			}
+
+			return String.Empty;
+		}
+
+		private static string ExtractLinkConversion(JObject entityJson, string columnName, ResourceClass model, DBColumn[] resourceColumns, DBColumn[] entityColumns)
+		{
+			var column = resourceColumns.FirstOrDefault(c => c.ColumnName.Equals(columnName));
+
+			if ( column.IsPrimaryKey )
+            {
+				var nn = new NameNormalizer(model.ClassName);
+				var conversion = new StringBuilder($"new Uri(rootUrl, \"{nn.PluralCamelCase}/id");
+
+				var primaryKeyColumns = entityColumns.Where(c => c.IsPrimaryKey);
+
+				foreach ( var keyColumn in primaryKeyColumns)
+                {
+					var theValue = entityJson[keyColumn.ColumnName].Value<string>();
+					conversion.Append($"/{theValue}");
+                }
+
+				conversion.Append("\")");
+				return conversion.ToString();
+	        }
+			else if ( column.IsForeignKey)
+            {
+				var foreignKeyColumns = entityColumns.Where(c => c.ForeignTableName.Equals(column.ForeignTableName));
+				var nn = new NameNormalizer(column.ForeignTableName);
+				var conversion = new StringBuilder($"new Uri(rootUrl, \"{nn.PluralCamelCase}/id");
+
+				foreach (var keyColumn in foreignKeyColumns)
+				{
+					var theValue = entityJson[keyColumn.ColumnName].Value<string>();
+					conversion.Append($"/{theValue}");
+				}
+
+				conversion.Append("\")");
+				return conversion.ToString();
+			}
+
+			return string.Empty;
+        }
+
 		private static string ExtractWellKnownConversion(JObject entityJson, ResourceClass model, DBColumn[] entityColumns, string mapFunction)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
+
 			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
 
 			if (ef.Success)

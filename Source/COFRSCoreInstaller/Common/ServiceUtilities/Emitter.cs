@@ -88,7 +88,7 @@ namespace COFRS.Template
             results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
             results.AppendLine($"\t\t[Route(\"{nn.PluralCamelCase}\")]");
 
-            if (!string.IsNullOrWhiteSpace(policy))
+            if (!string.IsNullOrWhiteSpace(policy) && !policy.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
                 results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
             results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(PagedCollection<{resourceClass.ClassName}>))]");
@@ -128,7 +128,7 @@ namespace COFRS.Template
                 results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
                 EmitRoute(results, nn.PluralCamelCase, pkcolumns);
 
-                if (!string.IsNullOrWhiteSpace(policy))
+                if (!string.IsNullOrWhiteSpace(policy) && !policy.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
                     results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
                 results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.OK, Type = typeof({resourceClass.ClassName}))]");
@@ -171,7 +171,7 @@ namespace COFRS.Template
             results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
             results.AppendLine($"\t\t[Route(\"{nn.PluralCamelCase}\")]");
 
-            if (!string.IsNullOrWhiteSpace(policy))
+            if (!string.IsNullOrWhiteSpace(policy) && !policy.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
                 results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
             results.AppendLine($"\t\t[SwaggerResponse((int)HttpStatusCode.Created, Type = typeof({resourceClass.ClassName}))]");
@@ -205,7 +205,7 @@ namespace COFRS.Template
             results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
             results.AppendLine($"\t\t[Route(\"{nn.PluralCamelCase}\")]");
 
-            if (!string.IsNullOrWhiteSpace(policy))
+            if (!string.IsNullOrWhiteSpace(policy) && !policy.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
                 results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
 
@@ -247,7 +247,7 @@ namespace COFRS.Template
                 results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
                 EmitRoute(results, nn.PluralCamelCase, pkcolumns);
 
-                if (!string.IsNullOrWhiteSpace(policy))
+                if (!string.IsNullOrWhiteSpace(policy) && !policy.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
                     results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
                 results.AppendLine($"\t\t[SwaggerRequestExample(typeof(IEnumerable<PatchCommand>), typeof({resourceClass.ClassName}PatchExample))]");
@@ -283,7 +283,7 @@ namespace COFRS.Template
                 results.AppendLine("\t\t[MapToApiVersion(\"1.0\")]");
                 EmitRoute(results, nn.PluralCamelCase, pkcolumns);
 
-                if (!string.IsNullOrWhiteSpace(policy))
+                if (!string.IsNullOrWhiteSpace(policy) && !policy.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
                     results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
                 EmitEndpoint(resourceClass.Entity.ServerType, resourceClass.ClassName, "Delete", results, pkcolumns);
