@@ -14,7 +14,6 @@ namespace COFRS.Template.Common.Models
         public string Folder { get; set; }
         public string ClassName { get; set; }
         public ResourceType ResourceType { get; set; }
-        public DBColumn[] Columns { get; set; }
         public DBServerType ServerType { get; set; }
         public EntityModel EntityModel { get; set; }
 

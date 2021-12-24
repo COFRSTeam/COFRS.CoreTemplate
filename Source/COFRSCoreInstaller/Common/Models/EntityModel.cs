@@ -15,7 +15,6 @@ namespace COFRS.Template.Common.Models
         public ElementType ElementType { get; set; }
         public string SchemaName { get; set; }
         public string TableName { get; set; }
-        public DBColumn[] Columns { get; set; }
         public DBServerType ServerType { get; set; }
 
         public override string ToString()

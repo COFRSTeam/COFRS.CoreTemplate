@@ -1,8 +1,6 @@
 ﻿using COFRS.Template.Common.Models;
 using EnvDTE;
-using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -14,7 +12,7 @@ using System.Text.RegularExpressions;
 
 namespace COFRS.Template.Common.ServiceUtilities
 {
-	public class StandardEmitter
+    public class StandardEmitter
 	{
 		/// <summary>
 		/// Generates a validation model for the specified resource
@@ -692,10 +690,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 		{
 			throw new NotImplementedException("not implemented yet");
 		}
+
 		private static string EmitResourcePostgresqlEnum(string resourceClassName, EntityClass model, string connectionString)
 		{
 			throw new NotImplementedException("not implemented yet");
 		}
+
 		private static string EmitResourceSqlServerEnum(string resourceClassName, EntityClass entityModel, string connectionString)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -2191,85 +2191,6 @@ namespace COFRS.Template.Common.ServiceUtilities
         }
 
 		/// <summary>
-		/// Emits the mapping model
-		/// </summary>
-		/// <param name="serverType"></param>
-		/// <param name="resourceModel"></param>
-		/// <param name="entityModel"></param>
-		/// <param name="mappingClassName"></param>
-		/// <param name="replacementsDictionary"></param>
-		/// <returns></returns>
-		public string EmitMappingModel(ProfileMap resourceMap, string mappingClassName, Dictionary<string, string> replacementsDictionary)
-		{
-			var results = new StringBuilder();
-			var nn = new NameNormalizer(resourceMap.ResourceClassName);
-
-			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\t{nn.SingleForm} Profile for AutoMapper");
-			results.AppendLine("\t///\t</summary>");
-
-			results.AppendLine($"\tpublic class {mappingClassName} : Profile");
-			results.AppendLine("\t{");
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tInitializes the {nn.SingleForm} Profile");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine($"\t\tpublic {mappingClassName}()");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tvar rootUrl = Startup.AppConfig.GetRootUrl();");
-
-			#region Create the Resource to Entity Mapping
-			results.AppendLine();
-			results.AppendLine($"\t\t\tCreateMap<{resourceMap.ResourceClassName}, {resourceMap.EntityClassName}>()");
-
-			bool first = true;
-
-			//	Emit known mappings
-			foreach (var entityColumn in resourceMap.EntityProfiles)
-			{
-				if (first)
-					first = false;
-				else
-					results.AppendLine();
-
-				results.Append($"\t\t\t\t.ForMember(dest => dest.{entityColumn.EntityColumnName}, opts => opts.MapFrom(e => {entityColumn.MapFunction})");
-			}
-
-			results.AppendLine(";");
-
-			results.AppendLine();
-			#endregion
-
-			#region Create Entity to Resource Mapping
-			results.AppendLine($"\t\t\tCreateMap<{resourceMap.EntityClassName}, {resourceMap.ResourceClassName}>()");
-
-			//	Emit known mappings
-			first = true;
-
-			foreach (var resourceMember in resourceMap.ResourceProfiles)
-			{
-				if (first)
-					first = false;
-				else
-					results.AppendLine();
-
-				results.Append($"\t\t\t\t.ForMember(dest => dest.{resourceMember.ResourceColumnName}, opts => opts.MapFrom(e => {resourceMember.MapFunction})");
-			}
-			results.AppendLine(";");
-			#endregion
-
-			results.AppendLine($"\t\t\tCreateMap<PagedCollection<{resourceMap.EntityClassName}>, PagedCollection<{resourceMap.ResourceClassName}>>()");
-			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Href, opts => opts.MapFrom(src => new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Href.Query}}\")))");
-			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.First, opts => opts.MapFrom(src => src.First == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.First.Query}}\")))");
-			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Next, opts => opts.MapFrom(src => src.Next == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Next.Query}}\")))");
-			results.AppendLine($"\t\t\t\t.ForMember(dest => dest.Previous, opts => opts.MapFrom(src => src.Previous == null ? null : new Uri($\"{{rootUrl}}/{nn.PluralCamelCase}{{src.Previous.Query}}\")));");
-			results.AppendLine("\t\t}");
-			results.AppendLine("\t}");
-			
-			return results.ToString();
-		}
-
-		/// <summary>
 		/// Emits an entity data model based upon the fields contained within the database table
 		/// </summary>
 		/// <param name="serverType">The type of server used to house the table</param>
@@ -2843,46 +2764,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return builder.ToString();
 		}
 
-		public string EmitResourceEnum(ResourceModel resourceModel)
-		{
-			var codeService = COFRSServiceFactory.GetService<ICodeService>();
-			var nn = new NameNormalizer(resourceModel.ClassName);
-			var builder = new StringBuilder();
-
-			builder.Clear();
-			builder.AppendLine("\t///\t<summary>");
-			builder.AppendLine($"\t///\tEnumerates a list of {nn.PluralForm}");
-			builder.AppendLine("\t///\t</summary>");
-
-			builder.AppendLine($"\t[Entity(typeof({resourceModel.EntityModel.ClassName}))]");
-
-			builder.AppendLine($"\tpublic enum {resourceModel.ClassName}");
-			builder.AppendLine("\t{");
-			bool firstUse = true;
-
-			foreach (var column in resourceModel.EntityModel.Columns)
-			{
-				if (firstUse)
-					firstUse = false;
-				else
-				{
-					builder.AppendLine(",");
-					builder.AppendLine();
-				}
-
-				builder.AppendLine("\t\t///\t<summary>");
-				builder.AppendLine($"\t\t///\t{codeService.NormalizeClassName(column.ColumnName)}");
-				builder.AppendLine("\t\t///\t</summary>");
-				var elementName = codeService.NormalizeClassName(column.ColumnName);
-				builder.Append($"\t\t{elementName}");
-			}
-
-			builder.AppendLine();
-			builder.AppendLine("\t}");
-
-			return builder.ToString();
-		}
-
 		public string EmitComposite(string className, string schema, string tableName, ElementType elementType, DBColumn[] columns, string connectionString, Dictionary<string, string> replacementsDictionary, ProjectFolder entityModelsFolder)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -3250,8 +3131,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 				}
 			}
 		}
-
-
 
 		#region Helper Functions
 		private void AppendComma(StringBuilder result, ref bool first)

@@ -742,6 +742,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                 }
             }
         }
+
         public void LoadResourceClassList(string folder = "")
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -1024,32 +1025,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 		}
 
-		/// <summary>
-		/// Checks to see if the candidate namespace is the root namespace of the startup project
-		/// </summary>
-		/// <param name="_dte2>"The <see cref="DTE2"/> Visual Studio interface</param>
-		/// <param name="candidateNamespace">The candidate namesapce</param>
-		/// <returns><see langword="true"/> if the candidate namespace is the root namespace of the startup project; <see langword="false"/> otherwise</returns>
-		public bool IsRootNamespace(string candidateNamespace)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-
-			foreach (Project project in mDte.Solution.Projects)
-			{
-				try
-				{
-					var projectNamespace = project.Properties.Item("RootNamespace").Value.ToString();
-
-					if (string.Equals(candidateNamespace, projectNamespace, StringComparison.OrdinalIgnoreCase))
-						return true;
-				}
-				catch (ArgumentException) { }
-			}
-
-			return false;
-		}
-
 		public string GetRelativeFolder(ProjectFolder folder)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -1249,7 +1224,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return null;
 		}
-
 
 		public object GetProjectFromFolder(string folder)
 		{
@@ -1630,11 +1604,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return null;
 		}
 
-
-
-
-
-
 		/// <summary>
 		/// Find Controllers Folder
 		/// </summary>
@@ -1808,8 +1777,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return null;
 		}
-
-
 
 		/// <summary>
 		/// Scans the project folder for an entity model
@@ -1999,49 +1966,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 		#region Discovery Operations
 		/// <summary>
-		/// Find Validation Folder
-		/// </summary>
-		/// <param name="solution"></param>
-		/// <returns></returns>
-		public ProjectFolder FindValidationFolder(DTE2 dte)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			//	Search the solution for a validator class. If one is found then return the 
-			//	project folder for the folder in which it resides.
-			foreach (Project project in dte.Solution.Projects)
-			{
-				var validadtionFolder = ScanForValidator(project);
-
-				if (validadtionFolder != null)
-					return validadtionFolder;
-
-				foreach (ProjectItem candidateFolder in project.ProjectItems)
-				{
-					if (candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
-						candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindVirtualFolder)
-					{
-						validadtionFolder = FindValidationFolder(candidateFolder, project.Name);
-
-						if (validadtionFolder != null)
-							return validadtionFolder;
-					}
-				}
-			}
-
-			//	We didn't find any resource models in the project. Search for the default resource models folder.
-			var theCandidateNamespace = "*.Validation";
-
-			var candidates = FindProjectFolder(theCandidateNamespace);
-
-			if (candidates.Count > 0)
-				return candidates[0];
-
-			//	We didn't find any folder matching the required namespace, so just return null.
-			return null;
-		}
-
-		/// <summary>
 		/// Locates and returns the mapping folder for the project
 		/// </summary>
 		/// <param name="parent">A <see cref="ProjectItem"/> folder within the project.</param>
@@ -2065,55 +1989,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 					if (validatorFolder != null)
 						return validatorFolder;
-				}
-			}
-
-			return null;
-		}
-
-		/// <summary>
-		/// Scans the projects root folder for a validator class
-		/// </summary>
-		/// <param name="parent">The <see cref="Project"/> to scan</param>
-		/// <returns>Returns the <see cref="ProjectFolder"/> for the <see cref="Project"/> if the root folder contains an entity model</returns>
-		private ProjectFolder ScanForValidator(Project parent)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			foreach (ProjectItem candidate in parent.ProjectItems)
-			{
-				if (candidate.Kind == Constants.vsProjectItemKindPhysicalFile &&
-					candidate.FileCodeModel != null &&
-					candidate.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
-					Convert.ToInt32(candidate.Properties.Item("BuildAction").Value) == 1)
-				{
-					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.OfType<CodeNamespace>())
-					{
-						foreach (CodeClass codeClass in namespaceElement.Members.OfType<CodeClass2>())
-						{
-							bool isValidator = false;
-
-							foreach (CodeElement parentClass in codeClass.Bases)
-							{
-								if (string.Equals(parentClass.Name, "Validator", StringComparison.OrdinalIgnoreCase))
-								{
-									isValidator = true;
-									break;
-								}
-							}
-
-							if (isValidator)
-							{
-								return new ProjectFolder()
-								{
-									Folder = parent.Properties.Item("FullPath").Value.ToString(),
-									Namespace = namespaceElement.Name,
-									ProjectName = parent.Name,
-									Name = codeClass.Name
-								};
-							}
-						}
-					}
 				}
 			}
 
@@ -2173,7 +2048,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return null;
 		}
-
 
 		private CodeClass2 FindValidator(ResourceModel resourceModel, string folder = "")
 		{
@@ -3612,6 +3486,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return null;
 		}
+
 		/// <summary>
 		/// Scans the projects root folder for a validator class
 		/// </summary>
@@ -3715,6 +3590,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return null;
 		}
+
 		/// <summary>
 		/// Find the project folder associated with the namespace
 		/// </summary>
@@ -3806,175 +3682,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 		#endregion
 
 		#region Models Functions
-		/// <summary>
-		/// Load all entity models from the entity models folder
-		/// </summary>
-		/// <param name="folder">The child folder to search</param>
-		/// <returns>A collection of all entity models in the solution</returns>
-		public EntityMap LoadEntityMap(DTE2 dte2, string folder = "")
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			var map = new List<EntityModel>();
-			var projectMapping = LoadProjectMapping();                       //	Contains the names and projects where various source file exist.
-
-			var entityFolder = string.IsNullOrWhiteSpace(folder) ? dte2.Solution.FindProjectItem(projectMapping.GetEntityModelsFolder().Folder) :
-																   dte2.Solution.FindProjectItem(folder);
-
-			foreach (ProjectItem projectItem in entityFolder.ProjectItems)
-			{
-				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
-					 projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
-				{
-					var emap = LoadEntityMap(dte2, projectItem.Name);
-					map.AddRange(emap.Maps);
-				}
-				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile &&
-						 projectItem.FileCodeModel != null &&
-						 projectItem.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
-						 Convert.ToInt32(projectItem.Properties.Item("BuildAction").Value) == 1)
-				{
-					FileCodeModel2 model = (FileCodeModel2)projectItem.FileCodeModel;
-
-					foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
-					{
-						foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
-						{
-							CodeAttribute tableAttribute = null;
-							CodeAttribute compositeAttribute = null;
-
-							try { tableAttribute = (CodeAttribute)classElement.Children.Item("Table"); } catch (Exception) { }
-							try { compositeAttribute = (CodeAttribute)classElement.Children.Item("PgComposite"); } catch (Exception) { }
-
-							if (tableAttribute != null)
-							{
-								var entityName = string.Empty;
-								var schemaName = string.Empty;
-								DBServerType serverType = DBServerType.SQLSERVER;
-
-								var match = Regex.Match(tableAttribute.Value, "\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}([ \t]*\\,[ \t]*DBType[ \t]*=[ \t]*\"(?<dbtype>[A-Za-z][A-Za-z0-9_]*)\"){0,1}");
-
-								if (match.Success)
-								{
-									entityName = match.Groups["tableName"].Value;
-									schemaName = match.Groups["schemaName"].Value;
-									serverType = (DBServerType)Enum.Parse(typeof(DBServerType), match.Groups["dbtype"].Value);
-								}
-
-								var entityModel = new EntityModel
-								{
-									ClassName = classElement.Name,
-									ElementType = ElementType.Table,
-									Namespace = namespaceElement.Name,
-									ServerType = serverType,
-									SchemaName = schemaName,
-									TableName = entityName,
-									ProjectName = projectMapping.GetEntityModelsFolder().ProjectName,
-									Folder = projectItem.Properties.Item("FullPath").Value.ToString()
-								};
-
-								entityModel.Columns = LoadEntityColumns(classElement);
-								map.Add(entityModel);
-							}
-							else if (compositeAttribute != null)
-							{
-								var entityName = string.Empty;
-								var schemaName = string.Empty;
-								DBServerType serverType = DBServerType.POSTGRESQL;
-								var match = Regex.Match(compositeAttribute.Value, "\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}");
-
-								if (match.Success)
-								{
-									entityName = match.Groups["tableName"].Value;
-									schemaName = match.Groups["schemaName"].Value;
-								}
-
-								var entityModel = new EntityModel
-								{
-									ClassName = classElement.Name,
-									ElementType = ElementType.Composite,
-									Namespace = namespaceElement.Name,
-									ServerType = serverType,
-									SchemaName = schemaName,
-									TableName = entityName,
-									ProjectName = projectMapping.GetEntityModelsFolder().ProjectName,
-									Folder = projectItem.Properties.Item("FullPath").Value.ToString()
-								};
-
-								entityModel.Columns = LoadEntityColumns(classElement);
-								map.Add(entityModel);
-							}
-						}
-
-						foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
-						{
-							CodeAttribute attributeElement = null;
-
-							try { attributeElement = (CodeAttribute)enumElement.Children.Item("PgEnum"); } catch (Exception) { }
-
-							if (attributeElement != null)
-							{
-								var entityName = string.Empty;
-								var schemaName = string.Empty;
-								DBServerType serverType = DBServerType.POSTGRESQL;
-
-								var match = Regex.Match(attributeElement.Value, "\"(?<tableName>[A-Za-z][A-Za-z0-9_]*)\"([ \t]*\\,[ \t]*Schema[ \t]*=[ \t]*\"(?<schemaName>[A-Za-z][A-Za-z0-9_]*)\"){0,1}");
-
-								if (match.Success)
-								{
-									entityName = match.Groups["tableName"].Value;
-									schemaName = match.Groups["schemaName"].Value;
-								}
-
-								var entityModel = new EntityModel
-								{
-									ClassName = enumElement.Name,
-									ElementType = ElementType.Enum,
-									Namespace = namespaceElement.Name,
-									ServerType = serverType,
-									SchemaName = schemaName,
-									TableName = entityName,
-									ProjectName = projectMapping.GetEntityModelsFolder().ProjectName,
-									Folder = projectItem.Properties.Item("FullPath").Value.ToString()
-								};
-
-								var columns = new List<DBColumn>();
-
-								foreach (CodeElement enumVariable in enumElement.Children)
-								{
-									if (enumVariable.Kind == vsCMElement.vsCMElementVariable)
-									{
-										CodeAttribute pgNameAttribute = null;
-										try { pgNameAttribute = (CodeAttribute)enumElement.Children.Item("PgName"); } catch (Exception) { }
-
-										var dbColumn = new DBColumn
-										{
-											ColumnName = enumElement.Name,
-										};
-
-										if (pgNameAttribute != null)
-										{
-											var matchit = Regex.Match(pgNameAttribute.Value, "\\\"(?<pgName>[_A-Za-z][A-Za-z0-9_]*)\\\"");
-
-											if (matchit.Success)
-												dbColumn.EntityName = matchit.Groups["pgName"].Value;
-										}
-
-										columns.Add(dbColumn);
-									}
-								}
-
-								entityModel.Columns = columns.ToArray();
-
-								map.Add(entityModel);
-							}
-						}
-					}
-				}
-			}
-
-			return new EntityMap() { Maps = map.ToArray() };
-		}
-
 		public DBColumn[] LoadEntityEnumColumns(CodeEnum enumElement)
 		{
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -4022,195 +3729,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 
 			return columns.ToArray();
-		}
-
-		/// <summary>
-		///	Load all resource models from the resource folder
-		/// </summary>
-		/// <param name="folder">The child folder to search</param>
-		/// <returns>A collection of all resource models in the solution</returns>
-		public ResourceMap LoadResourceMap(string folder = "")
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-			var map = new List<ResourceModel>();
-			Dictionary<string, string> rmap = new Dictionary<string, string>();
-			Dictionary<string, string> emap = new Dictionary<string, string>();
-
-			LoadResourceEntityAssociations(mDte, ref rmap);
-			LoadEntityTableAssociations(mDte, ref emap);
-
-			var projectMapping = LoadProjectMapping();                        //	Contains the names and projects where various source file exist.
-			var entityModelsFolder = projectMapping.GetEntityModelsFolder();
-			var resourceModelFolder = projectMapping.GetResourceModelsFolder();
-			var entityMap = LoadEntityMap(mDte);
-
-			var defaultServerType = DefaultServerType;
-
-
-			var resourceFolder = string.IsNullOrWhiteSpace(folder) ? mDte.Solution.FindProjectItem(resourceModelFolder.Folder) :
-																	 mDte.Solution.FindProjectItem(folder);
-
-			foreach (ProjectItem projectItem in resourceFolder.ProjectItems)
-			{
-				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
-					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
-				{
-					var resourceMap = LoadResourceMap(projectItem.Name);
-					map.AddRange(resourceMap.Maps);
-				}
-				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile &&
-					projectItem.FileCodeModel != null &&
-					projectItem.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
-					Convert.ToInt32(projectItem.Properties.Item("BuildAction").Value) == 1)
-				{
-					foreach (CodeNamespace namespaceElement in projectItem.FileCodeModel.CodeElements.OfType<CodeNamespace>())
-					{
-						//	Process any Enums found in the folder...
-						foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
-						{
-							CodeAttribute entityAttribute = null;
-
-							var resourceModel = new ResourceModel
-							{
-								ClassName = enumElement.Name,
-								Namespace = namespaceElement.Name,
-								ServerType = defaultServerType,
-								EntityModel = null,
-								ProjectName = resourceModelFolder.ProjectName,
-								ResourceType = ResourceType.Enum,
-								Folder = projectItem.Properties.Item("FullPath").Value.ToString()
-							};
-
-							var columns = new List<DBColumn>();
-
-							foreach (CodeVariable2 enumMember in enumElement.Children.OfType<CodeVariable2>())
-							{
-								var dbColumn = new DBColumn
-								{
-									ColumnName = enumMember.Name
-								};
-
-								columns.Add(dbColumn);
-							}
-
-							resourceModel.Columns = columns.ToArray();
-
-							try { entityAttribute = (CodeAttribute)enumElement.Children.Item("Entity"); } catch (Exception) { }
-
-							if (entityAttribute != null)
-							{
-								var match = Regex.Match(entityAttribute.Value, "typeof\\((?<entityType>[a-zA-Z0-9_]+)\\)");
-
-								var entityName = "Unknown";
-								if (match.Success)
-									entityName = match.Groups["entityType"].Value.ToString();
-
-								var entityModel = entityMap.Maps.FirstOrDefault(e =>
-									string.Equals(e.ClassName, entityName, StringComparison.OrdinalIgnoreCase));
-
-								resourceModel.EntityModel = entityModel;
-								resourceModel.ServerType = entityModel.ServerType;
-							}
-
-							map.Add(resourceModel);
-						}
-
-						//	Process any classes found in folder...
-						foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
-						{
-							var resourceModel = new ResourceModel
-							{
-								ClassName = classElement.Name,
-								Namespace = namespaceElement.Name,
-								ServerType = defaultServerType,
-								EntityModel = null,
-								ProjectName = resourceModelFolder.ProjectName,
-								Folder = projectItem.Properties.Item("FullPath").Value.ToString()
-							};
-
-							CodeAttribute entityAttribute = null;
-
-							try { entityAttribute = (CodeAttribute)classElement.Children.Item("Entity"); } catch (Exception) { }
-
-							if (entityAttribute != null)
-							{
-								var match = Regex.Match(entityAttribute.Value, "typeof\\((?<entityType>[a-zA-Z0-9_]+)\\)");
-
-								var entityName = "Unknown";
-								if (match.Success)
-									entityName = match.Groups["entityType"].Value.ToString();
-
-								var entityModel = entityMap.Maps.FirstOrDefault(e =>
-									string.Equals(e.ClassName, entityName, StringComparison.OrdinalIgnoreCase));
-
-								resourceModel.ServerType = entityModel.ServerType;
-								resourceModel.EntityModel = entityModel;
-							}
-
-							var columns = new List<DBColumn>();
-							var functions = new List<CodeFunction2>();
-							var foreignKeyColumns = resourceModel.EntityModel == null ? Array.Empty<DBColumn>() : resourceModel.EntityModel.Columns.Where(c => c.IsForeignKey).ToArray();
-
-							foreach (CodeElement memberElement in classElement.Children)
-							{
-								if (memberElement.Kind == vsCMElement.vsCMElementProperty)
-								{
-									CodeProperty property = (CodeProperty)memberElement;
-									var parts = property.Type.AsString.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-
-									if (property.Access == vsCMAccess.vsCMAccessPublic || property.Access == vsCMAccess.vsCMAccessProtected)
-									{
-										var dbColumn = new DBColumn
-										{
-											ColumnName = property.Name,
-											ModelDataType = parts[parts.Count() - 1],
-											IsPrimaryKey = string.Equals(property.Name, "href", StringComparison.OrdinalIgnoreCase)
-										};
-
-										//	ForeignTableName = AspNetRoles
-
-										if (rmap.Keys.Contains(property.Name))
-										{
-											var entityClass = rmap[property.Name];
-
-											if (emap.Keys.Contains(entityClass))
-											{
-												var tableName = emap[entityClass];
-
-												var fk = foreignKeyColumns.FirstOrDefault(c =>
-												{
-													return string.Equals(c.ForeignTableName, tableName, StringComparison.OrdinalIgnoreCase);
-												});
-
-												if (fk != null)
-												{
-													dbColumn.IsForeignKey = true;
-													dbColumn.ForeignTableName = fk.ForeignTableName;
-												}
-											}
-										}
-
-
-										columns.Add(dbColumn);
-									}
-								}
-								else if (memberElement.Kind == vsCMElement.vsCMElementFunction)
-								{
-									CodeFunction2 function = (CodeFunction2)memberElement;
-									functions.Add(function);
-								}
-							}
-
-							resourceModel.Columns = columns.ToArray();
-							resourceModel.Functions = functions.ToArray();
-							map.Add(resourceModel);
-						}
-					}
-				}
-			}
-
-			return new ResourceMap() { Maps = map.ToArray() };
 		}
 
 		private void LoadEntityTableAssociations(DTE2 dte, ref Dictionary<string, string> emap, ProjectItem parentFolder = null)
@@ -4309,7 +3827,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 		}
 
-
 		public DBColumn[] LoadEntityColumns(CodeClass2 codeClass)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -4386,6 +3903,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return columns.ToArray();
 		}
+
 		public DBColumn[] LoadResourceColumns(ResourceClass resource)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -4494,31 +4012,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 
 			return projectMapping;
-		}
-
-
-		/// <summary>
-		/// Open the <see cref="ProfileMap"/> for the <see cref="ResourceModel"/>
-		/// </summary>
-		/// <param name="dte">The <see cref="DTE2"/> Visual Studio interface.</param>
-		/// <param name="resourceModel">The <see cref="ResourceModel"/> whose <see cref="ProfileMap"/> is to be opened.</param>
-		/// <returns>The <see cref="ProfileMap"/> for the specified <see cref="ResourceModel"/></returns>
-		public ProfileMap OpenProfileMap2(ResourceModel resourceModel)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-
-			var solutionPath = mDte.Solution.Properties.Item("Path").Value.ToString();
-			var mappingPath = Path.Combine(Path.GetDirectoryName(solutionPath), $".cofrs\\{resourceModel.ClassName}.{resourceModel.EntityModel.ClassName}.json");
-
-			if (File.Exists(mappingPath))
-			{
-				var jsonText = File.ReadAllText(mappingPath);
-				var profileMap = JsonConvert.DeserializeObject<ProfileMap>(jsonText);
-				return profileMap;
-			}
-
-			return null;
 		}
 
 		/// <summary>
@@ -4766,68 +4259,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			profileMap.EntityProfiles.AddRange(GenerateEntityFromResourceMapping(resourceModel, profileMap));
 
 			return profileMap;
-		}
-
-		public static List<DBColumn> GetResourceModelList(ResourceModel source, ResourceMap resourceMap, string ParentName = "")
-		{
-			List<DBColumn> result = new List<DBColumn>();
-
-			foreach (var column in source.Columns)
-			{
-				var resourceModel = resourceMap.Maps.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
-
-				if (resourceModel != null && resourceModel.ResourceType != ResourceType.Enum)
-				{
-					string newParent = string.Empty;
-
-					if (string.IsNullOrWhiteSpace(ParentName))
-						newParent = column.ColumnName;
-					else
-						newParent = $"{ParentName}.{column.ColumnName}";
-
-					result.AddRange(GetResourceModelList(resourceModel, resourceMap, newParent));
-				}
-				else
-				{
-					if (!string.IsNullOrWhiteSpace(ParentName))
-						column.ColumnName = $"{ParentName}.{column.ColumnName}";
-
-					result.Add(column);
-				}
-			}
-
-			return result;
-		}
-
-		public static List<DBColumn> GetEntityModelList(EntityModel source, EntityMap entityMap, string ParentName = "")
-		{
-			List<DBColumn> unmappedColumns = new List<DBColumn>();
-
-			foreach (var column in source.Columns)
-			{
-				var entityModel = entityMap?.Maps.FirstOrDefault(r => string.Equals(r.ClassName, column.ModelDataType.ToString(), StringComparison.OrdinalIgnoreCase));
-
-				if (entityModel != null && entityModel.ElementType != ElementType.Enum)
-				{
-					string newParent = string.Empty;
-
-					if (string.IsNullOrWhiteSpace(ParentName))
-						newParent = column.ColumnName;
-					else
-						newParent = $"{ParentName}.{column.ColumnName}";
-
-					unmappedColumns.AddRange(GetEntityModelList(entityModel, entityMap, newParent));
-				}
-				else
-				{
-					if (!string.IsNullOrWhiteSpace(ParentName))
-						column.ColumnName = $"{ParentName}.{column.ColumnName}";
-
-					unmappedColumns.Add(column);
-				}
-			}
-
-			return unmappedColumns;
 		}
 
 		/// <summary>
@@ -5408,7 +4839,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return result;
 		}
-
 
 		public static ResourceClass GetParentModel(ResourceClass parent, string[] parts)
 		{
