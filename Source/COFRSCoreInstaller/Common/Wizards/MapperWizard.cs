@@ -79,7 +79,7 @@ namespace COFRS.Template.Common.Wizards
 				{
 					var resourceModel = form.ResourceModel;
 
-					var emitter = new StandardEmitter();
+					var emitter = new Emitter();
 					var model = emitter.EmitMappingModel(resourceModel, replacementsDictionary["$safeitemname$"], replacementsDictionary);
 
 					replacementsDictionary["$resourcenamespace$"] = resourceModel.Namespace;

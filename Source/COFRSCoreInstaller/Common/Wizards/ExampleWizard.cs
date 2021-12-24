@@ -89,7 +89,7 @@ namespace COFRS.Template.Common.Wizards
 					var resourceModel = form.ResourceModel;
 					var profileMap = codeService.OpenProfileMap(resourceModel, out bool isAllDefined);
 
-					var emitter = new StandardEmitter();
+					var emitter = new Emitter();
 					var model = emitter.EmitExampleModel(resourceModel, profileMap, replacementsDictionary["$safeitemname$"], form.ServerType, connectionString);
 
 					replacementsDictionary.Add("$model$", model);

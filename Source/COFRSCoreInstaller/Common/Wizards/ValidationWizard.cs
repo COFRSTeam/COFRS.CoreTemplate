@@ -87,7 +87,7 @@ namespace COFRS.Template.Common.Wizards
 					var resourceModel = form.ResourceModel;
 					var profileMap = codeService.OpenProfileMap(resourceModel, out bool isAllDefined);
 
-					var emitter = new StandardEmitter();
+					var emitter = new Emitter();
 					var model = emitter.EmitValidationModel(resourceModel, profileMap, replacementsDictionary["$safeitemname$"]);
 
 					replacementsDictionary.Add("$orchestrationnamespace$", codeService.FindOrchestrationNamespace());
