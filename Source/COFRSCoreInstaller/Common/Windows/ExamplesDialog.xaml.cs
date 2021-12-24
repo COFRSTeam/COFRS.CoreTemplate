@@ -18,9 +18,9 @@ using Path = System.IO.Path;
 namespace COFRS.Template.Common.Windows
 {
     /// <summary>
-    /// Interaction logic for ValidationDialog.xaml
+    /// Interaction logic for ExamplesDialog.xaml
     /// </summary>
-    public partial class ValidationDialog : DialogWindow
+    public partial class ExamplesDialog : DialogWindow
     {
         #region Variables
         private ServerConfig _serverConfig;
@@ -32,10 +32,11 @@ namespace COFRS.Template.Common.Windows
         public IServiceProvider ServiceProvider { get; set; }
         #endregion
 
-        public ValidationDialog()
+        public ExamplesDialog()
         {
             InitializeComponent();
         }
+
 		private void OnLoad(object sender, RoutedEventArgs e)
 		{
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
@@ -43,7 +44,7 @@ namespace COFRS.Template.Common.Windows
 			if (codeService.ResourceClassList.Count == 0)
 			{
 				VsShellUtilities.ShowMessageBox(ServiceProvider,
-												"No resource models were found in the project. Please create a corresponding resource model before attempting to create the validator class.",
+												"No resource models were found in the project. Please create a corresponding resource model before attempting to create the example class.",
 												"Microsoft Visual Studio",
 												OLEMSGICON.OLEMSGICON_CRITICAL,
 												OLEMSGBUTTON.OLEMSGBUTTON_OK,
@@ -244,7 +245,7 @@ select s.name, t.name
 				if (server == null)
 				{
 					VsShellUtilities.ShowMessageBox(ServiceProvider,
-								"You must select a database server to create a new validator class. Please select a database server and try again.",
+								"You must select a database server to create a new example class. Please select a database server and try again.",
 								"Microsoft Visual Studio",
 								OLEMSGICON.OLEMSGICON_WARNING,
 								OLEMSGBUTTON.OLEMSGBUTTON_OK,
@@ -261,7 +262,7 @@ select s.name, t.name
 				if (string.IsNullOrWhiteSpace(db))
 				{
 					VsShellUtilities.ShowMessageBox(ServiceProvider,
-								"You must select a database to create a new validator class. Please select a database and try again.",
+								"You must select a database to create a new example class. Please select a database and try again.",
 								"Microsoft Visual Studio",
 								OLEMSGICON.OLEMSGICON_WARNING,
 								OLEMSGBUTTON.OLEMSGBUTTON_OK,
@@ -278,7 +279,7 @@ select s.name, t.name
 				if (table == null)
 				{
 					VsShellUtilities.ShowMessageBox(ServiceProvider,
-								"You must select a database table to create a new validator class. Please select a database table and try again.",
+								"You must select a database table to create a new example class. Please select a database table and try again.",
 								"Microsoft Visual Studio",
 								OLEMSGICON.OLEMSGICON_WARNING,
 								OLEMSGBUTTON.OLEMSGBUTTON_OK,
@@ -313,7 +314,7 @@ select s.name, t.name
 					Listbox_Tables.SelectedIndex = -1;
 
 					VsShellUtilities.ShowMessageBox(ServiceProvider,
-								"No matching resource class found. You will not be able to create a validator class without a matching resource model.",
+								"No matching resource class found. You will not be able to create a example class without a matching resource model.",
 								"Microsoft Visual Studio",
 								OLEMSGICON.OLEMSGICON_WARNING,
 								OLEMSGBUTTON.OLEMSGBUTTON_OK,

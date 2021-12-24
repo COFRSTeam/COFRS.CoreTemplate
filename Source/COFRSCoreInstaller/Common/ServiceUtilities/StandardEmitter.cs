@@ -412,9 +412,11 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return results.ToString();
 		}
 
-		public string EmitExampleModel(ResourceModel resourceModel, ProfileMap profileMap, string exampleClassName, DBServerType serverType, string connectionString)
+		public string EmitExampleModel(ResourceClass resourceModel, ProfileMap profileMap, string exampleClassName, DBServerType serverType, string connectionString)
         {
-            var results = new StringBuilder();          
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var results = new StringBuilder();
+			var entityColumns = resourceModel.Entity.Columns;
 			
 			//	Generate the patch example class
 			results.AppendLine("\t///\t<summary>");
@@ -458,7 +460,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			results.AppendLine("\t\t\tvar results = new List<PatchCommand> {");
 
-			var exampleModel = GetExampleModel(0, resourceModel, serverType, connectionString);
+			var exampleModel = GetExampleModel(0, resourceModel, entityColumns, serverType, connectionString);
 			var entityJson = JObject.Parse(exampleModel);
 			var count = 0;
 
@@ -595,7 +597,7 @@ namespace COFRS.Template.Common.ServiceUtilities
             results.AppendLine();
 
 			results.Append("\t\t\tvar singleExample = ");
-            EmitSingleModel("", resourceModel, profileMap, results, entityJson);
+            EmitSingleModel("", resourceModel, entityColumns, profileMap, results, entityJson);
             results.AppendLine(";");
 
             results.AppendLine();
@@ -642,12 +644,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 				exampleModel = "";
 
 				while ( string.IsNullOrWhiteSpace(exampleModel.Replace("{","").Replace("}","")))
-					exampleModel = GetExampleModel(r--, resourceModel, serverType, connectionString);
+					exampleModel = GetExampleModel(r--, resourceModel, entityColumns, serverType, connectionString);
 
 				entityJson = JObject.Parse(exampleModel);
 
 				results.Append("\t\t\t\t");
-				EmitSingleModel("\t", resourceModel, profileMap, results, entityJson);
+				EmitSingleModel("\t", resourceModel, entityColumns, profileMap, results, entityJson);
 			}
 
 			var baseUrl = ExtractBaseUrl(profileMap);
@@ -823,8 +825,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return baseUrl;
         }
 
-        private static void EmitSingleModel(string prefix, ResourceModel resourceModel, ProfileMap profileMap, StringBuilder results, JObject entityJson)
+        private static void EmitSingleModel(string prefix, ResourceClass resourceModel, DBColumn[] entityColumns, ProfileMap profileMap, StringBuilder results, JObject entityJson)
         {
+			ThreadHelper.ThrowIfNotOnUIThread();
 			bool first = true;
 			results.AppendLine($"new {resourceModel.ClassName} {{");
 
@@ -836,26 +839,27 @@ namespace COFRS.Template.Common.ServiceUtilities
                     results.AppendLine(",");
 
                 results.Append($"{prefix}\t\t\t\t{map.ResourceColumnName} = ");
-				results.Append(ResolveMapFunction(entityJson, map.ResourceColumnName, resourceModel, map.MapFunction));
+				results.Append(ResolveMapFunction(entityJson, map.ResourceColumnName, resourceModel, entityColumns, map.MapFunction));
 			}
 
 			results.AppendLine();
 			results.Append($"{prefix}\t\t\t}}");
         }
 
-		private static string ResolveMapFunction(JObject entityJson, string columnName, ResourceModel model, string mapFunction)
+		private static string ResolveMapFunction(JObject entityJson, string columnName, ResourceClass model, DBColumn[] entityColumns, string mapFunction)
         {
+			ThreadHelper.ThrowIfNotOnUIThread();
             bool isDone = false;
             var originalMapFunction = mapFunction;
             var valueNumber = 1;
             List<string> valueAssignments = new List<string>();
 
-			var simpleConversion = ExtractSimpleConversion(entityJson, model, mapFunction);
+			var simpleConversion = ExtractSimpleConversion(entityJson, model, entityColumns, mapFunction);
 
 			if (!string.IsNullOrWhiteSpace(simpleConversion))
 				return simpleConversion;
 
-			var wellKnownConversion = ExtractWellKnownConversion(entityJson, model, mapFunction);
+			var wellKnownConversion = ExtractWellKnownConversion(entityJson, model, entityColumns, mapFunction);
 
 			if (!string.IsNullOrWhiteSpace(wellKnownConversion))
 				return wellKnownConversion;
@@ -870,7 +874,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                     var textToReplace = ef.Groups["replace"];
                     var token = entityJson[entityColumnReference.Value];
 
-                    var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(entityColumnReference.Value, StringComparison.OrdinalIgnoreCase));
+                    var entityColumn = entityColumns.FirstOrDefault(c => c.ColumnName.Equals(entityColumnReference.Value, StringComparison.OrdinalIgnoreCase));
                     var resourceColumn = model.Columns.FirstOrDefault(c => c.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase));
 
                     switch (entityColumn.ModelDataType.ToLower())
@@ -1020,14 +1024,15 @@ namespace COFRS.Template.Common.ServiceUtilities
             return results.ToString();
         }
 
-		private static string ExtractWellKnownConversion(JObject entityJson, ResourceModel model, string mapFunction)
+		private static string ExtractWellKnownConversion(JObject entityJson, ResourceClass model, DBColumn[] entityColumns, string mapFunction)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
 			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
 
 			if (ef.Success)
 			{
 				var token = entityJson[ef.Groups["entity"].Value];
-				var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+				var entityColumn = entityColumns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
 				var replaceText = ef.Groups["replace"].Value;
 
 				var seek = $"{replaceText}\\.HasValue[ \t]*\\?[ \t]*\\(TimeSpan\\?\\)[ \t]*TimeSpan\\.FromSeconds[ \t]*\\([ \t]*\\(double\\)[ \t]*{replaceText}[ \t]*\\)[ \t]*\\:[ \t]*null";
@@ -1243,16 +1248,17 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return string.Empty;
 		}
 
-		private static string ExtractSimpleConversion(JObject entityJson, ResourceModel model, string mapFunction)
+		private static string ExtractSimpleConversion(JObject entityJson, ResourceClass model, DBColumn[] entityColumns, string mapFunction)
         {
-            var  ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
 
             if (ef.Success)
             {
                 if (mapFunction.Equals(ef.Groups["replace"].Value))
                 {
                     var token = entityJson[ef.Groups["entity"].Value];
-                    var entityColumn = model.EntityModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+                    var entityColumn = entityColumns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
 
                     switch (entityColumn.ModelDataType.ToLower())
                     {
@@ -1539,30 +1545,32 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return string.Empty;
         }
 
-        public string GetExampleModel(int skipRecords, ResourceModel resourceModel, DBServerType serverType, string connectionString)
+        public string GetExampleModel(int skipRecords, ResourceClass resourceModel, DBColumn[] entityColumns, DBServerType serverType, string connectionString)
         {
+			ThreadHelper.ThrowIfNotOnUIThread();
 			if (serverType == DBServerType.MYSQL)
-				return GetMySqlExampleModel(skipRecords, resourceModel, connectionString);
+				return GetMySqlExampleModel(skipRecords, resourceModel, entityColumns, connectionString);
 			else if (serverType == DBServerType.POSTGRESQL)
-				return GetPostgresExampleModel(skipRecords, resourceModel, connectionString);
+				return GetPostgresExampleModel(skipRecords, resourceModel, entityColumns, connectionString);
 			else if (serverType == DBServerType.SQLSERVER)
-				return GetSQLServerExampleModel(skipRecords, resourceModel, connectionString);
+				return GetSQLServerExampleModel(skipRecords, resourceModel, entityColumns, connectionString);
 
 			throw new ArgumentException("Invalid or unrecognized DBServerType", "serverType");
         }
 
-		public string GetMySqlExampleModel(int skipRecords, ResourceModel resourceModel, string connectionString)
+		public string GetMySqlExampleModel(int skipRecords, ResourceClass resourceModel, DBColumn[] entityColumns, string connectionString)
 		{
 			throw new NotImplementedException();
 		}
 
-		public string GetPostgresExampleModel(int skipRecords, ResourceModel resourceModel, string connectionString)
+		public string GetPostgresExampleModel(int skipRecords, ResourceClass resourceModel, DBColumn[] entityColumns, string connectionString)
 		{
 			throw new NotImplementedException();
 		}
 
-		public string GetSQLServerExampleModel(int skipRecords, ResourceModel resourceModel, string connectionString)
+		public string GetSQLServerExampleModel(int skipRecords, ResourceClass resourceModel, DBColumn[] entityColumns, string connectionString)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
 			StringBuilder results = new StringBuilder();
 
 			using ( var connection = new SqlConnection(connectionString))
@@ -1573,7 +1581,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                 query.Append("select ");
 
 				bool first = true;
-				foreach ( var column in resourceModel.EntityModel.Columns)
+				foreach ( var column in entityColumns)
                 {
 					if ( first )
                     {
@@ -1587,19 +1595,19 @@ namespace COFRS.Template.Common.ServiceUtilities
 					query.Append($"[{column.ColumnName}]");
                 }
 
-				if ( string.IsNullOrWhiteSpace(resourceModel.EntityModel.SchemaName))
+				if ( string.IsNullOrWhiteSpace(resourceModel.Entity.SchemaName))
                 {
-					query.Append($" from [{resourceModel.EntityModel.TableName}]");
+					query.Append($" from [{resourceModel.Entity.TableName}]");
                 }
 				else
                 {
-					query.Append($" from [{resourceModel.EntityModel.SchemaName}].[{resourceModel.EntityModel.TableName}]");
+					query.Append($" from [{resourceModel.Entity.SchemaName}].[{resourceModel.Entity.TableName}]");
 				}
 
 				query.Append(" order by ");
 
 				first = true;
-				foreach (var column in resourceModel.EntityModel.Columns)
+				foreach (var column in entityColumns)
 				{
 					if (column.IsPrimaryKey)
 					{
@@ -1628,7 +1636,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						if (reader.Read())
 						{
 							first = true;
-							foreach (var column in resourceModel.EntityModel.Columns)
+							foreach (var column in entityColumns)
 							{
 								if (first)
 									first = false;
@@ -1823,7 +1831,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 						else
 						{
 							first = true;
-							foreach (var column in resourceModel.EntityModel.Columns)
+							foreach (var column in entityColumns)
 							{
 								if (first)
 									first = false;
