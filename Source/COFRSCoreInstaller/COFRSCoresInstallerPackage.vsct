@@ -109,6 +109,15 @@
 			  </Strings>
 		  </Button>
 
+		  <Button guid="guidCOFRSCoresInstallerPackageCmdSet" id="COFRSAddExampleId" priority="0x0100" type="Button">
+			  <Parent guid="guidCOFRSCoresInstallerPackageCmdSet" id="MyFolderGroup" />
+			  <CommandFlag>DefaultInvisible</CommandFlag>
+			  <CommandFlag>DynamicVisibility</CommandFlag>
+			  <Strings>
+				  <ButtonText>Add COFRS Example...</ButtonText>
+			  </Strings>
+		  </Button>
+
 		  <Button guid="guidCOFRSCoresInstallerPackageCmdSet" id="COFRSAddControllerId" priority="0x0100" type="Button">
 			  <Parent guid="guidCOFRSCoresInstallerPackageCmdSet" id="MyFolderGroup" />
 			  <CommandFlag>DefaultInvisible</CommandFlag>
@@ -155,6 +164,7 @@
 		<IDSymbol name="COFRSAddFullControllerId" value="0x0105" /> 
 		<IDSymbol name="COFRSAddProfileId" value="0x0106" />
 		<IDSymbol name="COFRSAddValidatorId" value="0x0107" />
+		<IDSymbol name="COFRSAddExampleId" value="0x0108" />
 	</GuidSymbol>
 
     <GuidSymbol name="guidImages" value="{b525c1f4-42ee-4226-8338-edc1e4260127}" >

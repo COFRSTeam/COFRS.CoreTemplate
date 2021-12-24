@@ -413,38 +413,90 @@ namespace COFRS.Template.Common.Wizards
                     #endregion
 
                     #region Example Operations
-                    //if (form.GenerateExampleData)
-                    //{
-                    //	GenerateExample = true;
+                    if (form.GenerateExampleData)
+                    {
+						var resourceModel = codeService.GetResourceClass(resourceClassName);
+						var profileMap = codeService.OpenProfileMap(resourceModel, out bool IsAllDefined);
 
-                    //	var resourceModel = codeService.GetResourceClass(resourceClassName);
+						var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, exampleClassName, defaultServerType, connectionString);
 
-                    //	if ( profileMap== null)
-                    //		profileMap = COFRSCommonUtilities.OpenProfileMap(dte, resourceModel, out bool IsAllDefined);
+						var projectItemPath = Path.Combine(projectMapping.ExampleFolder, $"{exampleClassName}.cs");
+						var theFile = new StringBuilder();
 
-                    //	var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, exampleClassName, defaultServerType, connectionString);
-                    //	replacementsDictionary.Add("$examplemodel$", exampleModel);
-                    //}
+						theFile.AppendLine("using System;");
+						theFile.AppendLine("using System.Collections;");
+						theFile.AppendLine("using System.Collections.Generic;");
+						theFile.AppendLine("using System.Linq;");
+						theFile.AppendLine("using System.Security.Claims;");
+						theFile.AppendLine("using System.Threading.Tasks;");
+
+						if (replacementsDictionary.ContainsKey("$barray$"))
+							if (replacementsDictionary["$barray$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Collections;");
+
+						if (replacementsDictionary.ContainsKey("$image$"))
+							if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Drawing;");
+
+						if (replacementsDictionary.ContainsKey("$net$"))
+							if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net;");
+
+						if (replacementsDictionary.ContainsKey("$netinfo$"))
+							if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.Net.NetworkInformation;");
+
+						if (replacementsDictionary.ContainsKey("$annotations$"))
+							if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
+
+						if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
+							if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+								theFile.AppendLine("using NpgsqlTypes;");
+
+						theFile.AppendLine("using Swashbuckle.AspNetCore.Filters;");
+						theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
+						theFile.AppendLine("using COFRS;");
+						theFile.AppendLine();
+						theFile.AppendLine($"namespace {projectMapping.ExampleNamespace}");
+						theFile.AppendLine("{");
+
+						theFile.Append(exampleModel);
+						theFile.AppendLine("}");
+
+						File.WriteAllText(projectItemPath, theFile.ToString());
+
+						var parentProject = codeService.GetProjectFromFolder(Path.GetDirectoryName(projectItemPath));
+						ProjectItem exampleItem;
+
+						if (parentProject.GetType() == typeof(Project))
+							exampleItem = ((Project)parentProject).ProjectItems.AddFromFile(projectItemPath);
+						else
+							exampleItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(projectItemPath);
+
+						var window = exampleItem.Open();
+						window.Activate();
+					}
                     #endregion
 
                     #region Controller Operations
                     //if (form.GenerateController)
                     //{
-                    //	GenerateController = true;
+                    //    GenerateController = true;
 
-                    //	var resourceModel = codeService.GetResourceClass(resourceClassName);
+                    //    var resourceModel = codeService.GetResourceClass(resourceClassName);
 
-                    //	var controllerModel = emitter.EmitController(
-                    //		dte,
-                    //		entityModel,
-                    //		resourceModel,
-                    //		moniker,
-                    //		controllerClassName,
-                    //		validatorInterface,
-                    //		policy,
-                    //		projectMapping.ValidationNamespace);
+                    //    var controllerModel = emitter.EmitController(
+                    //        dte,
+                    //        entityModel,
+                    //        resourceModel,
+                    //        moniker,
+                    //        controllerClassName,
+                    //        validatorInterface,
+                    //        policy,
+                    //        projectMapping.ValidationNamespace);
 
-                    //	replacementsDictionary.Add("$controllerModel$", controllerModel);
+                    //    replacementsDictionary.Add("$controllerModel$", controllerModel);
                     //}
                     #endregion
                 }

@@ -1,6 +1,7 @@
 ﻿using COFRS.Template.Common.Forms;
 using COFRS.Template.Common.Models;
 using COFRS.Template.Common.ServiceUtilities;
+using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
@@ -46,7 +47,7 @@ namespace COFRS.Template.Common.Wizards
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();	
 			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
-			var uiShell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell2;
+			var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
 
 			try
 			{
@@ -60,44 +61,43 @@ namespace COFRS.Template.Common.Wizards
 				{
 					var exampleFolder = projectMapping.GetExamplesFolder();
 
-					var result = MessageBox.Show($"You are attempting to install an example model into {codeService.GetRelativeFolder(installationFolder)}. Typically, example models reside in {codeService.GetRelativeFolder(exampleFolder)}.\r\n\r\nDo you wish to place the new example model in this non-standard location?",
-						"Warning: Non-Standard Location",
-						MessageBoxButtons.YesNo,
-						MessageBoxIcon.Warning);
 
-					if (result == DialogResult.No)
+					if (!VsShellUtilities.PromptYesNo(
+						    $"You are attempting to install an example model into {codeService.GetRelativeFolder(installationFolder)}. Typically, example models reside in {codeService.GetRelativeFolder(exampleFolder)}.\r\n\r\nDo you wish to place the new example model in this non-standard location?", 
+						    "Microsoft Visual Studio",
+							OLEMSGICON.OLEMSGICON_WARNING,
+							shell))
 					{
 						Proceed = false;
 						return;
 					}
 
-					var validationFolder = installationFolder;
+					exampleFolder = installationFolder;
 
-					projectMapping.ValidationFolder = validationFolder.Folder;
-					projectMapping.ValidationNamespace = validationFolder.Namespace;
-					projectMapping.ValidationProject = validationFolder.ProjectName;
+					projectMapping.ValidationFolder = exampleFolder.Folder;
+					projectMapping.ValidationNamespace = exampleFolder.Namespace;
+					projectMapping.ValidationProject = exampleFolder.ProjectName;
 
 					codeService.SaveProjectMapping();
 				}
 
-				var form = new UserInputGeneral()
+				var form = new ExamplesDialog()
 				{
 					DefaultConnectionString = connectionString,
-					InstallType = 2
+					ServiceProvider = ServiceProvider.GlobalProvider
 				};
 
-				if (form.ShowDialog() == DialogResult.OK)
+				var result = form.ShowDialog();
+
+				if (result.HasValue && result.Value == true)
 				{
-					var resourceModel = (ResourceClass)form._resourceModelList.SelectedItem;
-					//var profileMap = LoadMapping(solutionPath, resourceModel, entityModel);
+					var resourceModel = form.ResourceModel;
+					var profileMap = codeService.OpenProfileMap(resourceModel, out bool isAllDefined);
 
 					var emitter = new StandardEmitter();
-					//var model = emitter.EmitExampleModel(resourceModel, profileMap, replacementsDictionary["$safeitemname$"], defaultServerType, connectionString);
+					var model = emitter.EmitExampleModel(resourceModel, profileMap, replacementsDictionary["$safeitemname$"], form.ServerType, connectionString);
 
-					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
-
-					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
-					replacementsDictionary.Add("$model$", "");
+					replacementsDictionary.Add("$model$", model);
 					replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
 
@@ -106,9 +106,14 @@ namespace COFRS.Template.Common.Wizards
 				else
 					Proceed = false;
 			}
-			catch (Exception ex)
+			catch (Exception error)
 			{
-				MessageBox.Show(ex.ToString());
+				VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
+												error.Message,
+												"Microsoft Visual Studio",
+												OLEMSGICON.OLEMSGICON_CRITICAL,
+												OLEMSGBUTTON.OLEMSGBUTTON_OK,
+												OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 				Proceed = false;
 			}
 		}

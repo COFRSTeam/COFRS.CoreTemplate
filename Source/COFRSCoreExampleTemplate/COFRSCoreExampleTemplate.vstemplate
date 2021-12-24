@@ -1,15 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
   <TemplateData>
-    <Name>COFRS Example Model</Name>
-    <Description>Adds an example model to a COFRS REST Service</Description>
+    <Name>COFRS Example Class</Name>
+    <Description>Adds an example class to a COFRS REST Service</Description>
     <Icon>COFRS.ico</Icon>
     <TemplateID>8e90de2e-cfde-426a-bfaa-8e2e46c3ce42</TemplateID>
     <ProjectType>CSharp</ProjectType>
     <TemplateGroupID>AspNetCore</TemplateGroupID>
     <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
     <NumberOfParentCategoriesToRollUp>2</NumberOfParentCategoriesToRollUp>
-    <DefaultName>ClassExample.cs</DefaultName>
+    <DefaultName>ResourceExample.cs</DefaultName>
   </TemplateData>
   <TemplateContent>
     <References>
