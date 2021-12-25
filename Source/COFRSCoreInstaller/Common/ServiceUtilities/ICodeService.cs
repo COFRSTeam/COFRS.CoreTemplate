@@ -76,6 +76,9 @@ namespace COFRS.Template.Common.ServiceUtilities
         string ResolveMapFunction(JObject entityJson, string columnName, ResourceClass model, string mapFunction);
         CodeClass2 FindExampleCode(ResourceClass parentModel, string folder = "");
 
+        string GetProjectItemNamespace(ProjectItem item);
+        string GetProjectItemPath(ProjectItem item);
+
 
     }
 }

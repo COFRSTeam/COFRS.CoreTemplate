@@ -5601,6 +5601,33 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			return false;
 		}
+
+		public string GetProjectItemNamespace(ProjectItem item)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			foreach (var property in item.Properties.OfType<Property>())
+			{
+				if (property.Name.Equals("Namespace"))
+					return property.Value.ToString();
+			}
+
+			return string.Empty;
+		}
+
+		public string GetProjectItemPath(ProjectItem item)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			foreach (var property in item.Properties.OfType<Property>())
+			{
+				if (property.Name.Equals("FullPath"))
+					return property.Value.ToString();
+			}
+
+			return string.Empty;
+		}
+
 		#endregion
 	}
 }
