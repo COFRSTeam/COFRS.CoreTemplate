@@ -38,6 +38,7 @@ namespace COFRS.Template
 		public const int AddProfileId = 0x0106;
 		public const int AddValidatorId = 0x0107;
 		public const int AddExampleId = 0x0108;
+		public const int AddJsonConverterId = 0x0109;
 
 		/// <summary>
 		/// Command menu group (command set GUID).
@@ -108,6 +109,11 @@ namespace COFRS.Template
 			OleMenuCommand AddExampleMenu = new OleMenuCommand(new EventHandler(OnAddExample), addExampleCommandId);
 			AddExampleMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddExample);
 			commandService.AddCommand(AddExampleMenu);
+
+			var addJsonConverterCommandId = new CommandID(CommandSet, AddJsonConverterId);
+			OleMenuCommand AddJsonConverterMenu = new OleMenuCommand(new EventHandler(OnAddJsonConverter), addJsonConverterCommandId);
+			AddJsonConverterMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddJsonConverter);
+			commandService.AddCommand(AddJsonConverterMenu);
 		}
 
 		/// <summary>
@@ -117,17 +123,6 @@ namespace COFRS.Template
         {
             get;
             private set;
-        }
-
-        /// <summary>
-        /// Gets the service provider from the owner package.
-        /// </summary>
-        private IAsyncServiceProvider ServiceProvider
-        {
-            get
-            {
-                return this.package;
-            }
         }
 
         /// <summary>
@@ -170,7 +165,8 @@ namespace COFRS.Template
 			codeService.OnSolutionOpened();
 		}
 
-		private void OnBeforeAddExample(object sender, EventArgs e)
+        #region Example Operations
+        private void OnBeforeAddExample(object sender, EventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
@@ -342,8 +338,10 @@ namespace COFRS.Template
 				}
 			}
 		}
+        #endregion
 
-		private void OnBeforeAddValidator(object sender, EventArgs e)
+        #region Validator Operations
+        private void OnBeforeAddValidator(object sender, EventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
@@ -518,8 +516,10 @@ namespace COFRS.Template
 				}
 			}
 		}
+        #endregion
 
-		private void OnBeforeAddProfileMap(object sender, EventArgs e)
+        #region Profile Map Operations
+        private void OnBeforeAddProfileMap(object sender, EventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
@@ -693,8 +693,10 @@ namespace COFRS.Template
 				}
 			}
 		}
+        #endregion
 
-		private void OnBeforeAddFullController(object sender, EventArgs e)
+        #region Controller Operations
+        private void OnBeforeAddFullController(object sender, EventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
@@ -1052,9 +1054,11 @@ namespace COFRS.Template
 				}
 			}
 		}
+        #endregion
 
-		private void OnBeforeAddResourceModel(object sender, EventArgs e)
-        {
+        #region Resource Model Operations
+        private void OnBeforeAddResourceModel(object sender, EventArgs e)
+		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
 			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
@@ -1218,8 +1222,10 @@ namespace COFRS.Template
 				}
 			}
 		}
+        #endregion
 
-		private void OnBeforeAddEntityModel(object sender, EventArgs e)
+        #region Entity Model Operations
+        private void OnBeforeAddEntityModel(object sender, EventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
@@ -1266,6 +1272,7 @@ namespace COFRS.Template
 				}
 			}
 		}
+
 		private void OnAddEntityModel(object sender, EventArgs e)
 		{
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -1382,7 +1389,156 @@ namespace COFRS.Template
 				}
 			}
 		}
+        #endregion
 
+        #region Miscellaneous Operations
+        private void OnBeforeAddJsonConverter(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var myCommand = sender as OleMenuCommand;
+			var mDte = (DTE2)Package.GetGlobalService(typeof(SDTE));
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+
+			if (selectedItems.Length > 1)
+			{
+				myCommand.Visible = false;
+			}
+			else
+			{
+				EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
+
+				if (item.FileCodeModel != null && item.FileCodeModel.CodeElements != null)
+				{
+					var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
+
+					if (theNamespace != null)
+					{
+						var theClass = theNamespace.Children.OfType<CodeClass2>().First();
+
+						if (theClass != null)
+						{
+							var theAttribute = theClass.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+
+							if (theAttribute != null)
+							{
+								myCommand.Enabled = true;
+								myCommand.Visible = true;
+							}
+							else
+							{
+								myCommand.Enabled = false;
+								myCommand.Visible = false;
+							}
+						}
+						else
+						{
+							myCommand.Enabled = false;
+							myCommand.Visible = false;
+						}
+					}
+					else
+					{
+						myCommand.Enabled = false;
+						myCommand.Visible = false;
+					}
+				}
+			}
+		}
+
+		private void OnAddJsonConverter(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
+			var projectMapping = codeService.LoadProjectMapping();
+
+			if (selectedItems.Length == 1)
+			{
+				ProjectItem item = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
+				var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
+
+				if (theNamespace != null)
+				{
+					var theClass = theNamespace.Children.OfType<CodeClass2>().First();
+
+					if (theClass != null)
+					{
+						//	The resource is the resource selected by the user. 
+						var resourceModel = codeService.GetResourceClass(theClass.Name);
+
+						//	Now, get the folder where we will place our coverter...
+						Project theProject = item.ContainingProject;
+						var theFolder = theProject.ProjectItems.OfType<ProjectItem>().FirstOrDefault( p =>
+											{
+												ThreadHelper.ThrowIfNotOnUIThread();
+												return (p.Kind == Constants.vsProjectItemKindPhysicalFolder &&
+														p.Name.Equals("JSONConverters", StringComparison.OrdinalIgnoreCase));
+											});
+
+						if ( theFolder == null )
+                        {
+							theFolder = theProject.ProjectItems.AddFolder("JSONConverters");
+                        }
+
+						//	Now, construct the converter...
+
+						var className = $"{resourceModel.ClassName}Converter";
+						var projectItemPath = Path.Combine(codeService.GetProjectItemPath(theFolder), $"{className}.cs");
+
+						var theFile = new StringBuilder();
+
+						theFile.AppendLine("using System;");
+						theFile.AppendLine("using System.Collections.Generic;");
+						theFile.AppendLine("using System.Globalization;");
+						theFile.AppendLine("using System.Text.Json;");
+						theFile.AppendLine("using System.Text.Json.Serialization;");
+						theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
+						theFile.AppendLine();
+						theFile.AppendLine($"namespace {codeService.GetProjectItemNamespace(theFolder)}");
+						theFile.AppendLine("{");
+
+						theFile.AppendLine("\t/// <summary>");
+						theFile.AppendLine($"\t/// Json {resourceModel.ClassName} Converter");
+						theFile.AppendLine("\t/// </summary>");
+						theFile.AppendLine($"\tpublic class {className} : JsonConverter<{resourceModel.ClassName}>");
+						theFile.AppendLine("\t{");
+
+						theFile.AppendLine("\t\t///\t<summary>");
+						theFile.AppendLine("\t\t///\tRead");
+						theFile.AppendLine("\t\t///\t</summary>");
+						theFile.AppendLine("\t\t///\t<param name=\"reader\">A reference to a high-performance API for forward-only, read-only access to UTF8 encoded JSON Text.</param>");
+						theFile.AppendLine("\t\t///\t<param name=\"typeToConvert\">The <see cref=\"Type\"/> to convert from.</param>");
+						theFile.AppendLine("\t\t///\t<param name=\"options\">The <see cref=\"JsonSerializerOptions\"/> used in the conversion</param>");
+						theFile.AppendLine($"\t\t///\t<returns>The <see cref=\"{resourceModel.ClassName}\"/> value.</returns>");
+						theFile.AppendLine($"\t\tpublic override {resourceModel.ClassName} Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)");
+						theFile.AppendLine("\t\t{");
+						theFile.AppendLine("\t\t}");
+						
+						theFile.AppendLine("\t\t///\t<summary>");
+						theFile.AppendLine("\t\t///\tWrite");
+						theFile.AppendLine("\t\t///\t</summary>");
+						theFile.AppendLine("\t\t///\t<param name=\"writer\">A high-performance API for forward-only, non-cached writing to UTF8 encoded JSON Text.</param>");
+						theFile.AppendLine($"\t\t///\t<param name=\"value\">The <see cref=\"{resourceModel.ClassName}\"/> to write.</param>");
+						theFile.AppendLine("\t\t///\t<param name=\"options\">The <see cref=\"JsonSerializerOptions\"/> used in the conversion</param>");
+						theFile.AppendLine($"\t\t///\t<returns>The <see cref=\"{resourceModel.ClassName}\"/> value.</returns>");
+						theFile.AppendLine($"\t\tpublic override void Write(Utf8JsonWriter writer, {resourceModel.ClassName} value, JsonSerializerOptions options)");
+						theFile.AppendLine("\t\t{");
+						theFile.AppendLine("\t\t}");
+
+						theFile.AppendLine("\t}");
+						theFile.AppendLine("}");
+
+						File.WriteAllText(projectItemPath, theFile.ToString());
+
+						var converterItem = theFolder.ProjectItems.AddFromFile(projectItemPath);
+
+						var window = converterItem.Open();
+						window.Activate();
+					}
+				}
+			}
+		}
 
 		private void OnBeforeAddCollection(object sender, EventArgs e)
 		{
@@ -1397,7 +1553,7 @@ namespace COFRS.Template
 			}
 			else
 			{
-				EnvDTE.ProjectItem item = ((EnvDTE.UIHierarchyItem)selectedItems[0]).Object as EnvDTE.ProjectItem;
+				ProjectItem item = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
 
 				if (item.FileCodeModel != null && item.FileCodeModel.CodeElements != null)
 				{
@@ -1526,7 +1682,7 @@ namespace COFRS.Template
 										//	Constructor
 										if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
 										{
-											ModifyConstructor(aFunction, childValidatorName, childValidatorInterface, memberName);
+											ModifyConstructor(aFunction, childValidatorName, childValidatorInterface);
 										}
 
 										//	Get Single
@@ -1785,7 +1941,7 @@ namespace COFRS.Template
 				}
 			}
 		}
-
+        #endregion
 
 		#region Helper Functions
 		public string GetRunningFrameworkVersion()
@@ -3232,7 +3388,7 @@ namespace COFRS.Template
 		/// Modify the consructor to add and assign the needed validator for the child items
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyConstructor(CodeFunction2 aFunction, string childValidatorName, string childValidatorInterface, string memberName)
+		private void ModifyConstructor(CodeFunction2 aFunction, string childValidatorName, string childValidatorInterface)
 		{
             ThreadHelper.ThrowIfNotOnUIThread();
             //	This is the constructor function. We need that new validator, and we get it using dependency

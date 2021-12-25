@@ -862,7 +862,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			if (!string.IsNullOrWhiteSpace(linkConversion))
 				return linkConversion;
 
-			var enumConversion = ExtractEnumConversion(entityJson, columnName, model, resourceColumns, entityColumns);
+			var enumConversion = ExtractEnumConversion(entityJson, columnName, resourceColumns);
 
 			if (!string.IsNullOrWhiteSpace(enumConversion))
 				return enumConversion;
@@ -872,7 +872,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			if (!string.IsNullOrWhiteSpace(simpleConversion))
 				return simpleConversion;
 
-			var wellKnownConversion = ExtractWellKnownConversion(entityJson, model, entityColumns, mapFunction);
+			var wellKnownConversion = ExtractWellKnownConversion(entityJson, entityColumns, mapFunction);
 
 			if (!string.IsNullOrWhiteSpace(wellKnownConversion))
 				return wellKnownConversion;
@@ -1037,7 +1037,7 @@ namespace COFRS.Template.Common.ServiceUtilities
             return results.ToString();
         }
 
-		private static string ExtractEnumConversion(JObject entityJson, string columnName, ResourceClass model, DBColumn[] resourceColumns, DBColumn[] entityColumns)
+		private static string ExtractEnumConversion(JObject entityJson, string columnName, DBColumn[] resourceColumns)
         {
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var column = resourceColumns.FirstOrDefault(c => c.ColumnName.Equals(columnName));
@@ -1122,7 +1122,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return string.Empty;
         }
 
-		private static string ExtractWellKnownConversion(JObject entityJson, ResourceClass model, DBColumn[] entityColumns, string mapFunction)
+		private static string ExtractWellKnownConversion(JObject entityJson, DBColumn[] entityColumns, string mapFunction)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -2766,7 +2766,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return builder.ToString();
 		}
 
-		public string EmitComposite(string className, string schema, string tableName, ElementType elementType, DBColumn[] columns, string connectionString, Dictionary<string, string> replacementsDictionary, ProjectFolder entityModelsFolder)
+		public string EmitComposite(string className, string schema, string tableName, ElementType elementType, DBColumn[] columns, string connectionString, Dictionary<string, string> replacementsDictionary)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
@@ -3071,8 +3071,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 												 undefinedModel.ElementType,
 												 columns,
 												 connectionString,
-												 replacementsDictionary,
-												 entityModelsFolder);
+												 replacementsDictionary);
 
 						result.AppendLine("using COFRS;");
 						result.AppendLine("using NpgsqlTypes;");

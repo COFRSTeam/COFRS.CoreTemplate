@@ -98,14 +98,14 @@ namespace COFRS.Template.Common.Wizards
                         var className = replacementsDictionary["$safeitemname$"];
                         replacementsDictionary["$entityClass$"] = className;
 
-                        var standardEmitter = new Emitter();
+                        var emitter = new Emitter();
 
                         if (form.ServerType == DBServerType.POSTGRESQL)
                         {
                             //	Generate any undefined composits before we construct our entity model (because, 
                             //	the entity model depends upon them)
 
-                            standardEmitter.GenerateComposites(form.UndefinedEntityModels,
+                            emitter.GenerateComposites(form.UndefinedEntityModels,
                                                                form.ConnectionString,
                                                                replacementsDictionary,
                                                                projectMapping.GetEntityModelsFolder());
@@ -119,7 +119,7 @@ namespace COFRS.Template.Common.Wizards
                                                                        form.DatabaseTable.Table,
                                                                        form.ConnectionString);
 
-                            model = standardEmitter.EmitEntityEnum(replacementsDictionary["$safeitemname$"],
+                            model = emitter.EmitEntityEnum(replacementsDictionary["$safeitemname$"],
                                                                    form.DatabaseTable.Schema,
                                                                    form.DatabaseTable.Table,
                                                                    columns);
@@ -135,14 +135,13 @@ namespace COFRS.Template.Common.Wizards
                         {
                             var  columns = DBHelper.GenerateColumns(form.DatabaseTable.Schema, form.DatabaseTable.Table, form.ServerType, form.ConnectionString);
 
-                            model = standardEmitter.EmitComposite(replacementsDictionary["$safeitemname$"],
+                            model = emitter.EmitComposite(replacementsDictionary["$safeitemname$"],
                                                                   form.DatabaseTable.Schema,
                                                                   form.DatabaseTable.Table,
                                                                   ElementType.Composite,
                                                                   columns,
                                                                   form.ConnectionString,
-                                                                  replacementsDictionary,
-                                                                  projectMapping.GetEntityModelsFolder());
+                                                                  replacementsDictionary);
 
                             replacementsDictionary["$npgsqltypes$"] = "true";
 
@@ -153,7 +152,7 @@ namespace COFRS.Template.Common.Wizards
                         }
                         else
                         {
-                            model = standardEmitter.EmitEntityModel(replacementsDictionary["$safeitemname$"],
+                            model = emitter.EmitEntityModel(replacementsDictionary["$safeitemname$"],
                                                                     form.DatabaseTable.Schema,
                                                                     form.DatabaseTable.Table,
                                                                     form.ServerType,
