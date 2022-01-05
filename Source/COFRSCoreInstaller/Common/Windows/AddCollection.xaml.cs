@@ -63,11 +63,13 @@ namespace COFRS.Template.Common.Windows
                         {
                             IsChecked = false,
                             Content = resourceModel.ClassName,
-                            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(clr.A, clr.R, clr.G, clr.B))
+                            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(clr.A, clr.R, clr.G, clr.B)),
                         };
 
                         //	Ther is, so add it to the child resource list
                         Listbox_ChildResources.Items.Add(theItem);
+                        Listbox_ChildResources.MouseDoubleClick += OnResourceItemDoubleClicked;
+                        Listbox_ChildResources.MouseUp += OnResourceItemClicked;
                     }
                 }
             }
@@ -77,7 +79,25 @@ namespace COFRS.Template.Common.Windows
 			Button_Cancel.IsDefault = true;
 		}
 
-		private void OK_Click(object sender, RoutedEventArgs e)
+        private void OnResourceItemClicked(object sender, MouseButtonEventArgs e)
+        {
+            Button_OK.IsEnabled = false;
+
+            foreach (CheckBox item in Listbox_ChildResources.Items)
+                if (item.IsChecked.HasValue && item.IsChecked.Value == true)
+                    Button_OK.IsEnabled = true;
+        }
+
+        private void OnResourceItemDoubleClicked(object sender, MouseButtonEventArgs e)
+        {
+            Button_OK.IsEnabled = false;
+
+            foreach ( CheckBox item in Listbox_ChildResources.Items)
+                if ( item.IsChecked.HasValue && item.IsChecked.Value == true)
+                    Button_OK.IsEnabled =true;
+        }
+
+        private void OK_Click(object sender, RoutedEventArgs e)
 		{
             SelectedItems = new List<string>();
 

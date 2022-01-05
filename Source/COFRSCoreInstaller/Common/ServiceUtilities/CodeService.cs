@@ -4268,7 +4268,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="resourceModel"></param>
 		public static List<EntityProfile> GenerateEntityFromResourceMapping(ResourceClass resourceModel, ProfileMap profileMap)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+			ThreadHelper.ThrowIfNotOnUIThread();
 			var result = new List<EntityProfile>();
 			var unmappedMembers = new List<String>();
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
