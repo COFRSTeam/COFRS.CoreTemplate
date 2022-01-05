@@ -1726,18 +1726,8 @@ namespace COFRS.Template
 								AddSingleExample(parentModel, childModel, memberName);
 								AddCollectionExample(parentModel, childModel, memberName);
 							}
-
-							mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationGeneral);
 						}
 					}
-					else
-					{
-						mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
-					}
-				}
-				else
-				{
-					mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 				}
 			}
 		}

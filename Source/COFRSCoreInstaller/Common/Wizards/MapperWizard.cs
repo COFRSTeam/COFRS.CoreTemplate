@@ -47,7 +47,6 @@ namespace COFRS.Template.Common.Wizards
 				//  Make sure we are where we're supposed to be
 				if (!codeService.IsChildOf(projectMapping.MappingFolder, installationFolder.Folder))
 				{
-					mDte.StatusBar.Animate(false, vsStatusAnimation.vsStatusAnimationBuild);
 					var mappingFolder = projectMapping.GetMappingFolder();
 
 					if (!VsShellUtilities.PromptYesNo(
