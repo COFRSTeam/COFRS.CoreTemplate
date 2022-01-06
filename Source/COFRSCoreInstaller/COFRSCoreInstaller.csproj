@@ -88,9 +88,6 @@
     <Compile Include="Common\Windows\NewResourceDialog.xaml.cs">
       <DependentUpon>NewResourceDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Common\Windows\ValidationDialog.xaml.cs">
-      <DependentUpon>ValidationDialog.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Common\Wizards\COFRSModelsProjectWizard.cs" />
     <Compile Include="Common\Wizards\COFRSSDKProjectWizard.cs" />
     <Compile Include="Common\Models\DBAuthentication.cs" />
@@ -129,7 +126,6 @@
     <Compile Include="Common\Wizards\FullStackControllerWizard.cs" />
     <Compile Include="Common\Wizards\MapperWizard.cs" />
     <Compile Include="Common\Wizards\ResourceWizard.cs" />
-    <Compile Include="Common\Wizards\ValidationWizard.cs" />
     <Compile Include="Common\Wizards\CoreProjectWtihSDKWizard.cs" />
     <Compile Include="Common\ServiceUtilities\ProviderOptions.cs" />
     <Compile Include="Common\Wizards\COFRSServiceProjectWizard.cs" />
@@ -307,13 +303,6 @@
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
     </ProjectReference>
-    <ProjectReference Include="..\COFRSCoreValidationTemplate\COFRSCoreValidationTemplate.csproj">
-      <Project>{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}</Project>
-      <Name>COFRSCoreValidationTemplate</Name>
-      <VSIXSubPath>ItemTemplates</VSIXSubPath>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
@@ -354,10 +343,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Common\Windows\NewResourceDialog.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Common\Windows\ValidationDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

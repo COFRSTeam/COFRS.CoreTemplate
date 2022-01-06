@@ -2,11 +2,13 @@
 using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace COFRS.Template.Common.Wizards
 {
@@ -76,14 +78,35 @@ namespace COFRS.Template.Common.Wizards
 
 				if (result.HasValue && result.Value == true)
 				{
-					var resourceModel = form.ResourceModel;
+					IVsThreadedWaitDialog2 dialog = null;
+					var dialogFactory = ServiceProvider.GlobalProvider.GetService(typeof(SVsThreadedWaitDialogFactory)) as IVsThreadedWaitDialogFactory;
 
-					var emitter = new Emitter();
-					var model = emitter.EmitMappingModel(resourceModel, replacementsDictionary["$safeitemname$"], replacementsDictionary);
+					if (dialogFactory != null)
+					{
+						dialogFactory.CreateInstance(out dialog);
+					}
 
-					replacementsDictionary["$resourcenamespace$"] = resourceModel.Namespace;
-					replacementsDictionary["$entitynamespace$"] = resourceModel.Entity.Namespace;
-					replacementsDictionary["$model$"] = model;
+					if (dialog != null && dialog.StartWaitDialog("Microsoft Visual Studio", 
+						                                         "Constructing conversion maps", 
+																 $"Building {replacementsDictionary["$safeitemname$"]}", 
+																 null, 
+																 $"Building {replacementsDictionary["$safeitemname$"]}", 
+																 0, 
+																 false, true) == VSConstants.S_OK)
+					{
+						var resourceModel = form.ResourceModel;
+
+
+						var emitter = new Emitter();
+						var model = emitter.EmitMappingModel(resourceModel, replacementsDictionary["$safeitemname$"], replacementsDictionary);
+
+						replacementsDictionary["$resourcenamespace$"] = resourceModel.Namespace;
+						replacementsDictionary["$entitynamespace$"] = resourceModel.Entity.Namespace;
+						replacementsDictionary["$model$"] = model;
+
+						int usercancel;
+						dialog.EndWaitDialog(out usercancel);
+					}
 
 					Proceed = true;
 				}

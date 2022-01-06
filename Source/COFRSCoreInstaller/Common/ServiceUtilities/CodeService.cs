@@ -425,6 +425,14 @@ namespace COFRS.Template.Common.ServiceUtilities
                 resourceClassList.Remove(resource);
         }
 
+		public void OnProjectItemAdded(ProjectItem ProjectItem)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+			AddEntity(ProjectItem);
+			AddResource(ProjectItem);
+        }
+
         public void OnSolutionOpened()
         {
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -549,125 +557,114 @@ namespace COFRS.Template.Common.ServiceUtilities
         public void AddEntity(ProjectItem projectItem)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (entityClassList.Count == 0)
-            {
-                LoadEntityClassList();
-            }
-            else
-            {
-                FileCodeModel2 model = (FileCodeModel2)projectItem.FileCodeModel;
+			if (entityClassList.Count == 0)
+			{
+				LoadEntityClassList();
+			}
+			else
+			{
+				FileCodeModel2 model = (FileCodeModel2)projectItem.FileCodeModel;
 
-                foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
-                {
-                    foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
-                    {
-                        CodeAttribute2 tableAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Table"));
+				if (model != null)
+				{
 
-                        if (tableAttribute != null)
-                        {
-                            var code = new EntityClass
-                            {
-                                Entity = (CodeElement2)classElement,
-                            };
+					foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
+					{
+						foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
+						{
+							CodeAttribute2 tableAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Table"));
 
-                            entityClassList.Add(code);
-                        }
-                        else
-                        {
-                            CodeAttribute2 compositeAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgComposite"));
+							if (tableAttribute != null)
+							{
+								var code = new EntityClass((CodeElement2)classElement);
+								entityClassList.Add(code);
+							}
+							else
+							{
+								CodeAttribute2 compositeAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgComposite"));
 
-                            if (compositeAttribute != null)
-                            {
-                                var code = new EntityClass
-                                {
-                                    Entity = (CodeElement2)classElement,
-                                };
+								if (compositeAttribute != null)
+								{
+									var code = new EntityClass((CodeElement2)classElement);
+									entityClassList.Add(code);
+								}
+							}
+						}
 
-                                entityClassList.Add(code);
-                            }
-                        }
-                    }
+						foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
+						{
+							CodeAttribute2 enumAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgEnum"));
 
-                    foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
-                    {
-                        CodeAttribute2 enumAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgEnum"));
-
-                        if (enumAttribute != null)
-                        {
-                            var code = new EntityClass
-                            {
-                                Entity = (CodeElement2)enumElement,
-                            };
-
-                            entityClassList.Add(code);
-                        }
-                    }
-                }
-            }
+							if (enumAttribute != null)
+							{
+								var code = new EntityClass((CodeElement2)enumElement);
+								entityClassList.Add(code);
+							}
+						}
+					}
+				}
+			}
         }
 
         public void AddResource(ProjectItem projectItem)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (resourceClassList.Count == 0)
-            {
-                LoadResourceClassList();
-            }
-            else
-            {
-                FileCodeModel2 model = (FileCodeModel2)projectItem.FileCodeModel;
+			if (resourceClassList.Count == 0)
+			{
+				LoadResourceClassList();
+			}
+			else
+			{
+				FileCodeModel2 model = (FileCodeModel2)projectItem.FileCodeModel;
 
-                foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
-                {
-                    foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
-                    {
-                        CodeAttribute2 entityAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+				if (model != null)
+				{
+					foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
+					{
+						foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
+						{
+							CodeAttribute2 entityAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+							EntityClass entityClass = null;
 
-                        var code = new ResourceClass
-                        {
-                            Resource = (CodeElement2)classElement
-                        };
+							if (entityAttribute != null)
+							{
+								var entityTypeArgument = entityAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals(""));
 
-                        if (entityAttribute != null)
-                        {
-                            var entityTypeArgument = entityAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals(""));
+								var match = Regex.Match(entityTypeArgument.Value, "^typeof\\((?<entityClass>[a-zA-Z0-9_]+)\\)");
 
-                            var match = Regex.Match(entityTypeArgument.Value, "^typeof\\((?<entityClass>[a-zA-Z0-9_]+)\\)");
+								if (match.Success)
+								{
+									entityClass = GetEntityClass(match.Groups["entityClass"].Value);
+								}
+							}
 
-                            if (match.Success)
-                            {
-                                code.Entity = GetEntityClass(match.Groups["entityClass"].Value);
-                            }
-                        }
+							var code = new ResourceClass((CodeElement2)classElement, entityClass);
+							resourceClassList.Add(code);
+						}
 
-                        resourceClassList.Add(code);
-                    }
+						foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
+						{
+							CodeAttribute2 entityAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+							EntityClass entityClass = null;
 
-                    foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
-                    {
-                        CodeAttribute2 entityAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+							if (entityAttribute != null)
+							{
+								var entityTypeArgument = entityAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals(""));
 
-                        var code = new ResourceClass
-                        {
-                            Resource = (CodeElement2)enumElement
-                        };
+								var match = Regex.Match(entityTypeArgument.Value, "^typeof\\((?<entityClass>[a-zA-Z0-9_]+)\\)");
 
-                        if (entityAttribute != null)
-                        {
-                            var entityTypeArgument = entityAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals(""));
+								if (match.Success)
+								{
+									entityClass = GetEntityClass(match.Groups["entityClass"].Value);
+								}
+							}
 
-                            var match = Regex.Match(entityTypeArgument.Value, "^typeof\\((?<entityClass>[a-zA-Z0-9_]+)\\)");
-
-                            if (match.Success)
-                            {
-                                code.Entity = GetEntityClass(match.Groups["entityClass"].Value);
-                            }
-                        }
-
-                        resourceClassList.Add(code);
-                    }
-                }
-            }
+							var code = new ResourceClass((CodeElement2)enumElement, entityClass);
+							resourceClassList.Add(code);
+						}
+					}
+				}
+			}
         }
 
         public void LoadEntityClassList(string folder = "")
@@ -701,11 +698,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
                             if (tableAttribute != null)
                             {
-                                var code = new EntityClass
-                                {
-                                    Entity = (CodeElement2)classElement,
-                                };
-
+								var code = new EntityClass((CodeElement2)classElement);
                                 entityClassList.Add(code);
                             }
                             else
@@ -714,12 +707,8 @@ namespace COFRS.Template.Common.ServiceUtilities
 
                                 if (compositeAttribute != null)
                                 {
-                                    var code = new EntityClass
-                                    {
-                                        Entity = (CodeElement2)classElement,
-                                    };
-
-                                    entityClassList.Add(code);
+									var code = new EntityClass((CodeElement2)classElement);
+									entityClassList.Add(code);
                                 }
                             }
                         }
@@ -730,11 +719,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
                             if (tableAttribute != null)
                             {
-                                var code = new EntityClass
-                                {
-                                    Entity = (CodeElement2)enumElement,
-                                };
-
+								var code = new EntityClass((CodeElement2)enumElement);
                                 entityClassList.Add(code);
                             }
                         }
@@ -771,11 +756,7 @@ namespace COFRS.Template.Common.ServiceUtilities
                         foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
                         {
                             CodeAttribute2 entityAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
-
-                            var code = new ResourceClass
-                            {
-                                Resource = (CodeElement2)classElement
-                            };
+							EntityClass entityClass = null;
 
                             if (entityAttribute != null)
                             {
@@ -785,21 +766,18 @@ namespace COFRS.Template.Common.ServiceUtilities
 
                                 if (match.Success)
                                 {
-                                    code.Entity = GetEntityClass(match.Groups["entityClass"].Value);
+									entityClass = GetEntityClass(match.Groups["entityClass"].Value);
                                 }
                             }
 
-                            resourceClassList.Add(code);
+							var code = new ResourceClass((CodeElement2)classElement, entityClass);
+							resourceClassList.Add(code);
                         }
 
                         foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
                         {
                             CodeAttribute2 entityAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgEnum"));
-
-                            var code = new ResourceClass
-                            {
-                                Resource = (CodeElement2)enumElement
-                            };
+							EntityClass entityClass = null;
 
                             if (entityAttribute != null)
                             {
@@ -809,11 +787,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 
                                 if (match.Success)
                                 {
-                                    code.Entity = GetEntityClass(match.Groups["entityClass"].Value);
+									entityClass = GetEntityClass(match.Groups["entityClass"].Value);
                                 }
                             }
 
-                            resourceClassList.Add(code);
+							var code = new ResourceClass((CodeElement2)enumElement, entityClass);
+							resourceClassList.Add(code);
                         }
                     }
                 }
@@ -861,57 +840,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 
 			return string.Empty;
-		}
-
-		/// <summary>
-		/// This function will add the appropriate code to regster the validation model in the ServicesConfig.cs file.
-		/// </summary>
-		/// <param name="_dte2>"The <see cref="DTE2"/> Visual Studio interface</param>
-		/// <param name="validationClass">The name of the validation class.</param>
-		/// <param name="validationNamespace">The namespace where the validation class resides.</param>
-		public void RegisterValidationModel(string validationClass, string validationNamespace)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-
-			//	Get the ServicesConfig.cs project item.
-			ProjectItem serviceConfig = mDte.Solution.FindProjectItem("ServicesConfig.cs");
-			FileCodeModel2 codeModel = (FileCodeModel2)serviceConfig.FileCodeModel;
-
-			if (codeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(validationNamespace)) == null)
-				codeModel.AddImport(validationNamespace, -1);
-
-			foreach (var codeNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
-			{
-				var codeClass = codeNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceCollectionExtension"));
-
-				if (codeClass != null)
-				{
-					var aFunction = codeClass.Children.OfType<CodeFunction2>().FirstOrDefault(f => f.Name.Equals("ConfigureServices"));
-
-					if (aFunction != null)
-					{
-						var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-						bool foundit = editPoint.FindPattern($"services.AddScoped<I{validationClass}, {validationClass}>();");
-						foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
-						if (!foundit)
-						{
-							editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-							foundit = editPoint.FindPattern($"services.AddScoped<IServiceOrchestrator, ServiceOrchestrator>();");
-							foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
-							if (foundit)
-							{
-								editPoint.EndOfLine();
-								editPoint.InsertNewLine(2);
-								editPoint.Indent(null, 3);
-								editPoint.Insert($"services.AddScoped<I{validationClass}, {validationClass}>();");
-							}
-						}
-					}
-				}
-			}
 		}
 
 		public void RegisterComposite(string className, string entityNamespace, ElementType elementType, string tableName)
@@ -1961,202 +1889,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 
 			return null;
-		}
-		#endregion
-
-		#region Discovery Operations
-		/// <summary>
-		/// Locates and returns the mapping folder for the project
-		/// </summary>
-		/// <param name="parent">A <see cref="ProjectItem"/> folder within the project.</param>
-		/// <param name="projectName">The name of the project containing the <see cref="ProjectItem"/> folder.</param>
-		/// <returns>The first <see cref="ProjectFolder"/> that contains an entity model, or null if none are found.</returns>
-		private ProjectFolder FindValidationFolder(ProjectItem parent, string projectName)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			var validatorFolder = ScanForValidator(parent, projectName);
-
-			if (validatorFolder != null)
-				return validatorFolder;
-
-			foreach (ProjectItem candidateFolder in parent.ProjectItems)
-			{
-				if (candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
-					candidateFolder.Kind == EnvDTE.Constants.vsProjectItemKindVirtualFolder)
-				{
-					validatorFolder = FindValidationFolder(candidateFolder, projectName);
-
-					if (validatorFolder != null)
-						return validatorFolder;
-				}
-			}
-
-			return null;
-		}
-
-		/// <summary>
-		/// Scans the project folder for a validator class
-		/// </summary>
-		/// <param name="parent">The <see cref="ProjectItem"/> folder to scan</param>
-		/// <param name="projectName">the name of the project</param>
-		/// <returns>Returns the <see cref="ProjectFolder"/> for the <see cref="ProjectItem"/> folder if the folder contains an entity model</returns>
-		private ProjectFolder ScanForValidator(ProjectItem parent, string projectName)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			foreach (ProjectItem candidate in parent.ProjectItems)
-			{
-				if (candidate.Kind == Constants.vsProjectItemKindPhysicalFile &&
-					candidate.FileCodeModel != null &&
-					candidate.FileCodeModel.Language == CodeModelLanguageConstants.vsCMLanguageCSharp &&
-					Convert.ToInt32(candidate.Properties.Item("BuildAction").Value) == 1)
-				{
-					foreach (CodeNamespace namespaceElement in candidate.FileCodeModel.CodeElements.OfType<CodeNamespace>())
-					{
-						foreach (CodeElement childElement in namespaceElement.Members)
-						{
-							if (childElement.Kind == vsCMElement.vsCMElementClass)
-							{
-								CodeClass codeClass = (CodeClass)childElement;
-								bool isValidator = false;
-
-								foreach (CodeElement parentClass in codeClass.Bases)
-								{
-									if (string.Equals(parentClass.Name, "Validator", StringComparison.OrdinalIgnoreCase))
-									{
-										isValidator = true;
-										break;
-									}
-								}
-
-								if (isValidator)
-								{
-									return new ProjectFolder()
-									{
-										Folder = parent.Properties.Item("FullPath").Value.ToString(),
-										Namespace = parent.Properties.Item("DefaultNamespace").Value.ToString(),
-										ProjectName = projectName,
-										Name = childElement.Name
-									};
-								}
-							}
-						}
-					}
-				}
-			}
-
-			return null;
-		}
-
-		private CodeClass2 FindValidator(ResourceModel resourceModel, string folder = "")
-		{
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var projectMapping = LoadProjectMapping();                        //	Contains the names and projects where various source file exist.
-			var mDte2 = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-			var validatorModelFolder = projectMapping.GetValidatorFolder();
-
-			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? mDte2.Solution.FindProjectItem(validatorModelFolder.Folder) :
-																	  mDte2.Solution.FindProjectItem(folder);
-
-			foreach (ProjectItem projectItem in validatorFolder.ProjectItems)
-			{
-				if (projectItem.Kind == Constants.vsProjectItemKindVirtualFolder ||
-					projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder)
-				{
-					CodeClass2 validatorClass = FindValidator(resourceModel, projectItem.Name);
-
-					if (validatorClass != null)
-						return validatorClass;
-				}
-				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile && projectItem.FileCodeModel != null)
-				{
-					FileCodeModel2 codeModel = (FileCodeModel2)projectItem.FileCodeModel;
-
-					foreach (CodeNamespace codeNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
-					{
-						foreach (CodeClass2 codeClass in codeNamespace.Children.OfType<CodeClass2>())
-						{
-							foreach (CodeClass2 codeBase in codeClass.Bases.OfType<CodeClass2>())
-							{
-								var parts = codeBase.FullName.Split(new char[] { '<', '>' }, StringSplitOptions.RemoveEmptyEntries);
-
-								if (parts.Length == 2)
-								{
-									var interfaceParts = parts[0].Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-									var classParts = parts[1].Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-
-									if (interfaceParts[interfaceParts.Length - 1].Equals("IValidator") &&
-										 classParts[classParts.Length - 1].Equals(resourceModel.ClassName))
-									{
-										return codeClass;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			return null;
-		}
-
-		/// <summary>
-		/// Get the validator interface name for a resource
-		/// </summary>
-		/// <param name="resourceClassName">The resource class whos validator is to be found</param>
-		/// <param name="folder">The folder to search</param>
-		/// <returns>The name of the interface for the validator of the resource.</returns>
-		public string FindValidatorInterface(string resourceClassName, string folder = "")
-		{
-            ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-            var projectMapping = LoadProjectMapping();                        //	Contains the names and projects where various source file exist.
-			var validatorModelFolder = projectMapping.GetValidatorFolder();
-
-			var validatorFolder = string.IsNullOrWhiteSpace(folder) ? mDte.Solution.FindProjectItem(validatorModelFolder.Folder) :
-																	  mDte.Solution.FindProjectItem(folder);
-
-			foreach (ProjectItem projectItem in validatorFolder.ProjectItems)
-			{
-				if (projectItem.Kind == Constants.vsProjectItemKindVirtualFolder ||
-					projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder)
-				{
-					string validatorClass = FindValidatorInterface(resourceClassName, projectItem.Name);
-
-					if (!string.IsNullOrWhiteSpace(validatorClass))
-						return validatorClass;
-				}
-				else if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFile && projectItem.FileCodeModel != null)
-				{
-					FileCodeModel2 codeModel = (FileCodeModel2)projectItem.FileCodeModel;
-
-					foreach (CodeNamespace codeNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
-					{
-						foreach (CodeInterface2 codeClass in codeNamespace.Children.OfType<CodeInterface2>())
-						{
-							foreach (CodeInterface2 codeBase in codeClass.Bases.OfType<CodeInterface2>())
-							{
-								var parts = codeBase.FullName.Split(new char[] { '<', '>' }, StringSplitOptions.RemoveEmptyEntries);
-
-								if (parts.Length == 2)
-								{
-									var interfaceParts = parts[0].Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-									var classParts = parts[1].Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-
-									if (interfaceParts[interfaceParts.Length - 1].Equals("IValidator") &&
-										 classParts[classParts.Length - 1].Equals(resourceClassName))
-									{
-										return codeClass.Name;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			return string.Empty;
 		}
 		#endregion
 
@@ -3979,16 +3711,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 				projectMapping.MappingFolder = modelFolder == null ? installationFolder.Folder : modelFolder.Folder;
 				projectMapping.MappingNamespace = modelFolder == null ? installationFolder.Namespace : modelFolder.Namespace;
 				projectMapping.MappingProject = modelFolder == null ? installationFolder.ProjectName : modelFolder.ProjectName;
-			}
-
-			if (string.IsNullOrWhiteSpace(projectMapping.ValidationFolder) ||
-				string.IsNullOrWhiteSpace(projectMapping.ValidationNamespace) ||
-				string.IsNullOrWhiteSpace(projectMapping.ValidationProject))
-			{
-				var modelFolder = FindMappingFolder();
-				projectMapping.ValidationFolder = modelFolder == null ? installationFolder.Folder : modelFolder.Folder;
-				projectMapping.ValidationNamespace = modelFolder == null ? installationFolder.Namespace : modelFolder.Namespace;
-				projectMapping.ValidationProject = modelFolder == null ? installationFolder.ProjectName : modelFolder.ProjectName;
 			}
 
 			if (string.IsNullOrWhiteSpace(projectMapping.ExampleFolder) ||

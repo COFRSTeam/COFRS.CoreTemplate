@@ -36,7 +36,6 @@ namespace COFRS.Template
 		public const int AddControllerId = 0x104;
 		public const int AddFullControllerId = 0x105;
 		public const int AddProfileId = 0x0106;
-		public const int AddValidatorId = 0x0107;
 		public const int AddExampleId = 0x0108;
 		public const int AddJsonConverterId = 0x0109;
 
@@ -100,11 +99,6 @@ namespace COFRS.Template
 			AddProfileMapMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddProfileMap);
 			commandService.AddCommand(AddProfileMapMenu);
 
-			var addValidatorCommandId = new CommandID(CommandSet, AddValidatorId);
-			OleMenuCommand AddValidatorMenu = new OleMenuCommand(new EventHandler(OnAddValidator), addValidatorCommandId);
-			AddValidatorMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddValidator);
-			commandService.AddCommand(AddValidatorMenu);
-
 			var addExampleCommandId = new CommandID(CommandSet, AddExampleId);
 			OleMenuCommand AddExampleMenu = new OleMenuCommand(new EventHandler(OnAddExample), addExampleCommandId);
 			AddExampleMenu.BeforeQueryStatus += new EventHandler(OnBeforeAddExample);
@@ -151,6 +145,13 @@ namespace COFRS.Template
 
 			_solutionEvents.Opened += Instance.OnSolutionOpened;
 			_projectItemsEvents.ItemRemoved += Instance.OnProjectItemRemoved;
+            _projectItemsEvents.ItemAdded += OnProjectItemAdded;
+		}
+
+        private static void OnProjectItemAdded(ProjectItem ProjectItem)
+        {
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			codeService.OnProjectItemAdded(ProjectItem);
 		}
 
 		private void OnProjectItemRemoved(ProjectItem ProjectItem)
@@ -332,184 +333,6 @@ namespace COFRS.Template
 					wizard.BeforeOpeningFile(exampleItem);
 
 					var window = exampleItem.Open();
-					window.Activate();
-
-					wizard.RunFinished();
-				}
-			}
-		}
-        #endregion
-
-        #region Validator Operations
-        private void OnBeforeAddValidator(object sender, EventArgs e)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
-
-
-			if (selectedItems.Length > 1 || selectedItems.Length == 0)
-			{
-				var myCommand = sender as OleMenuCommand;
-				myCommand.Visible = false;
-			}
-			else
-			{
-				ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
-
-				if (projectItem.Kind == Constants.vsProjectItemKindPhysicalFolder ||
-					projectItem.Kind == Constants.vsProjectItemKindVirtualFolder)
-				{
-					var codeService = COFRSServiceFactory.GetService<ICodeService>();
-					var projectMap = codeService.LoadProjectMapping();
-
-					var candidateFolder = projectMap.ValidationFolder;
-					var projectItemPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
-					{
-						ThreadHelper.ThrowIfNotOnUIThread();
-						return p.Name.Equals("FullPath");
-					})?.Value.ToString().Trim('\\');
-
-					if (projectItemPath.Equals(candidateFolder))
-					{
-						var myCommand = sender as OleMenuCommand;
-						myCommand.Visible = true;
-					}
-					else
-					{
-						var myCommand = sender as OleMenuCommand;
-						myCommand.Visible = false;
-					}
-				}
-				else
-				{
-					var myCommand = sender as OleMenuCommand;
-					myCommand.Visible = false;
-				}
-			}
-		}
-
-		private void OnAddValidator(object sender, EventArgs e)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
-			var codeService = COFRSServiceFactory.GetService<ICodeService>();
-			object[] selectedItems = (object[])mDte.ToolWindows.SolutionExplorer.SelectedItems;
-			var projectMapping = codeService.LoadProjectMapping();
-
-			ProjectItem projectItem = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
-
-			var projectFolderNamespace = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
-			{
-				ThreadHelper.ThrowIfNotOnUIThread();
-				return p.Name.Equals("DefaultNamespace", StringComparison.OrdinalIgnoreCase);
-			});
-
-			var projectFolderPath = projectItem.Properties.OfType<Property>().FirstOrDefault(p =>
-			{
-				ThreadHelper.ThrowIfNotOnUIThread();
-				return p.Name.Equals("FullPath", StringComparison.OrdinalIgnoreCase);
-			});
-
-
-			var dialog = new GetClassNameDialog("COFRS Validator Generator", "ResourceValidator.cs");
-			var result = dialog.ShowDialog();
-
-			if (result.HasValue && result.Value == true)
-			{
-				var replacementsDictionary = new Dictionary<string, string>();
-
-				for (int i = 0; i < 10; i++)
-				{
-					replacementsDictionary.Add($"$guid{i + 1}$", Guid.NewGuid().ToString());
-				}
-
-				var className = dialog.ClassName;
-				if (className.EndsWith(".cs"))
-					className = className.Substring(0, className.Length - 3);
-
-				replacementsDictionary.Add("$time$", DateTime.Now.ToString());
-				replacementsDictionary.Add("$year$", DateTime.Now.Year.ToString());
-				replacementsDictionary.Add("$username$", Environment.UserName);
-				replacementsDictionary.Add("$userdomain$", Environment.UserDomainName);
-				replacementsDictionary.Add("$machinename$", Environment.MachineName);
-				replacementsDictionary.Add("$clrversion$", GetRunningFrameworkVersion());
-				replacementsDictionary.Add("$registeredorganization$", GetOrganization());
-				replacementsDictionary.Add("$runsilent$", "True");
-				replacementsDictionary.Add("$solutiondirectory$", Path.GetDirectoryName(mDte.Solution.FullName));
-				replacementsDictionary.Add("$rootname$", $"{className}.cs");
-				replacementsDictionary.Add("$targetframeworkversion$", "6.0");
-				replacementsDictionary.Add("$targetframeworkidentifier", ".NETCoreApp");
-				replacementsDictionary.Add("$safeitemname$", codeService.NormalizeClassName(codeService.CorrectForReservedNames(className)));
-				replacementsDictionary.Add("$rootnamespace$", projectFolderNamespace.Value.ToString());
-
-				var wizard = new ValidationWizard();
-
-				wizard.RunStarted(mDte, replacementsDictionary, Microsoft.VisualStudio.TemplateWizard.WizardRunKind.AsNewItem, null);
-
-				var projectItemPath = Path.Combine(projectFolderPath.Value.ToString(), replacementsDictionary["$rootname$"]);
-
-				if (wizard.ShouldAddProjectItem("Validator"))
-				{
-					var theFile = new StringBuilder();
-
-					theFile.AppendLine("using System;");
-					theFile.AppendLine("using System.Collections.Generic;");
-					theFile.AppendLine("using System.Linq;");
-					theFile.AppendLine("using System.Security.Claims;");
-					theFile.AppendLine("using System.Threading.Tasks;");
-
-					if (replacementsDictionary.ContainsKey("$barray$"))
-						if (replacementsDictionary["$barray$"].Equals("true", StringComparison.OrdinalIgnoreCase))
-							theFile.AppendLine("using System.Collections;");
-
-					if (replacementsDictionary.ContainsKey("$image$"))
-						if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
-							theFile.AppendLine("using System.Drawing;");
-
-					if (replacementsDictionary.ContainsKey("$net$"))
-						if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
-							theFile.AppendLine("using System.Net;");
-
-					if (replacementsDictionary.ContainsKey("$netinfo$"))
-						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
-							theFile.AppendLine("using System.Net.NetworkInformation;");
-
-					if (replacementsDictionary.ContainsKey("$annotations$"))
-						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
-							theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
-
-					if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
-						if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
-							theFile.AppendLine("using NpgsqlTypes;");
-
-					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
-
-					theFile.AppendLine($"using {projectMapping.EntityNamespace};");
-					theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
-					theFile.AppendLine($"using {orchestrationNamespace};");
-					theFile.AppendLine("using COFRS;");
-					theFile.AppendLine();
-					theFile.AppendLine($"namespace {projectMapping.ValidationNamespace}");
-					theFile.AppendLine("{");
-
-					theFile.Append(replacementsDictionary["$model$"]);
-					theFile.AppendLine("}");
-
-					File.WriteAllText(projectItemPath, theFile.ToString());
-
-					var parentProject = codeService.GetProjectFromFolder(projectFolderPath.Value.ToString());
-					ProjectItem validationItem;
-
-					if (parentProject.GetType() == typeof(Project))
-						validationItem = ((Project)parentProject).ProjectItems.AddFromFile(projectItemPath);
-					else
-						validationItem = ((ProjectItem)parentProject).ProjectItems.AddFromFile(projectItemPath);
-
-					wizard.ProjectItemFinishedGenerating(validationItem);
-					wizard.BeforeOpeningFile(validationItem);
-
-					var window = validationItem.Open();
 					window.Activate();
 
 					wizard.RunFinished();
@@ -783,6 +606,8 @@ namespace COFRS.Template
 				if (className.EndsWith(".cs"))
 					className = className.Substring(0, className.Length - 3);
 
+				NameNormalizer nn = new NameNormalizer(className);
+
 				replacementsDictionary.Add("$time$", DateTime.Now.ToString());
 				replacementsDictionary.Add("$year$", DateTime.Now.Year.ToString());
 				replacementsDictionary.Add("$username$", Environment.UserName);
@@ -792,7 +617,7 @@ namespace COFRS.Template
 				replacementsDictionary.Add("$registeredorganization$", GetOrganization());
 				replacementsDictionary.Add("$runsilent$", "True");
 				replacementsDictionary.Add("$solutiondirectory$", Path.GetDirectoryName(mDte.Solution.FullName));
-				replacementsDictionary.Add("$rootname$", $"{className}.cs");
+				replacementsDictionary.Add("$rootname$", $"{nn.PluralForm}Controller.cs");
 				replacementsDictionary.Add("$targetframeworkversion$", "6.0");
 				replacementsDictionary.Add("$targetframeworkidentifier", ".NETCoreApp");
 				replacementsDictionary.Add("$safeitemname$", codeService.NormalizeClassName(codeService.CorrectForReservedNames(className)));
@@ -808,6 +633,7 @@ namespace COFRS.Template
 				{
 					var theFile = new StringBuilder();
 
+					theFile.AppendLine("using COFRS;");
 					theFile.AppendLine("using System;");
 
 					if (replacementsDictionary.ContainsKey("$barray$"))
@@ -816,32 +642,41 @@ namespace COFRS.Template
 
 					theFile.AppendLine("using System.Collections.Generic;");
 
+					if (replacementsDictionary.ContainsKey("$annotations$"))
+						if (replacementsDictionary["$annotations$"].Equals("true", StringComparison.OrdinalIgnoreCase))
+							theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
+
 					if (replacementsDictionary.ContainsKey("$image$"))
 						if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
 							theFile.AppendLine("using System.Drawing;");
-
-					if (replacementsDictionary.ContainsKey("$net$"))
-						if (replacementsDictionary["$net$"].Equals("true", StringComparison.OrdinalIgnoreCase))
-							theFile.AppendLine("using System.Net;");
+					
+					theFile.AppendLine("using System.Net;");
 
 					if (replacementsDictionary.ContainsKey("$netinfo$"))
 						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
 							theFile.AppendLine("using System.Net.NetworkInformation;");
 
-					if (replacementsDictionary.ContainsKey("$annotations$"))
-						if (replacementsDictionary["$netinfo$"].Equals("true", StringComparison.OrdinalIgnoreCase))
-							theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
+					theFile.AppendLine("using System.Text.Json;");
+					theFile.AppendLine("using System.Threading.Tasks;");
+
+					theFile.AppendLine("using Microsoft.AspNetCore.Mvc;");
+					theFile.AppendLine("using Microsoft.Extensions.Logging;");
+					theFile.AppendLine("using Swashbuckle.AspNetCore.Annotations;");
+					theFile.AppendLine("using Swashbuckle.AspNetCore.Filters;");
+					theFile.AppendLine("using Serilog.Context;");
+					theFile.AppendLine($"using {replacementsDictionary["$orchestrationnamespace$"]};");
+					theFile.AppendLine($"using {replacementsDictionary["$resourcenamespace$"]};");
+					theFile.AppendLine($"using {replacementsDictionary["$examplesnamespace$"]};");
 
 					if (replacementsDictionary.ContainsKey("$npgsqltypes$"))
 						if (replacementsDictionary["$npgsqltypes$"].Equals("true", StringComparison.OrdinalIgnoreCase))
 							theFile.AppendLine("using NpgsqlTypes;");
 
-					theFile.AppendLine("using COFRS;");
 					theFile.AppendLine();
 					theFile.AppendLine($"namespace {projectMapping.ControllersNamespace}");
 					theFile.AppendLine("{");
 
-					theFile.Append(replacementsDictionary["$controllermodel$"]);
+					theFile.Append(replacementsDictionary["$model$"]);
 					theFile.AppendLine("}");
 
 					File.WriteAllText(projectItemPath, theFile.ToString());
@@ -1020,7 +855,6 @@ namespace COFRS.Template
 
 					theFile.AppendLine($"using {projectMapping.EntityNamespace};");
 					theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
-					theFile.AppendLine($"using {projectMapping.ValidationNamespace};");
 					theFile.AppendLine($"using {projectMapping.ExampleNamespace};");
 					theFile.AppendLine($"using {orchestrationNamespace};");
 					theFile.AppendLine("using COFRS;");
@@ -1176,6 +1010,7 @@ namespace COFRS.Template
 							theFile.AppendLine("using System.Collections;");
 
 					theFile.AppendLine("using System.Collections.Generic;");
+					theFile.AppendLine("using System.ComponentModel.DataAnnotations;");
 
 					if (replacementsDictionary.ContainsKey("$image$"))
 						if (replacementsDictionary["$image$"].Equals("true", StringComparison.OrdinalIgnoreCase))
@@ -1649,8 +1484,6 @@ namespace COFRS.Template
 								var memberName = nn.PluralForm;                                     // The memberName is will be the name of the new collection in the parent resource. By default, it will be
 																									// the plural of the child model class name.
 
-								var parentValidatorInterface = codeService.FindValidatorInterface(parentModel.ClassName);
-								var childValidatorInterface = codeService.FindValidatorInterface(childModel.ClassName);
 								string memberType = string.Empty;
 
 								//	Now that we have all the information we need, add the collection member to the parent resource
@@ -1658,35 +1491,16 @@ namespace COFRS.Template
 
 								//	Now that we've added a new collection, we need to alter the orchestration layer to handle that new collection...
 
-								//	We're going to need a validator for the new members. To get it, we will use dependency injection in the 
-								//	constructor, which means we will need a class variable. That variable is going to need a name. Create 
-								//	the default name for this vairable as the class name of the new member followed by "Validator".
-								//
-								//	i.e., if the new member class is Foo, then the variable name will be FooValidator.
-
-								var childValidatorName = $"{childModel.ClassName}Validator";
-								var parentValidatorName = $"{parentModel.ClassName}Validator";
-
 								//	Find the namespace...
 								foreach (CodeNamespace orchestratorNamespace in codeModel.CodeElements.OfType<CodeNamespace>())
 								{
 									CodeClass2 classElement = orchestratorNamespace.Children.OfType<CodeClass2>().FirstOrDefault(c => c.Name.Equals("ServiceOrchestrator"));
 
-									//	The new collection of child items will need to be validated for the various operations.
-									//	Add a validator the for the child items 
-									AddChildValidatorInterfaceMember(classElement, parentValidatorInterface, childValidatorInterface, childValidatorName, ref parentValidatorName);
-
 									//	Now, let's go though all the functions...
 									foreach (CodeFunction2 aFunction in classElement.Children.OfType<CodeFunction2>())
 									{
-										//	Constructor
-										if (aFunction.FunctionKind == vsCMFunction.vsCMFunctionConstructor)
-										{
-											ModifyConstructor(aFunction, childValidatorName, childValidatorInterface);
-										}
-
 										//	Get Single
-										else if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
+										if (aFunction.Name.Equals($"Get{parentModel.ClassName}Async", StringComparison.OrdinalIgnoreCase))
 										{
 											ModifyGetSingle(aFunction, parentModel, childModel, memberName, memberType);
 										}
@@ -1700,25 +1514,25 @@ namespace COFRS.Template
 										//	Add
 										else if (aFunction.Name.Equals($"Add{parentModel.ClassName}Async"))
 										{
-											ModifyAdd(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
+											ModifyAdd(aFunction, parentModel, childModel, memberName);
 										}
 
 										//	Update
 										else if (aFunction.Name.Equals($"Update{parentModel.ClassName}Async"))
 										{
-											ModifyUpdate(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
+											ModifyUpdate(aFunction, parentModel, childModel, memberName);
 										}
 
 										//	Update
 										else if (aFunction.Name.Equals($"Patch{parentModel.ClassName}Async"))
 										{
-											ModifyPatch(aFunction, parentModel, childModel, parentValidatorName, childValidatorName, memberName);
+											ModifyPatch(aFunction, parentModel, childModel, memberName);
 										}
 
 										//	Delete
 										else if (aFunction.Name.Equals($"Delete{parentModel.ClassName}Async"))
 										{
-											ModifyDelete(aFunction, childModel, parentValidatorName, childValidatorName, memberName);
+											ModifyDelete(aFunction, childModel, memberName);
 										}
 									}
 								}
@@ -2233,54 +2047,6 @@ namespace COFRS.Template
 				}
 			}
 		}
-		/// <summary>
-		/// Adds a class property for the child class validator
-		/// </summary>
-		/// <param name="classElement"></param>
-		private void AddChildValidatorInterfaceMember(CodeClass2 classElement, string parentValidatorInterface, string childValidatorInterface, string childValidatorName, ref string parentValidatorName)
-		{
-            ThreadHelper.ThrowIfNotOnUIThread();
-            //	Okay, we will need a validator for our new child resources. To get one, we will use dependency injection
-            //	in the constructor. That means, we need a class member variable to hold it.
-            //
-            //	And, by the way, we're going to need to know the name of the source class validator. While we're
-            //	muking around with the variables, find and store that name.
-            //	muking around with the variables, find and store that name.
-
-            //	So, do we already have that variable? If so, use it. If not, create it.
-            //	We start by assuming we're going to create it.
-            var shouldAddValidator = true;
-
-			//	Look at all our class variables.
-			//	The variable we are looking for will have a type of validator interface for the class. Fortunately,
-			//	we know those names for both our source class and our new member class.
-			foreach (CodeVariable2 variableElement in classElement.Children.OfType<CodeVariable2>())
-			{
-				var parts = variableElement.Type.AsFullName.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-
-				if (parts[parts.Length - 1].Equals(parentValidatorInterface, StringComparison.OrdinalIgnoreCase))
-				{
-					//	This is a member variable that has a type of the Interface for the source class. Remember it's name.
-					parentValidatorName = variableElement.Name;
-				}
-				else if (parts[parts.Length - 1].Equals(childValidatorInterface, StringComparison.OrdinalIgnoreCase))
-				{
-					//	This is a member variable that has a type of the interface for the member class. It may (or may not)
-					//	have the name we used as the default. No matter, whatever name it is using, remember it. Also, mark
-					//	the flag to say we don't need to create one.
-					childValidatorName = variableElement.Name;
-					shouldAddValidator = false;
-				}
-			}
-
-			//	Did we find it?
-			if (shouldAddValidator)
-			{
-				//	Nope, didn't find it. Create it using that default variable name we created.
-				var variable = (CodeVariable2)classElement.AddVariable(childValidatorName, childValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
-				variable.ConstKind = vsCMConstKind.vsCMConstKindReadOnly;
-			}
-		}
 
 		/// <summary>
 		/// Adds the new collection member to the parent resource
@@ -2452,7 +2218,7 @@ namespace COFRS.Template
 		/// Modify the delete function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction">The <see cref="CodeFunction2"/> instance of the delete function.</param>
-		private void ModifyDelete(CodeFunction2 aFunction, ResourceClass childModel, string parentValidatorName, string childValidatorName, string memberName)
+		private void ModifyDelete(CodeFunction2 aFunction, ResourceClass childModel, string memberName)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -2462,7 +2228,7 @@ namespace COFRS.Template
 
 			if (!foundit)
 			{
-				foundit = editPoint.FindPattern($"await {parentValidatorName}.ValidateForDeleteAsync");
+				foundit = editPoint.FindPattern("}");
 				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
 				if (foundit)
@@ -2476,7 +2242,7 @@ namespace COFRS.Template
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-			editPoint.FindPattern($"await {parentValidatorName}.ValidateForDeleteAsync");
+			editPoint.FindPattern("}");
 
 			foundit = editPoint.FindPattern("var subNode =");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
@@ -2484,7 +2250,7 @@ namespace COFRS.Template
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				foundit = editPoint.FindPattern($"await {parentValidatorName}.ValidateForDeleteAsync");
+				foundit = editPoint.FindPattern("}");
 				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
 				if (foundit)
@@ -2519,19 +2285,6 @@ namespace COFRS.Template
 						editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
 						editPoint.InsertNewLine(2);
 						editPoint.Indent(null, 3);
-						editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
-						editPoint.InsertNewLine();
-						editPoint.Indent(null, 3);
-						editPoint.Insert("{");
-						editPoint.InsertNewLine();
-						editPoint.Indent(null, 4);
-						editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
-						editPoint.InsertNewLine();
-						editPoint.Indent(null, 4);
-						editPoint.Insert($"await {childValidatorName}.ValidateForDeleteAsync(dnode, User);");
-						editPoint.InsertNewLine();
-						editPoint.Indent(null, 3);
-						editPoint.Insert("}");
 					}
 
 					editPoint = (EditPoint2)aFunction.EndPoint.CreateEditPoint();
@@ -2567,7 +2320,7 @@ namespace COFRS.Template
 		/// Modify the update function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyUpdate(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string parentValidatorName, string childValidatorName, string memberName)
+		private void ModifyUpdate(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string memberName)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -2584,14 +2337,14 @@ namespace COFRS.Template
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-			editPoint.FindPattern($"await {parentValidatorName}.ValidateForUpdateAsync");
+			editPoint.FindPattern($"item =");
 			foundit = editPoint.FindPattern("var subNode =");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
 			if (!foundit)
 			{
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern($"await {parentValidatorName}.ValidateForUpdateAsync");
+				editPoint.FindPattern($"item =");
 				editPoint.EndOfLine();
 				editPoint.InsertNewLine(2);
 				editPoint.Indent(null, 3);
@@ -2611,57 +2364,6 @@ namespace COFRS.Template
 				editPoint.InsertNewLine();
 				editPoint.Indent(null, 3);
 				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"var matchingItem = item.{memberName}.FirstOrDefault(m => m.HRef == subitem.HRef);");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"if (matchingItem != null)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert($"await {childValidatorName}.ValidateForUpdateAsync(matchingItem, User);");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("else");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert("var dnode = RqlNode.Parse($\"HRef=uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert($"await {childValidatorName}.ValidateForDeleteAsync(dnode, User);");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"foreach (var subitem in item.{memberName}.Where(c => c.HRef == null))");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"await {childValidatorName}.ValidateForAddAsync(subitem, User);");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("}");
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -2737,7 +2439,7 @@ namespace COFRS.Template
 		/// Modify teh patch function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyPatch(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string parentValidatorName, string childValidatorName, string memberName)
+		private void ModifyPatch(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string memberName)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -2783,18 +2485,6 @@ namespace COFRS.Template
 					editPoint.Insert($"var subNode = RqlNode.Parse($\"{parentModel.ClassName}=uri:\\\"{{node.Value<Uri>(1).LocalPath}}\\\"\");");
 					editPoint.InsertNewLine();
 				}
-			}
-
-			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-			foundit = editPoint.FindPattern($"await {parentModel.ClassName}Validator.ValidateForPatchAsync(commands, node, User)");
-			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
-			if (foundit)
-			{
-				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern($"await {parentModel.ClassName}Validator.ValidateForPatchAsync(commands, node, User)");
-				editPoint.FindPattern("commands");
-				editPoint.ReplaceText(8, "baseCommands", 0);
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -2907,9 +2597,6 @@ namespace COFRS.Template
 				editPoint.Indent(null, 8);
 				editPoint.Insert("var cmds = new PatchCommand[] { cmd };");
 				editPoint.InsertNewLine();
-				editPoint.Indent(null, 8);
-				editPoint.Insert($"await {childValidatorName}.ValidateForPatchAsync(cmds, childNode, User);");
-				editPoint.InsertNewLine();
 				editPoint.Indent(null, 7);
 				editPoint.Insert("}");
 				editPoint.InsertNewLine();
@@ -2927,7 +2614,6 @@ namespace COFRS.Template
 				editPoint.InsertNewLine();
 
 				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern($"await {parentValidatorName}.ValidateForPatchAsync");
 				editPoint.LineDown();
 				editPoint.EndOfLine();
 				editPoint.InsertNewLine(2);
@@ -3036,7 +2722,7 @@ namespace COFRS.Template
 		/// Modify the add function to accomodate the new collection
 		/// </summary>
 		/// <param name="aFunction"></param>
-		private void ModifyAdd(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string parentValidatorName, string childValidatorName, string memberName)
+		private void ModifyAdd(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string memberName)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -3050,44 +2736,6 @@ namespace COFRS.Template
 				editPoint.InsertNewLine(2);
 				editPoint.Indent(null, 3);
 				editPoint.Insert("return item;");
-
-				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				foundit = editPoint.FindPattern($"await {parentValidatorName}.ValidateForAddAsync(item, User);");
-				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
-				if (foundit)
-				{
-					editPoint.EndOfLine();
-					editPoint.InsertNewLine();
-				}
-			}
-
-			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-			foundit = editPoint.FindPattern($"foreach ( var subitem in item.{memberName})");
-			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
-			if (!foundit)
-			{
-				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				foundit = editPoint.FindPattern($"await {parentValidatorName}.ValidateForAddAsync(item, User);");
-				foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
-				if (foundit)
-				{
-					editPoint.EndOfLine();
-					editPoint.InsertNewLine(2);
-					editPoint.Indent(null, 3);
-					editPoint.Insert($"foreach ( var subitem in item.{memberName})");
-					editPoint.InsertNewLine();
-					editPoint.Indent(null, 3);
-					editPoint.Insert("{");
-					editPoint.InsertNewLine();
-					editPoint.Indent(null, 4);
-					editPoint.Insert($"await {childValidatorName}.ValidateForAddAsync(subitem, User);");
-					editPoint.InsertNewLine();
-					editPoint.Indent(null, 3);
-					editPoint.Insert("}");
-				}
 			}
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
@@ -3371,58 +3019,6 @@ namespace COFRS.Template
 				editPoint.Indent(null, 3);
 				editPoint.Insert("}");
 				editPoint.InsertNewLine();
-			}
-		}
-
-		/// <summary>
-		/// Modify the consructor to add and assign the needed validator for the child items
-		/// </summary>
-		/// <param name="aFunction"></param>
-		private void ModifyConstructor(CodeFunction2 aFunction, string childValidatorName, string childValidatorInterface)
-		{
-            ThreadHelper.ThrowIfNotOnUIThread();
-            //	This is the constructor function. We need that new validator, and we get it using dependency
-            //	injection. That means, it needs to be an argument in the aruguement list of the constructor.
-            //	
-            //	If it's already there, then no problem, just move on. But if it isn't there, then we need 
-            //	to add it and assign it's value to the new validator member we created (or found).
-            //
-            //	Let's start by assuming we're going to need to create it.
-            var shouldAddArgument = true;
-			var parameterName = childValidatorName;
-			parameterName = parameterName.Substring(0, 1).ToLower() + parameterName.Substring(1);
-
-			//	Look at each argument...
-			foreach (CodeParameter2 arg in aFunction.Parameters.OfType<CodeParameter2>())
-			{
-				//	if any one has a type of the interface for the new member, the the argument already
-				//	exists, and we don't have to create it.
-				if (arg.Type.AsString.EndsWith(childValidatorInterface, StringComparison.OrdinalIgnoreCase))
-				{
-					parameterName = arg.Name;
-					//	Set the flag to show it already exists, so we don't have to create it.
-					shouldAddArgument = false;
-				}
-			}
-
-			//	Did we find it?
-			if (shouldAddArgument)
-			{
-				//	Nope, create it
-				aFunction.AddParameter(parameterName, childValidatorInterface, -1);
-			}
-
-			var editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-
-			if (!editPoint.FindPattern($"{childValidatorName} ="))
-			{
-				//	Now, within the function, add the assignment.
-				editPoint = (EditPoint2)aFunction.EndPoint.CreateEditPoint();
-				editPoint.LineUp();
-				editPoint.EndOfLine();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"{childValidatorName} = {parameterName};");
 			}
 		}
 		#endregion

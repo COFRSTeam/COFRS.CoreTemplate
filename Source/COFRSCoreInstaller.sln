@@ -12,8 +12,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COFRSCoreResourceTemplate",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COFRSCoreMapperTemplate", "COFRSCoreMapperTemplate\COFRSCoreMapperTemplate.csproj", "{0B29B804-7833-4C33-92C9-F2F8588D86D4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COFRSCoreValidationTemplate", "COFRSCoreValidationTemplate\COFRSCoreValidationTemplate.csproj", "{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COFRSCoreControllerTemplate", "COFRSCoreControllerTemplate\COFRSCoreControllerTemplate.csproj", "{D7E7E13E-DC23-49AE-9FE2-A71483170879}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COFRSCoreFullStackTemplate", "COFRSCoreFullStackTemplate\COFRSCoreFullStackTemplate.csproj", "{564C7BDB-0523-4C30-BD4C-E4D14A933BB6}"
@@ -70,14 +68,6 @@ Global
 		{0B29B804-7833-4C33-92C9-F2F8588D86D4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0B29B804-7833-4C33-92C9-F2F8588D86D4}.Release|x86.ActiveCfg = Release|Any CPU
 		{0B29B804-7833-4C33-92C9-F2F8588D86D4}.Release|x86.Build.0 = Release|Any CPU
-		{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}.Debug|x86.Build.0 = Debug|Any CPU
-		{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}.Release|x86.ActiveCfg = Release|Any CPU
-		{C58520A1-A1E3-401D-B0CD-F5A30D4945AF}.Release|x86.Build.0 = Release|Any CPU
 		{D7E7E13E-DC23-49AE-9FE2-A71483170879}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D7E7E13E-DC23-49AE-9FE2-A71483170879}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D7E7E13E-DC23-49AE-9FE2-A71483170879}.Debug|x86.ActiveCfg = Debug|Any CPU

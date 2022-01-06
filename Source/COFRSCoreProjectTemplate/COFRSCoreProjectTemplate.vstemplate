@@ -54,7 +54,6 @@
         <ProjectItem ReplaceParameters="true" >launchSettings.json</ProjectItem>
       </Folder>
       <Folder Name ="Mapping"></Folder>
-      <Folder Name ="Validation"></Folder>
       <Folder Name ="Examples"></Folder>
     </Project>
   </TemplateContent>

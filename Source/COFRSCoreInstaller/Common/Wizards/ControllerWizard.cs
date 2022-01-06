@@ -94,7 +94,6 @@ namespace COFRS.Template.Common.Wizards
 					string policy = form.Policy;
 
 					var orchestrationNamespace = codeService.FindOrchestrationNamespace();
-					var validatorInterface = codeService.FindValidatorInterface(resourceModel.ClassName);
 
 					replacementsDictionary.Add("$companymoniker$", string.IsNullOrWhiteSpace(moniker) ? "acme" : moniker);
 					replacementsDictionary.Add("$securitymodel$", string.IsNullOrWhiteSpace(policy) ? "none" : "OAuth");
@@ -102,7 +101,6 @@ namespace COFRS.Template.Common.Wizards
 					replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
 					replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
 					replacementsDictionary.Add("$orchestrationnamespace$", orchestrationNamespace);
-					replacementsDictionary.Add("$validationnamespace$", projectMapping.ValidationNamespace);
 					replacementsDictionary.Add("$examplesnamespace$", projectMapping.ExampleNamespace);
 
 					var emitter = new Emitter();
@@ -110,9 +108,7 @@ namespace COFRS.Template.Common.Wizards
 						resourceModel,
 						moniker,
 						replacementsDictionary["$safeitemname$"],
-						validatorInterface,
-						policy,
-						projectMapping.ValidationNamespace);
+						policy);
 
 					replacementsDictionary.Add("$model$", model);
 					Proceed = true;

@@ -2,6 +2,7 @@
 using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
@@ -80,29 +81,50 @@ namespace COFRS.Template.Common.Wizards
 
                 if (form.DialogResult.HasValue && form.DialogResult.Value == true)
                 {
-                    var standardEmitter = new Emitter();
-                    var undefinedModels = form.UndefinedResources;
+                    IVsThreadedWaitDialog2 dialog = null;
+                    var dialogFactory = ServiceProvider.GlobalProvider.GetService(typeof(SVsThreadedWaitDialogFactory)) as IVsThreadedWaitDialogFactory;
 
-                    standardEmitter.GenerateResourceComposites(undefinedModels,
-                                                               projectMapping.GetResourceModelsFolder(),
-                                                               form.ConnectionString);
+                    if (dialogFactory != null)
+                    {
+                        dialogFactory.CreateInstance(out dialog);
+                    }
 
-                    var entityModel = form.EntityModel;
-                    var resourceClassName = replacementsDictionary["$safeitemname$"];
+                    if (dialog != null && dialog.StartWaitDialog("Microsoft Visual Studio",
+                                                                 "Constructing resource model",
+                                                                 $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                                 null,
+                                                                 $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                                 0,
+                                                                 false, true) == VSConstants.S_OK)
+                    {
+                        var standardEmitter = new Emitter();
+                        var undefinedModels = form.UndefinedResources;
 
-                    string model;
+                        standardEmitter.GenerateResourceComposites(undefinedModels,
+                                                                   projectMapping.GetResourceModelsFolder(),
+                                                                   form.ConnectionString);
 
-                    if (form.GenerateAsEnum)
-                        model = standardEmitter.EmitResourceEnum(resourceClassName, 
-                                                                 entityModel,
-                                                                 form.ConnectionString);
-                    else
-                        model = standardEmitter.EmitResourceModel(resourceClassName, 
-                                                                  entityModel,
-                                                                  replacementsDictionary);
+                        var entityModel = form.EntityModel;
+                        var resourceClassName = replacementsDictionary["$safeitemname$"];
 
-                    replacementsDictionary.Add("$model$", model);
-                    replacementsDictionary.Add("$entitynamespace$", entityModel.Namespace);
+                        string model;
+
+                        if (form.GenerateAsEnum)
+                            model = standardEmitter.EmitResourceEnum(resourceClassName,
+                                                                     entityModel,
+                                                                     form.ConnectionString);
+                        else
+                            model = standardEmitter.EmitResourceModel(resourceClassName,
+                                                                      entityModel,
+                                                                      replacementsDictionary);
+
+                        replacementsDictionary.Add("$model$", model);
+                        replacementsDictionary.Add("$entitynamespace$", entityModel.Namespace);
+
+                        int usercancel;
+                        dialog.EndWaitDialog(out usercancel);
+                    }
+
                     Proceed = true;
                 }
                 else

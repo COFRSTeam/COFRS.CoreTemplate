@@ -16,402 +16,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 {
     public class Emitter
 	{
-		/// <summary>
-		/// Generates a validation model for the specified resource
-		/// </summary>
-		/// <param name="resourceModel">The resource model for the resource being validated.</param>
-		/// <param name="profileMap">The profile map between the resource and entity models.</param>
-		/// <param name="validatorClassName">The name of the validator class</param>
-		/// <param name="validatorInterface">The output parameter returning the validator interface name.</param>
-		/// <returns>The code for the validator class in a string.</returns>
-		public string EmitValidationModel(ResourceClass resourceModel, ProfileMap profileMap, string validatorClassName)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			//	Instantiate a string builder. We will use the string builder to construct our code.
-			var results = new StringBuilder();
-
-			//	The validator interface is nothing more than I followed by the validator class name.
-			var validatorInterface = $"I{validatorClassName}";
-
-
-			var resourceColumns = resourceModel.Columns;
-			var entityColumns = resourceModel.Entity.Columns;
-
-			//	Define the IValidator interface. This is nothing more than an interface that is derrived from
-			//	the IValidator<T> interface. The IValidator<T> interface has all the important methods defined
-			//	in it, so that this interface we are creating doesn't need any methods.
-			//
-			//	It will be up the the user to add any additional validation methods to this interface that they
-			//	deem necessasry.
-			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\tInterface for the {resourceModel.ClassName} Validator");
-			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic interface {validatorInterface} : IValidator<{resourceModel.ClassName}>");
-			results.AppendLine("\t{");
-			results.AppendLine("\t}");
-			results.AppendLine();
-
-			//	Define the validator class and it's constructor. This class is derrived from the Validator<T> base class,
-			//	and the interface we just defined above.
-			results.AppendLine("\t///\t<summary>");
-			results.AppendLine($"\t///\t{validatorClassName}");
-			results.AppendLine("\t///\t</summary>");
-			results.AppendLine($"\tpublic class {validatorClassName} : Validator<{resourceModel.ClassName}>, {validatorInterface}");
-			results.AppendLine("\t{");
-
-			//	Here is the constructor - nothing much to do here, just an empty constructor.
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tInitializes the {validatorClassName}");
-			results.AppendLine("\t\t///\t</summary>");	
-			results.AppendLine($"\t\tpublic {validatorClassName}()");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for GET
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tValidation for Queries");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the query.</param>");
-			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForGetAsync(RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\t//\tUn-comment out the line below if this table is large, and you want to prevent users from requesting a full table scan");
-			results.AppendLine("\t\t\t//\tRequireIndexedQuery(node, \"The query is too broad. Please specify a more refined query that will produce fewer records.\");");
-			results.AppendLine();
-			results.AppendLine("\t\t\tawait base.ValidateForGetAsync(node, User, parms);");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for PUT and POST
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tValidations common to adding and updating items");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added or updated</param>");
-			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic async Task ValidateForAddAndUpdateAsync({resourceModel.ClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
-			results.AppendLine("\t\t{");
-
-			//	To do:	Scan the profileMap to see which resource elements are nullable (if they are not, write code here to verify that 
-			//			they are not null), and write code to check the length of any strings.
-			//
-			//			This code will look like:	Require(item.membername != null, "The value for membername cannot be null."); 
-			//										Require(!string.IsNullOrWhiteSpace(item.membername), "The value for membername cannot be null."); 
-			//										Require(item.membername.Length <= 10, "The value of membername must be 10 characters or less.");
-
-			foreach (ResourceProfile resourceProfile in profileMap.ResourceProfiles)
-            {
-				var resourceColumn = resourceColumns.FirstOrDefault(rc => rc.ColumnName.Equals(resourceProfile.ResourceColumnName));
-
-				if ( resourceColumn != null )
-                {
-					if ( resourceColumn.IsPrimaryKey)
-                    {
-
-                    }
-					else if ( resourceColumn.IsForeignKey)
-                    {
-						if (resourceProfile.EntityColumnNames.Count() == 1)
-						{
-							var entityColumn = entityColumns.FirstOrDefault(ec => ec.ColumnName.Equals(resourceProfile.EntityColumnNames.ToList()[0]));
-
-							if (entityColumn != null)
-							{
-								if (entityColumn.ModelDataType.Equals("Uri", StringComparison.OrdinalIgnoreCase))
-								{
-									if (!entityColumn.IsNullable)
-										results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null, \"{resourceColumn.ColumnName} cannot be null.\");");
-								}
-							}
-						}
-					}
-					else
-                    {
-						if (resourceProfile.EntityColumnNames.Count() == 1)
-						{
-							var entityColumn = entityColumns.FirstOrDefault(ec => ec.ColumnName.Equals(resourceProfile.EntityColumnNames.ToList()[0]));
-
-							if (entityColumn != null)
-							{
-								if (entityColumn.ModelDataType.Equals("string", StringComparison.OrdinalIgnoreCase))
-								{
-									if (resourceProfile.MapFunction == $"source.{entityColumn.ColumnName}")
-									{
-										if (!entityColumn.IsNullable)
-										{
-											results.AppendLine($"\t\t\tRequire(!string.IsNullOrWhiteSpace(item.{resourceColumn.ColumnName}), \"{resourceColumn.ColumnName} cannot be null or whitespace.\");");
-											results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null && item.{resourceColumn.ColumnName}.Length <= {entityColumn.Length}, \"{resourceColumn.ColumnName} cannot exceed {entityColumn.Length} characters.\");");
-										}
-										else if (resourceProfile.MapFunction == $"source.{entityColumn.ColumnName}")
-											results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null && item.{resourceColumn.ColumnName}.Length <= {entityColumn.Length}, \"{resourceColumn.ColumnName} cannot exceed {entityColumn.Length} characters.\");");
-									}
-								}
-								else if (entityColumn.ModelDataType.Equals("Uri", StringComparison.OrdinalIgnoreCase))
-								{
-									if (!entityColumn.IsNullable)
-										results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null, \"{resourceColumn.ColumnName} cannot be null.\");");
-								}
-								else if (entityColumn.ModelDataType.EndsWith("[]", StringComparison.OrdinalIgnoreCase) ||
-										 entityColumn.ModelDataType.StartsWith("IEnumerable", StringComparison.OrdinalIgnoreCase) ||
-										 entityColumn.ModelDataType.StartsWith("List", StringComparison.OrdinalIgnoreCase))
-								{
-									if (!entityColumn.IsNullable)
-										results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null, \"{resourceColumn.ColumnName} cannot be null.\");");
-								}
-							}
-						}
-                    }
-                }
-            }
-
-			results.AppendLine();
-			results.AppendLine("\t\t\t//\tTo do: Add any additinal code to perform any specific validations pertaining to");
-			results.AppendLine("\t\t\t//\t       adding or updating an item here.");
-			results.AppendLine("\t\t\tawait Task.CompletedTask;");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for PUT
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine("\t\t///\tValidation for updating existing items");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being updated</param>");
-			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForUpdateAsync({resourceModel.ClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, User, parms);");
-			foreach (ResourceProfile resourceProfile in profileMap.ResourceProfiles)
-			{
-				var resourceColumn = resourceColumns.FirstOrDefault(rc => rc.ColumnName.Equals(resourceProfile.ResourceColumnName));
-
-				if (resourceColumn != null)
-				{
-					if (resourceColumn.IsPrimaryKey)
-					{
-						results.AppendLine($"\t\t\tRequire(item.{resourceColumn.ColumnName} != null, \"{resourceColumn.ColumnName} cannot be null.\");");
-					}
-				}
-			}
-
-			//	To do:	If the item has an href, then that href cannot be null for an update. Write the code to ensure it is not null
-			//			here, if needed.
-
-			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to updating an item.");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for POST
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tValidation for adding new items");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"item\">The candidate item being added</param>");
-			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForAddAsync({resourceModel.ClassName} item, ClaimsPrincipal User = null, object[] parms = null)");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\tawait ValidateForAddAndUpdateAsync(item, User, parms);");
-			results.AppendLine();
-			results.AppendLine("\t\t\t//\tTo do: add any specific validations pertaining to adding an item.");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-
-			//------------------------------------------------------------------------------------------
-			//	Validation for PATCH
-			//------------------------------------------------------------------------------------------
-
-			//	A patch command consists of 3 fields:
-			//		command.Op => The operation to perform. Can be "replace", "add" or "delete"
-			//		command.Path => The fully qualified reference to the member to acted upon
-			//		command.Value => The new value (if applicable)
-			//
-			//	For example: command.Op = "replace", command.Path = "Name.FirstName", command.Value = "John"
-			//	instructs the program to replace the value for Name.FirstName with "John".
-			//
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine("\t\t///\tValidates a set of patch commands on an item");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"patchCommands\">The set of patch commands to validate</param>");
-			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the update</param>");
-			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine("\t\tpublic override async Task ValidateForPatchAsync(IEnumerable<PatchCommand> patchCommands, RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
-			results.AppendLine("\t\t{");
-
-			results.AppendLine("\t\t\tforeach (var command in patchCommands)");
-			results.AppendLine("\t\t\t{");
-			results.AppendLine("\t\t\t\tif (string.Equals(command.Op, \"replace\", StringComparison.OrdinalIgnoreCase))");
-			results.AppendLine("\t\t\t\t{");
-
-			//	The command op is "replace".
-			//
-			//	The replace command tells the system to "replace", or update, the value of the member with the new value. Typically,
-			//	the Path specifies a single value: 
-			//
-			//	op/path/value => replace/name.firstName/John
-			//
-			//	This command tells the system to set the item.name.firstName = "John".
-			//
-			//	However, a replace command can set an entire object:
-			//
-			//	op/path/value => replace/name/{ "firstName": "Jonn", "lastName": "Smith", "Suffix": "Jr." }
-			//
-			//	This command tells the system to replace all the values in the Name object.
-			//
-			//	Reserved words for value:  <null>, <default>
-			//
-			//	<null> will set the value to null.
-			//	<default> will set the value to the default value for the member (this might be null, or whatever the min value is if
-			//	null is not acceptable).
-			//
-			//	For a collection, the replace command will replace the entire item in the collection
-			//
-			//	Imagine we have a class called PhoneContact. The class has two values: Type and Number.
-			//	Imagine we have a class that contains a member called phoneContacts that is a collection of PhoneContact classes:
-			//
-			//	public PhoneContact[] phoneContacts { get; set; }
-			//
-			//	Now, imagine that our collection looks like this:
-			//
-			//	[ { "Type": "Home", "Number": "913 754-1411" }
-			//	  { "Type": "Work", "Number": "913 241-6400" }
-			//	  { "Type": "Mobile", "Number": "913 624-9084" }
-			//	  { "Type": "Fax", "Number": "913 313-1140" } ]
-			//	  
-			//	op/path/value => replace/phoneContacts[1]/{ "Type": "Work", "Number": "913 214-4572" }
-			//
-			//	Then our resultant collection would be:
-			//
-			//	[ { "Type": "Home", "Number": "913 754-1411" }
-			//	  { "Type": "Work", "Number": "913 214-4572" }
-			//	  { "Type": "Mobile", "Number": "913 624-9084" }
-			//	  { "Type": "Fax", "Number": "913 313-1140" } ]
-
-			//	TO DO: For single item values, check length and not nullable (if the command.Value = <null>)
-			//		   For object values, check each length and not nullable in the object : note, you'll need to deserialize the json to do this
-			//		   For array values, check array range (the item they are trying to replace actually exists), and check length and not nullable of the object
-
-			results.AppendLine("\t\t\t\t}");
-			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"add\", StringComparison.OrdinalIgnoreCase))");
-			results.AppendLine("\t\t\t\t{");
-
-			//	The command op is "add".
-			//
-			//	The add command tells the system to "add", or update, the value of the member with the new value. Typically,
-			//	the Path specifies a collection. However, when the path specifes a single value, add acts just the same as replace.
-			//
-			//	op/path/value => add/name.firstName/John
-			//
-			//	This command tells the system to set the item.name.firstName = "John".
-			//
-			//	However, an add command can set an entire object (again, works just like replace):
-			//
-			//	op/path/value => add/name/{ "firstName": "Jonn", "lastName": "Smith", "Suffix": "Jr." }
-			//
-			//	This command tells the system to add (i.e. replace) all the values in the Name object.
-			//
-			//	Reserved words for value:  <null>, <default>
-			//
-			//	<null> will set the value to null.
-			//	<default> will set the value to the default value for the member (this might be null, or whatever the min value is if
-			//	null is not acceptable).
-			//
-			//	Imagine the phoneContacts class again. This time, add really does mean add.
-			//	  
-			//	op/path/value => add/phoneContacts/{ "Type": "Other", "Number": "913 667-5144" }
-			//
-			//	Then our resultant collection would be:
-			//
-			//	[ { "Type": "Home", "Number": "913 754-1411" }
-			//	  { "Type": "Work", "Number": "913 214-4572" }
-			//	  { "Type": "Mobile", "Number": "913 624-9084" }
-			//	  { "Type": "Fax", "Number": "913 313-1140" }
-			//	  { "Type": "Other", "Number": "913 667-5144" } ]
-
-			//	TO DO: For single item values, check length and not nullable (if the command.Value = <null>)
-			//		   For object values, check each length and not nullable in the object : note, you'll need to deserialize the json to do this
-			//		   For array values,  check each length and not nullable of the object : note, you'll need to deserialize the json to do this
-
-			results.AppendLine("\t\t\t\t}");
-			results.AppendLine("\t\t\t\telse if (string.Equals(command.Op, \"delete\", StringComparison.OrdinalIgnoreCase))");
-			results.AppendLine("\t\t\t\t{");
-
-			//	The command op is "delete".
-			//
-			//	The delete command tells the system to "delete", or remove, the value of the member. The Value item is ignored for delete.
-			//	Typically, the Path specifies a collection. However, when the path specifes a single value, delete acts like replace, except
-			//	that it replaces the value of the member with the default value for that member.
-			//
-			//	op/path/value => delete/name.firstName
-			//
-			//	This command tells the system to set the item.name.firstName = null
-			//
-			//	However, a delete command can set an entire object (again, works just like replace):
-			//
-			//	op/path/value => delete/name
-			//
-			//	This command tells the system to delete (i.e. replace) the name object:   item.name = null
-			//
-			//	Imagine the phoneContacts class again. This time, delete really does mean delete.
-			//	  
-			//	op/path/value => delete/phoneContacts[2]
-			//
-			//	Then our resultant collection would be:
-			//
-			//	[ { "Type": "Home", "Number": "913 754-1411" }
-			//	  { "Type": "Work", "Number": "913 214-4572" }
-			//	  { "Type": "Fax", "Number": "913 313-1140" } ]
-
-			//	TO DO: For single item values, check not nullable
-			//		   For object values, check object not nullable 
-			//		   For array values,  check valid range (the item they are trying to delete actually exists)
-
-
-			results.AppendLine("\t\t\t\t}");
-			results.AppendLine("\t\t\t}");
-			results.AppendLine();
-
-			results.AppendLine("\t\t\t//\tTo do: Add any additional code to perform any specific validations pertaining to patching an item.");
-			results.AppendLine("\t\t\tawait base.ValidateForPatchAsync(patchCommands, node, User, parms);");
-			results.AppendLine("\t\t}");
-			results.AppendLine();
-			
-			//------------------------------------------------------------------------------------------
-			//	Validation for DELETE
-			//------------------------------------------------------------------------------------------
-
-			results.AppendLine("\t\t///\t<summary>");
-			results.AppendLine($"\t\t///\tValidation for deleting an item");
-			results.AppendLine("\t\t///\t</summary>");
-			results.AppendLine("\t\t///\t<param name=\"node\">The <see cref=\"RqlNode\"/> that constricts the delete</param>");
-			results.AppendLine("\t\t///\t<param name=\"User\">The <see cref=\"ClaimsPrincipal\"/> responsible for making this request.</param>");
-			results.AppendLine("\t\t///\t<param name=\"parms\">The additional, and optional, parameters used by custom validators</param>");
-			results.AppendLine($"\t\tpublic override async Task ValidateForDeleteAsync(RqlNode node, ClaimsPrincipal User = null, object[] parms = null)");
-			results.AppendLine("\t\t{");
-			results.AppendLine("\t\t\t//\tTo do: Add any additional code to perform any specific validations pertaining to deleting an item.");
-			results.AppendLine("\t\t\tawait base.ValidateForDeleteAsync(node, User, parms);");
-			results.AppendLine("\t\t}");
-			results.AppendLine("\t}");
-
-			return results.ToString();
-		}
-
 		public string EmitExampleModel(ResourceClass resourceModel, ProfileMap profileMap, string exampleClassName, DBServerType serverType, string connectionString)
         {
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -2505,7 +2109,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 			else
 			{
-				results.AppendLine($"\tpublic class {resourceClassName}");
+				results.AppendLine($"\tpublic class {resourceClassName} : IValidatableObject");
 				results.AppendLine("\t{");
 				var foreignTableList = new List<string>();
 
@@ -2524,6 +2128,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							results.AppendLine("\t\t///\t<summary>");
 							results.AppendLine($"\t\t///\tThe hypertext reference that identifies the resource.");
 							results.AppendLine("\t\t///\t</summary>");
+							results.AppendLine("\t\t[Url]");
 							results.AppendLine($"\t\tpublic Uri HRef {{ get; set; }}");
 							hasPrimary = true;
 						}
@@ -2602,6 +2207,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 								results.AppendLine("\t\t///\t<summary>");
 								results.AppendLine($"\t\t///\tA hypertext reference that identifies the associated {memberName}");
 								results.AppendLine("\t\t///\t</summary>");
+								results.AppendLine("\t\t[Url]");
 								results.AppendLine($"\t\tpublic Uri {memberName} {{ get; set; }}");
 
 								foreignTableList.Add(member.ForeignTableName);
@@ -2695,6 +2301,30 @@ namespace COFRS.Template.Common.ServiceUtilities
 							}
 						}
 
+						if (member.ModelDataType.Equals("string", StringComparison.OrdinalIgnoreCase))
+                        {
+							if ( member.ModelDataType.Equals("string", StringComparison.OrdinalIgnoreCase))
+                            {
+								if (!member.IsNullable)
+									results.AppendLine($"\t\t[Required(AllowEmptyStrings=false, ErrorMessage=\"{membername} cannot be blank or null.\")]");
+
+								results.AppendLine($"\t\t[StringLength({member.Length}, ErrorMessage=\"{membername} cannot exceed {member.Length} characters.\")]");
+                            }
+                        }
+						else if ( member.ModelDataType.Equals("Uri"))
+                        {
+							if (!member.IsNullable)
+							{
+								results.AppendLine($"\t\t[Required(ErrorMessage=\"{membername} cannot be null.\")]");
+							}
+
+							results.AppendLine("\t\t[Url]");
+						}
+						else if ( !member.IsNullable )
+                        {
+							results.AppendLine($"\t\t[Required(ErrorMessage=\"{membername} cannot be null.\")]");
+						}
+
 						results.AppendLine($"\t\tpublic {member.ModelDataType} {membername} {{ get; set; }}");
 
 						var resourceColumn = new DBColumn()
@@ -2714,6 +2344,18 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 					}
 				}
+
+				results.AppendLine();
+				results.AppendLine("\t\t///\t<summary>");
+				results.AppendLine($"\t\t///\tDetermines whether the specified object is valid.");
+				results.AppendLine("\t\t///\t</summary>");
+				results.AppendLine("\t\t///\t<param name=\"validationContext\">The <see cref=\"ValidationContext\"/> for the validation.</param>");
+				results.AppendLine("\t\t///\t<returns>A collection that holds failed-validation information.</returns>");
+				results.AppendLine("\t\tpublic IEnumerable<ValidationResult> Validate(ValidationContext validationContext)");
+				results.AppendLine("\t\t{");
+				results.AppendLine("\t\t\tvar results = new List<ValidationResult>();");
+				results.AppendLine("\t\t\treturn results.ToArray();");
+				results.AppendLine("\t\t}");
 			}
 
 			results.AppendLine("\t}");
@@ -3237,7 +2879,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 		/// <param name="policy">The authentication policy used by the controller</param>
 		/// <param name="ValidationNamespace">The validation namespace/param>
 		/// <returns></returns>
-		public string EmitController(ResourceClass resourceClass, string moniker, string controllerClassName, string ValidatorInterface, string policy, string ValidationNamespace)
+		public string EmitController(ResourceClass resourceClass, string moniker, string controllerClassName, string policy)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
@@ -3247,7 +2889,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			var pkcolumns = resourceClass.Entity.Columns.Where(c => c.IsPrimaryKey);
 
 			BuildControllerInterface(resourceClass.ClassName, resourceClass.Namespace);
-			BuildControllerOrchestration(resourceClass.ClassName, resourceClass.Namespace, ValidatorInterface, ValidationNamespace);
+			BuildControllerOrchestration(resourceClass.ClassName, resourceClass.Namespace);
 
 			// --------------------------------------------------------------------------------
 			//	Class
@@ -3262,9 +2904,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine("\t\t///\t<value>A generic interface for logging where the category name is derrived from");
 			results.AppendLine($"\t\t///\tthe specified <see cref=\"{controllerClassName}\"/> type name.</value>");
 			results.AppendLine($"\t\tprivate readonly ILogger<{controllerClassName}> Logger;");
-			results.AppendLine();
-			results.AppendLine("\t\t///\t<value>The validator used to validate any requested actions.</value>");
-			results.AppendLine($"\t\tprotected readonly {ValidatorInterface} Validator;");
 			results.AppendLine();
 			results.AppendLine("\t\t///\t<value>The interface to the orchestration layer.</value>");
 			results.AppendLine($"\t\tprotected readonly IServiceOrchestrator Orchestrator;");
@@ -3314,7 +2953,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			results.AppendLine();
 			results.AppendLine("\t\t\tLogContext.PushProperty(\"RqlNode\", node);");
 			results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
-			results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method} {Request.Path}\");");
+			results.AppendLine("\t\t\tLogger.LogInformation(\"{s1} {s2}\", Request.Method, Request.Path);");
 			results.AppendLine();
 
 			results.AppendLine($"\t\t\tvar collection = await Orchestrator.Get{resourceClass.ClassName}CollectionAsync(Request.QueryString.Value, node, User);");
@@ -3350,7 +2989,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 				results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
 				results.AppendLine("\t\t[SupportRQL]");
 
-				EmitEndpoint(resourceClass.Entity.ServerType, resourceClass.ClassName, "Get", results, pkcolumns);
+				EmitEndpoint(resourceClass.ClassName, "Get", results, pkcolumns);
 
 				results.AppendLine("\t\t{");
 				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\")");
@@ -3359,7 +2998,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 				results.AppendLine("\t\t\tLogContext.PushProperty(\"RqlNode\", node);");
 				results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
-				results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method} {Request.Path}\");");
+				results.AppendLine("\t\t\tLogger.LogInformation(\"{s1} {s2}\", Request.Method, Request.Path);");
 				results.AppendLine($"\t\t\tvar item = await Orchestrator.Get{resourceClass.ClassName}Async(node, User);");
 				results.AppendLine();
 				results.AppendLine("\t\t\tif (item == null)");
@@ -3396,7 +3035,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			results.AppendLine("\t\t\tLogContext.PushProperty(\"Item\", JsonSerializer.Serialize(item));");
 			results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
-			results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method} {Request.Path}\");");
+			results.AppendLine("\t\t\tLogger.LogInformation(\"{s1} {s2}\", Request.Method, Request.Path);");
 			results.AppendLine();
 			results.AppendLine($"\t\t\titem = await Orchestrator.Add{resourceClass.ClassName}Async(item, User);");
 			results.AppendLine($"\t\t\treturn Created(item.HRef.AbsoluteUri, item);");
@@ -3432,7 +3071,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			results.AppendLine("\t\t\tLogContext.PushProperty(\"Item\", JsonSerializer.Serialize(item));");
 			results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
-			results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
+			results.AppendLine("\t\t\tLogger.LogInformation(\"{s1} {s2}\", Request.Method, Request.Path);");
 			results.AppendLine();
 
 			results.AppendLine($"\t\t\titem = await Orchestrator.Update{resourceClass.ClassName}Async(item, User);");
@@ -3465,14 +3104,14 @@ namespace COFRS.Template.Common.ServiceUtilities
 				results.AppendLine($"\t\t[SwaggerRequestExample(typeof(IEnumerable<PatchCommand>), typeof({resourceClass.ClassName}PatchExample))]");
 				results.AppendLine($"\t\t[Consumes(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
 				results.AppendLine($"\t\t[Produces(\"application/vnd.{moniker}.v1+json\", \"application/json\", \"text/json\")]");
-				EmitEndpoint(resourceClass.Entity.ServerType, resourceClass.ClassName, "Patch", results, pkcolumns);
+				EmitEndpoint(resourceClass.ClassName, "Patch", results, pkcolumns);
 
 				results.AppendLine("\t\t{");
 				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\");");
 				results.AppendLine();
 				results.AppendLine("\t\t\tLogContext.PushProperty(\"Commands\", JsonSerializer.Serialize(commands));");
 				results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
-				results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
+				results.AppendLine("\t\t\tLogger.LogInformation(\"{s1} {s2}\", Request.Method, Request.Path);");
 				results.AppendLine();
 
 				results.AppendLine($"\t\t\tawait Orchestrator.Patch{resourceClass.ClassName}Async(commands, node, User);");
@@ -3498,14 +3137,14 @@ namespace COFRS.Template.Common.ServiceUtilities
 				if (!string.IsNullOrWhiteSpace(policy) && !policy.Equals("Anonymous", StringComparison.OrdinalIgnoreCase))
 					results.AppendLine($"\t\t[Authorize(\"{policy}\")]");
 
-				EmitEndpoint(resourceClass.Entity.ServerType, resourceClass.ClassName, "Delete", results, pkcolumns);
+				EmitEndpoint(resourceClass.ClassName, "Delete", results, pkcolumns);
 
 				results.AppendLine("\t\t{");
 				results.AppendLine($"\t\t\tvar node = RqlNode.Parse($\"HRef=uri:\\\"/{BuildRoute(nn.PluralCamelCase, pkcolumns)}\\\"\");");
 				results.AppendLine();
 				results.AppendLine("\t\t\tLogContext.PushProperty(\"RqlNode\", node);");
 				results.AppendLine("\t\t\tLogContext.PushProperty(\"ClaimsPrincipal\", User.ListClaims());");
-				results.AppendLine("\t\t\tLogger.LogInformation($\"{Request.Method}	{Request.Path}\");");
+				results.AppendLine("\t\t\tLogger.LogInformation(\"{s1} {s2}\", Request.Method, Request.Path);");
 				results.AppendLine();
 
 				results.AppendLine($"\t\t\tawait Orchestrator.Delete{resourceClass.ClassName}Async(node, User);");
@@ -3727,7 +3366,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 		}
 
-		private static void BuildControllerOrchestration(string resourceClassName, string resourceNamespace, string ValidatorInterface, string ValidationNamespace)
+		private static void BuildControllerOrchestration(string resourceClassName, string resourceNamespace)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var mDte = Package.GetGlobalService(typeof(SDTE)) as DTE2;
@@ -3749,6 +3388,9 @@ namespace COFRS.Template.Common.ServiceUtilities
 			if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("System.Text.Json")) == null)
 				fileCodeModel.AddImport("System.Text.Json");
 
+			if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("Microsoft.Extensions.DependencyInjection")) == null)
+				fileCodeModel.AddImport("Microsoft.Extensions.DependencyInjection");
+
 			if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals("Microsoft.Extensions.Logging")) == null)
 				fileCodeModel.AddImport("Microsoft.Extensions.Logging");
 
@@ -3757,9 +3399,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 
 			if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(resourceNamespace)) == null)
 				fileCodeModel.AddImport(resourceNamespace);
-
-			if (fileCodeModel.CodeElements.OfType<CodeImport>().FirstOrDefault(c => c.Namespace.Equals(ValidationNamespace)) == null)
-				fileCodeModel.AddImport(ValidationNamespace);
 
 			//  Add all the functions
 			foreach (CodeNamespace orchestrattorNamespace in fileCodeModel.CodeElements.OfType<CodeNamespace>())
@@ -3785,91 +3424,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 								  resourceClassName.ToLower().StartsWith("o") ||
 								  resourceClassName.ToLower().StartsWith("u") ? "an" : "a";
 
-					var parameterName = ValidatorInterface.Substring(1, 1).ToLower() + ValidatorInterface.Substring(2);
-					var validatorInterfaceMemberName = ValidatorInterface.Substring(1, 1).ToUpper() + ValidatorInterface.Substring(2);
+					EditPoint2 editPoint;
 
-					try
-					{
-						#region Constructor
-						CodeFunction2 constructorFunction = orchestratorClass.Children.OfType<CodeFunction2>()
-							.FirstOrDefault(c => c.FunctionKind == vsCMFunction.vsCMFunctionConstructor);
-
-						if (constructorFunction == null)
-						{
-							constructorFunction = (CodeFunction2)orchestratorClass.AddFunction(orchestratorClass.Name,
-							   vsCMFunction.vsCMFunctionConstructor,
-							   $"",
-							   -1,
-							   vsCMAccess.vsCMAccessPublic);
-						}
-
-						//  Does the varialble already exist in the class?
-						if (orchestratorClass.Children.OfType<CodeVariable2>().FirstOrDefault(c =>
-						{
-							ThreadHelper.ThrowIfNotOnUIThread();
-							var parts = c.Type.AsString.Split('.');
-							return parts[parts.Length - 1].Equals(ValidatorInterface);
-
-						}) != null)
-						{
-							validatorInterfaceMemberName = orchestratorClass.Children.OfType<CodeVariable2>().FirstOrDefault(c =>
-							{
-								ThreadHelper.ThrowIfNotOnUIThread();
-								var parts = c.Type.AsString.Split('.');
-								return parts[parts.Length - 1].Equals(ValidatorInterface);
-
-							}).Name;
-						}
-						else
-						{
-							var variable = (CodeVariable2)orchestratorClass.AddVariable(validatorInterfaceMemberName, ValidatorInterface, 0, vsCMAccess.vsCMAccessPrivate);
-							variable.ConstKind = vsCMConstKind.vsCMConstKindReadOnly;
-						}
-
-
-						//  Does the parameter already exist in the class?
-						if (constructorFunction.Children.OfType<CodeParameter2>().FirstOrDefault(c =>
-						{
-							ThreadHelper.ThrowIfNotOnUIThread();
-							var parts = c.Type.AsString.Split('.');
-							return parts[parts.Length - 1].Equals(ValidatorInterface);
-						}) != null)
-						{
-							parameterName = constructorFunction.Children.OfType<CodeParameter2>().FirstOrDefault(c =>
-							{
-								ThreadHelper.ThrowIfNotOnUIThread();
-								var parts = c.Type.AsString.Split('.');
-								return parts[parts.Length - 1].Equals(ValidatorInterface);
-							}).Name;
-						}
-						else
-						{
-							constructorFunction.AddParameter(parameterName, ValidatorInterface, -1);
-						}
-
-						//  Is the variable already assigned?
-						var editPoint = (EditPoint2)constructorFunction.StartPoint.CreateEditPoint();
-						if (!editPoint.FindPattern($"{validatorInterfaceMemberName} = {parameterName};"))
-						{
-							editPoint = (EditPoint2)constructorFunction.EndPoint.CreateEditPoint();
-							editPoint.LineUp();
-							editPoint.StartOfLine();
-
-							var codeLine = editPoint.GetText(editPoint.LineLength);
-
-							if (!string.IsNullOrWhiteSpace(codeLine))
-							{
-								editPoint.EndOfLine();
-								editPoint.InsertNewLine();
-							}
-
-							editPoint.Indent(null, 3);
-							editPoint.Insert($"{validatorInterfaceMemberName} = {parameterName};");
-						}
-						#endregion
-
-						#region Get Single Function
-						if (orchestratorClass.Children
+                    try
+                    {
+                        #region Get Single Function
+                        if (orchestratorClass.Children
 											 .OfType<CodeFunction2>()
 											 .FirstOrDefault(c => c.Name.Equals(getSingleFunctionName, StringComparison.OrdinalIgnoreCase)) == null)
 						{
@@ -3901,10 +3461,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							editPoint.LineUp();
 							editPoint.StartOfLine();
 							editPoint.Indent(null, 3);
-							editPoint.Insert($"Logger.LogDebug($\"{getSingleFunctionName}\");");
-							editPoint.InsertNewLine(2);
-							editPoint.Indent(null, 3);
-							editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
+							editPoint.Insert($"Logger.LogDebug(\"{getSingleFunctionName}\");");
 							editPoint.InsertNewLine();
 							editPoint.Indent(null, 3);
 							editPoint.Insert($"return await GetSingleAsync<{resourceClassName}>(node);");
@@ -3946,10 +3503,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							editPoint.LineUp();
 							editPoint.StartOfLine();
 							editPoint.Indent(null, 3);
-							editPoint.Insert($"Logger.LogDebug($\"{collectionFunctionName}\");");
-							editPoint.InsertNewLine(2);
-							editPoint.Indent(null, 3);
-							editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForGetAsync(node, User);");
+							editPoint.Insert($"Logger.LogDebug(\"{collectionFunctionName}\");");
 							editPoint.InsertNewLine();
 							editPoint.Indent(null, 3);
 							editPoint.Insert($"return await GetCollectionAsync<{resourceClassName}>(originalQuery, node);");
@@ -3989,10 +3543,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							editPoint.LineUp();
 							editPoint.StartOfLine();
 							editPoint.Indent(null, 3);
-							editPoint.Insert($"Logger.LogDebug($\"{addFunctionName}\");");
-							editPoint.InsertNewLine(2);
-							editPoint.Indent(null, 3);
-							editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForAddAsync(item, User);");
+							editPoint.Insert($"Logger.LogDebug(\"{addFunctionName}\");");
 							editPoint.InsertNewLine();
 							editPoint.Indent(null, 3);
 							editPoint.Insert($"return await AddAsync<{resourceClassName}>(item);");
@@ -4032,10 +3583,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							editPoint.LineUp();
 							editPoint.StartOfLine();
 							editPoint.Indent(null, 3);
-							editPoint.Insert($"Logger.LogDebug($\"{updateFunctionName}\");");
-							editPoint.InsertNewLine(2);
-							editPoint.Indent(null, 3);
-							editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForUpdateAsync(item, User);");
+							editPoint.Insert($"Logger.LogDebug(\"{updateFunctionName}\");");
 							editPoint.InsertNewLine();
 							editPoint.Indent(null, 3);
 							editPoint.Insert($"return await UpdateAsync<{resourceClassName}>(item);");
@@ -4076,10 +3624,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							editPoint.LineUp();
 							editPoint.StartOfLine();
 							editPoint.Indent(null, 3);
-							editPoint.Insert($"Logger.LogDebug($\"{patchFunctionName}\");");
-							editPoint.InsertNewLine(2);
-							editPoint.Indent(null, 3);
-							editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForPatchAsync(commands, node, User);");
+							editPoint.Insert($"Logger.LogDebug(\"{patchFunctionName}\");");
 							editPoint.InsertNewLine();
 							editPoint.Indent(null, 3);
 							editPoint.Insert($"await PatchAsync<{resourceClassName}>(commands, node);");
@@ -4118,10 +3663,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 							editPoint.LineUp();
 							editPoint.StartOfLine();
 							editPoint.Indent(null, 3);
-							editPoint.Insert($"Logger.LogDebug($\"{deleteFunctionName}\");");
-							editPoint.InsertNewLine(2);
-							editPoint.Indent(null, 3);
-							editPoint.Insert($"await {validatorInterfaceMemberName}.ValidateForDeleteAsync(node, User);");
+							editPoint.Insert($"Logger.LogDebug(\"{deleteFunctionName}\");");
 							editPoint.InsertNewLine();
 							editPoint.Indent(null, 3);
 							editPoint.Insert($"await DeleteAsync<{resourceClassName}>(node);");
@@ -4159,7 +3701,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			}
 		}
 
-		private void EmitEndpoint(DBServerType serverType, string resourceClassName, string action, StringBuilder results, IEnumerable<DBColumn> pkcolumns)
+		private void EmitEndpoint(string resourceClassName, string action, StringBuilder results, IEnumerable<DBColumn> pkcolumns)
 		{
 			results.Append($"\t\tpublic async Task<IActionResult> {action}{resourceClassName}Async(");
 			bool first = true;

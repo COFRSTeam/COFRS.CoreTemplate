@@ -1,5 +1,6 @@
 ﻿using COFRS;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Security.Claims;
 using $safeprojectname$.Repository;
 
@@ -18,7 +19,7 @@ namespace $safeprojectname$.Orchestration
 		///	<remarks>Add new, customized functions to the <see cref="IServiceOrchestrator"/> interface, and then add their
 		///	implementations in this class, to extend the orchestrator with your custom functions.
 		///	</remarks>
-		public ServiceOrchestrator(ILogger<ServiceOrchestrator> logger, IServiceRepository repository, IRepositoryOptions options) : base(repository, options)
+		public ServiceOrchestrator(ILogger<ServiceOrchestrator> logger, IServiceProvider provider, IServiceRepository repository, IRepositoryOptions options) : base(provider, repository, options)
 		{
 			Logger = logger;
 		}

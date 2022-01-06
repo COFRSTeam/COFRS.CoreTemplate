@@ -33,7 +33,6 @@ namespace COFRS.Template.Common.Windows
 		public bool GenerateEntityModel { get; set; }
 		public bool GenerateResourceModel { get; set; }
 		public bool GenerateMappingModel { get; set; }
-		public bool GenerateValidator { get; set; }
 		public bool GenerateExampleData { get; set; }
 		public bool GenerateController { get; set; }
 
@@ -657,12 +656,11 @@ select c.name as column_name,
 
 			Policy = Combobox_Policy.SelectedItem.ToString();
 
-			GenerateEntityModel = Checkbox_EntityModel.IsChecked.HasValue ? Checkbox_EntityModel.IsChecked.Value : false;
-			GenerateResourceModel = Checkbox_ResourceModel.IsChecked.HasValue ? Checkbox_ResourceModel.IsChecked.Value : false;
-			GenerateMappingModel = Checkbox_MappingModel.IsChecked.HasValue ? Checkbox_MappingModel.IsChecked.Value : false;
-			GenerateValidator = Checkbox_Validator.IsChecked.HasValue ? Checkbox_Validator.IsChecked.Value : false;
-			GenerateExampleData = Checkbox_ExampleData.IsChecked.HasValue ? Checkbox_ExampleData.IsChecked.Value : false;
-			GenerateController = Checkbox_Controller.IsChecked.HasValue ? Checkbox_Controller.IsChecked.Value : false;
+			GenerateEntityModel = Checkbox_EntityModel.IsChecked ?? false;
+			GenerateResourceModel = Checkbox_ResourceModel.IsChecked ?? false;
+			GenerateMappingModel = Checkbox_MappingModel.IsChecked ?? false;
+			GenerateExampleData = Checkbox_ExampleData.IsChecked ?? false;
+			GenerateController = Checkbox_Controller.IsChecked ?? false;
 
 			DialogResult = true;
 			Close();

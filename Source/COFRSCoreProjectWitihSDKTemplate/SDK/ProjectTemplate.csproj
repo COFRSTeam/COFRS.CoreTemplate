@@ -5,9 +5,9 @@
 
   <ItemGroup>
     <PackageReference Include="COFRS.Common" Version="0.0.42-alpha" />
-    <PackageReference Include="COFRS" Version="0.0.98-alpha" />
+    <PackageReference Include="COFRS" Version="0.0.102-alpha" />
     <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
-    <PackageReference Include="System.Text.Json" Version="6.0.0" />
+    <PackageReference Include="System.Text.Json" Version="6.0.1" />
   </ItemGroup>
 
 </Project>

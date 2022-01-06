@@ -221,6 +221,11 @@ namespace COFRS.Template.Common.Models
 
         public CodeElement2 Entity { get; set; }
 
+        public EntityClass(CodeElement2 entity)
+        {
+            Entity = entity;
+        }
+
         public override string ToString()
         {
             return Entity.Name;
