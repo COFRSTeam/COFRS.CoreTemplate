@@ -94,10 +94,6 @@ namespace COFRS.Template
 							MappingFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Mapping"),
 							MappingNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Mapping",
 
-							ValidationProject = replacementsDictionary["$safeprojectname$"],
-							ValidationFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Validation"),
-							ValidationNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Validation",
-
 							ExampleProject = replacementsDictionary["$safeprojectname$"],
 							ExampleFolder = Path.Combine(replacementsDictionary["$destinationdirectory$"], "Examples"),
 							ExampleNamespace = $"{replacementsDictionary["$safeprojectname$"]}.Examples",

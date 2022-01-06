@@ -27,6 +27,7 @@ namespace COFRS.Template.Common.ServiceUtilities
         void SaveProjectMapping();
 
         void OnProjectItemRemoved(ProjectItem ProjectItem);
+        void OnProjectItemAdded(ProjectItem ProjectItem);
 
         void OnSolutionOpened();
 
@@ -64,9 +65,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
         Project GetProject(string projectName);
         object GetProjectFromFolder(string folder);
-        string FindValidatorInterface(string resourceClassName, string folder = "");
 
-        void RegisterValidationModel(string validationClass, string validationNamespace);
         void RegisterComposite(string className, string entityNamespace, ElementType elementType, string tableName);
 
         ProfileMap OpenProfileMap(ResourceClass resourceModel, out bool isAllDefined);

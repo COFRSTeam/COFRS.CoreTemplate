@@ -11,9 +11,6 @@
         public string MappingProject { get; set; }
         public string MappingNamespace { get; set; }
         public string MappingFolder { get; set; }
-        public string ValidationProject { get; set; }
-        public string ValidationNamespace { get; set; }
-        public string ValidationFolder { get; set; }
         public string ExampleProject { get; set; }
         public string ExampleNamespace { get; set; }
         public string ExampleFolder { get; set; }
@@ -41,18 +38,6 @@
                 Folder = ResourceFolder,
                 Namespace = ResourceNamespace,
                 ProjectName = ResourceProject
-            };
-
-            return pf;
-        }
-
-        public ProjectFolder GetValidatorFolder()
-        {
-            var pf = new ProjectFolder
-            {
-                Folder = ValidationFolder,
-                Namespace = ValidationNamespace,
-                ProjectName = ValidationProject
             };
 
             return pf;

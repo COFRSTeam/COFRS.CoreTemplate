@@ -56,7 +56,6 @@ namespace COFRS.Template.Common.Wizards
 				{
 					var exampleFolder = projectMapping.GetExamplesFolder();
 
-
 					if (!VsShellUtilities.PromptYesNo(
 						    $"You are attempting to install an example model into {codeService.GetRelativeFolder(installationFolder)}. Typically, example models reside in {codeService.GetRelativeFolder(exampleFolder)}.\r\n\r\nDo you wish to place the new example model in this non-standard location?", 
 						    "Microsoft Visual Studio",
@@ -69,9 +68,9 @@ namespace COFRS.Template.Common.Wizards
 
 					exampleFolder = installationFolder;
 
-					projectMapping.ValidationFolder = exampleFolder.Folder;
-					projectMapping.ValidationNamespace = exampleFolder.Namespace;
-					projectMapping.ValidationProject = exampleFolder.ProjectName;
+					projectMapping.ExampleFolder = exampleFolder.Folder;
+					projectMapping.ExampleNamespace = exampleFolder.Namespace;
+					projectMapping.ExampleProject = exampleFolder.ProjectName;
 
 					codeService.SaveProjectMapping();
 				}

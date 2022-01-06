@@ -60,6 +60,18 @@ namespace COFRS.Template.Common.Models
             }
         }
 
+        public ResourceClass(CodeElement2 code, EntityClass entity)
+        {
+            Resource = code;
+            Entity = entity;
+        }
+
+        public ResourceClass()
+        {
+            Resource = null;
+            Entity = null;
+        }
+
 
         public override string ToString()
         {
