@@ -3,6 +3,7 @@ using COFRS.Template.Common.ServiceUtilities;
 using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
@@ -34,19 +35,20 @@ namespace COFRS.Template.Common.Wizards
 		{
 		}
 
-		/// <summary>
-		/// Start generating the entity model
-		/// </summary>
-		/// <param name="automationObject"></param>
-		/// <param name="replacementsDictionary"></param>
-		/// <param name="runKind"></param>
-		/// <param name="customParams"></param>
-		public void RunStarted(object automationObject, Dictionary<string, string> replacementsDictionary, WizardRunKind runKind, object[] customParams)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			var mDte = automationObject as DTE2;
+        /// <summary>
+        /// Start generating the entity model
+        /// </summary>
+        /// <param name="automationObject"></param>
+        /// <param name="replacementsDictionary"></param>
+        /// <param name="runKind"></param>
+        /// <param name="customParams"></param>
+        public void RunStarted(object automationObject, Dictionary<string, string> replacementsDictionary, WizardRunKind runKind, object[] customParams)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var mDte = automationObject as DTE2;
             var codeService = COFRSServiceFactory.GetService<ICodeService>();
             var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+            IVsThreadedWaitDialog2 waitDialog = null;
 
             try
             {
@@ -55,7 +57,7 @@ namespace COFRS.Template.Common.Wizards
                 var connectionString = codeService.ConnectionString;
 
                 //  Make sure we are where we're supposed to be
-                if ( !codeService.IsChildOf(projectMapping.EntityFolder, installationFolder.Folder))
+                if (!codeService.IsChildOf(projectMapping.EntityFolder, installationFolder.Folder))
                 {
                     if (!VsShellUtilities.PromptYesNo(
                                 $"You are attempting to install an entity model into {codeService.GetRelativeFolder(installationFolder)}. Typically, entity models reside in {codeService.GetRelativeFolder(projectMapping.GetEntityModelsFolder())}.\r\n\r\nDo you wish to place the new entity model in this non-standard location?",
@@ -87,8 +89,21 @@ namespace COFRS.Template.Common.Wizards
 
                 if (isok.HasValue && isok.Value == true)
                 {
-                    try
+                    if (ServiceProvider.GlobalProvider.GetService(typeof(SVsThreadedWaitDialogFactory)) is IVsThreadedWaitDialogFactory dialogFactory)
                     {
+                        dialogFactory.CreateInstance(out waitDialog);
+                    }
+
+                    if (waitDialog != null && waitDialog.StartWaitDialog("Microsoft Visual Studio",
+                                                                 "Building entity model",
+                                                                 $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                                 null,
+                                                                 $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                                 0,
+                                                                 false, true) == VSConstants.S_OK)
+                    {
+                        bool fpCanceled = false;
+
                         //	Replace the default connection string in the appSettings.Local.json, so that the 
                         //	user doesn't have to do it. Note: this function only replaces the connection string
                         //	if the appSettings.Local.json contains the original placeholder connection string.
@@ -100,21 +115,37 @@ namespace COFRS.Template.Common.Wizards
 
                         var emitter = new Emitter();
 
-                        if (form.ServerType == DBServerType.POSTGRESQL)
+                        if (form.ServerType == DBServerType.POSTGRESQL && form.UndefinedEntityModels != null && form.UndefinedEntityModels.Count > 0)
                         {
                             //	Generate any undefined composits before we construct our entity model (because, 
                             //	the entity model depends upon them)
 
+                            waitDialog.UpdateProgress($"Building entity model",
+                                                      $"Building composites",
+                                                      $"Building composites",
+                                                      0,
+                                                      0,
+                                                      true,
+                                                      out fpCanceled);
+
                             emitter.GenerateComposites(form.UndefinedEntityModels,
-                                                               form.ConnectionString,
-                                                               replacementsDictionary,
-                                                               projectMapping.GetEntityModelsFolder());
+                                                       form.ConnectionString,
+                                                       replacementsDictionary,
+                                                       projectMapping.GetEntityModelsFolder());
                         }
 
                         string model = string.Empty;
 
                         if (form.EType == ElementType.Enum)
                         {
+                            waitDialog.UpdateProgress($"Building entity model",
+                                                     $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                     $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                     0,
+                                                     0,
+                                                     true,
+                                                     out fpCanceled);
+
                             var columns = DBHelper.GenerateEnumColumns(form.DatabaseTable.Schema,
                                                                        form.DatabaseTable.Table,
                                                                        form.ConnectionString);
@@ -126,6 +157,14 @@ namespace COFRS.Template.Common.Wizards
 
                             replacementsDictionary["$npgsqltypes$"] = "true";
 
+                            waitDialog.UpdateProgress($"Building entity model",
+                                                     $"Registering {replacementsDictionary["$safeitemname$"]}",
+                                                     $"Registering {replacementsDictionary["$safeitemname$"]}",
+                                                     0,
+                                                     0,
+                                                     true,
+                                                     out fpCanceled);
+
                             codeService.RegisterComposite(replacementsDictionary["$safeitemname$"],
                                                                    replacementsDictionary["$rootnamespace$"],
                                                                    ElementType.Enum,
@@ -133,7 +172,15 @@ namespace COFRS.Template.Common.Wizards
                         }
                         else if (form.EType == ElementType.Composite)
                         {
-                            var  columns = DBHelper.GenerateColumns(form.DatabaseTable.Schema, form.DatabaseTable.Table, form.ServerType, form.ConnectionString);
+                            var columns = DBHelper.GenerateColumns(form.DatabaseTable.Schema, form.DatabaseTable.Table, form.ServerType, form.ConnectionString);
+
+                            waitDialog.UpdateProgress($"Building entity model",
+                                                     $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                     $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                     0,
+                                                     0,
+                                                     true,
+                                                     out fpCanceled);
 
                             model = emitter.EmitComposite(replacementsDictionary["$safeitemname$"],
                                                                   form.DatabaseTable.Schema,
@@ -145,6 +192,14 @@ namespace COFRS.Template.Common.Wizards
 
                             replacementsDictionary["$npgsqltypes$"] = "true";
 
+                            waitDialog.UpdateProgress($"Building entity model",
+                                                    $"Registering {replacementsDictionary["$safeitemname$"]}",
+                                                    $"Registering {replacementsDictionary["$safeitemname$"]}",
+                                                    0,
+                                                    0,
+                                                    true,
+                                                    out fpCanceled);
+
                             codeService.RegisterComposite(replacementsDictionary["$safeitemname$"],
                                                                    replacementsDictionary["$rootnamespace$"],
                                                                    ElementType.Enum,
@@ -152,6 +207,14 @@ namespace COFRS.Template.Common.Wizards
                         }
                         else
                         {
+                            waitDialog.UpdateProgress($"Building entity model",
+                                                    $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                    $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                    0,
+                                                    0,
+                                                    true,
+                                                    out fpCanceled);
+
                             model = emitter.EmitEntityModel(replacementsDictionary["$safeitemname$"],
                                                                     form.DatabaseTable.Schema,
                                                                     form.DatabaseTable.Table,
@@ -162,18 +225,18 @@ namespace COFRS.Template.Common.Wizards
 
                         replacementsDictionary.Add("$entityModel$", model);
                         Proceed = true;
-                    }
-                    catch ( Exception error )
-                    {
-                        MessageBox.Show(error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        Proceed = false;
+
+                        waitDialog.EndWaitDialog(out int usercancel);
                     }
                 }
                 else
                     Proceed = false;
             }
             catch (Exception error)
-			{
+            {
+                if (waitDialog != null)
+                    waitDialog.EndWaitDialog(out int usercancel);
+
                 VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
                                                 error.Message,
                                                 "Microsoft Visual Studio",
@@ -182,8 +245,8 @@ namespace COFRS.Template.Common.Wizards
                                                 OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
                 Proceed = false;
-			}
-		}
+            }
+        }
 
         public bool ShouldAddProjectItem(string filePath)
 		{

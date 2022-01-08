@@ -9,7 +9,7 @@
     <TemplateGroupID>AspNetCore</TemplateGroupID>
     <RequiredFrameworkVersion>2.0</RequiredFrameworkVersion>
     <NumberOfParentCategoriesToRollUp>2</NumberOfParentCategoriesToRollUp>
-    <DefaultName>ResourceController.cs</DefaultName>
+    <DefaultName>ResourcesController.cs</DefaultName>
   </TemplateData>
   <TemplateContent>
     <References>
