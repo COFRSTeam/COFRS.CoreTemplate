@@ -409,17 +409,33 @@ namespace COFRS.Template.Common.ServiceUtilities
             var entity = entityClassList.FirstOrDefault(c =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
-                return c.ProjectItem.Name.Equals(ProjectItem.Name);
-            });
+				try
+				{
+					return c.ProjectItem != null && (string.IsNullOrWhiteSpace(c.ProjectItem.Name) ? false : c.ProjectItem.Name.Equals(ProjectItem.Name));
+				}
+				catch (Exception ex)
+                {
+					var ss = ex.Message;
+					return false;
+                }
+			});
 
             if (entity != null)
                 entityClassList.Remove(entity);
 
             var resource = resourceClassList.FirstOrDefault(c =>
             {
-                ThreadHelper.ThrowIfNotOnUIThread();
-                return c.ProjectItem.Name.Equals(ProjectItem.Name);
-            });
+				ThreadHelper.ThrowIfNotOnUIThread();
+				try
+				{
+					return c.ProjectItem != null && (string.IsNullOrWhiteSpace(c.ProjectItem.Name) ? false : c.ProjectItem.Name.Equals(ProjectItem.Name));
+				}
+				catch (Exception ex)
+				{
+					var ss = ex.Message;
+					return false;
+				}
+			});
 
             if (resource != null)
                 resourceClassList.Remove(resource);
@@ -564,41 +580,45 @@ namespace COFRS.Template.Common.ServiceUtilities
 			else
 			{
 				FileCodeModel2 model = (FileCodeModel2)projectItem.FileCodeModel;
+				var projectMapping = LoadProjectMapping();
 
 				if (model != null)
 				{
 
 					foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
 					{
-						foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
+						if (namespaceElement.Name.Contains(projectMapping.EntityNamespace))
 						{
-							CodeAttribute2 tableAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Table"));
-
-							if (tableAttribute != null)
+							foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
 							{
-								var code = new EntityClass((CodeElement2)classElement);
-								entityClassList.Add(code);
-							}
-							else
-							{
-								CodeAttribute2 compositeAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgComposite"));
+								CodeAttribute2 tableAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Table"));
 
-								if (compositeAttribute != null)
+								if (tableAttribute != null)
 								{
 									var code = new EntityClass((CodeElement2)classElement);
 									entityClassList.Add(code);
 								}
+								else
+								{
+									CodeAttribute2 compositeAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgComposite"));
+
+									if (compositeAttribute != null)
+									{
+										var code = new EntityClass((CodeElement2)classElement);
+										entityClassList.Add(code);
+									}
+								}
 							}
-						}
 
-						foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
-						{
-							CodeAttribute2 enumAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgEnum"));
-
-							if (enumAttribute != null)
+							foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
 							{
-								var code = new EntityClass((CodeElement2)enumElement);
-								entityClassList.Add(code);
+								CodeAttribute2 enumAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("PgEnum"));
+
+								if (enumAttribute != null)
+								{
+									var code = new EntityClass((CodeElement2)enumElement);
+									entityClassList.Add(code);
+								}
 							}
 						}
 					}
@@ -616,51 +636,55 @@ namespace COFRS.Template.Common.ServiceUtilities
 			else
 			{
 				FileCodeModel2 model = (FileCodeModel2)projectItem.FileCodeModel;
+				var projectMapping = LoadProjectMapping();
 
 				if (model != null)
 				{
 					foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
 					{
-						foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
+						if (namespaceElement.Name.Contains(projectMapping.ResourceNamespace))
 						{
-							CodeAttribute2 entityAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
-							EntityClass entityClass = null;
-
-							if (entityAttribute != null)
+							foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
 							{
-								var entityTypeArgument = entityAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals(""));
+								CodeAttribute2 entityAttribute = classElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+								EntityClass entityClass = null;
 
-								var match = Regex.Match(entityTypeArgument.Value, "^typeof\\((?<entityClass>[a-zA-Z0-9_]+)\\)");
-
-								if (match.Success)
+								if (entityAttribute != null)
 								{
-									entityClass = GetEntityClass(match.Groups["entityClass"].Value);
+									var entityTypeArgument = entityAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals(""));
+
+									var match = Regex.Match(entityTypeArgument.Value, "^typeof\\((?<entityClass>[a-zA-Z0-9_]+)\\)");
+
+									if (match.Success)
+									{
+										entityClass = GetEntityClass(match.Groups["entityClass"].Value);
+									}
 								}
+
+								var code = new ResourceClass((CodeElement2)classElement, entityClass);
+								resourceClassList.Add(code);
 							}
 
-							var code = new ResourceClass((CodeElement2)classElement, entityClass);
-							resourceClassList.Add(code);
-						}
-
-						foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
-						{
-							CodeAttribute2 entityAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
-							EntityClass entityClass = null;
-
-							if (entityAttribute != null)
+							foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
 							{
-								var entityTypeArgument = entityAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals(""));
+								CodeAttribute2 entityAttribute = enumElement.Attributes.OfType<CodeAttribute2>().FirstOrDefault(a => a.Name.Equals("Entity"));
+								EntityClass entityClass = null;
 
-								var match = Regex.Match(entityTypeArgument.Value, "^typeof\\((?<entityClass>[a-zA-Z0-9_]+)\\)");
-
-								if (match.Success)
+								if (entityAttribute != null)
 								{
-									entityClass = GetEntityClass(match.Groups["entityClass"].Value);
-								}
-							}
+									var entityTypeArgument = entityAttribute.Children.OfType<CodeAttributeArgument>().FirstOrDefault(a => a.Name.Equals(""));
 
-							var code = new ResourceClass((CodeElement2)enumElement, entityClass);
-							resourceClassList.Add(code);
+									var match = Regex.Match(entityTypeArgument.Value, "^typeof\\((?<entityClass>[a-zA-Z0-9_]+)\\)");
+
+									if (match.Success)
+									{
+										entityClass = GetEntityClass(match.Groups["entityClass"].Value);
+									}
+								}
+
+								var code = new ResourceClass((CodeElement2)enumElement, entityClass);
+								resourceClassList.Add(code);
+							}
 						}
 					}
 				}
