@@ -9,14 +9,14 @@
              WindowStyle="ToolWindow" Title="Add COFRS Entity Model" >
     <ui:DialogWindow.Resources>
         <Style TargetType="{x:Type Grid}">
-            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolboxBackgroundKey}}" />
         </Style>
         <Style TargetType="{x:Type TextBlock}">
-            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolboxBackgroundKey}}" />
             <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolWindowTextKey}}" />
         </Style>
         <Style TargetType="{x:Type PasswordBox}">
-            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.EnvironmentBackgroundKey}}" />
+            <Setter Property="Background" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolboxBackgroundKey}}" />
             <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:VsBrushes.ToolWindowTextKey}}" />
         </Style>
     </ui:DialogWindow.Resources>
