@@ -2,6 +2,7 @@
 using COFRS.Template.Common.Windows;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TemplateWizard;
@@ -43,6 +44,7 @@ namespace COFRS.Template.Common.Wizards
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();	
 			DTE2 _appObject = Package.GetGlobalService(typeof(DTE)) as DTE2;
 			var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+			IVsThreadedWaitDialog2 waitDialog = null;
 
 			try
 			{
@@ -85,15 +87,31 @@ namespace COFRS.Template.Common.Wizards
 
 				if (result.HasValue && result.Value == true)
 				{
-					var resourceModel = form.ResourceModel;
-					var profileMap = codeService.OpenProfileMap(resourceModel, out bool isAllDefined);
+					if (ServiceProvider.GlobalProvider.GetService(typeof(SVsThreadedWaitDialogFactory)) is IVsThreadedWaitDialogFactory dialogFactory)
+					{
+						dialogFactory.CreateInstance(out waitDialog);
+					}
 
-					var emitter = new Emitter();
-					var model = emitter.EmitExampleModel(resourceModel, profileMap, replacementsDictionary["$safeitemname$"], form.ServerType, connectionString);
+					if (waitDialog != null && waitDialog.StartWaitDialog("Microsoft Visual Studio",
+																 "Building example classes",
+																 $"Building {replacementsDictionary["$safeitemname$"]}",
+																 null,
+																 $"Building {replacementsDictionary["$safeitemname$"]}",
+																 0,
+																 false, true) == VSConstants.S_OK)
+					{
+						var resourceModel = form.ResourceModel;
+						var profileMap = codeService.OpenProfileMap(resourceModel, out bool isAllDefined);
 
-					replacementsDictionary.Add("$model$", model);
-					replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
-					replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
+						var emitter = new Emitter();
+						var model = emitter.EmitExampleModel(resourceModel, profileMap, replacementsDictionary["$safeitemname$"], form.ServerType, connectionString);
+
+						replacementsDictionary.Add("$model$", model);
+						replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
+						replacementsDictionary.Add("$resourcenamespace$", resourceModel.Namespace);
+
+						waitDialog.EndWaitDialog(out int usercancel);
+					}
 
 					Proceed = true;
 				}
@@ -102,6 +120,9 @@ namespace COFRS.Template.Common.Wizards
 			}
 			catch (Exception error)
 			{
+				if ( waitDialog != null )
+					waitDialog.EndWaitDialog(out int usercancel);
+
 				VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
 												error.Message,
 												"Microsoft Visual Studio",

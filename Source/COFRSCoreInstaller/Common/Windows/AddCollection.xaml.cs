@@ -66,6 +66,8 @@ namespace COFRS.Template.Common.Windows
                             Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(clr.A, clr.R, clr.G, clr.B)),
                         };
 
+                        theItem.Click += TheItem_Click;
+
                         //	Ther is, so add it to the child resource list
                         Listbox_ChildResources.Items.Add(theItem);
                         Listbox_ChildResources.MouseDoubleClick += OnResourceItemDoubleClicked;
@@ -78,6 +80,15 @@ namespace COFRS.Template.Common.Windows
 			Button_OK.IsDefault = false;
 			Button_Cancel.IsDefault = true;
 		}
+
+        private void TheItem_Click(object sender, RoutedEventArgs e)
+        {
+            Button_OK.IsEnabled = false;
+
+            foreach (CheckBox item in Listbox_ChildResources.Items)
+                if (item.IsChecked.HasValue && item.IsChecked.Value == true)
+                    Button_OK.IsEnabled = true;
+        }
 
         private void OnResourceItemClicked(object sender, MouseButtonEventArgs e)
         {

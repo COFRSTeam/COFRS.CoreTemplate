@@ -38,6 +38,7 @@ namespace COFRS.Template.Common.Wizards
 			DTE2 mDte = automationObject as DTE2;
 			var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+			IVsThreadedWaitDialog2 waitDialog = null;
 
 			try
 			{
@@ -78,15 +79,12 @@ namespace COFRS.Template.Common.Wizards
 
 				if (result.HasValue && result.Value == true)
 				{
-					IVsThreadedWaitDialog2 dialog = null;
-					var dialogFactory = ServiceProvider.GlobalProvider.GetService(typeof(SVsThreadedWaitDialogFactory)) as IVsThreadedWaitDialogFactory;
+                    if (ServiceProvider.GlobalProvider.GetService(typeof(SVsThreadedWaitDialogFactory)) is IVsThreadedWaitDialogFactory dialogFactory)
+                    {
+                        dialogFactory.CreateInstance(out waitDialog);
+                    }
 
-					if (dialogFactory != null)
-					{
-						dialogFactory.CreateInstance(out dialog);
-					}
-
-					if (dialog != null && dialog.StartWaitDialog("Microsoft Visual Studio", 
+                    if (waitDialog != null && waitDialog.StartWaitDialog("Microsoft Visual Studio", 
 						                                         "Constructing conversion maps", 
 																 $"Building {replacementsDictionary["$safeitemname$"]}", 
 																 null, 
@@ -96,7 +94,6 @@ namespace COFRS.Template.Common.Wizards
 					{
 						var resourceModel = form.ResourceModel;
 
-
 						var emitter = new Emitter();
 						var model = emitter.EmitMappingModel(resourceModel, replacementsDictionary["$safeitemname$"], replacementsDictionary);
 
@@ -104,8 +101,7 @@ namespace COFRS.Template.Common.Wizards
 						replacementsDictionary["$entitynamespace$"] = resourceModel.Entity.Namespace;
 						replacementsDictionary["$model$"] = model;
 
-						int usercancel;
-						dialog.EndWaitDialog(out usercancel);
+						waitDialog.EndWaitDialog(out int usercancel);
 					}
 
 					Proceed = true;
@@ -115,6 +111,9 @@ namespace COFRS.Template.Common.Wizards
 			}
 			catch ( Exception error )
             {
+				if ( waitDialog != null )
+					waitDialog.EndWaitDialog(out int usercancel);
+
 				VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
 												error.Message,
 												"Microsoft Visual Studio",

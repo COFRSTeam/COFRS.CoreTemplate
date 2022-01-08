@@ -39,6 +39,8 @@ namespace COFRS.Template.Common.Wizards
             var mDte = automationObject as DTE2;
             var codeService = COFRSServiceFactory.GetService<ICodeService>();
             var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+            IVsThreadedWaitDialog2 waitDialog = null;
+            bool fpCanceled = false;
 
             try
             {
@@ -81,16 +83,13 @@ namespace COFRS.Template.Common.Wizards
 
                 if (form.DialogResult.HasValue && form.DialogResult.Value == true)
                 {
-                    IVsThreadedWaitDialog2 dialog = null;
-                    var dialogFactory = ServiceProvider.GlobalProvider.GetService(typeof(SVsThreadedWaitDialogFactory)) as IVsThreadedWaitDialogFactory;
-
-                    if (dialogFactory != null)
+                    if (ServiceProvider.GlobalProvider.GetService(typeof(SVsThreadedWaitDialogFactory)) is IVsThreadedWaitDialogFactory dialogFactory)
                     {
-                        dialogFactory.CreateInstance(out dialog);
+                        dialogFactory.CreateInstance(out waitDialog);
                     }
 
-                    if (dialog != null && dialog.StartWaitDialog("Microsoft Visual Studio",
-                                                                 "Constructing resource model",
+                    if (waitDialog != null && waitDialog.StartWaitDialog("Microsoft Visual Studio",
+                                                                 "Building resource model",
                                                                  $"Building {replacementsDictionary["$safeitemname$"]}",
                                                                  null,
                                                                  $"Building {replacementsDictionary["$safeitemname$"]}",
@@ -98,31 +97,47 @@ namespace COFRS.Template.Common.Wizards
                                                                  false, true) == VSConstants.S_OK)
                     {
                         var standardEmitter = new Emitter();
-                        var undefinedModels = form.UndefinedResources;
 
-                        standardEmitter.GenerateResourceComposites(undefinedModels,
-                                                                   projectMapping.GetResourceModelsFolder(),
-                                                                   form.ConnectionString);
+                        if (form.UndefinedResources != null && form.UndefinedResources.Count > 0)
+                        {
+                            waitDialog.UpdateProgress($"Building resource model",
+                                                      $"Building composites",
+                                                      $"Building composites",
+                                                      0,
+                                                      0,
+                                                      true,
+                                                      out fpCanceled);
+
+                            standardEmitter.GenerateResourceComposites(form.UndefinedResources,
+                                                                       projectMapping.GetResourceModelsFolder(),
+                                                                       form.ConnectionString);
+                        }
 
                         var entityModel = form.EntityModel;
-                        var resourceClassName = replacementsDictionary["$safeitemname$"];
 
                         string model;
 
+                        waitDialog.UpdateProgress($"Building resource model",
+                                                  $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                  $"Building {replacementsDictionary["$safeitemname$"]}",
+                                                  0,
+                                                  0,
+                                                  true,
+                                                  out fpCanceled);
+
                         if (form.GenerateAsEnum)
-                            model = standardEmitter.EmitResourceEnum(resourceClassName,
+                            model = standardEmitter.EmitResourceEnum(replacementsDictionary["$safeitemname$"],
                                                                      entityModel,
                                                                      form.ConnectionString);
                         else
-                            model = standardEmitter.EmitResourceModel(resourceClassName,
+                            model = standardEmitter.EmitResourceModel(replacementsDictionary["$safeitemname$"],
                                                                       entityModel,
                                                                       replacementsDictionary);
 
                         replacementsDictionary.Add("$model$", model);
                         replacementsDictionary.Add("$entitynamespace$", entityModel.Namespace);
 
-                        int usercancel;
-                        dialog.EndWaitDialog(out usercancel);
+                        waitDialog.EndWaitDialog(out int usercancel);
                     }
 
                     Proceed = true;
@@ -132,6 +147,11 @@ namespace COFRS.Template.Common.Wizards
             }
             catch ( Exception error)
             {
+                if ( waitDialog != null)
+                {
+                    waitDialog.EndWaitDialog(out int usercancel);
+                }
+
                 VsShellUtilities.ShowMessageBox(ServiceProvider.GlobalProvider,
                                                 error.Message,
                                                 "Microsoft Visual Studio",
