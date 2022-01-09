@@ -104,7 +104,7 @@ namespace COFRS.Template.Common.Wizards
 						var profileMap = codeService.OpenProfileMap(resourceModel, out bool isAllDefined);
 
 						var emitter = new Emitter();
-						var model = emitter.EmitExampleModel(resourceModel, profileMap, replacementsDictionary["$safeitemname$"], form.ServerType, connectionString);
+						var model = emitter.EmitExampleModel(codeService, resourceModel, profileMap, replacementsDictionary["$safeitemname$"], form.ServerType, connectionString);
 
 						replacementsDictionary.Add("$model$", model);
 						replacementsDictionary.Add("$entitynamespace$", resourceModel.Entity.Namespace);
