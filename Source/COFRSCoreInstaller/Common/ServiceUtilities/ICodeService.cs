@@ -72,7 +72,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 
         CodeClass2 FindCollectionExampleCode(ResourceClass parentModel, string folder = "");
         string GetExampleModel(int skipRecords, ResourceClass resourceModel, DBServerType serverType, string connectionString);
-        string ResolveMapFunction(JObject entityJson, string columnName, ResourceClass model, string mapFunction);
+        string ResolveMapFunction(JObject entityJson, string columnName, DBColumn[] entityColumns, ResourceClass model, string mapFunction);
         CodeClass2 FindExampleCode(ResourceClass parentModel, string folder = "");
 
         string GetProjectItemNamespace(ProjectItem item);

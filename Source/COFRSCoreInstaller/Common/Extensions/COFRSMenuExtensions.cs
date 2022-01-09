@@ -1310,85 +1310,90 @@ namespace COFRS.Template
 				if (selectedItems.Length == 1)
 				{
 					ProjectItem item = ((UIHierarchyItem)selectedItems[0]).Object as ProjectItem;
-					var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
 
-					if (theNamespace != null)
+					if (item.FileCodeModel != null)
 					{
-						var theClass = theNamespace.Children.OfType<CodeClass2>().First();
 
-						if (theClass != null)
+						var theNamespace = item.FileCodeModel.CodeElements.OfType<CodeNamespace>().First();
+
+						if (theNamespace != null)
 						{
-							//	The resource is the resource selected by the user. 
-							var resourceModel = codeService.GetResourceClass(theClass.Name);
+							var theClass = theNamespace.Children.OfType<CodeClass2>().First();
 
-							//	Now, get the folder where we will place our coverter...
-							Project theProject = item.ContainingProject;
-							var theFolder = theProject.ProjectItems.OfType<ProjectItem>().FirstOrDefault(p =>
-											   {
-												   ThreadHelper.ThrowIfNotOnUIThread();
-												   return (p.Kind == Constants.vsProjectItemKindPhysicalFolder &&
-														   p.Name.Equals("JSONConverters", StringComparison.OrdinalIgnoreCase));
-											   });
-
-							if (theFolder == null)
+							if (theClass != null)
 							{
-								theFolder = theProject.ProjectItems.AddFolder("JSONConverters");
+								//	The resource is the resource selected by the user. 
+								var resourceModel = codeService.GetResourceClass(theClass.Name);
+
+								//	Now, get the folder where we will place our coverter...
+								Project theProject = item.ContainingProject;
+								var theFolder = theProject.ProjectItems.OfType<ProjectItem>().FirstOrDefault(p =>
+												   {
+													   ThreadHelper.ThrowIfNotOnUIThread();
+													   return (p.Kind == Constants.vsProjectItemKindPhysicalFolder &&
+															   p.Name.Equals("JSONConverters", StringComparison.OrdinalIgnoreCase));
+												   });
+
+								if (theFolder == null)
+								{
+									theFolder = theProject.ProjectItems.AddFolder("JSONConverters");
+								}
+
+								//	Now, construct the converter...
+
+								var className = $"{resourceModel.ClassName}Converter";
+								var projectItemPath = Path.Combine(codeService.GetProjectItemPath(theFolder), $"{className}.cs");
+
+								var theFile = new StringBuilder();
+
+								theFile.AppendLine("using System;");
+								theFile.AppendLine("using System.Collections.Generic;");
+								theFile.AppendLine("using System.Globalization;");
+								theFile.AppendLine("using System.Text.Json;");
+								theFile.AppendLine("using System.Text.Json.Serialization;");
+								theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
+								theFile.AppendLine();
+								theFile.AppendLine($"namespace {codeService.GetProjectItemNamespace(theFolder)}");
+								theFile.AppendLine("{");
+
+								theFile.AppendLine("\t/// <summary>");
+								theFile.AppendLine($"\t/// Json {resourceModel.ClassName} Converter");
+								theFile.AppendLine("\t/// </summary>");
+								theFile.AppendLine($"\tpublic class {className} : JsonConverter<{resourceModel.ClassName}>");
+								theFile.AppendLine("\t{");
+
+								theFile.AppendLine("\t\t///\t<summary>");
+								theFile.AppendLine("\t\t///\tRead");
+								theFile.AppendLine("\t\t///\t</summary>");
+								theFile.AppendLine("\t\t///\t<param name=\"reader\">A reference to a high-performance API for forward-only, read-only access to UTF8 encoded JSON Text.</param>");
+								theFile.AppendLine("\t\t///\t<param name=\"typeToConvert\">The <see cref=\"Type\"/> to convert from.</param>");
+								theFile.AppendLine("\t\t///\t<param name=\"options\">The <see cref=\"JsonSerializerOptions\"/> used in the conversion</param>");
+								theFile.AppendLine($"\t\t///\t<returns>The <see cref=\"{resourceModel.ClassName}\"/> value.</returns>");
+								theFile.AppendLine($"\t\tpublic override {resourceModel.ClassName} Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)");
+								theFile.AppendLine("\t\t{");
+								theFile.AppendLine("\t\t}");
+
+								theFile.AppendLine("\t\t///\t<summary>");
+								theFile.AppendLine("\t\t///\tWrite");
+								theFile.AppendLine("\t\t///\t</summary>");
+								theFile.AppendLine("\t\t///\t<param name=\"writer\">A high-performance API for forward-only, non-cached writing to UTF8 encoded JSON Text.</param>");
+								theFile.AppendLine($"\t\t///\t<param name=\"value\">The <see cref=\"{resourceModel.ClassName}\"/> to write.</param>");
+								theFile.AppendLine("\t\t///\t<param name=\"options\">The <see cref=\"JsonSerializerOptions\"/> used in the conversion</param>");
+								theFile.AppendLine($"\t\t///\t<returns>The <see cref=\"{resourceModel.ClassName}\"/> value.</returns>");
+								theFile.AppendLine($"\t\tpublic override void Write(Utf8JsonWriter writer, {resourceModel.ClassName} value, JsonSerializerOptions options)");
+								theFile.AppendLine("\t\t{");
+								theFile.AppendLine("\t\t}");
+
+								theFile.AppendLine("\t}");
+								theFile.AppendLine("}");
+
+								File.WriteAllText(projectItemPath, theFile.ToString());
+
+								var converterItem = theFolder.ProjectItems.AddFromFile(projectItemPath);
+
+								var window = converterItem.Open();
+								window.Activate();
 							}
-
-							//	Now, construct the converter...
-
-							var className = $"{resourceModel.ClassName}Converter";
-							var projectItemPath = Path.Combine(codeService.GetProjectItemPath(theFolder), $"{className}.cs");
-
-							var theFile = new StringBuilder();
-
-							theFile.AppendLine("using System;");
-							theFile.AppendLine("using System.Collections.Generic;");
-							theFile.AppendLine("using System.Globalization;");
-							theFile.AppendLine("using System.Text.Json;");
-							theFile.AppendLine("using System.Text.Json.Serialization;");
-							theFile.AppendLine($"using {projectMapping.ResourceNamespace};");
-							theFile.AppendLine();
-							theFile.AppendLine($"namespace {codeService.GetProjectItemNamespace(theFolder)}");
-							theFile.AppendLine("{");
-
-							theFile.AppendLine("\t/// <summary>");
-							theFile.AppendLine($"\t/// Json {resourceModel.ClassName} Converter");
-							theFile.AppendLine("\t/// </summary>");
-							theFile.AppendLine($"\tpublic class {className} : JsonConverter<{resourceModel.ClassName}>");
-							theFile.AppendLine("\t{");
-
-							theFile.AppendLine("\t\t///\t<summary>");
-							theFile.AppendLine("\t\t///\tRead");
-							theFile.AppendLine("\t\t///\t</summary>");
-							theFile.AppendLine("\t\t///\t<param name=\"reader\">A reference to a high-performance API for forward-only, read-only access to UTF8 encoded JSON Text.</param>");
-							theFile.AppendLine("\t\t///\t<param name=\"typeToConvert\">The <see cref=\"Type\"/> to convert from.</param>");
-							theFile.AppendLine("\t\t///\t<param name=\"options\">The <see cref=\"JsonSerializerOptions\"/> used in the conversion</param>");
-							theFile.AppendLine($"\t\t///\t<returns>The <see cref=\"{resourceModel.ClassName}\"/> value.</returns>");
-							theFile.AppendLine($"\t\tpublic override {resourceModel.ClassName} Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)");
-							theFile.AppendLine("\t\t{");
-							theFile.AppendLine("\t\t}");
-
-							theFile.AppendLine("\t\t///\t<summary>");
-							theFile.AppendLine("\t\t///\tWrite");
-							theFile.AppendLine("\t\t///\t</summary>");
-							theFile.AppendLine("\t\t///\t<param name=\"writer\">A high-performance API for forward-only, non-cached writing to UTF8 encoded JSON Text.</param>");
-							theFile.AppendLine($"\t\t///\t<param name=\"value\">The <see cref=\"{resourceModel.ClassName}\"/> to write.</param>");
-							theFile.AppendLine("\t\t///\t<param name=\"options\">The <see cref=\"JsonSerializerOptions\"/> used in the conversion</param>");
-							theFile.AppendLine($"\t\t///\t<returns>The <see cref=\"{resourceModel.ClassName}\"/> value.</returns>");
-							theFile.AppendLine($"\t\tpublic override void Write(Utf8JsonWriter writer, {resourceModel.ClassName} value, JsonSerializerOptions options)");
-							theFile.AppendLine("\t\t{");
-							theFile.AppendLine("\t\t}");
-
-							theFile.AppendLine("\t}");
-							theFile.AppendLine("}");
-
-							File.WriteAllText(projectItemPath, theFile.ToString());
-
-							var converterItem = theFolder.ProjectItems.AddFromFile(projectItemPath);
-
-							var window = converterItem.Open();
-							window.Activate();
 						}
 					}
 				}
@@ -1583,8 +1588,10 @@ namespace COFRS.Template
 											}
 										}
 
-										AddSingleExample(parentModel, childModel, memberName);
-										AddCollectionExample(parentModel, childModel, memberName);
+										var entityColumns = childModel.Entity.Columns;
+
+										AddSingleExample(parentModel, entityColumns, childModel, memberName);
+										AddCollectionExample(parentModel, childModel, entityColumns, memberName);
 									}
 
 									int usercancel;
@@ -1861,12 +1868,13 @@ namespace COFRS.Template
 			eol.StartOfLine();
 			startOfLine.Delete(eol);
 		}
-		private void AddCollectionExample(ResourceClass parentModel, ResourceClass childModel, string memberName)
+		private void AddCollectionExample(ResourceClass parentModel, ResourceClass childModel, DBColumn[] entityColumns, string memberName)
 		{
             ThreadHelper.ThrowIfNotOnUIThread();
             var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var connectionString = codeService.ConnectionString;
 			var collectionExampleClass = codeService.FindCollectionExampleCode(parentModel);
+			string parentUrl = string.Empty;
 
 			if (collectionExampleClass != null)
 			{
@@ -1892,6 +1900,20 @@ namespace COFRS.Template
 
 							if (foundit)
 							{
+								EditPoint2 editPoint = (EditPoint2)classStart.CreateEditPoint();
+								foundit = editPoint.FindPattern("HRef = ");
+								foundit = foundit && editPoint.LessThan(getExampleFunction.EndPoint);
+
+								if (foundit)
+								{
+									editPoint.CharRight(7);
+									var editPoint2 = editPoint.CreateEditPoint();
+									editPoint2.EndOfLine();
+									editPoint2.CharLeft(1);
+									var point = editPoint2.CreateEditPoint();
+									parentUrl = editPoint.GetText(point);
+								}
+
 								EditPoint2 AssignPoint = (EditPoint2)classStart.CreateEditPoint();
 								bool alreadyAssigned = AssignPoint.FindPattern($"{memberName} = new {childModel.ClassName}[]");
 								alreadyAssigned = alreadyAssigned && AssignPoint.LessThan(nextClassStart);
@@ -1936,7 +1958,21 @@ namespace COFRS.Template
 										nextClassStart.InsertNewLine();
 										nextClassStart.Indent(null, 7);
 										nextClassStart.Insert($"{map.ResourceColumnName} = ");
-										nextClassStart.Insert(codeService.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
+
+
+										var resourceColumn = childModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(map.ResourceColumnName));
+
+										if (resourceColumn.IsForeignKey)
+										{
+											if (resourceColumn.ForeignTableName.Equals(parentModel.Entity.TableName))
+											{
+												nextClassStart.Insert(parentUrl);
+											}
+											else
+												nextClassStart.Insert(codeService.ResolveMapFunction(entityJson, map.ResourceColumnName, entityColumns, childModel, map.MapFunction));
+										}
+										else
+											nextClassStart.Insert(codeService.ResolveMapFunction(entityJson, map.ResourceColumnName, entityColumns, childModel, map.MapFunction));
 									}
 
 									nextClassStart.InsertNewLine();
@@ -1959,6 +1995,20 @@ namespace COFRS.Template
 
 					if (foundit)
 					{
+						EditPoint2 editPoint = (EditPoint2)classStart.CreateEditPoint();
+						foundit = editPoint.FindPattern("HRef = ");
+						foundit = foundit && editPoint.LessThan(getExampleFunction.EndPoint);
+
+						if (foundit)
+						{
+							editPoint.CharRight(7);
+							var editPoint2 = editPoint.CreateEditPoint();
+							editPoint2.EndOfLine();
+							editPoint2.CharLeft(1);
+							var point = editPoint2.CreateEditPoint();
+							parentUrl = editPoint.GetText(point);
+						}
+
 						EditPoint2 AssignPoint = (EditPoint2)classStart.CreateEditPoint();
 						bool alreadyAssigned = AssignPoint.FindPattern($"{memberName} = new {childModel.ClassName}[]");
 						alreadyAssigned = alreadyAssigned && AssignPoint.LessThan(nextClassStart);
@@ -2003,7 +2053,20 @@ namespace COFRS.Template
 								nextClassStart.InsertNewLine();
 								nextClassStart.Indent(null, 7);
 								nextClassStart.Insert($"{map.ResourceColumnName} = ");
-								nextClassStart.Insert(codeService.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
+
+								var resourceColumn = childModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(map.ResourceColumnName));
+
+								if (resourceColumn.IsForeignKey)
+								{
+									if (resourceColumn.ForeignTableName.Equals(parentModel.Entity.TableName))
+									{
+										nextClassStart.Insert(parentUrl);
+									}
+									else
+										nextClassStart.Insert(codeService.ResolveMapFunction(entityJson, map.ResourceColumnName, entityColumns, childModel, map.MapFunction));
+								}
+								else
+									nextClassStart.Insert(codeService.ResolveMapFunction(entityJson, map.ResourceColumnName, entityColumns, childModel, map.MapFunction));
 							}
 
 							nextClassStart.InsertNewLine();
@@ -2018,12 +2081,13 @@ namespace COFRS.Template
 			}
 		}
 
-		private void AddSingleExample(ResourceClass parentModel, ResourceClass childModel, string memberName)
+		private void AddSingleExample(ResourceClass parentModel, DBColumn[] entityColumns, ResourceClass childModel, string memberName)
 		{
             ThreadHelper.ThrowIfNotOnUIThread();
             var codeService = COFRSServiceFactory.GetService<ICodeService>();
 			var connectionString = codeService.ConnectionString;
 			var singleExampleClass = codeService.FindExampleCode(parentModel);
+			var parentUrl = string.Empty;
 
 			if (singleExampleClass != null)
 			{
@@ -2034,7 +2098,21 @@ namespace COFRS.Template
 				if (getExampleFunction != null)
 				{
 					EditPoint2 editPoint = (EditPoint2)getExampleFunction.StartPoint.CreateEditPoint();
-					bool foundit = editPoint.FindPattern($"{memberName} = new {childModel.ClassName}[]");
+					bool foundit = editPoint.FindPattern("HRef = ");
+					foundit = foundit && editPoint.LessThan(getExampleFunction.EndPoint);
+
+					if (foundit)
+					{
+						editPoint.CharRight(7);
+						var editPoint2 = editPoint.CreateEditPoint();
+						editPoint2.EndOfLine();
+						editPoint2.CharLeft(1);
+						var point = editPoint2.CreateEditPoint();
+						parentUrl = editPoint.GetText(point);
+					}
+
+					editPoint = (EditPoint2)getExampleFunction.StartPoint.CreateEditPoint();
+					foundit = editPoint.FindPattern($"{memberName} = new {childModel.ClassName}[]");
 					foundit = foundit && editPoint.LessThan(getExampleFunction.EndPoint);
 
 					if (!foundit)
@@ -2074,6 +2152,7 @@ namespace COFRS.Template
 							var serverType = codeService.DefaultServerType;
 
 							var exampleModel = codeService.GetExampleModel(0, childModel, serverType, connectionString);
+
 							var entityJson = JObject.Parse(exampleModel);
 							var profileMap = codeService.OpenProfileMap(childModel, out bool isAllDefined);
 
@@ -2093,7 +2172,20 @@ namespace COFRS.Template
 								editPoint.InsertNewLine();
 								editPoint.Indent(null, 6);
 								editPoint.Insert($"{map.ResourceColumnName} = ");
-								editPoint.Insert(codeService.ResolveMapFunction(entityJson, map.ResourceColumnName, childModel, map.MapFunction));
+
+								var resourceColumn = childModel.Columns.FirstOrDefault(c => c.ColumnName.Equals(map.ResourceColumnName));
+
+								if ( resourceColumn.IsForeignKey )
+                                {
+									if ( resourceColumn.ForeignTableName.Equals(parentModel.Entity.TableName))
+                                    {
+										editPoint.Insert(parentUrl);
+                                    }
+									else
+										editPoint.Insert(codeService.ResolveMapFunction(entityJson, map.ResourceColumnName, entityColumns, childModel, map.MapFunction));
+								}
+								else 
+									editPoint.Insert(codeService.ResolveMapFunction(entityJson, map.ResourceColumnName, entityColumns, childModel, map.MapFunction));
 							}
 
 							editPoint.InsertNewLine();
@@ -2374,6 +2466,7 @@ namespace COFRS.Template
 
 			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
 			editPoint.FindPattern($"item =");
+
 			foundit = editPoint.FindPattern("var subNode =");
 			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
 
@@ -2387,98 +2480,100 @@ namespace COFRS.Template
 				editPoint.Insert($"var subNode = RqlNode.Parse($\"{memberName}=uri:\\\"{{item.HRef.LocalPath}}\\\"\");\r\n");
 			}
 
-			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-			editPoint.FindPattern("var subNode = ");
-			foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
-			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+            editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+            editPoint.FindPattern("var subNode = ");
 
-			if (!foundit)
-			{
-				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern("var subNode = ");
+            foundit = editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+            foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+            if (!foundit)
+            {
+                editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+                editPoint.FindPattern("var subNode = ");
+                editPoint.EndOfLine();
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 3);
+                editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+            }
+
+            editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+            editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
+
+            foundit = editPoint.FindPattern($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
+            foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
+
+            if (!foundit)
+            {
+                editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
+				editPoint.FindPattern($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
 				editPoint.EndOfLine();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"var {childModel.ClassName}Collection = await GetCollectionAsync<{childModel.ClassName}>(null, subNode, true);");
-			}
+                editPoint.InsertNewLine(2);
+                editPoint.Indent(null, 3);
+                editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 3);
+                editPoint.Insert("{");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 4);
+                editPoint.Insert($"var matchingItem = item.{memberName}.FirstOrDefault(m => m.HRef == subitem.HRef);");
+                editPoint.InsertNewLine(2);
+                editPoint.Indent(null, 4);
+                editPoint.Insert($"if (matchingItem != null)");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 4);
+                editPoint.Insert("{");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 5);
+                editPoint.Insert($"await UpdateAsync<{childModel.ClassName}>(subitem);");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 4);
+                editPoint.Insert("}");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 4);
+                editPoint.Insert("else");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 4);
+                editPoint.Insert("{");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 5);
+                editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 5);
+                editPoint.Insert($"await DeleteAsync<{childModel.ClassName}>(dnode);");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 4);
+                editPoint.Insert("}");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 3);
+                editPoint.Insert("}");
+                editPoint.InsertNewLine();
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 3);
+                editPoint.Insert($"foreach (var subitem in item.{memberName}.Where(c => c.HRef == null))");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 3);
+                editPoint.Insert("{");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 4);
+                editPoint.Insert($"subitem.{parentModel.ClassName} = item.HRef;");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 4);
+                editPoint.Insert("subitem.HRef = (await AddAsync(subitem)).HRef;");
+                editPoint.InsertNewLine();
+                editPoint.Indent(null, 3);
+                editPoint.Insert("}");
+                editPoint.InsertNewLine();
+            }
+        }
 
-			editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-			editPoint.FindPattern("item = await UpdateAsync");
-			foundit = editPoint.FindPattern($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
-			foundit = foundit && editPoint.LessThan(aFunction.EndPoint);
-
-			if (!foundit)
-			{
-				editPoint = (EditPoint2)aFunction.StartPoint.CreateEditPoint();
-				editPoint.FindPattern("item = await UpdateAsync");
-				editPoint.EndOfLine();
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"foreach (var subitem in {childModel.ClassName}Collection.Items)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"var matchingItem = item.{memberName}.FirstOrDefault(m => m.HRef == subitem.HRef);");
-				editPoint.InsertNewLine(2);
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"if (matchingItem != null)");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert($"await UpdateAsync<{childModel.ClassName}>(subitem);");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("else");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert("var dnode = RqlNode.Parse($\"HRef = uri:\\\"{subitem.HRef.LocalPath}\\\"\");");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 5);
-				editPoint.Insert($"await DeleteAsync<{childModel.ClassName}>(dnode);");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert($"foreach (var subitem in item.{memberName}.Where(c => c.HRef == null))");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("{");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert($"subitem.{parentModel.ClassName} = item.HRef;");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 4);
-				editPoint.Insert("subitem.HRef = (await AddAsync(subitem)).HRef;");
-				editPoint.InsertNewLine();
-				editPoint.Indent(null, 3);
-				editPoint.Insert("}");
-				editPoint.InsertNewLine();
-			}
-		}
-
-		/// <summary>
-		/// Modify teh patch function to accomodate the new collection
-		/// </summary>
-		/// <param name="aFunction"></param>
-		/// <param name="parentModel">The <see cref="ResourceModel"/> of the parent containing class.</param>
-		/// <param name="childModel">The <see cref="ResourceModel"/> of the child collection class.</param>
-		/// <param name="memberName">The name of the collection.</param>
-		private void ModifyPatch(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string memberName)
+        /// <summary>
+        /// Modify teh patch function to accomodate the new collection
+        /// </summary>
+        /// <param name="aFunction"></param>
+        /// <param name="parentModel">The <see cref="ResourceModel"/> of the parent containing class.</param>
+        /// <param name="childModel">The <see cref="ResourceModel"/> of the child collection class.</param>
+        /// <param name="memberName">The name of the collection.</param>
+        private void ModifyPatch(CodeFunction2 aFunction, ResourceClass parentModel, ResourceClass childModel, string memberName)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 

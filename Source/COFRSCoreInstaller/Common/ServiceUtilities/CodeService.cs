@@ -580,13 +580,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 			else
 			{
 				FileCodeModel2 model = (FileCodeModel2)projectItem.FileCodeModel;
-				var projectMapping = LoadProjectMapping();
 
 				if (model != null)
 				{
-
 					foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
 					{
+						var projectMapping = LoadProjectMapping();
 						if (namespaceElement.Name.Contains(projectMapping.EntityNamespace))
 						{
 							foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
@@ -596,7 +595,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 								if (tableAttribute != null)
 								{
 									var code = new EntityClass((CodeElement2)classElement);
-									entityClassList.Add(code);
+									var existingClass = entityClassList.FirstOrDefault(c => c.ClassName.Equals(code.ClassName));
+
+									if ( existingClass == null )
+										entityClassList.Add(code);
 								}
 								else
 								{
@@ -605,7 +607,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 									if (compositeAttribute != null)
 									{
 										var code = new EntityClass((CodeElement2)classElement);
-										entityClassList.Add(code);
+										var existingClass = entityClassList.FirstOrDefault(c => c.ClassName.Equals(code.ClassName));
+
+										if (existingClass == null)
+											entityClassList.Add(code);
 									}
 								}
 							}
@@ -617,7 +622,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 								if (enumAttribute != null)
 								{
 									var code = new EntityClass((CodeElement2)enumElement);
-									entityClassList.Add(code);
+									var existingClass = entityClassList.FirstOrDefault(c => c.ClassName.Equals(code.ClassName));
+
+									if (existingClass == null)
+										entityClassList.Add(code);
 								}
 							}
 						}
@@ -636,12 +644,12 @@ namespace COFRS.Template.Common.ServiceUtilities
 			else
 			{
 				FileCodeModel2 model = (FileCodeModel2)projectItem.FileCodeModel;
-				var projectMapping = LoadProjectMapping();
 
 				if (model != null)
 				{
 					foreach (CodeNamespace namespaceElement in model.CodeElements.OfType<CodeNamespace>())
 					{
+						var projectMapping = LoadProjectMapping();
 						if (namespaceElement.Name.Contains(projectMapping.ResourceNamespace))
 						{
 							foreach (CodeClass2 classElement in namespaceElement.Members.OfType<CodeClass2>())
@@ -662,7 +670,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 								}
 
 								var code = new ResourceClass((CodeElement2)classElement, entityClass);
-								resourceClassList.Add(code);
+								var existingClass = resourceClassList.FirstOrDefault(c => c.ClassName.Equals(code.ClassName));
+
+								if (existingClass == null)
+									resourceClassList.Add(code);
 							}
 
 							foreach (CodeEnum enumElement in namespaceElement.Members.OfType<CodeEnum>())
@@ -683,7 +694,10 @@ namespace COFRS.Template.Common.ServiceUtilities
 								}
 
 								var code = new ResourceClass((CodeElement2)enumElement, entityClass);
-								resourceClassList.Add(code);
+								var existingClass = resourceClassList.FirstOrDefault(c => c.ClassName.Equals(code.ClassName));
+
+								if (existingClass == null)
+									resourceClassList.Add(code);
 							}
 						}
 					}
@@ -2157,7 +2171,6 @@ namespace COFRS.Template.Common.ServiceUtilities
 				query.Append($" OFFSET {skipRecords} ROWS");
 				query.Append(" FETCH NEXT 1 ROWS ONLY;");
 
-				results.AppendLine("{");
 
 				using (var command = new SqlCommand(query.ToString(), connection))
 				{
@@ -2165,325 +2178,400 @@ namespace COFRS.Template.Common.ServiceUtilities
 					{
 						if (reader.Read())
 						{
-							first = true;
-							foreach (var column in entityColumns)
-							{
-								if (first)
-									first = false;
-								else
-									results.AppendLine(",");
-								results.Append($"\t\"{column.ColumnName}\": ");
-
-								switch (column.DBDataType.ToLower())
-								{
-									case "bigint":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var Value = reader.GetInt64(reader.GetOrdinal(column.ColumnName));
-											results.Append($"{Value}");
-										}
-										break;
-
-									case "binary":
-									case "image":
-									case "timestamp":
-									case "varbinary":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var length = reader.GetBytes(0, -1, null, 1, 1);
-											var byteBuffer = new byte[length];
-											reader.GetBytes(0, 0, byteBuffer, 0, (int)length);
-											var Value = Convert.ToBase64String(byteBuffer);
-											results.Append($"{Value}");
-										}
-										break;
-
-									case "bit":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-											results.Append("null");
-										else
-										{
-											var Value = reader.GetBoolean(reader.GetOrdinal(column.ColumnName));
-											results.Append(Value ? "true" : "false");
-										}
-										break;
-
-									case "date":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
-											results.Append("\"{date.ToShortDateString()}\"");
-										}
-										break;
-
-									case "datetime":
-									case "datetime2":
-									case "smalldatetime":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
-											var Value = date.ToString("o");
-											results.Append($"\"{Value}\"");
-										}
-										break;
-
-									case "datetimeoffset":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var date = reader.GetDateTimeOffset(reader.GetOrdinal(column.ColumnName));
-											var Value = date.ToString("o");
-											results.Append($"\"{Value}\"");
-										}
-										break;
-
-									case "decimal":
-									case "money":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var Value = reader.GetDecimal(reader.GetOrdinal(column.ColumnName));
-											results.Append($"{Value}");
-										}
-										break;
-
-									case "float":
-									case "real":
-									case "smallmoney":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var Value = reader.GetFloat(reader.GetOrdinal(column.ColumnName));
-											results.Append($"{Value}");
-										}
-										break;
-
-									case "int":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-											results.Append("null");
-										else
-										{
-											var Value = reader.GetInt32(reader.GetOrdinal(column.ColumnName));
-											results.Append($"{Value}");
-										}
-										break;
-
-									case "smallint":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var Value = reader.GetInt16(reader.GetOrdinal(column.ColumnName));
-											results.Append($"{Value}");
-										}
-										break;
-
-									case "tinyint":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var Value = reader.GetByte(reader.GetOrdinal(column.ColumnName));
-											results.Append($"{Value}");
-										}
-										break;
-
-									case "time":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else
-										{
-											var Value = reader.GetTimeSpan(reader.GetOrdinal(column.ColumnName));
-											results.Append($"\"{Value}\"");
-										}
-										break;
-
-									case "text":
-									case "nvarchar":
-									case "ntext":
-									case "char":
-									case "nchar":
-									case "varchar":
-									case "xml":
-										if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
-										{
-											results.Append("null");
-										}
-										else if (string.Equals(column.DBDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
-										{
-											var theValue = reader.GetFieldValue<object>(reader.GetOrdinal(column.ColumnName));
-											theValue = theValue.ToString().Replace("/", "-");
-											results.Append($"\"{theValue}\"");
-										}
-										else
-										{
-											var Value = reader.GetString(reader.GetOrdinal(column.ColumnName));
-											results.Append($"\"{Value}\"");
-										}
-										break;
-
-									default:
-										throw new InvalidDataException($"Unrecognized database type: {column.ModelDataType}");
-								}
-							}
+							results = BuildModelFromReader(entityColumns, reader);
 						}
 						else
 						{
-							first = true;
-							foreach (var column in entityColumns)
-							{
-								if (first)
-									first = false;
-								else
-									results.AppendLine(",");
-								results.Append($"\t\"{column.ColumnName}\": ");
-
-								switch (column.DBDataType.ToLower())
-								{
-									case "bigint":
-										results.Append("100");
-										break;
-
-									case "binary":
-									case "image":
-									case "timestamp":
-									case "varbinary":
-										{
-											var str = "The cow jumped over the moon";
-											var buffer = Encoding.UTF8.GetBytes(str);
-											var str2 = Convert.ToBase64String(buffer);
-											results.Append($"{str2}");
-										}
-										break;
-
-									case "bit":
-										results.Append("true");
-										break;
-
-									case "date":
-										{
-											var date = DateTime.Now; ;
-											results.Append("\"{date.ToShortDateString()}\"");
-										}
-										break;
-
-									case "datetime":
-									case "datetime2":
-									case "smalldatetime":
-										{
-											var date = DateTime.Now;
-											var Value = date.ToString("o");
-											results.Append($"\"{Value}\"");
-										}
-										break;
-
-									case "datetimeoffset":
-										{
-											var date = DateTimeOffset.Now;
-											var Value = date.ToString("o");
-											results.Append($"\"{Value}\"");
-										}
-										break;
-
-									case "decimal":
-									case "money":
-									case "float":
-									case "real":
-									case "smallmoney":
-										{
-											var Value = 124.32;
-											results.Append($"{Value}");
-										}
-										break;
-
-									case "int":
-									case "smallint":
-									case "tinyint":
-										results.Append("10");
-										break;
-
-									case "time":
-										{
-											var Value = TimeSpan.FromSeconds(24541);
-											results.Append($"\"{Value}\"");
-										}
-										break;
-
-									case "text":
-									case "nvarchar":
-									case "ntext":
-									case "char":
-									case "nchar":
-									case "varchar":
-									case "xml":
-										{
-											var Value = "A string value";
-											results.Append($"\"{Value}\"");
-										}
-										break;
-
-									default:
-										throw new InvalidDataException($"Unrecognized database type: {column.ModelDataType}");
-								}
-							}
+							results = BuildModelFromMetadata(skipRecords, resourceModel, entityColumns);
 						}
 					}
 				}
-
-				results.AppendLine();
-				results.AppendLine("}");
-
 			}
 
 			return results.ToString();
 		}
 
-		public string ResolveMapFunction(JObject entityJson, string columnName, ResourceClass model, string mapFunction)
+		private StringBuilder BuildModelFromReader(DBColumn[] entityColumns, SqlDataReader reader)
+		{
+			StringBuilder results = new StringBuilder();
+			bool first;
+			results.AppendLine("{");
+			first = true;
+
+			foreach (var column in entityColumns)
+			{
+				if (first)
+					first = false;
+				else
+					results.AppendLine(",");
+				results.Append($"\t\"{column.ColumnName}\": ");
+
+				switch (column.DBDataType.ToLower())
+				{
+					case "bigint":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var Value = reader.GetInt64(reader.GetOrdinal(column.ColumnName));
+							results.Append($"{Value}");
+						}
+						break;
+
+					case "binary":
+					case "image":
+					case "timestamp":
+					case "varbinary":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var length = reader.GetBytes(0, -1, null, 1, 1);
+							var byteBuffer = new byte[length];
+							reader.GetBytes(0, 0, byteBuffer, 0, (int)length);
+							var Value = Convert.ToBase64String(byteBuffer);
+							results.Append($"{Value}");
+						}
+						break;
+
+					case "bit":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+							results.Append("null");
+						else
+						{
+							var Value = reader.GetBoolean(reader.GetOrdinal(column.ColumnName));
+							results.Append(Value ? "true" : "false");
+						}
+						break;
+
+					case "date":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
+							results.Append("\"{date.ToShortDateString()}\"");
+						}
+						break;
+
+					case "datetime":
+					case "datetime2":
+					case "smalldatetime":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var date = reader.GetDateTime(reader.GetOrdinal(column.ColumnName));
+							var Value = date.ToString("o");
+							results.Append($"\"{Value}\"");
+						}
+						break;
+
+					case "datetimeoffset":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var date = reader.GetDateTimeOffset(reader.GetOrdinal(column.ColumnName));
+							var Value = date.ToString("o");
+							results.Append($"\"{Value}\"");
+						}
+						break;
+
+					case "decimal":
+					case "money":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var Value = reader.GetDecimal(reader.GetOrdinal(column.ColumnName));
+							results.Append($"{Value}");
+						}
+						break;
+
+					case "float":
+					case "real":
+					case "smallmoney":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var Value = reader.GetFloat(reader.GetOrdinal(column.ColumnName));
+							results.Append($"{Value}");
+						}
+						break;
+
+					case "int":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+							results.Append("null");
+						else
+						{
+							var Value = reader.GetInt32(reader.GetOrdinal(column.ColumnName));
+							results.Append($"{Value}");
+						}
+						break;
+
+					case "smallint":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var Value = reader.GetInt16(reader.GetOrdinal(column.ColumnName));
+							results.Append($"{Value}");
+						}
+						break;
+
+					case "tinyint":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var Value = reader.GetByte(reader.GetOrdinal(column.ColumnName));
+							results.Append($"{Value}");
+						}
+						break;
+
+					case "time":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else
+						{
+							var Value = reader.GetTimeSpan(reader.GetOrdinal(column.ColumnName));
+							results.Append($"\"{Value}\"");
+						}
+						break;
+
+					case "text":
+					case "nvarchar":
+					case "ntext":
+					case "char":
+					case "nchar":
+					case "varchar":
+					case "xml":
+						if (reader.IsDBNull(reader.GetOrdinal(column.ColumnName)))
+						{
+							results.Append("null");
+						}
+						else if (string.Equals(column.DBDataType, "hierarchyid", StringComparison.OrdinalIgnoreCase))
+						{
+							var theValue = reader.GetFieldValue<object>(reader.GetOrdinal(column.ColumnName));
+							theValue = theValue.ToString().Replace("/", "-");
+							results.Append($"\"{theValue}\"");
+						}
+						else
+						{
+							var Value = reader.GetString(reader.GetOrdinal(column.ColumnName));
+							results.Append($"\"{Value}\"");
+						}
+						break;
+
+					default:
+						throw new InvalidDataException($"Unrecognized database type: {column.ModelDataType}");
+				}
+			}
+
+			results.AppendLine();
+			results.AppendLine("}");
+			return results;
+		}
+
+		private StringBuilder BuildModelFromMetadata(int skipRecords, ResourceClass resourceClass, DBColumn[] entityColumns)
+		{
+			StringBuilder results = new StringBuilder();
+			bool first = true;
+			var rnd = new Random(DateTime.Now.Second);
+
+			results.AppendLine("{");
+
+			foreach (var column in entityColumns)
+			{
+				if (first)
+					first = false;
+				else
+					results.AppendLine(",");
+				results.Append($"\t\"{column.ColumnName}\": ");
+
+				switch (column.DBDataType.ToLower())
+				{
+					case "bigint":
+						if (column.IsPrimaryKey)
+						{
+							if (skipRecords > 0)
+								results.Append(skipRecords.ToString());
+							else
+								results.Append(rnd.Next(5, 25487).ToString());
+						}
+						else
+							results.Append("100");
+						break;
+
+					case "binary":
+					case "image":
+					case "timestamp":
+					case "varbinary":
+						{
+							var str = "The cow jumped over the moon";
+							var buffer = Encoding.UTF8.GetBytes(str);
+							var str2 = Convert.ToBase64String(buffer);
+							results.Append($"{str2}");
+						}
+						break;
+
+					case "bit":
+						results.Append("true");
+						break;
+
+					case "date":
+						{
+							var date = DateTime.Now; ;
+							results.Append("\"{date.ToShortDateString()}\"");
+						}
+						break;
+
+					case "datetime":
+					case "datetime2":
+					case "smalldatetime":
+						{
+							var date = DateTime.Now;
+							var Value = date.ToString("o");
+							results.Append($"\"{Value}\"");
+						}
+						break;
+
+					case "datetimeoffset":
+						{
+							var date = DateTimeOffset.Now;
+							var Value = date.ToString("o");
+							results.Append($"\"{Value}\"");
+						}
+						break;
+
+					case "decimal":
+					case "money":
+					case "float":
+					case "real":
+					case "smallmoney":
+						{
+							var Value = 124.32;
+							results.Append($"{Value}");
+						}
+						break;
+
+					case "int":
+					case "smallint":
+					case "tinyint":
+						if (column.IsPrimaryKey)
+						{
+							if (skipRecords > 0)
+								results.Append(skipRecords.ToString());
+							else
+								results.Append(rnd.Next(5, 25487).ToString());
+						}
+						else
+							results.Append("10");
+						break;
+
+					case "time":
+						{
+							var Value = TimeSpan.FromSeconds(24541);
+							results.Append($"\"{Value}\"");
+						}
+						break;
+
+					case "text":
+					case "nvarchar":
+					case "ntext":
+					case "nchar":
+					case "varchar":
+						{
+							var Value = $"{resourceClass.ClassName} {column.ColumnName}";
+
+							if (Value.Length > column.Length)
+								Value = Value.Substring(0, Convert.ToInt32(column.Length));
+
+							results.Append($"\"{Value}\"");
+						}
+						break;
+
+					case "char":
+						{
+							if (column.Length == 1)
+								results.Append($"'A'");
+							else
+							{
+								var Value = $"{resourceClass.ClassName} {column.ColumnName}";
+
+								if (Value.Length > column.Length)
+									Value = Value.Substring(0, Convert.ToInt32(column.Length));
+
+								results.Append($"\"{Value}\"");
+							}
+
+						}
+						break;
+
+					case "xml":
+						{
+							var Value = "<xml></xml>";
+							results.Append($"\"{Value}\"");
+						}
+						break;
+
+					default:
+						throw new InvalidDataException($"Unrecognized database type: {column.ModelDataType}");
+				}
+			}
+
+			results.AppendLine();
+			results.AppendLine("}");
+			return results;
+		}
+
+		public string ResolveMapFunction(JObject entityJson, string columnName, DBColumn[] entityColumns, ResourceClass model, string mapFunction)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-
 			bool isDone = false;
 			var originalMapFunction = mapFunction;
 			var valueNumber = 1;
 			List<string> valueAssignments = new List<string>();
+			var resourceColumns = model.Columns;
 
-			var simpleConversion = ExtractSimpleConversion(entityJson, model, mapFunction);
+			var linkConversion = ExtractLinkConversion(entityJson, columnName, model, resourceColumns, entityColumns);
+
+			if (!string.IsNullOrWhiteSpace(linkConversion))
+				return linkConversion;
+
+			var enumConversion = ExtractEnumConversion(entityJson, columnName, resourceColumns);
+
+			if (!string.IsNullOrWhiteSpace(enumConversion))
+				return enumConversion;
+
+			var simpleConversion = ExtractSimpleConversion(entityJson, model, entityColumns, mapFunction);
 
 			if (!string.IsNullOrWhiteSpace(simpleConversion))
 				return simpleConversion;
 
-			var wellKnownConversion = ExtractWellKnownConversion(entityJson, model, mapFunction);
+			var wellKnownConversion = ExtractWellKnownConversion(entityJson, entityColumns, model, mapFunction);
 
 			if (!string.IsNullOrWhiteSpace(wellKnownConversion))
 				return wellKnownConversion;
@@ -2498,7 +2586,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 					var textToReplace = ef.Groups["replace"];
 					var token = entityJson[entityColumnReference.Value];
 
-					var entityColumn = model.Entity.Columns.FirstOrDefault(c => c.ColumnName.Equals(entityColumnReference.Value, StringComparison.OrdinalIgnoreCase));
+					var entityColumn = entityColumns.FirstOrDefault(c => c.ColumnName.Equals(entityColumnReference.Value, StringComparison.OrdinalIgnoreCase));
 					var resourceColumn = model.Columns.FirstOrDefault(c => c.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase));
 
 					switch (entityColumn.ModelDataType.ToLower())
@@ -2648,7 +2736,389 @@ namespace COFRS.Template.Common.ServiceUtilities
 			return results.ToString();
 		}
 
-		public static string ExtractWellKnownConversion(JObject entityJson, ResourceClass model, string mapFunction)
+		private string ExtractEnumConversion(JObject entityJson, string columnName, DBColumn[] resourceColumns)
+		{
+			var codeService = COFRSServiceFactory.GetService<ICodeService>();
+			var column = resourceColumns.FirstOrDefault(c => c.ColumnName.Equals(columnName));
+			var enumClassName = column.ModelDataType.Trim('?');
+			var parentResource = codeService.ResourceClassList.FirstOrDefault(r => r.ClassName.Equals(enumClassName));
+
+			if (parentResource != null && parentResource.ResourceType == ResourceType.Enum)
+			{
+				StringBuilder conversion = new StringBuilder($"{parentResource.ClassName}.");
+				var jsonValue = entityJson[columnName].Value<string>();
+
+				if (jsonValue == null)
+					return "null";
+
+				foreach (var colValue in parentResource.Columns)
+				{
+					if (jsonValue.Equals(colValue.ToString(), StringComparison.OrdinalIgnoreCase))
+					{
+						conversion.Append(colValue);
+						return conversion.ToString();
+					}
+				}
+
+				if (Int64.TryParse(jsonValue, out long jValue))
+				{
+					foreach (var colValue in parentResource.Columns)
+					{
+						if (Int64.TryParse(colValue.DBDataType, out long cValue))
+						{
+							if (jValue == cValue)
+							{
+								conversion.Append(colValue);
+								return conversion.ToString();
+							}
+						}
+					}
+				}
+
+				conversion.Append(parentResource.Columns.ToList()[0]);
+				return conversion.ToString();
+			}
+
+			return String.Empty;
+		}
+
+		public string ExtractLinkConversion(JObject entityJson, string columnName, ResourceClass model, DBColumn[] resourceColumns, DBColumn[] entityColumns)
+		{
+			var column = resourceColumns.FirstOrDefault(c => c.ColumnName.Equals(columnName));
+
+			if (column.IsPrimaryKey)
+			{
+				var nn = new NameNormalizer(model.ClassName);
+				var conversion = new StringBuilder($"new Uri(rootUrl, \"{nn.PluralCamelCase}/id");
+
+				var primaryKeyColumns = entityColumns.Where(c => c.IsPrimaryKey);
+
+				foreach (var keyColumn in primaryKeyColumns)
+				{
+					var theValue = entityJson[keyColumn.ColumnName].Value<string>();
+					conversion.Append($"/{theValue}");
+				}
+
+				conversion.Append("\")");
+				return conversion.ToString();
+			}
+			else if (column.IsForeignKey)
+			{
+				var foreignKeyColumns = entityColumns.Where(c => !string.IsNullOrWhiteSpace(c.ForeignTableName) && c.ForeignTableName.Equals(column.ForeignTableName));
+				var nn = new NameNormalizer(column.ForeignTableName);
+				var conversion = new StringBuilder($"new Uri(rootUrl, \"{nn.PluralCamelCase}/id");
+
+				foreach (var keyColumn in foreignKeyColumns)
+				{
+					var theValue = entityJson[keyColumn.ColumnName].Value<string>();
+					conversion.Append($"/{theValue}");
+				}
+
+				conversion.Append("\")");
+				return conversion.ToString();
+			}
+
+			return string.Empty;
+		}
+
+		private static string ExtractSimpleConversion(JObject entityJson, ResourceClass model, DBColumn[] entityColumns, string mapFunction)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
+
+			if (ef.Success)
+			{
+				if (mapFunction.Equals(ef.Groups["replace"].Value))
+				{
+					var token = entityJson[ef.Groups["entity"].Value];
+					var entityColumn = entityColumns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+
+					switch (entityColumn.ModelDataType.ToLower())
+					{
+						case "bool":
+						case "bool?":
+							switch (token.Type)
+							{
+								case JTokenType.Boolean:
+									return token.Value<bool>().ToString().ToLower();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "byte":
+						case "byte?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<byte>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "sbyte":
+						case "sbyte?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<sbyte>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "short":
+						case "short?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<short>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "ushort":
+						case "ushort?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<ushort>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "int":
+						case "int?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<int>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "uint":
+						case "uint?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<uint>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "long":
+						case "long?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<long>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "ulong":
+						case "ulong?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<ulong>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "float":
+						case "float?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<float>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "double":
+						case "double?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<double>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "decimal":
+						case "decimal?":
+							switch (token.Type)
+							{
+								case JTokenType.Integer:
+									return token.Value<decimal>().ToString();
+
+								case JTokenType.Null:
+									return "null";
+
+								default:
+									return "default";
+							}
+
+						case "string":
+							switch (token.Type)
+							{
+								case JTokenType.String:
+									return $"\"{token.Value<string>()}\"";
+
+								case JTokenType.Null:
+									return "string.Empty";
+
+								default:
+									return "string.Empty";
+							}
+
+						case "Guid":
+							switch (token.Type)
+							{
+								case JTokenType.Guid:
+									return $"Guid.Parse(\"{token.Value<Guid>()}\")";
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "DateTime":
+						case "DateTime?":
+							switch (token.Type)
+							{
+								case JTokenType.Date:
+									return $"DateTime.Parse(\"{token.Value<DateTime>().ToString():O}\")";
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "DateTimeOffset":
+						case "DateTimeOffset?":
+							switch (token.Type)
+							{
+								case JTokenType.Date:
+									return $"DateTimeOffset.Parse(\"{token.Value<DateTimeOffset>().ToString():O}\")";
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "TimeSpan":
+						case "TimeSpan?":
+							switch (token.Type)
+							{
+								case JTokenType.TimeSpan:
+									return $"TimeSpan.Parse(\"{token.Value<TimeSpan>()}\")";
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "byte[]":
+						case "IEnumerable<byte>":
+							switch (token.Type)
+							{
+								case JTokenType.String:
+									return $"Convert.FromBase64String(\"{token.Value<string>()}\").ToArray()";
+
+								case JTokenType.Bytes:
+									{
+										var theBytes = token.Value<byte[]>();
+										var str = Convert.ToBase64String(theBytes);
+										return $"Convert.FromBase64String(\"{str}\").ToArray()";
+									}
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+
+						case "List<byte>":
+							switch (token.Type)
+							{
+								case JTokenType.String:
+									return $"Convert.FromBase64String(\"{token.Value<string>()}\").ToList()";
+
+								case JTokenType.Bytes:
+									{
+										var theBytes = token.Value<byte[]>();
+										var str = Convert.ToBase64String(theBytes);
+										return $"Convert.FromBase64String(\"{str}\").ToList()";
+									}
+
+								case JTokenType.Null:
+									return null;
+
+								default:
+									return "default";
+							}
+					}
+				}
+			}
+
+			return string.Empty;
+		}
+
+		public static string ExtractWellKnownConversion(JObject entityJson, DBColumn[] entityColumns, ResourceClass model, string mapFunction)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var ef = Regex.Match(mapFunction, "(?<replace>source\\.(?<entity>[a-zA-Z0-9_]+))");
@@ -2656,7 +3126,7 @@ namespace COFRS.Template.Common.ServiceUtilities
 			if (ef.Success)
 			{
 				var token = entityJson[ef.Groups["entity"].Value];
-				var entityColumn = model.Entity.Columns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
+				var entityColumn = entityColumns.FirstOrDefault(c => c.ColumnName.Equals(ef.Groups["entity"].Value, StringComparison.OrdinalIgnoreCase));
 				var replaceText = ef.Groups["replace"].Value;
 
 				var seek = $"{replaceText}\\.HasValue[ \t]*\\?[ \t]*\\(TimeSpan\\?\\)[ \t]*TimeSpan\\.FromSeconds[ \t]*\\([ \t]*\\(double\\)[ \t]*{replaceText}[ \t]*\\)[ \t]*\\:[ \t]*null";

@@ -416,7 +416,7 @@ namespace COFRS.Template.Common.Wizards
 																	  $"Building {exampleClassName}",
 																	  0, 0, false, out pfCanceled);
 
-											var exampleModel = standardEmitter.EmitExampleModel(resourceModel, profileMap, exampleClassName, defaultServerType, connectionString);
+											var exampleModel = standardEmitter.EmitExampleModel(codeService, resourceModel, profileMap, exampleClassName, defaultServerType, connectionString);
 
 											var projectItemPath = Path.Combine(projectMapping.ExampleFolder, $"{exampleClassName}.cs");
 											var theFile = new StringBuilder();
