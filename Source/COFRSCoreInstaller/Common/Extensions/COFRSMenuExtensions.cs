@@ -1868,6 +1868,7 @@ namespace COFRS.Template
 			eol.StartOfLine();
 			startOfLine.Delete(eol);
 		}
+
 		private void AddCollectionExample(ResourceClass parentModel, ResourceClass childModel, DBColumn[] entityColumns, string memberName)
 		{
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -2364,7 +2365,6 @@ namespace COFRS.Template
 				}
 			}
 		}
-
 
 		/// <summary>
 		/// Modify the delete function to accomodate the new collection
